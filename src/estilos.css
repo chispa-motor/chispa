@@ -1,0 +1,43 @@
+/* Estilos de la página del juego */
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+  font-family: system-ui, "Segoe UI", sans-serif;
+}
+
+/* El contenedor ocupa toda la ventana y centra el lienzo (bandas negras si hace falta) */
+#contenedor-juego {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#lienzo {
+  display: block;
+  cursor: none;          /* dibujamos nuestro propio cursor */
+  touch-action: none;    /* evita que el táctil haga scroll/zoom */
+}
+
+/* Panel de errores en español */
+#panel-error {
+  position: fixed;
+  left: 50%;
+  top: 24px;
+  transform: translateX(-50%);
+  max-width: min(640px, calc(100vw - 32px));
+  padding: 16px 20px;
+  background: #3a1216;
+  border: 2px solid #e74c3c;
+  border-radius: 10px;
+  color: #ffe9e9;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+#panel-error h2 { margin: 0 0 8px; font-size: 18px; color: #ff8a80; }
+#panel-error p { margin: 6px 0; line-height: 1.45; }
+#panel-error .pista { color: #ffd98a; }
