@@ -18,6 +18,8 @@ import { PanelIzquierdo } from '../src/editor/paneles/PanelIzquierdo';
 import type { VistaEscena } from '../src/editor/escena/VistaEscena';
 import { fuenteAutocompletado } from '../src/editor/codigo/autocompletado';
 import { eventoDeLinea, rutaEn } from '../src/editor/codigo/ayudaYErrores';
+import { escaparHTML, generarPaginaJuego, jsonParaScript } from '../src/exportar/exportar';
+import { nombreDeArchivo } from '../src/editor/Almacen';
 import { proyectoVacio, type DefProyecto } from '../src/proyecto/formato';
 import { proyectoMinimo } from '../src/ejemplos/minimo/proyecto';
 
@@ -254,3 +256,34 @@ describe('Autocompletado de la Zona de Programación', () => {
   });
 });
 
+// ═════════════════════════ Fase 5: exportar ═════════════════════════
+
+describe('Exportar el juego', () => {
+  it('genera una página completa con el proyecto y el reproductor dentro', () => {
+    const html = generarPaginaJuego(proyectoMinimo, 'console.log("reproductor")');
+    expect(html.startsWith('<!doctype html>')).toBe(true);
+    expect(html).toContain('<title>Ejemplo mínimo</title>');
+    expect(html).toContain('<canvas id="lienzo"');
+    expect(html).toContain('console.log("reproductor")');
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const json = doc.getElementById('proyecto-chispa')!.textContent!;
+    expect(JSON.parse(json)).toEqual(proyectoMinimo);
+  });
+
+  it('ningún texto del juego puede romper la página (ni </script> ni HTML en el título)', () => {
+    const malo: DefProyecto = { ...proyectoVacio('<b>Mi "juego"</b>'), scripts: { 'a.chs': 'mostrar("</script><script>alert(1)</script>")\n# <!--  ' } };
+    const html = generarPaginaJuego(malo, 'var s = "</script>";');
+    expect(html).toContain('<title>&lt;b&gt;Mi &quot;juego&quot;&lt;/b&gt;</title>');
+    expect(html.match(/<\/script>/g)?.length).toBe(2); // solo los dos cierres de verdad
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    expect(doc.querySelectorAll('script').length).toBe(2);
+    expect(JSON.parse(doc.getElementById('proyecto-chispa')!.textContent!)).toEqual(malo);
+    expect(jsonParaScript({ a: '<' })).toBe('{"a":"\\u003c"}');
+    expect(escaparHTML(`a&b'`)).toBe('a&amp;b&#39;');
+  });
+
+  it('nombres de archivo sin caracteres raros', () => {
+    expect(nombreDeArchivo('Mi juego: ¡Ñandú!', '.html')).toBe('Mi_juego_Nandu.html');
+    expect(nombreDeArchivo('???', '.chispa.json')).toBe('mi_juego.chispa.json');
+  });
+});

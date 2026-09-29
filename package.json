@@ -1,12 +1,15 @@
 {
   "name": "chispa-motor",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.5.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "predev": "npm run reproductor",
     "build": "tsc && vite build",
+    "prebuild": "npm run reproductor",
     "preview": "vite preview",
+    "reproductor": "vite build -c vite.reproductor.config.ts",
     "pruebas": "vitest run",
     "pruebas:vigilar": "vitest"
   },

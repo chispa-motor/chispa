@@ -16,6 +16,7 @@
  */
 import { ErrorCompilacion } from '../chispa/errores/ErrorChispa';
 import { ErrorMotor } from '../motor/Errores';
+import { generarPaginaJuego } from '../exportar/exportar';
 import { proyectoMinimo } from '../ejemplos/minimo/proyecto';
 import { proyectoVacio } from '../proyecto/formato';
 import { cargarAutomatico, descargar, elegirArchivo, guardarAutomatico, nombreDeArchivo } from './Almacen';
@@ -348,7 +349,29 @@ export class Aplicacion {
   }
 
   async exportar(): Promise<void> {
-    avisar('Exportar', 'Exportar el juego como página web llegará en la Fase 5.');
+    if (this.inferior.revisar() > 0) {
+      this.inferior.mostrarPestana('problemas');
+      return avisar('Hay errores en el código', 'Arregla los errores (pestaña Problemas) antes de exportar el juego.');
+    }
+    let reproductor: string;
+    try {
+      const r = await fetch('reproductor.js');
+      if (!r.ok) throw new Error();
+      reproductor = await r.text();
+    } catch {
+      return avisar('No encuentro el reproductor', 'Falta el archivo reproductor.js. Arranca el editor con "npm run dev" (lo genera solo) o ejecuta "npm run reproductor".');
+    }
+    const html = generarPaginaJuego(this.estado.proyecto, reproductor);
+    const archivo = nombreDeArchivo(this.estado.proyecto.nombre, '.html');
+    descargar(archivo, html, 'text/html');
+    avisar('¡Juego exportado!', h('div', {},
+      h('p', {}, 'Se ha descargado ', h('strong', {}, archivo), ` (${Math.ceil(html.length / 1024)} KB). Es una página web que lo lleva TODO dentro: el motor, el código, las imágenes y los sonidos.`),
+      h('ul', {},
+        h('li', {}, 'Ábrela con doble clic para jugar, incluso sin internet.'),
+        h('li', {}, 'Para publicarla: súbela a itch.io (como juego HTML), GitHub Pages o Netlify, cambiándole el nombre a index.html.'),
+        h('li', {}, 'Lo que escribe mostrar() no se ve en el juego exportado (solo en la consola del navegador, F12).'),
+      ),
+    ));
   }
 
   private ayuda(): void {
