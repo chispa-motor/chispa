@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "reproductor": "vite build -c vite.reproductor.config.ts",
     "pruebas": "vitest run",
-    "pruebas:vigilar": "vitest"
+    "pruebas:vigilar": "vitest",
+    "lineas": "node herramientas/contar-lineas.mjs"
   },
   "devDependencies": {
     "happy-dom": "^20.14.5",
@@ -27,7 +28,6 @@
     "@codemirror/search": "^6.7.2",
     "@codemirror/state": "^6.7.6",
     "@codemirror/view": "^6.43.13",
-    "@lezer/highlight": "^1.2.5",
-    "codemirror": "^6.0.2"
+    "@lezer/highlight": "^1.2.5"
   }
 }
