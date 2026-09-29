@@ -11,9 +11,9 @@ const PARTES = [
   ['Lenguaje (src/chispa)', (f) => f.startsWith('src/chispa/')],
   ['Motor (motor, objetos, proyecto, reproductor, utilidades)', (f) => /^src\/(motor|objetos|proyecto|reproductor|utilidades)\//.test(f)],
   ['Editor (editor, exportar, main, estilos, index.html)', (f) => /^src\/(editor|exportar)\//.test(f) || /^src\/(main\.ts|estilos\.css|vite-env\.d\.ts)$/.test(f) || f === 'index.html'],
-  ['Tests (pruebas)', (f) => f.startsWith('pruebas/')],
+  ['Tests (pruebas y pruebas-navegador)', (f) => f.startsWith('pruebas/') || f.startsWith('pruebas-navegador/')],
   ['Ejemplos y demos', (f) => /^src\/(ejemplos|demos)\//.test(f)],
-  ['Documentación (.md)', (f) => f.endsWith('.md')],
+  ['Documentación (.md; MANUAL_CHISPA.md se genera solo)', (f) => f.endsWith('.md')],
   ['Configuración y herramientas', () => true],
 ];
 
