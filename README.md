@@ -39,7 +39,7 @@ src/
 ├── chispa/       El lenguaje (lexico/ → sintaxis/ → analisis/ → ejecucion/, + errores/, api/). Ver chispa/LEEME.md
 ├── proyecto/     Formato del proyecto (JSON), revisión del código y JuegoEnMarcha (proyecto → juego)
 ├── editor/       El editor: estado/ (lógica sin interfaz), codigo/ (CodeMirror), escena/, paneles/, juego/
-├── exportar/     Genera la página .html del juego exportado
+├── exportar/     Genera la página .html del juego exportado, el .zip para itch.io y los pasos para publicar
 ├── reproductor/  El motor sin el editor (lo que lleva dentro un juego exportado)
 ├── ejemplos/     Ejemplo mínimo en Chispa
 └── demos/        Demos de las fases 1 y 2

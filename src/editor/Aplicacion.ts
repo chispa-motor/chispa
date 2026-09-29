@@ -16,7 +16,7 @@
  */
 import { ErrorCompilacion } from '../chispa/errores/ErrorChispa';
 import { ErrorMotor } from '../motor/Errores';
-import { generarPaginaJuego } from '../exportar/exportar';
+import { prepararPublicacion, type DestinoPublicar } from '../exportar/publicar';
 import { proyectoMinimo } from '../ejemplos/minimo/proyecto';
 import { proyectoVacio } from '../proyecto/formato';
 import { cargarAutomatico, descargar, elegirArchivo, guardarAutomatico, nombreDeArchivo } from './Almacen';
@@ -29,7 +29,7 @@ import { botonIcono, h, icono, rellenar } from './interfaz/dom';
 import { Inspector } from './paneles/Inspector';
 import { PanelInferior } from './paneles/PanelInferior';
 import { PanelIzquierdo } from './paneles/PanelIzquierdo';
-import { Tutorial, marcarTutorialVisto, tutorialVisto } from './tutorial/Tutorial';
+import { Tutorial, conNegritas, marcarTutorialVisto, tutorialVisto } from './tutorial/Tutorial';
 import { revisarProyecto } from '../proyecto/Revision';
 
 const CLAVE_DISPOSICION = 'chispa-editor:disposicion';
@@ -409,17 +409,42 @@ export class Aplicacion {
     } catch {
       return avisar('No encuentro el reproductor', 'Falta el archivo reproductor.js. Arranca el editor con "npm run dev" (lo genera solo) o ejecuta "npm run reproductor".');
     }
-    const html = generarPaginaJuego(this.estado.proyecto, reproductor);
-    const archivo = nombreDeArchivo(this.estado.proyecto.nombre, '.html');
-    descargar(archivo, html, 'text/html');
-    avisar('¡Juego exportado!', h('div', {},
-      h('p', {}, 'Se ha descargado ', h('strong', {}, archivo), ` (${Math.ceil(html.length / 1024)} KB). Es una página web que lo lleva TODO dentro: el motor, el código, las imágenes y los sonidos.`),
-      h('ul', {},
-        h('li', {}, 'Ábrela con doble clic para jugar, incluso sin internet.'),
-        h('li', {}, 'Para publicarla: súbela a itch.io (como juego HTML), GitHub Pages o Netlify, cambiándole el nombre a index.html.'),
-        h('li', {}, 'Lo que escribe mostrar() no se ve en el juego exportado (solo en la consola del navegador, F12).'),
-      ),
-    ));
+    this.dialogoPublicar(reproductor);
+  }
+
+  /** Exportar: un archivo, itch.io o GitHub Pages. Descarga lo que hace falta y enseña los pasos en la web de cada sitio. */
+  private dialogoPublicar(reproductor: string): void {
+    const cuerpo = h('div', { class: 'publicar' });
+    const elegir = () =>
+      rellenar(cuerpo,
+        h('p', {}, '¿Dónde quieres tu juego? No hace falta conectar ninguna cuenta: te preparo el archivo y te digo paso a paso qué hacer.'),
+        h('div', { class: 'opciones-publicar' },
+          opcion('archivo', 'descargar', 'Un archivo', 'Una página (.html) con el juego dentro. Para jugar en tu ordenador o mandárselo a alguien.'),
+          opcion('itch', 'estrella', 'itch.io', 'La web de juegos independientes. Tu juego tendrá su página y se juega en el navegador.'),
+          opcion('github', 'mundo', 'GitHub Pages', 'Una página web gratis, con tu propia dirección, para compartir el enlace.'),
+        ),
+      );
+    const opcion = (destino: DestinoPublicar, ic: string, titulo: string, texto: string) =>
+      h('button', { class: `opcion-publicar destino-${destino}`, onclick: () => pasos(destino) },
+        icono(ic, 26), h('strong', {}, titulo), h('span', {}, texto));
+    const pasos = (destino: DestinoPublicar) => {
+      const p = prepararPublicacion(this.estado.proyecto, reproductor, destino);
+      const bajar = () => descargar(p.descarga.nombre, p.descarga.contenido, p.descarga.tipo);
+      bajar();
+      rellenar(cuerpo,
+        h('h3', { class: 'titulo-publicar' }, p.titulo),
+        h('ol', { class: 'pasos-publicar' }, p.pasos.map((t) => h('li', {}, ...conNegritas(t)))),
+        p.nota ? h('p', { class: 'nota' }, p.nota) : null,
+        h('div', { class: 'botones-publicar' },
+          h('button', { class: 'boton-enlace', onclick: elegir }, '← Otras opciones'),
+          h('span', { class: 'espacio' }),
+          h('button', { class: 'boton', onclick: bajar, title: p.descarga.nombre }, 'Descargar otra vez'),
+          p.enlace ? h('a', { class: 'boton principal', href: p.enlace.url, target: '_blank', rel: 'noopener' }, p.enlace.texto) : null,
+        ),
+      );
+    };
+    elegir();
+    abrirDialogo('Exportar y publicar tu juego', cuerpo, [{ texto: 'Cerrar' }], 'dialogo-ancho');
   }
 
   private ayuda(): void {

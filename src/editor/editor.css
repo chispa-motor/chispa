@@ -367,3 +367,24 @@ kbd { display: inline-block; padding: 1px 6px; border-radius: 4px; border: 1px s
 .tutorial-botones .espacio { flex: 1; }
 .tutorial-saltar { font-size: 12px; color: var(--texto-tenue); }
 .ofrecer-tutorial p { max-width: 460px; }
+
+/* ═════════ Exportar y publicar ═════════ */
+.publicar { max-width: 620px; }
+.opciones-publicar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+.opcion-publicar {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left;
+  padding: 14px; border-radius: 10px; border: 1px solid var(--borde-fuerte); background: var(--fondo-panel);
+  color: var(--texto); font: inherit; cursor: pointer;
+}
+.opcion-publicar:hover, .opcion-publicar:focus-visible { border-color: var(--acento); background: var(--fondo-hover); }
+.opcion-publicar svg { color: var(--acento); }
+.opcion-publicar strong { font-size: 15px; }
+.opcion-publicar span { color: var(--texto-suave); font-size: 12.5px; line-height: 1.4; }
+.titulo-publicar { margin: 0 0 6px; }
+.pasos-publicar { padding-left: 22px; line-height: 1.55; }
+.pasos-publicar li { margin: 6px 0; }
+.pasos-publicar strong { color: #fff; }
+.botones-publicar { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.botones-publicar .espacio { flex: 1; }
+a.boton { text-decoration: none; display: inline-flex; align-items: center; }
+@media (max-width: 700px) { .opciones-publicar { grid-template-columns: 1fr; } }

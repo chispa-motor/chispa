@@ -154,8 +154,15 @@ copiarlo:
   está todo.
 - **Guardar** (Ctrl+S) descarga tu proyecto como un archivo `.chispa.json`.
   Con **Abrir** lo recuperas, en este o en otro ordenador.
-- **Exportar** crea una página `.html` con tu juego dentro. Se abre con doble
-  clic y se puede subir a itch.io o enviarla a quien quieras.
+- **Exportar** te deja elegir:
+  - **Un archivo**: una página `.html` con tu juego dentro. Se abre con doble
+    clic y se la puedes mandar a quien quieras.
+  - **itch.io**: descarga un `.zip` listo para subir y te dice, paso a paso,
+    qué pulsar en la web de itch.io (y qué tamaño poner).
+  - **GitHub Pages**: descarga un `index.html` y te explica cómo tener tu
+    juego en una dirección tuya, gratis.
+
+  No hace falta conectar ninguna cuenta al editor: tú subes el archivo.
 
 Todo el lenguaje, con un ejemplo de cada cosa, está en **MANUAL_CHISPA.md**
 (y en la pestaña **Guía** del editor).

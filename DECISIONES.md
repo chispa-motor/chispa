@@ -175,3 +175,15 @@ Ver PROBLEMAS_PRINCIPIANTE.md para la lista completa de lo que se encontró.
 | El juego del tutorial: **Jugador** con física, **suelo** pintado con Mayús, una **Moneda** que se atraviesa, el **script** del jugador (andar, saltar, coger la moneda) y un **marcador** hecho con «Enseñar un dato». | Toca las cinco cosas que se usan en casi cualquier juego: objetos, propiedades, mapa, código y textos con datos. Cabe en 5 minutos. |
 | Si lo que hay que tocar está fuera de la vista (por ejemplo, abajo del todo en Propiedades), el tutorial **lleva la vista hasta allí**, una vez por paso. | Si no, el resaltado apuntaba fuera de la pantalla. Solo una vez, para no pelear con quien mueve la vista. |
 | La burbuja se pone **al lado** de lo resaltado; si es algo grande (la escena, el código), **dentro, en una esquina** que no tape donde se trabaja. | Nunca debe tapar lo que se está señalando. |
+
+### Publicar (sesión 3, bloque 5)
+
+| Decisión | Por qué |
+|---|---|
+| **Exportar** abre un diálogo con tres opciones: **un archivo** (.html), **itch.io** (.zip) y **GitHub Pages** (index.html). Al elegir, se descarga el archivo y el diálogo enseña **los pasos**, numerados, con los nombres de los botones tal como salen en esa web (en inglés, en negrita, y traducidos entre paréntesis la primera vez). | Quien empieza no sabe qué archivo pide cada sitio ni dónde se pulsa. Los botones de esas webs están en inglés: hay que reconocerlos. |
+| **No se conecta a ninguna cuenta.** | Pedirlo el usuario. Además, conectar cuentas necesita permisos, contraseñas y un servidor; así no hay nada que pueda fallar ni ningún dato que guardar. |
+| Para itch.io, un **.zip con un index.html dentro**, y los pasos dicen **el tamaño exacto** del juego para «Viewport dimensions». | Es lo que pide itch.io para juegos HTML. Con el tamaño bien puesto, el juego no sale cortado ni con bandas. |
+| El .zip se hace **sin comprimir**, con un programa propio de unas 100 líneas (con su CRC-32). | No hace falta ninguna biblioteca. El juego es una sola página e itch.io la sirve comprimida de todas formas. |
+| Para GitHub Pages, **index.html** (tiene que llamarse así) y los pasos **desde la web** (subir el archivo, Settings → Pages), sin usar git. | Instalar y aprender git es demasiado para publicar el primer juego. |
+| La dirección de GitHub se sugiere con un **nombre corto** del juego (`Mi Juego del Ñandú` → `mi-juego-del-nandu`). | Sin espacios ni acentos, que en una dirección web dan problemas. |
+| Cada opción explica también **cómo subir una versión nueva**. | Es lo segundo que se pregunta siempre. |

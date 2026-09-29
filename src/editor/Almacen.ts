@@ -60,9 +60,9 @@ export function nombreDeArchivo(nombre: string, extension: string): string {
   return `${limpio || 'mi_juego'}${extension}`;
 }
 
-/** Descarga un texto como archivo. */
-export function descargar(nombreArchivo: string, contenido: string, tipo = 'application/json'): void {
-  const url = URL.createObjectURL(new Blob([contenido], { type: tipo }));
+/** Descarga un texto (o unos bytes, como un .zip) como archivo. */
+export function descargar(nombreArchivo: string, contenido: string | Uint8Array, tipo = 'application/json'): void {
+  const url = URL.createObjectURL(new Blob([contenido as BlobPart], { type: tipo }));
   const a = document.createElement('a');
   a.href = url;
   a.download = nombreArchivo;

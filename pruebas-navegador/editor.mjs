@@ -342,8 +342,40 @@ await prueba('un sonido importado se carga y suena de verdad', async (p) => {
   comprobar(audio[0] === true && audio[1] === 'pitido', 'el sonido no se ha decodificado: ' + JSON.stringify(audio));
 });
 
+/** Saca un archivo de un .zip sin comprimir (como los que hace Chispa para itch.io). */
+function sacarDelZip(zip, nombreBuscado) {
+  const v = new DataView(zip.buffer, zip.byteOffset, zip.byteLength);
+  for (let i = 0; i + 30 <= zip.length && v.getUint32(i, true) === 0x04034b50; ) {
+    const tamano = v.getUint32(i + 18, true);
+    const largo = v.getUint16(i + 26, true);
+    const nombre = new TextDecoder().decode(zip.subarray(i + 30, i + 30 + largo));
+    const datos = zip.subarray(i + 30 + largo, i + 30 + largo + tamano);
+    if (nombre === nombreBuscado) return new TextDecoder().decode(datos);
+    i += 30 + largo + tamano;
+  }
+  return null;
+}
+
+await prueba('publicar: el zip de itch.io y el index.html de GitHub Pages, con sus pasos', async (p) => {
+  await p.click('button:has-text("Exportar")');
+  const [zip] = await Promise.all([p.waitForEvent('download'), p.click('.destino-itch')]);
+  comprobar(/-itch\.zip$/.test(zip.suggestedFilename()), 'el zip no se llama bien: ' + zip.suggestedFilename());
+  const rutaZip = join(carpeta, zip.suggestedFilename());
+  await zip.saveAs(rutaZip);
+  const index = sacarDelZip(readFileSync(rutaZip), 'index.html');
+  comprobar(index?.includes('proyecto-chispa'), 'el zip no lleva un index.html con el juego');
+  const pasos = await textoDe(p, '.pasos-publicar');
+  comprobar(pasos.includes('Kind of project') && pasos.includes('960') && pasos.includes('played in the browser'), 'faltan pasos de itch.io');
+  comprobar(await p.$('.botones-publicar a[href="https://itch.io/game/new"]'), 'no hay enlace a itch.io');
+  await p.click('button:has-text("Otras opciones")');
+  const [html] = await Promise.all([p.waitForEvent('download'), p.click('.destino-github')]);
+  comprobar(html.suggestedFilename() === 'index.html', 'para GitHub Pages tiene que llamarse index.html');
+  comprobar((await textoDe(p, '.pasos-publicar')).includes('Settings'), 'faltan pasos de GitHub Pages');
+});
+
 await prueba('exportar el juego y que funcione solo, sin el editor', async (p) => {
-  const [descarga] = await Promise.all([p.waitForEvent('download'), p.click('button:has-text("Exportar")')]);
+  await p.click('button:has-text("Exportar")');
+  const [descarga] = await Promise.all([p.waitForEvent('download'), p.click('.destino-archivo')]);
   const archivo = join(carpeta, descarga.suggestedFilename());
   await descarga.saveAs(archivo);
   comprobar(readFileSync(archivo, 'utf8').includes('proyecto-chispa'), 'la página no lleva el proyecto dentro');
