@@ -141,6 +141,112 @@ await prueba('seleccionar varios con un rectángulo y con Ctrl+clic, moverlos ju
   comprobar((await estado(p, () => window.chispa.estado.escena.objetos.length)) === 0, 'Supr no ha borrado todos');
 });
 
+await prueba('la primera vez ofrece el tutorial, y el tutorial se hace entero haciendo clic donde señala', async (p) => {
+  // Primera visita (sin nada guardado): «¿Hacemos tu primer juego?»
+  await p.evaluate(() => localStorage.clear());
+  await p.goto(direccion);
+  await p.waitForSelector('.dialogo:has-text("¿Hacemos tu primer juego?")', { timeout: 5000 });
+  await p.click('.dialogo button:has-text("¡Vamos!")');
+  const paso = async (titulo) => {
+    try {
+      await p.waitForFunction((t) => document.querySelector('.tutorial-burbuja strong')?.textContent === t, titulo, { timeout: 5000 });
+    } catch {
+      const actual = await p.evaluate(() => document.querySelector('.tutorial-burbuja strong')?.textContent ?? '(sin tutorial)');
+      throw new Error(`esperaba el paso «${titulo}» y sigue en «${actual}»`);
+    }
+  };
+  const centroDelFoco = async () => {
+    await p.waitForTimeout(450); // lo que tarda el foco en llegar (se comprueba cada 200 ms y se mueve con una transición)
+    const r = await p.locator('.tutorial-foco').boundingBox();
+    comprobar(r, 'no hay nada resaltado');
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+  };
+  const clicEnFoco = async () => {
+    const c = await centroDelFoco();
+    await p.mouse.click(c.x, c.y);
+  };
+  const escribirNombre = async (nombre) => {
+    await clicEnFoco();
+    await p.keyboard.press('Control+a');
+    await p.keyboard.type(nombre);
+    await p.keyboard.press('Enter');
+  };
+  const lienzo = await p.locator('.lienzo-escena').boundingBox();
+  const pantalla = (x, y) => estado(p, ([x, y]) => window.chispa.vistaEscena.camara.aPantalla(x, y), [x, y]);
+
+  await paso('Tu primer juego');
+  await p.click('.tutorial-siguiente');
+  await paso('El jugador');
+  await clicEnFoco();
+  await paso('Ponle nombre');
+  await escribirNombre('Jugador');
+  await paso('Que caiga');
+  await clicEnFoco();
+  await paso('Un suelo');
+  await clicEnFoco();
+  await paso('Pinta el suelo');
+  const a = await pantalla(8, 24);
+  const b = await pantalla(952, 24);
+  await p.keyboard.down('Shift');
+  await p.mouse.move(lienzo.x + a.x, lienzo.y + a.y);
+  await p.mouse.down();
+  await p.mouse.move(lienzo.x + b.x, lienzo.y + b.y, { steps: 8 });
+  await p.mouse.up();
+  await p.keyboard.up('Shift');
+  await paso('Vuelve a la flecha');
+  await clicEnFoco();
+  await paso('Una moneda');
+  await clicEnFoco();
+  await paso('Llámala Moneda');
+  await escribirNombre('Moneda');
+  await paso('Que se pueda atravesar');
+  await clicEnFoco();
+  await paso('Colócala');
+  const m = await estado(p, () => window.chispa.estado.escena.objetos.find((o) => o.nombre === 'Moneda'));
+  const j = await estado(p, () => window.chispa.estado.escena.objetos.find((o) => o.nombre === 'Jugador'));
+  const desde = await pantalla(m.x, m.y);
+  const hasta = await pantalla(j.x + 176, 128);
+  await p.mouse.move(lienzo.x + desde.x, lienzo.y + desde.y);
+  await p.mouse.down();
+  await p.mouse.move(lienzo.x + hasta.x, lienzo.y + hasta.y, { steps: 8 });
+  await p.mouse.up();
+  await paso('Ahora, el código');
+  await clicEnFoco();
+  await paso('Su script');
+  await clicEnFoco();
+  await paso('Escribe el código');
+  await p.click('.tutorial-hazlo');
+  await paso('Vuelve a la escena');
+  await clicEnFoco();
+  await paso('Un marcador');
+  await clicEnFoco();
+  await paso('Enséñale los puntos');
+  await centroDelFoco();
+  await p.selectOption('.menu-datos', '{juego.puntos}');
+  await paso('¡A jugar!');
+  await clicEnFoco();
+  await paso('Coge la moneda');
+  await p.waitForTimeout(300);
+  await clicEnFoco(); // clic en el juego para que reciba las teclas
+  await p.keyboard.down('ArrowRight');
+  await p.waitForTimeout(900);
+  await p.keyboard.up('ArrowRight');
+  await paso('¡Lo has hecho!');
+  const puntos = await estado(p, () => window.chispa.vistaJuego.datoDelJuego('puntos'));
+  comprobar(puntos === 1, 'los puntos no han subido: ' + puntos);
+  await p.click('.tutorial-siguiente');
+  await p.waitForFunction(() => !document.querySelector('.tutorial-burbuja'));
+  // Al recargar, ya no se ofrece otra vez; se puede abrir desde Ayuda
+  await p.goto(direccion);
+  await p.waitForFunction(() => window.chispa);
+  await p.waitForTimeout(300);
+  comprobar(!(await p.$('.dialogo:has-text("¿Hacemos tu primer juego?")')), 'el tutorial se ofrece otra vez');
+  await p.click('button:has-text("Ayuda")');
+  await p.click('.dialogo button:has-text("Tutorial: tu primer juego")');
+  await p.click('.dialogo button:has-text("Empezar el tutorial")');
+  await paso('Tu primer juego');
+});
+
 await prueba('los errores se subrayan mientras escribes y bloquean Ejecutar', async (p) => {
   await p.click('.nodo.hijo');
   await p.click('.cm-content');

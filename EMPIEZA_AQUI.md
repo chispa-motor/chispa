@@ -47,6 +47,12 @@ el navegador (http://localhost:5173).
 
 La primera vez se abre un ejemplo. Pulsa **▶ Ejecutar** (o F5) para verlo.
 
+> **¿Prefieres que te guíe?** La primera vez que abres el editor te pregunta
+> «¿Hacemos tu primer juego?». Si dices que sí, te va señalando dónde hacer
+> clic, paso a paso, dentro del propio editor. Se puede saltar, y volver a
+> abrir cuando quieras desde **Ayuda → Tutorial: tu primer juego**. Lo que
+> viene a continuación es lo mismo, por escrito (con alguna cosa más).
+
 ## 3. Tu primer juego
 
 1. Pulsa **Nuevo → Vacío**.

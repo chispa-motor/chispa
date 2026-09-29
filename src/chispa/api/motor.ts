@@ -123,6 +123,11 @@ export class DatosJuego extends Anfitrion {
   asignar(p: string, v: Valor, original: string): void {
     this.datos.set(p, { valor: copiarSiVector(v), original });
   }
+  /** Lee un dato desde fuera del lenguaje (el editor, el tutorial). `undefined` si no hay nada guardado. */
+  leer(nombre: string): Valor | undefined {
+    const d = this.datos.get(nombre) ?? [...this.datos.values()].find((x) => x.original === nombre);
+    return d?.valor;
+  }
 }
 
 // ═════════════════════════ Instalar la API ═════════════════════════

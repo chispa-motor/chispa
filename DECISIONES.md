@@ -162,3 +162,16 @@ Ver PROBLEMAS_PRINCIPIANTE.md para la lista completa de lo que se encontró.
 | Los proyectos antiguos **no se enlazan solos**, aunque sus copias vengan de una plantilla. | Sus copias pueden haberse cambiado a propósito: enlazarlas las igualaría y se perderían esos cambios. |
 | Un test recorre **todos los métodos del estado del editor** y comprueba que cada cambio se deshace y se rehace; si alguien añade un método nuevo sin probarlo, el test falla. | «Deshacer para todo» tiene que seguir siendo verdad aunque el editor crezca. Lo único fuera del historial es el código (el editor de código tiene su propio deshacer, letra a letra). |
 | **Ctrl+Mayús+Z** también rehace. | Es el atajo de Mac y de muchos programas. |
+
+### Tutorial guiado (sesión 3, bloque 4)
+
+| Decisión | Por qué |
+|---|---|
+| La **primera vez** que se abre el editor en un navegador pregunta «¿Hacemos tu primer juego?». Se pregunta **una sola vez** (se apunta en el navegador), diga lo que diga. Luego se abre desde **Ayuda → Tutorial: tu primer juego**. | Ofrecerlo es lo que más ayuda al que empieza; insistir molesta al que ya sabe. |
+| El tutorial va **dentro del propio editor**: oscurece un poco todo, **resalta** con un borde amarillo el sitio donde hay que hacer clic y una **burbuja** explica qué hacer. **No bloquea nada**: se puede hacer clic en cualquier sitio. | Se aprende el editor de verdad, no una copia. Si alguien se despista y hace otra cosa, no se queda atrapado. |
+| Cada paso sabe que **está hecho mirando el proyecto** (¿hay un objeto llamado Jugador?), no los clics. Avanza solo. | Da igual si se hace con el botón, con un atajo, deshaciendo o de otra forma: si está hecho, está hecho. |
+| Cada paso tiene **«Hazlo por mí»** (en el código, «Escríbelo por mí»). | Nadie debería abandonar por atascarse en un paso. Además, los tests recorren el tutorial entero con él y comprueban que el juego final funciona (se coge la moneda y suben los puntos). |
+| Empieza con un **proyecto vacío** y avisa antes si se va a cerrar uno (también si es el que se ha recuperado del navegador). | Así los pasos siempre encajan; y nunca se pierde el trabajo de nadie sin preguntar. |
+| El juego del tutorial: **Jugador** con física, **suelo** pintado con Mayús, una **Moneda** que se atraviesa, el **script** del jugador (andar, saltar, coger la moneda) y un **marcador** hecho con «Enseñar un dato». | Toca las cinco cosas que se usan en casi cualquier juego: objetos, propiedades, mapa, código y textos con datos. Cabe en 5 minutos. |
+| Si lo que hay que tocar está fuera de la vista (por ejemplo, abajo del todo en Propiedades), el tutorial **lleva la vista hasta allí**, una vez por paso. | Si no, el resaltado apuntaba fuera de la pantalla. Solo una vez, para no pelear con quien mueve la vista. |
+| La burbuja se pone **al lado** de lo resaltado; si es algo grande (la escena, el código), **dentro, en una esquina** que no tape donde se trabaja. | Nunca debe tapar lo que se está señalando. |

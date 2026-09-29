@@ -29,6 +29,8 @@ import { botonIcono, h, icono, rellenar } from './interfaz/dom';
 import { Inspector } from './paneles/Inspector';
 import { PanelInferior } from './paneles/PanelInferior';
 import { PanelIzquierdo } from './paneles/PanelIzquierdo';
+import { Tutorial, marcarTutorialVisto, tutorialVisto } from './tutorial/Tutorial';
+import { revisarProyecto } from '../proyecto/Revision';
 
 const CLAVE_DISPOSICION = 'chispa-editor:disposicion';
 
@@ -48,6 +50,8 @@ export class Aplicacion {
   private errores = 0;
   private temporizadorGuardado = 0;
   private guardadoEn: number | null = null;
+  /** El tutorial guiado, si está abierto. */
+  tutorial: Tutorial | null = null;
 
   constructor(private raiz: HTMLElement) {
     const e = this.estado;
@@ -95,6 +99,50 @@ export class Aplicacion {
     } catch {
       notificar('No he podido recuperar el último proyecto. Empezamos con el ejemplo.', 'error');
     }
+  }
+
+  // ═════════════════════════ Tutorial ═════════════════════════
+
+  /** La primera vez que se abre el editor en este navegador: «¿Hacemos tu primer juego?». */
+  ofrecerTutorial(): void {
+    if (tutorialVisto()) return;
+    marcarTutorialVisto();
+    abrirDialogo('¡Hola! ¿Hacemos tu primer juego?',
+      h('div', { class: 'ofrecer-tutorial' },
+        h('p', {}, 'Te llevo paso a paso, aquí mismo en el editor: yo te señalo dónde hacer clic y tú lo haces. En unos 5 minutos tendrás un juego pequeño hecho por ti: un personaje que salta y coge una moneda.'),
+        h('p', { class: 'nota' }, 'Si prefieres explorar solo, lo puedes abrir cuando quieras desde el botón Ayuda.'),
+      ),
+      [
+        { texto: 'Ahora no' },
+        // Si se ha recuperado un proyecto guardado, se pregunta antes de cerrarlo
+        { texto: '¡Vamos!', clase: 'principal', alPulsar: () => void this.empezarTutorial(this.guardadoEn !== null || this.estado.modificado) },
+      ]);
+  }
+
+  /** Empieza el tutorial con un proyecto vacío. */
+  async empezarTutorial(preguntar = true): Promise<void> {
+    // Se pregunta siempre: lo recuperado del navegador no cuenta como «modificado», pero es trabajo de alguien
+    if (preguntar && !(await confirmar('Tutorial: tu primer juego', 'El tutorial empieza con un proyecto vacío y el actual se cerrará. Si quieres conservarlo, descárgalo antes con «Guardar». ¿Seguir?', 'Empezar el tutorial'))) return;
+    this.tutorial?.cerrar();
+    this.parar();
+    this.estado.abrir(proyectoVacio('Mi primer juego'));
+    this.vistaEscena.ponerHerramienta('mover');
+    this.vistaEscena.encuadrar(false);
+    this.inferior.limpiar();
+    this.tutorial = new Tutorial({
+      estado: this.estado,
+      herramienta: () => this.vistaEscena.herramienta,
+      ponerHerramienta: (h_) => this.vistaEscena.ponerHerramienta(h_),
+      anadir: (tipo) => this.vistaEscena.anadir(tipo),
+      juegoEnMarcha: () => this.vistaJuego.estadoJuego === 'jugando' || this.vistaJuego.estadoJuego === 'pausado',
+      ejecutar: () => void this.ejecutar(),
+      datoDelJuego: (n) => this.vistaJuego.datoDelJuego(n),
+      escribirCodigo: (archivo, codigo) => {
+        this.estado.cambiarCodigo(archivo, codigo);
+        this.editorCodigo.sincronizar();
+      },
+      hayErrores: () => [...revisarProyecto(this.estado.proyecto).porArchivo.values()].flat().some((d) => d.gravedad === 'error'),
+    }, () => (this.tutorial = null));
   }
 
   // ═════════════════════════ Disposición ═════════════════════════
@@ -384,6 +432,7 @@ export class Aplicacion {
         h('li', {}, 'Escribe el código. Si te equivocas, se subraya en rojo: pasa el ratón por encima para ver la explicación.'),
         h('li', {}, 'Pulsa ', h('strong', {}, '▶ Ejecutar'), ' y prueba tu juego a la derecha.'),
       ),
+      h('p', { class: 'nota' }, '¿Primera vez? El botón ', h('strong', {}, 'Tutorial: tu primer juego'), ' (abajo) te lleva paso a paso, señalando dónde hacer clic.'),
       h('h3', {}, 'Atajos'),
       h('table', { class: 'atajos' },
         [
@@ -408,6 +457,7 @@ export class Aplicacion {
       ),
       h('p', { class: 'nota' }, 'Toda la documentación del lenguaje está en la pestaña ', h('strong', {}, 'Guía'), ' de abajo, con buscador.'),
     ), [
+      { texto: 'Tutorial: tu primer juego', alPulsar: () => void this.empezarTutorial() },
       { texto: 'Abrir la Guía', alPulsar: () => this.inferior.mostrarPestana('guia') },
       { texto: 'Cerrar', clase: 'principal' },
     ], 'dialogo-ancho');

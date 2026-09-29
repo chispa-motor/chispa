@@ -59,6 +59,10 @@ export class JuegoEnMarcha implements ContextoJuego {
   /** Nombre de la escena que se está jugando. */
   nombreEscena: string;
   private datos = new DatosJuego();
+  /** Un dato de `juego` (juego.puntos...), para verlo desde el editor. */
+  datoDelJuego(nombre: string): unknown {
+    return this.datos.leer(nombre);
+  }
   private programas = new Map<string, Programa>();
   private pendiente: Pendiente = null;
   private erroresVistos = new Map<string, number>();

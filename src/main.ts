@@ -44,7 +44,11 @@ async function arrancarEditor(): Promise<void> {
   raiz.hidden = false;
   const app = new Aplicacion(raiz);
   // ?limpio = empezar con el ejemplo, sin recuperar lo guardado (lo usan las pruebas del navegador)
-  if (!new URLSearchParams(location.search).has('limpio')) await app.recuperar();
+  const parametros = new URLSearchParams(location.search);
+  if (!parametros.has('limpio')) await app.recuperar();
+  // La primera vez: «¿Hacemos tu primer juego?» (?tutorial lo abre siempre; ?limpio, nunca)
+  if (parametros.has('tutorial')) void app.empezarTutorial(false);
+  else if (!parametros.has('limpio')) app.ofrecerTutorial();
   // Para poder inspeccionarlo desde la consola del navegador (F12) y en las pruebas
   (window as unknown as { chispa: unknown }).chispa = app;
 }

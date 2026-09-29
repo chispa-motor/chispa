@@ -24,6 +24,10 @@ export class VistaJuego {
   private barraEstado = h('div', { class: 'estado-juego' });
   private motor: Motor | null = null;
   private juego: JuegoEnMarcha | null = null;
+  /** Un dato de `juego` del juego que está en marcha (para el tutorial). */
+  datoDelJuego(nombre: string): unknown {
+    return this.juego?.datoDelJuego(nombre);
+  }
   private intervalo = 0;
   private ampliada = false;
 
