@@ -33,7 +33,7 @@ import { enumerar, pistaNombreDesconocido, sugerir } from '../errores/sugerencia
 import type { Entorno } from '../ejecucion/entorno';
 import { Anfitrion } from '../ejecucion/valores';
 import { esMiembroDelMotor, propiedadMalEscrita } from '../api/objetos';
-import { comprobarNombreTecla } from '../../motor/Entrada';
+import { comprobarNombreTecla, NOMBRES_TECLAS } from '../../motor/Entrada';
 import { ErrorMotor } from '../../motor/Errores';
 import { NOMBRES_COLORES, esColorValido } from '../../motor/Color';
 import { normalizar } from '../../utilidades/texto';
@@ -447,7 +447,15 @@ class Analizador {
   private pistaNombre(nombre: string, amb: Ambito, comoCrearla?: string): string {
     return pistaNombreDesconocido(
       nombre,
-      { visibles: [...amb.nombresDeUsuario(), ...this.ctx.globales.nombresVisibles()], deUsuario: amb.nombresDeUsuario(), objetosEscena: this.ctx.objetosEscena },
+      {
+        visibles: [...amb.nombresDeUsuario(), ...this.ctx.globales.nombresVisibles()],
+        deUsuario: amb.nombresDeUsuario(),
+        objetosEscena: this.ctx.objetosEscena,
+        textos: [
+          ...NOMBRES_TECLAS, ...NOMBRES_COLORES, ...Object.keys(TIPOS_PARTICULAS),
+          ...(this.ctx.plantillas ?? []), ...(this.ctx.escenas ?? []), ...(this.ctx.sonidos ?? []), ...(this.ctx.animaciones ?? []), ...(this.ctx.imagenes ?? []),
+        ],
+      },
       comoCrearla,
     );
   }

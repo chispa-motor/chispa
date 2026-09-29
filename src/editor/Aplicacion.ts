@@ -392,6 +392,8 @@ export class Aplicacion {
           [[tecla('Ctrl'), '+', tecla('Z'), ' / ', tecla('Ctrl'), '+', tecla('Y')], 'Deshacer / rehacer'],
           [[tecla('Ctrl'), '+', tecla('S')], 'Guardar (descargar el proyecto)'],
           [[tecla('Ctrl'), '+', tecla('D')], 'Duplicar el objeto seleccionado'],
+          [[tecla('Ctrl'), '+', tecla('C'), ' / ', tecla('Ctrl'), '+', tecla('V')], 'Copiar y pegar objetos (también de una escena a otra)'],
+          [[tecla('Mayús'), ' + arrastrar'], 'Con el pincel: pintar un rectángulo de casillas'],
           [[tecla('Supr')], 'Borrar el objeto seleccionado'],
           [[tecla('Flechas')], 'Mover el objeto seleccionado (con Mayús, de 10 en 10)'],
           [[tecla('Espacio'), ' + arrastrar'], 'Mover la vista de la escena (o arrastra el fondo)'],
@@ -445,6 +447,10 @@ export class Aplicacion {
       } else if (ctrl && k === 'd') {
         ev.preventDefault();
         this.estado.duplicarSeleccionado();
+      } else if (ctrl && k === 'c') {
+        if (this.estado.copiarSeleccionado()) notificar('Copiado. Pégalo con Ctrl+V (también en otra escena).', 'ok');
+      } else if (ctrl && k === 'v') {
+        if (this.estado.pegar() < 0) notificar('No hay nada copiado. Selecciona un objeto y pulsa Ctrl+C.');
       }
     });
   }

@@ -9,7 +9,7 @@
  *     mientras escribes (sin tener que pulsar Ejecutar).
  *   - GUÍA: toda la documentación de Chispa, con buscador.
  */
-import { DOC_ESPECIALES, DOC_EVENTOS, DOC_FUNCIONES, DOC_MODULOS, DOC_OBJETO, DOC_PALABRAS, type Doc } from '../../chispa/api/documentacion';
+import { DOC_ESPECIALES, DOC_EVENTOS, DOC_FUNCIONES, DOC_MODULOS, DOC_OBJETO, DOC_PALABRAS, DOC_VALORES, RECETAS, type Doc, type Receta } from '../../chispa/api/documentacion';
 import { explicarPila, type Diagnostico } from '../../chispa/errores/ErrorChispa';
 import { revisarProyecto } from '../../proyecto/Revision';
 import { normalizar } from '../../utilidades/texto';
@@ -180,12 +180,17 @@ export class PanelInferior {
         ['Variables especiales', DOC_ESPECIALES],
         ['Objetos (yo.…, otro.…)', DOC_OBJETO],
         ...DOC_MODULOS.map((m): [string, Doc[]] => [`${m.nombre} — ${m.descripcion}`, m.miembros]),
+        ...DOC_VALORES.map((v): [string, Doc[]] => [`${v.tipo} — ${v.descripcion}`, v.miembros]),
       ];
+      // Primero las recetas («¿cómo hago...?»): es lo que más se busca al empezar
+      const recetas = RECETAS.filter((r) => !q || [r.titulo, r.descripcion, r.codigo].some((t) => normalizar(t).includes(q)));
+      const bloqueRecetas = recetas.length ? h('section', { class: 'grupo-guia recetas' }, h('h3', {}, 'Recetas: ¿cómo hago...?'), recetas.map((r) => this.receta(r))) : null;
       const bloques = grupos
         .map(([titulo, docs]) => [titulo, docs.filter(coincide)] as const)
         .filter(([, docs]) => docs.length)
         .map(([titulo, docs]) => h('section', { class: 'grupo-guia' }, h('h3', {}, titulo), docs.map((d) => this.ficha(d))));
-      rellenar(resultados, bloques.length ? bloques : h('p', { class: 'nota' }, `No encuentro "${this.busqueda}". Prueba con otra palabra.`));
+      const todo = [bloqueRecetas, ...bloques].filter((b): b is HTMLElement => !!b);
+      rellenar(resultados, todo.length ? todo : h('p', { class: 'nota' }, `No encuentro "${this.busqueda}". Prueba con otra palabra.`));
     };
     buscador.addEventListener('input', () => {
       this.busqueda = buscador.value;
@@ -193,6 +198,19 @@ export class PanelInferior {
     });
     pintar();
     rellenar(this.guia, h('div', { class: 'cabecera-guia' }, icono('lupa', 16), buscador), resultados);
+  }
+
+  private receta(r: Receta): HTMLElement {
+    return h('article', { class: 'ficha-guia receta' },
+      h('strong', { class: 'titulo-receta' }, r.titulo),
+      h('p', {}, r.descripcion),
+      h('div', { class: 'ejemplo' },
+        h('pre', {}, r.codigo),
+        botonIcono('copiar', 'Copiar el código', () => {
+          navigator.clipboard?.writeText(r.codigo).then(() => notificar('Código copiado: pégalo en tu script con Ctrl+V', 'ok'), () => notificar('No he podido copiar', 'error'));
+        }, undefined, 'pequeno copiar-ejemplo'),
+      ),
+    );
   }
 
   private ficha(d: Doc): HTMLElement {

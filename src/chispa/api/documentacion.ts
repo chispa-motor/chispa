@@ -69,6 +69,7 @@ export const DOC_EVENTOS: Doc[] = [
   d('cuando hago clic', 'evento', 'cuando hago clic:', 'Se ejecuta al hacer clic en cualquier sitio de la pantalla del juego.', 'cuando hago clic:\n    crear("Bola", raton.x, raton.y)', 'cuando hago clic:\n    '),
   d('cuando hago clic encima', 'evento', 'cuando hago clic encima:', 'Se ejecuta al hacer clic ENCIMA de este objeto. Sirve para hacer botones.', 'cuando hago clic encima:\n    escena.cambiar("Nivel1")', 'cuando hago clic encima:\n    '),
   d('cuando termina la animacion', 'evento', 'cuando termina la animacion:', 'Se ejecuta cuando termina una animación que no se repite.', 'cuando termina la animacion:\n    yo.animar("quieto")', 'cuando termina la animacion:\n    '),
+  d('cuando salgo de la pantalla', 'evento', 'cuando salgo de la pantalla:', 'Se ejecuta cuando el objeto sale de lo que se ve (por un borde de la pantalla). Sirve para borrar balas y enemigos que ya no se ven, o para perder si el jugador se cae.', 'cuando salgo de la pantalla:\n    destruir(yo)', 'cuando salgo de la pantalla:\n    '),
 ];
 
 // ═════════════════════════ Funciones ═════════════════════════
@@ -153,7 +154,7 @@ export const DOC_MODULOS: DocModulo[] = [
     ejemplo: 'escena.camara.seguir(yo)\nescena.camara.zoom = 2',
     miembros: [
       d('seguir', 'accion', 'escena.camara.seguir(objeto)', 'La cámara sigue a un objeto (suavemente).', 'escena.camara.seguir(yo)', 'seguir(${1:yo})'),
-      d('limites', 'accion', 'escena.camara.limites(izquierda, abajo, derecha, arriba)', 'La cámara no enseña nada fuera de esta zona.', 'escena.camara.limites(0, 0, 3000, 540)', 'limites(${1:0}, ${2:0}, ${3:3000}, ${4:540})'),
+      d('limites', 'accion', 'escena.camara.limites(izquierda, abajo, derecha, arriba)', 'La cámara no enseña nada fuera de esta zona. También se le puede dar un mapa de casillas (no sale de él), o nada para quitar los límites. En el editor: Cámara > «no salir del mapa».', 'escena.camara.limites(buscar("Mapa"))', 'limites(${1:0}, ${2:0}, ${3:3000}, ${4:540})'),
       d('temblar', 'accion', 'escena.camara.temblar(intensidad, segundos)', 'Hace temblar la pantalla (explosiones, golpes).', 'escena.camara.temblar(10, 0.3)', 'temblar(${1:8}, ${2:0.3})'),
       d('zoom', 'propiedad', 'escena.camara.zoom', '1 = normal, 2 = más cerca (todo el doble de grande), 0.5 = más lejos.', 'escena.camara.zoom = 2'),
       d('x', 'propiedad', 'escena.camara.x', 'Centro de la cámara (horizontal).', 'escena.camara.x = 480'),
@@ -252,6 +253,7 @@ export const DOC_OBJETO: Doc[] = [
   d('mover', 'accion', 'yo.mover(x, y)', 'Mueve el objeto esa cantidad de píxeles.', 'yo.mover(10, 0)', 'mover(${1:10}, ${2:0})'),
   d('rotar', 'accion', 'yo.rotar(grados)', 'Gira el objeto esos grados.', 'yo.rotar(90 * delta)', 'rotar(${1:90})'),
   d('empujar', 'accion', 'yo.empujar(x, y)', 'Da un golpe: cambia la velocidad según la masa (los pesados se mueven menos).', 'otro.empujar(500, 200)', 'empujar(${1:500}, ${2:0})'),
+  d('moverConFlechas', 'accion', 'yo.moverConFlechas(rapidez)', 'Mueve el objeto con las flechas (o W A S D) a esa rapidez en píxeles por segundo. Si el objeto cae (tiene física y hay gravedad), solo va a izquierda y derecha; si no, en las cuatro direcciones. Las imágenes miran hacia donde anda. Úsalo en "cuando cada fotograma".', 'cuando cada fotograma:\n    yo.moverConFlechas(300)', 'moverConFlechas(${1:300})'),
   d('moverHacia', 'accion', 'yo.moverHacia(destino, rapidez)', 'Avanza hacia otro objeto o posición a esa rapidez (píxeles/segundo), sin pasarse. Devuelve verdadero al llegar.', 'yo.moverHacia(buscar("Jugador"), 80)', 'moverHacia(${1:buscar("Jugador")}, ${2:100})'),
   d('mirarA', 'accion', 'yo.mirarA(destino)', 'Gira el objeto para que mire hacia otro objeto o posición.', 'yo.mirarA(raton.posicion)', 'mirarA(${1:otro})'),
   d('direccionA', 'accion', 'yo.direccionA(destino)', 'Un vector de largo 1 que apunta hacia otro objeto o posición. Útil para disparar.', 'bala.velocidad = yo.direccionA(raton.posicion) * 500', 'direccionA(${1:otro})'),
@@ -266,6 +268,135 @@ export const DOC_OBJETO: Doc[] = [
   d('columnaEn', 'accion', 'mapa.columnaEn(x)', 'Solo en mapas: la columna que hay en esa X del mundo.', 'variable c = mapa.columnaEn(yo.x)', 'columnaEn(${1:yo.x})'),
   d('filaEn', 'accion', 'mapa.filaEn(y)', 'Solo en mapas: la fila que hay en esa Y del mundo.', 'variable f = mapa.filaEn(yo.y)', 'filaEn(${1:yo.y})'),
   d('centroDeCasilla', 'accion', 'mapa.centroDeCasilla(columna, fila)', 'Solo en mapas: el centro de una casilla, en el mundo (vector).', 'yo.posicion = mapa.centroDeCasilla(2, 5)', 'centroDeCasilla(${1:0}, ${2:0})'),
+];
+
+// ═════════════════════════ Listas, textos, tablas y vectores ═════════════════════════
+
+/** Lo que tienen los valores del lenguaje (no los objetos del juego): lista.añadir(), texto.mayusculas... */
+export const DOC_VALORES: { tipo: string; descripcion: string; miembros: Doc[] }[] = [
+  {
+    tipo: 'lista',
+    descripcion: 'Una lista de valores en orden, entre corchetes: [1, 2, 3]. La primera posición es la 1.',
+    miembros: [
+      d('longitud', 'propiedad', 'lista.longitud', 'Cuántos elementos tiene la lista.', 'mostrar(enemigos.longitud)'),
+      d('añadir', 'accion', 'lista.añadir(valor)', 'Pone un valor al final de la lista.', 'colores.añadir("rosa")', 'añadir(${1})'),
+      d('quitar', 'accion', 'lista.quitar(posicion)', 'Quita el elemento de esa posición (la primera es la 1) y lo devuelve.', 'variable primero = cola.quitar(1)', 'quitar(${1:1})'),
+    ],
+  },
+  {
+    tipo: 'texto',
+    descripcion: 'Un texto entre comillas: "Hola". Con + se une a otros textos y números.',
+    miembros: [
+      d('longitud', 'propiedad', 'texto.longitud', 'Cuántas letras tiene el texto.', 'mostrar(nombre.longitud)'),
+      d('mayusculas', 'propiedad', 'texto.mayusculas', 'El mismo texto en MAYÚSCULAS.', 'yo.texto = nombre.mayusculas'),
+      d('minusculas', 'propiedad', 'texto.minusculas', 'El mismo texto en minúsculas.', 'si respuesta.minusculas == "si":\n    mostrar("Vale")'),
+    ],
+  },
+  {
+    tipo: 'tabla',
+    descripcion: 'Datos con nombre, entre llaves: {vida: 3, nombre: "Ana"}. Se leen con un punto: jugador.vida.',
+    miembros: [
+      d('claves', 'propiedad', 'tabla.claves', 'Una lista con los nombres de todas las claves, en el orden en que se añadieron.', 'para cada k en inventario.claves:\n    mostrar(k)'),
+      d('quitar', 'accion', 'tabla.quitar("clave")', 'Quita una clave de la tabla y devuelve su valor.', 'inventario.quitar("llave")', 'quitar("${1}")'),
+    ],
+  },
+  {
+    tipo: 'vector',
+    descripcion: 'Dos números juntos (una posición, una velocidad...): vector(3, 4).',
+    miembros: [
+      d('x', 'propiedad', 'vector.x', 'El número horizontal.', 'mostrar(yo.velocidad.x)'),
+      d('y', 'propiedad', 'vector.y', 'El número vertical (positivo = hacia arriba).', 'si yo.velocidad.y < 0:\n    mostrar("Cayendo")'),
+      d('longitud', 'propiedad', 'vector.longitud', 'Lo largo que es (por ejemplo, la rapidez de una velocidad).', 'mostrar(yo.velocidad.longitud)'),
+      d('normalizado', 'propiedad', 'vector.normalizado', 'Un vector con la misma dirección pero de largo 1.', 'variable dir = (destino - yo.posicion).normalizado'),
+    ],
+  },
+];
+
+// ═════════════════════════ Recetas ═════════════════════════
+
+/**
+ * RECETAS: respuestas a «¿cómo hago...?». Son lo primero que se busca al
+ * hacer el primer juego (salieron de la prueba de principiante: ver
+ * PROBLEMAS_PRINCIPIANTE.md). Un test comprueba que todo su código es correcto.
+ */
+export interface Receta {
+  titulo: string;
+  /** Qué hace falta en el editor y dónde va el código. */
+  descripcion: string;
+  codigo: string;
+}
+
+export const RECETAS: Receta[] = [
+  {
+    titulo: 'Moverse con las flechas',
+    descripcion: 'En el script del jugador. Si tiene Física y hay gravedad, anda a izquierda y derecha; en una escena con gravedad 0 (vista desde arriba) o sin Física, en las cuatro direcciones. También funciona con W A S D.',
+    codigo: 'cuando cada fotograma:\n    yo.moverConFlechas(300)',
+  },
+  {
+    titulo: 'Saltar',
+    descripcion: 'El jugador necesita Física (Propiedades > Física) y algo debajo para apoyarse: un suelo sin Física, o un mapa de casillas. Solo salta si está en el suelo.',
+    codigo: 'cuando se pulsa "espacio", "arriba":\n    yo.saltar(700)',
+  },
+  {
+    titulo: 'Recoger monedas y contar puntos',
+    descripcion: 'En el script del jugador. Las monedas llevan Colisión con «sólido» quitado, para atravesarlas. Si duplicas la moneda (Ctrl+D), las copias se llaman Moneda2, Moneda3... y «cuando toco Moneda» vale para todas.',
+    codigo: 'cuando empieza:\n    juego.puntos = 0\n\ncuando toco Moneda:\n    destruir(otro)\n    juego.puntos += 1\n    sonido.tono(880, 0.1)',
+  },
+  {
+    titulo: 'Enseñar los puntos (o la vida) en la pantalla',
+    descripcion: 'Añade un Texto (ya sale pegado a la pantalla) y ponle este script. «juego» guarda datos que ven todos los scripts; alguien tiene que darle valor primero (ver la receta anterior).',
+    codigo: 'cuando cada fotograma:\n    yo.texto = "Puntos: " + juego.puntos',
+  },
+  {
+    titulo: 'Disparar',
+    descripcion: 'Crea la bala (un objeto pequeño con su script) y pulsa «Plantilla» para convertirla en plantilla. La nave la crea con crear("Bala"): sin posición, sale donde está la nave.',
+    codigo: '# En el script de la nave:\ncuando se pulsa "espacio":\n    crear("Bala")\n\n# En el script de la Bala:\ncuando cada fotograma:\n    yo.y += 600 * delta\n\ncuando salgo de la pantalla:\n    destruir(yo)',
+  },
+  {
+    titulo: 'Enemigos que caen desde arriba',
+    descripcion: 'Un objeto vacío (Añadir > Objeto vacío) con este script crea un enemigo cada segundo en un sitio al azar. El Enemigo es una plantilla con su propio script para bajar.',
+    codigo: '# En el script del objeto vacío:\ncuando cada 1 segundo:\n    crear("Enemigo", aleatorio(50, pantalla.ancho - 50), pantalla.alto + 40)\n\n# En el script del Enemigo:\ncuando cada fotograma:\n    yo.y -= 200 * delta\n\ncuando salgo de la pantalla:\n    destruir(yo)',
+  },
+  {
+    titulo: 'Explosión al acertar',
+    descripcion: 'En el script de la Bala. particulas() sin posición sale donde está el objeto; con otro.x y otro.y, donde estaba el enemigo.',
+    codigo: 'cuando toco Enemigo:\n    particulas("explosion", otro.x, otro.y)\n    destruir(otro)\n    destruir(yo)\n    juego.puntos += 1',
+  },
+  {
+    titulo: 'Pantalla de fin y volver a empezar',
+    descripcion: 'Crea otra escena llamada Fin (botón + junto al nombre de la escena) con un Texto y un Botón. Al volver a Principal, recuerda poner los puntos a 0 en «cuando empieza».',
+    codigo: '# En el script del Enemigo:\ncuando toco Nave:\n    escena.cambiar("Fin")\n\n# En el script del Botón de la escena Fin:\ncuando hago clic encima:\n    escena.cambiar("Principal")',
+  },
+  {
+    titulo: 'Caer al vacío y volver a empezar',
+    descripcion: 'En el script del jugador. «cuando salgo de la pantalla» pasa cuando deja de verse (si la cámara le sigue, solo cuando la cámara ya no puede bajar más: usa «no salir del mapa»).',
+    codigo: 'cuando salgo de la pantalla:\n    escena.reiniciar()',
+  },
+  {
+    titulo: 'Cámara que sigue al jugador',
+    descripcion: 'Lo más fácil es en el editor: sin nada seleccionado, en Propiedades > Cámara, elige al jugador en «seguir a» y marca «no salir del mapa». Desde el código:',
+    codigo: 'cuando empieza:\n    escena.camara.seguir(yo)\n    escena.camara.limites(buscar("Mapa"))',
+  },
+  {
+    titulo: 'Una puerta que lleva a otra escena',
+    descripcion: 'En el mapa de casillas, crea un tipo de casilla «puerta» y píntala. En el script del jugador (la otra escena se crea con el botón + junto al nombre de la escena):',
+    codigo: 'cuando toco puerta:\n    escena.cambiar("Nivel2")',
+  },
+  {
+    titulo: 'Un enemigo que te persigue',
+    descripcion: 'En el script del enemigo.',
+    codigo: 'cuando cada fotograma:\n    variable jugador = buscar("Jugador")\n    si jugador != nulo:\n        yo.moverHacia(jugador, 120)',
+  },
+  {
+    titulo: 'Cuenta atrás',
+    descripcion: 'En el script de un Texto.',
+    codigo: 'variable quedan = 30\n\ncuando cada 1 segundo:\n    quedan -= 1\n    yo.texto = "Tiempo: " + quedan\n    si quedan == 0:\n        escena.cambiar("Fin")',
+  },
+  {
+    titulo: 'Guardar el récord',
+    descripcion: 'Los datos guardados siguen ahí aunque cierres el juego. Por ejemplo, en la escena Fin:',
+    codigo: 'cuando empieza:\n    variable record = cargar("record", 0)\n    si juego.puntos > record:\n        guardar("record", juego.puntos)\n        record = juego.puntos\n    yo.texto = "Récord: " + record',
+  },
 ];
 
 // ═════════════════════════ Búsqueda ═════════════════════════
@@ -300,13 +431,18 @@ export function buscarDoc(ruta: string): Doc | null {
   const dueno = partes.slice(0, -1).join('.');
   const modulo = DOC_MODULOS.find((m) => normalizar(m.nombre) === dueno);
   if (modulo) return modulo.miembros.find((x) => igual(x.nombre, miembro)) ?? null;
-  // Cualquier otra cosa (yo, otro, una variable con un objeto...): propiedades de objeto
-  return DOC_OBJETO.find((x) => igual(x.nombre, miembro)) ?? null;
+  // Cualquier otra cosa (yo, otro, una variable con un objeto...): propiedades de objeto,
+  // y si no, lo que tienen las listas, textos, tablas y vectores (colores.añadir...)
+  return DOC_OBJETO.find((x) => igual(x.nombre, miembro)) ?? DOC_VALORES.flatMap((v) => v.miembros).find((x) => igual(x.nombre, miembro)) ?? null;
 }
 
 /** Los miembros que se pueden escribir después de "algo." (para el autocompletado). */
 export function miembrosDe(dueno: string): Doc[] {
   const n = normalizar(dueno);
   const modulo = DOC_MODULOS.find((m) => normalizar(m.nombre) === n);
-  return modulo ? modulo.miembros : DOC_OBJETO;
+  if (modulo) return modulo.miembros;
+  if (n === 'yo' || n === 'otro') return DOC_OBJETO;
+  // Una variable: puede ser un objeto, una lista, un texto... Damos todo (sin repetir nombres)
+  const vistos = new Set(DOC_OBJETO.map((x) => x.nombre));
+  return [...DOC_OBJETO, ...DOC_VALORES.flatMap((v) => v.miembros).filter((x) => !vistos.has(x.nombre) && (vistos.add(x.nombre), true))];
 }

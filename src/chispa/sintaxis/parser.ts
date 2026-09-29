@@ -483,7 +483,7 @@ class Parser {
       'Los eventos que existen son:\n' +
       '    cuando empieza:\n    cuando cada fotograma:\n    cuando cada 2 segundos:\n    cuando pasen 3 segundos:\n' +
       '    cuando se pulsa "espacio":   (también "se mantiene" y "se suelta")\n' +
-      '    cuando toco Enemigo:\n    cuando dejo de tocar Enemigo:\n    cuando hago clic:\n    cuando hago clic encima:\n    cuando termina la animacion:';
+      '    cuando toco Enemigo:\n    cuando dejo de tocar Enemigo:\n    cuando hago clic:\n    cuando hago clic encima:\n    cuando termina la animacion:\n    cuando salgo de la pantalla:';
 
     if (this.esPalabra('empieza') || this.esPalabra('empiece') || this.esPalabra('comienza')) {
       this.avanzar();
@@ -542,6 +542,14 @@ class Parser {
       this.avanzar();
       return { tipo: 'animacion' };
     }
+    if (this.esPalabra('salgo') || this.esPalabra('sale')) {
+      this.avanzar();
+      if (this.esPalabra('de')) this.avanzar();
+      if (this.esPalabra('la')) this.avanzar();
+      if (!this.esPalabra('pantalla')) this.error("esperaba 'cuando salgo de la pantalla:'.");
+      this.avanzar();
+      return { tipo: 'pantalla' };
+    }
     let dejar = false;
     if (this.esPalabra('dejo')) {
       this.avanzar();
@@ -550,7 +558,7 @@ class Parser {
       if (!this.esPalabra('tocar')) this.error("esperaba 'cuando dejo de tocar ...'.");
       dejar = true;
     } else if (!this.esPalabra('toco')) {
-      const parecido = sugerir(t.original, ['empieza', 'toco', 'hago', 'dejo', 'se', 'cada', 'pasen', 'termina']);
+      const parecido = sugerir(t.original, ['empieza', 'toco', 'hago', 'dejo', 'se', 'cada', 'pasen', 'termina', 'salgo']);
       this.error(`no conozco el evento 'cuando ${t.original}'.`, parecido ? `¿Querías decir 'cuando ${parecido} ...'?\n${ayuda}` : ayuda);
     }
     this.avanzar(); // "toco" o "tocar"

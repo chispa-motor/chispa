@@ -18,7 +18,7 @@ import type { Motor, EscenaActiva } from '../motor/Motor';
 import type { Renderizador } from '../motor/Renderizador';
 import { Vector2 } from '../motor/Vector2';
 import { normalizar } from '../utilidades/texto';
-import { Camara } from './Camara';
+import { Camara, type Limites } from './Camara';
 import { ObjetoJuego } from './ObjetoJuego';
 import { Particulas } from './Particulas';
 import { SistemaFisico } from './SistemaFisico';
@@ -188,6 +188,19 @@ export class Escena implements EscenaActiva {
     // 2. La interfaz, pegada a la pantalla: (0,0) es la esquina inferior izquierda
     interfaz.sort((a, b) => a.capa - b.capa);
     for (const s of interfaz) s.dibujarEn(r, s.objeto.posicion.x, r.alto - s.objeto.posicion.y);
+  }
+
+  /** La zona que ocupan todos los mapas de casillas (para que la cámara no salga de ellos). */
+  limitesDeLosMapas(): Limites | null {
+    let r: Limites | null = null;
+    for (const o of this.objetos) {
+      const l = o.destruido ? null : o.obtener(MapaCasillas)?.limites();
+      if (!l) continue;
+      r = r
+        ? { izquierda: Math.min(r.izquierda, l.izquierda), abajo: Math.min(r.abajo, l.abajo), derecha: Math.max(r.derecha, l.derecha), arriba: Math.max(r.arriba, l.arriba) }
+        : { ...l };
+    }
+    return r;
   }
 
   /** Destruye todo (al parar, reiniciar o cambiar de escena). */

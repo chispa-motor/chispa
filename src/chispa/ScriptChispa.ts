@@ -30,6 +30,7 @@ import { ErrorChispa } from './errores/ErrorChispa';
 import type { Ejecucion, Interprete } from './ejecucion/interprete';
 import { referencia } from './api/objetos';
 import { nombreTipo } from './ejecucion/valores';
+import { Sprite } from '../objetos/componentes/Sprite';
 import { ErrorMotor } from '../motor/Errores';
 import { Componente } from '../objetos/Componente';
 import type { ObjetoJuego } from '../objetos/ObjetoJuego';
@@ -173,6 +174,15 @@ export class ScriptChispa extends Componente {
             if (ocurre) this.lanzarEvento(ev, undefined, e.modo === 'mantiene' ? ev.clave : null);
             break;
           }
+          case 'pantalla':
+            // Se lanza al pasar de "dentro de lo que se ve" a "fuera". Un objeto que
+            // aparece fuera (un enemigo que entra desde arriba) no cuenta hasta que entra.
+            if (this.enPantalla()) ev.acumulado = 1;
+            else if (ev.acumulado === 1) {
+              ev.acumulado = 0;
+              this.lanzarEvento(ev);
+            }
+            break;
           case 'clic':
             // "cuando hago clic encima" lo reparte la Escena (alHacerClic): aquí solo el clic en cualquier sitio
             if (!e.encima && entrada.ratonSePulso('izquierdo')) this.lanzarEvento(ev);
@@ -252,10 +262,21 @@ export class ScriptChispa extends Componente {
   /** Avanza un hilo. Devuelve verdadero si se ha quedado dormido (sigue vivo). */
   private avanzarHilo(hilo: Hilo): boolean {
     this.interprete.reiniciarContadorDeVueltas();
-    const r = hilo.generador.next();
+    const r = this.comoObjetoActual(() => hilo.generador.next());
     if (r.done || this.objeto.destruido) return false;
     hilo.despertarEn = this.motor.tiempo.total + r.value.segundos;
     return true;
+  }
+
+  /** Ejecuta algo sabiendo que "yo" es este objeto (y deja como estaba el anterior). */
+  private comoObjetoActual<T>(fn: () => T): T {
+    const anterior = this.interprete.objetoActual;
+    this.interprete.objetoActual = this.objeto;
+    try {
+      return fn();
+    } finally {
+      this.interprete.objetoActual = anterior;
+    }
   }
 
   private despertarHilos(): void {
@@ -268,9 +289,19 @@ export class ScriptChispa extends Componente {
     }
   }
 
+  /** ¿Se ve alguna parte del objeto en la pantalla? (los objetos de interfaz, siempre) */
+  private enPantalla(): boolean {
+    const escena = this.objeto.escena;
+    if (!escena || this.objeto.obtener(Sprite)?.fijo) return true;
+    const p = this.objeto.posicion;
+    const caja = escena.cajaDe(this.objeto) ?? { izquierda: p.x, derecha: p.x, abajo: p.y, arriba: p.y };
+    const v = escena.camara.zonaVisible();
+    return caja.derecha >= v.izquierda && caja.izquierda <= v.derecha && caja.arriba >= v.abajo && caja.abajo <= v.arriba;
+  }
+
   /** Evalúa una expresión al momento (sin permitir esperar). */
   private evaluarYa(expr: Expresion) {
-    const r = this.interprete.evaluar(expr, this.entorno).next();
+    const r = this.comoObjetoActual(() => this.interprete.evaluar(expr, this.entorno).next());
     if (!r.done) throw new ErrorChispa(expr.pos, 'aquí no se puede usar esperar().');
     return r.value;
   }

@@ -4,7 +4,10 @@
  * que no existen. Y todo sin tildes (la forma oficial).
  */
 import { describe, expect, it } from 'vitest';
-import { DOC_ESPECIALES, DOC_EVENTOS, DOC_FUNCIONES, DOC_MODULOS, DOC_OBJETO, DOC_PALABRAS, buscarDoc } from '../src/chispa/api/documentacion';
+import { DOC_ESPECIALES, DOC_EVENTOS, DOC_FUNCIONES, DOC_MODULOS, DOC_OBJETO, DOC_PALABRAS, DOC_VALORES, RECETAS, buscarDoc, miembrosDe } from '../src/chispa/api/documentacion';
+import { METODOS_LISTA } from '../src/chispa/ejecucion/interprete';
+import { revisarScript } from '../src/proyecto/Revision';
+import { proyectoVacio } from '../src/proyecto/formato';
 import { globalesDelMotor } from '../src/proyecto/Revision';
 import { Anfitrion } from '../src/chispa/ejecucion/valores';
 import { PALABRAS_CLAVE } from '../src/chispa/lexico/tokens';
@@ -48,13 +51,13 @@ describe('Documentación de la API', () => {
   });
 
   it('todo está escrito sin tildes (forma oficial), salvo la ñ', () => {
-    const todas = [...DOC_PALABRAS, ...DOC_EVENTOS, ...DOC_FUNCIONES, ...DOC_ESPECIALES, ...DOC_OBJETO, ...DOC_MODULOS.flatMap((m) => m.miembros)];
+    const todas = [...DOC_PALABRAS, ...DOC_EVENTOS, ...DOC_FUNCIONES, ...DOC_ESPECIALES, ...DOC_OBJETO, ...DOC_MODULOS.flatMap((m) => m.miembros), ...DOC_VALORES.flatMap((v) => v.miembros)];
     const conTilde = todas.filter((d) => quitarTildes(d.nombre) !== d.nombre || quitarTildes(d.firma) !== d.firma || quitarTildes(d.insertar ?? '') !== (d.insertar ?? ''));
     expect(conTilde.map((d) => d.nombre)).toEqual([]);
   });
 
   it('todos los ejemplos son código Chispa bien escrito', () => {
-    const todas = [...DOC_PALABRAS, ...DOC_EVENTOS, ...DOC_FUNCIONES, ...DOC_ESPECIALES, ...DOC_OBJETO, ...DOC_MODULOS.flatMap((m) => m.miembros)];
+    const todas = [...DOC_PALABRAS, ...DOC_EVENTOS, ...DOC_FUNCIONES, ...DOC_ESPECIALES, ...DOC_OBJETO, ...DOC_MODULOS.flatMap((m) => m.miembros), ...DOC_VALORES.flatMap((v) => v.miembros)];
     for (const doc of todas) {
       // Algunos ejemplos son trozos (una condición sin cuerpo): les ponemos un cuerpo para comprobarlos
       let codigo = doc.ejemplo;
@@ -76,4 +79,32 @@ describe('Documentación de la API', () => {
     expect(buscarDoc('enemigo.enSuelo')?.nombre).toBe('enSuelo');
     expect(buscarDoc('Teclado.PULSADA')?.nombre).toBe('pulsada');
   });
+
+  it('los métodos de las listas están documentados (sin contar los otros nombres que también valen)', () => {
+    const lista = DOC_VALORES.find((v) => v.tipo === 'lista')!.miembros.map((d) => d.nombre).sort();
+    const reales = ['longitud', ...Object.keys(METODOS_LISTA).filter((k) => k !== 'anadir' && k !== 'agregar')].sort();
+    expect(lista).toEqual(reales);
+    expect(buscarDoc('colores.añadir')?.firma).toBe('lista.añadir(valor)');
+    expect(buscarDoc('nombre.mayusculas')?.tipo).toBe('propiedad');
+    // Después de "colores." se sugieren también los de las listas; después de "yo.", solo los de los objetos
+    expect(miembrosDe('colores').map((d) => d.nombre)).toContain('añadir');
+    expect(miembrosDe('yo').map((d) => d.nombre)).not.toContain('añadir');
+  });
+});
+
+describe('Recetas de la guía', () => {
+  // Un proyecto con todo lo que nombran las recetas
+  const p = proyectoVacio();
+  p.plantillas = { Bala: {}, Enemigo: {} };
+  p.escenas.Fin = { colorFondo: 'negro', objetos: [] };
+  p.escenas.Nivel2 = { colorFondo: 'negro', objetos: [] };
+  p.escenas.Principal.objetos = [{ nombre: 'Nave' }, { nombre: 'Jugador' }, { nombre: 'Moneda' }, { nombre: 'Mapa', mapa: { tamano: 32, tipos: { puerta: { solida: false } }, celdas: {} } }];
+
+  for (const r of RECETAS) {
+    it(r.titulo, () => {
+      const errores = revisarScript('receta.chs', r.codigo, p).filter((d) => d.gravedad === 'error');
+      expect(errores.map((d) => `${d.pos.linea}: ${d.mensaje}`)).toEqual([]);
+      expect(r.descripcion.length).toBeGreaterThan(10);
+    });
+  }
 });

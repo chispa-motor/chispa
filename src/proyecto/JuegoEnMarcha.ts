@@ -28,7 +28,7 @@ import { Fisica, GRAVEDAD_MUNDO } from '../objetos/componentes/Fisica';
 import { MapaCasillas } from '../objetos/componentes/MapaCasillas';
 import { Sprite } from '../objetos/componentes/Sprite';
 import { normalizar } from '../utilidades/texto';
-import { migrarProyecto, type DefObjeto, type DefProyecto } from './formato';
+import { migrarProyecto, tipoPorNombre, type DefObjeto, type DefProyecto } from './formato';
 import { comprobarRevision, revisarProyecto } from './Revision';
 
 export interface OpcionesJuego {
@@ -123,16 +123,16 @@ export class JuegoEnMarcha implements ContextoJuego {
     this.escena.gravedad = def.gravedad ?? GRAVEDAD_MUNDO;
     this.motor.colorFondo = def.colorFondo;
 
+    // La cámara empieza siempre como diga ESTA escena (nada se queda de la anterior)
     const cam = this.escena.camara;
-    if (def.camara) {
-      cam.zoom = def.camara.zoom ?? 1;
-      cam.limites = def.camara.limites ? { ...def.camara.limites } : null;
-      cam.posicion = new Vector2(def.camara.x ?? cam.anchoPantalla / 2, def.camara.y ?? cam.altoPantalla / 2);
-    }
+    cam.zoom = def.camara?.zoom ?? 1;
+    cam.limites = def.camara?.limites ? { ...def.camara.limites } : null;
+    cam.posicion = new Vector2(def.camara?.x ?? cam.anchoPantalla / 2, def.camara?.y ?? cam.altoPantalla / 2);
 
     // Primero creamos todos y DESPUÉS los iniciamos: así en "cuando empieza"
     // cualquier script puede buscar("...") a otro objeto de la escena.
     for (const o of def.objetos) this.instanciar(o, o.nombre ?? o.tipo ?? 'Objeto');
+    if (def.camara?.limitarAlMapa) cam.limites = this.escena.limitesDeLosMapas();
     if (def.camara?.seguir) {
       const objetivo = this.escena.buscar(def.camara.seguir);
       if (objetivo) cam.seguir(objetivo);
@@ -250,7 +250,7 @@ export class JuegoEnMarcha implements ContextoJuego {
  * También lo usa el editor para dibujar la escena mientras la editas.
  */
 export function crearObjetoDesdeDefinicion(def: DefObjeto, nombrePorDefecto: string, proyecto: DefProyecto): ObjetoJuego {
-  const o = new ObjetoJuego(def.nombre ?? nombrePorDefecto, def.tipo ?? nombrePorDefecto);
+  const o = new ObjetoJuego(def.nombre ?? nombrePorDefecto, def.tipo ?? tipoPorNombre(def.nombre ?? nombrePorDefecto));
   o.en(def.x ?? 0, def.y ?? 0);
   o.transformacion.rotacion = def.rotacion ?? 0;
   if (def.escala !== undefined) o.transformacion.escala.x = o.transformacion.escala.y = def.escala;

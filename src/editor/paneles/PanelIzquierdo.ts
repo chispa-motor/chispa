@@ -125,7 +125,8 @@ export class PanelIzquierdo {
     );
     return [
       selector,
-      h('div', { class: 'titulo-lista' }, h('span', {}, `Objetos (${objetos.length})`)),
+      h('div', { class: 'titulo-lista' }, h('span', {}, `Objetos (${objetos.length})`),
+        e.portapapeles ? botonIcono('copiar', `Pegar "${e.portapapeles.nombre ?? 'objeto'}" en esta escena (Ctrl+V)`, () => e.pegar(), 'Pegar', 'pequeno') : null),
       objetos.length ? lista : h('p', { class: 'nota' }, 'La escena está vacía. Añade un objeto con los botones de abajo.'),
       h('div', { class: 'titulo-lista' }, h('span', {}, 'Añadir')),
       anadir,

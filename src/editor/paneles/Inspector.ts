@@ -8,7 +8,7 @@
  * o quitarlas (como los componentes de Unity).
  */
 import { NOMBRES_COLORES } from '../../motor/Color';
-import type { DefObjeto } from '../../proyecto/formato';
+import { tipoPorNombre, type DefObjeto } from '../../proyecto/formato';
 import type { EstadoEditor, RefObjeto } from '../estado/EstadoEditor';
 import type { VistaEscena } from '../escena/VistaEscena';
 import { botonIcono, h, icono, rellenar } from '../interfaz/dom';
@@ -70,7 +70,11 @@ export class Inspector {
     );
     const info = esPlantilla
       ? h('p', { class: 'nota' }, 'Plantilla: no está en la escena. Créala desde el código con ', h('code', {}, `crear("${nombre}")`), ' o arrástrala a la escena.')
-      : def.tipo && def.tipo !== def.nombre ? h('p', { class: 'nota' }, 'Copia de la plantilla ', h('code', {}, def.tipo)) : null;
+      : def.tipo && def.tipo !== def.nombre
+        ? h('p', { class: 'nota' }, 'Copia de la plantilla ', h('code', {}, def.tipo), '.')
+        : /\d$/.test(nombre) && tipoPorNombre(nombre) !== nombre
+          ? h('p', { class: 'nota' }, 'Tipo: ', h('code', {}, tipoPorNombre(nombre)), `. "cuando toco ${tipoPorNombre(nombre)}" vale para todas las copias.`)
+          : null;
 
     const partes: (HTMLElement | null)[] = [cabecera, info];
 
@@ -181,9 +185,14 @@ export class Inspector {
     // Acciones
     partes.push(h('div', { class: 'acciones-objeto' },
       esPlantilla ? null : botonIcono('copiar', 'Duplicar (Ctrl+D)', () => e.duplicarSeleccionado(), 'Duplicar'),
-      esPlantilla ? null : botonIcono('plantilla', 'Guardar una copia como plantilla, para crearla desde el código con crear("…")', () => {
+      esPlantilla ? null : botonIcono('copiar', 'Copiar (Ctrl+C), para pegarlo en otra escena con Ctrl+V', () => {
+        if (e.copiarSeleccionado()) notificar(`"${nombre}" copiado. Pégalo con Ctrl+V (también en otra escena).`, 'ok');
+      }, 'Copiar'),
+      esPlantilla ? null : botonIcono('plantilla', 'Convertir en plantilla: sale de la escena y se crea desde el código con crear("…"), como las balas o los enemigos que aparecen', async () => {
+        const base = nombre.replace(/\d+$/, '') || nombre;
+        if (!(await confirmar('Convertir en plantilla', `"${nombre}" saldrá de la escena y pasará a Proyecto > Plantillas. Desde el código lo crearás con crear("${base}"). Para poner copias en la escena, arrastra la plantilla desde el panel Proyecto.`, 'Convertir'))) return;
         const n = e.convertirEnPlantilla(ref);
-        if (n) notificar(`Plantilla "${n}" creada. Úsala con crear("${n}")`, 'ok');
+        if (n) notificar(`Plantilla "${n}" lista. Úsala con crear("${n}")`, 'ok');
       }, 'Plantilla'),
       botonIcono('basura', 'Borrar (Supr)', async () => {
         if (await confirmar('Borrar', `¿Borrar "${nombre}"?`, 'Borrar', true)) e.borrarSeleccionado();
@@ -320,12 +329,13 @@ export class Inspector {
       ]),
       seccion('Cámara', [
         campoLista('seguir a', 'camara.seguir', esc.camara?.seguir ?? '', [['', '(nadie)'], ...nombres.map((n): [string, string] => [n, n])], (v) => e.cambiarEscenaPropiedad('camara.seguir', v || undefined), 'La cámara sigue a este objeto (desde el código: escena.camara.seguir(yo))'),
+        campoCasilla('no salir del mapa', 'camara.limitarAlMapa', esc.camara?.limitarAlMapa ?? false, (v) => e.cambiarEscenaPropiedad('camara.limitarAlMapa', v), 'La cámara no enseña nada fuera de los mapas de casillas de la escena (no se ve el vacío de los bordes)'),
         campoNumero('zoom', 'camara.zoom', esc.camara?.zoom ?? 1, (v) => e.cambiarEscenaPropiedad('camara.zoom', v ?? 1), { paso: 0.1, min: 0.1, max: 10, ayuda: '1 = normal, 2 = todo el doble de grande' }),
         h('div', { class: 'dos-columnas' },
           campoNumero('centro x', 'camara.x', esc.camara?.x, (v) => e.cambiarEscenaPropiedad('camara.x', v), { vacio: String(e.proyecto.ancho / 2), ayuda: 'Punto al que mira la cámara al empezar' }),
           campoNumero('centro y', 'camara.y', esc.camara?.y, (v) => e.cambiarEscenaPropiedad('camara.y', v), { vacio: String(e.proyecto.alto / 2), ayuda: 'Punto al que mira la cámara al empezar' }),
         ),
-      ], { plegada: true }),
+      ]),
       seccion('Proyecto', [
         campoTexto('nombre', 'proyecto.nombre', e.proyecto.nombre, (v) => e.renombrarProyecto(v), 'Nombre del juego (sale en el título de la página al exportar)'),
         h('div', { class: 'dos-columnas' },

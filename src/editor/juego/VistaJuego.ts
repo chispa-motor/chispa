@@ -27,8 +27,13 @@ export class VistaJuego {
   private intervalo = 0;
   private ampliada = false;
 
+  /** Aviso cuando el juego está en marcha pero las teclas van a otro sitio (al código, a la escena...). */
+  private avisoFoco = h('button', { class: 'aviso-foco', hidden: true, onclick: () => this.enfocar() }, 'Haz clic aquí para jugar con el teclado');
+
   constructor() {
-    this.elemento = h('div', { class: 'vista-juego' }, this.pantalla, this.barraEstado);
+    this.elemento = h('div', { class: 'vista-juego' }, this.pantalla, this.avisoFoco, this.barraEstado);
+    document.addEventListener('focusin', () => this.actualizarAvisoFoco());
+    document.addEventListener('focusout', () => setTimeout(() => this.actualizarAvisoFoco()));
     this.mostrarEspera();
     // Escape sale de la vista ampliada
     window.addEventListener('keydown', (e) => {
@@ -82,6 +87,18 @@ export class VistaJuego {
     this.intervalo = window.setInterval(() => this.actualizarBarra(), 500);
   }
 
+  /** Da el teclado al juego. */
+  enfocar(): void {
+    this.pantalla.querySelector('canvas')?.focus();
+    this.actualizarAvisoFoco();
+  }
+
+  private actualizarAvisoFoco(): void {
+    const activo = document.activeElement;
+    const tieneTeclado = !activo || activo === document.body || this.elemento.contains(activo);
+    this.avisoFoco.hidden = this.estadoJuego !== 'jugando' || tieneTeclado;
+  }
+
   pausar(): void {
     if (!this.motor) return;
     if (this.estadoJuego === 'jugando') {
@@ -119,6 +136,7 @@ export class VistaJuego {
   private cambiarEstado(e: EstadoJuego): void {
     this.estadoJuego = e;
     this.elemento.dataset.estado = e;
+    this.actualizarAvisoFoco();
     this.actualizarBarra();
     this.alCambiarEstado();
   }
@@ -127,7 +145,7 @@ export class VistaJuego {
     const textos: Record<EstadoJuego, string> = { parado: 'Parado', cargando: 'Cargando…', jugando: 'Jugando', pausado: 'En pausa' };
     const partes = [textos[this.estadoJuego]];
     if (this.juego && this.motor) {
-      partes.push(`escena ${this.juego.nombreEscena}`, `${this.juego.escena.objetos.length} objetos`, `${this.motor.tiempo.fps} FPS`);
+      partes.push(`escena ${this.juego.nombreEscena}`, `${this.juego.escena.objetos.length} objetos`, `${this.motor.tiempo.fps} fotogramas/s`);
     }
     this.barraEstado.textContent = partes.join(' · ');
   }

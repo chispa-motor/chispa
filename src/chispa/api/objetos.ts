@@ -272,6 +272,39 @@ const METODOS: Record<string, (o: ObjetoJuego, args: Valor[], pos: Posicion) => 
     o.obtener(Animador)?.parar();
     return null;
   },
+  moverconflechas: (o, a, p) => {
+    // Lo más fácil para empezar: flechas (o W A S D) y ya se mueve.
+    //  - Si el objeto CAE (tiene física y hay gravedad): solo izquierda y derecha (para saltar, yo.saltar()).
+    //  - Si no (juegos vistos desde arriba, naves...): en las cuatro direcciones.
+    // Con física cambia la velocidad (así choca bien con las paredes); sin física, la posición.
+    const rapidez = argNumero(a, 0, 'moverConFlechas', p, 'yo.moverConFlechas(300)', 300);
+    const escena = o.escena;
+    if (!escena) return false;
+    const pulsada = (...teclas: string[]) => teclas.some((t) => escena.motor.entrada.estaPulsada(t));
+    let dx = (pulsada('derecha', 'd') ? 1 : 0) - (pulsada('izquierda', 'a') ? 1 : 0);
+    let dy = (pulsada('arriba', 'w') ? 1 : 0) - (pulsada('abajo', 's') ? 1 : 0);
+    const f = o.obtener(Fisica);
+    const conFisica = !!f && f.activo && !f.estatico;
+    const cae = conFisica && f!.gravedad !== 0 && escena.gravedad !== 0;
+    if (cae) dy = 0;
+    if (dx !== 0 && dy !== 0) {
+      // En diagonal, no más rápido que en recto
+      dx *= Math.SQRT1_2;
+      dy *= Math.SQRT1_2;
+    }
+    if (conFisica) {
+      f!.velocidad.x = dx * rapidez;
+      if (!cae) f!.velocidad.y = dy * rapidez;
+    } else {
+      const dt = escena.motor.tiempo.delta;
+      o.posicion.x += dx * rapidez * dt;
+      o.posicion.y += dy * rapidez * dt;
+    }
+    // Mira hacia donde anda (las imágenes se dan la vuelta al ir a la izquierda)
+    const s = o.obtener(Sprite);
+    if (s && dx !== 0) s.voltearX = dx < 0;
+    return dx !== 0 || dy !== 0;
+  },
   moverhacia: (o, a, p) => {
     // Avanza hacia el destino a esa rapidez (píxeles/segundo) sin pasarse. Devuelve verdadero al llegar.
     const d = destino(a[0], 'moverHacia', p);
@@ -333,7 +366,7 @@ const NOMBRES_BONITOS = [
   'color', 'visible', 'ancho', 'alto', 'texto', 'tamaño', 'colorTexto', 'imagen', 'opacidad', 'voltear', 'capa', 'fijo',
   'solido', 'fantasma', 'rozamiento', 'rebote', 'masa', 'estatico', 'animacion', 'ratonEncima', 'destruido',
   'saltar', 'mover', 'rotar', 'destruir', 'distanciaA', 'empujar', 'animar', 'pararAnimacion', 'moverHacia', 'mirarA', 'direccionA',
-  'casilla', 'ponerCasilla', 'quitarCasilla', 'casillaEn', 'columnaEn', 'filaEn', 'centroDeCasilla',
+  'moverConFlechas', 'casilla', 'ponerCasilla', 'quitarCasilla', 'casillaEn', 'columnaEn', 'filaEn', 'centroDeCasilla',
 ];
 
 interface PropiedadPropia {

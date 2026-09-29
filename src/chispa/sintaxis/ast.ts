@@ -59,7 +59,9 @@ export type Evento =
   /** encima = verdadero → "cuando hago clic encima:" (solo si el clic es sobre este objeto) */
   | { tipo: 'clic'; encima: boolean }
   /** "cuando termina la animacion:" (solo las que no se repiten) */
-  | { tipo: 'animacion' };
+  | { tipo: 'animacion' }
+  /** cuando salgo de la pantalla: */
+  | { tipo: 'pantalla' };
 
 // ───────────────────────── Sentencias (órdenes) ─────────────────────────
 

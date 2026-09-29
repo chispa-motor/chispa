@@ -21,6 +21,7 @@ import { Vector2 } from '../../motor/Vector2';
 import type { Escena } from '../../objetos/Escena';
 import type { ObjetoJuego } from '../../objetos/ObjetoJuego';
 import { normalizar } from '../../utilidades/texto';
+import { MapaCasillas } from '../../objetos/componentes/MapaCasillas';
 import { TIPOS_PARTICULAS, type ConfigParticulas } from '../../objetos/Particulas';
 import { deserializar, serializar } from './guardado';
 import { Tabla } from '../ejecucion/valores';
@@ -141,13 +142,16 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
   // OJO: no tocamos ctx.motor hasta que se USA una función. Así la API se puede
   // instalar sin juego en marcha (el editor la necesita para revisar el código).
   const funcion = (nombre: string, fn: Metodo) => g.declarar(normalizar(nombre), new FuncionNativa(nombre, fn), nombre);
+  /** Dónde está el objeto que ejecuta el código ahora (para crear() y particulas() sin posición). */
+  const aqui = (): Vector2 | null => (interprete.objetoActual as ObjetoJuego | null)?.posicion ?? null;
 
   // ── Objetos ──
   funcion('crear', (a, p) => {
     const ej = 'crear("Bala", yo.x, yo.y)';
     const nombre = argTexto(a, 0, 'crear', p, ej);
-    const x = a[1] === undefined ? null : argNumero(a, 1, 'crear', p, ej);
-    const y = a[2] === undefined ? null : argNumero(a, 2, 'crear', p, ej);
+    // Sin posición: donde está el objeto que lo crea (la bala sale de la nave)
+    const x = a[1] === undefined ? aqui()?.x ?? null : argNumero(a, 1, 'crear', p, ej);
+    const y = a[2] === undefined ? aqui()?.y ?? null : argNumero(a, 2, 'crear', p, ej);
     return referencia(ctx.crearDesdePlantilla(nombre, x, y));
   });
   funcion('destruir', (a, p) => {
@@ -219,6 +223,18 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
         return null;
       },
       limites: (a, p) => {
+        // Con un objeto: la zona que ocupa (un mapa de casillas, o su caja). Sin nada: quita los límites.
+        if (a.length === 0 || a[0] === null) {
+          cam().limites = null;
+          return null;
+        }
+        if (a.length === 1 && a[0] instanceof RefObjeto) {
+          const o = argObjeto(a, 0, 'escena.camara.limites', p, 'escena.camara.limites(buscar("Mapa"))');
+          const l = o.obtener(MapaCasillas)?.limites() ?? ctx.escena.cajaDe(o);
+          if (!l) throw new ErrorChispa(p, `'${o.nombre}' no ocupa ninguna zona (no tiene casillas pintadas ni tamaño).`, 'Pinta casillas en el mapa, o usa números: escena.camara.limites(0, 0, 3000, 540)');
+          cam().limites = { ...l };
+          return null;
+        }
         const ej = 'escena.camara.limites(0, 0, 3000, 540)';
         const n = (i: number) => argNumero(a, i, 'escena.camara.limites', p, ej);
         cam().limites = { izquierda: n(0), abajo: n(1), derecha: n(2), arriba: n(3) };
@@ -310,7 +326,10 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
   funcion('particulas', (a, p) => {
     const ej = 'particulas("explosion", yo.x, yo.y)';
     const config = configParticulas(a[0], p);
-    ctx.escena.particulas.emitir(config, argNumero(a, 1, 'particulas', p, ej), argNumero(a, 2, 'particulas', p, ej));
+    // Sin posición: donde está el objeto que las pide
+    const x = a[1] === undefined && aqui() ? aqui()!.x : argNumero(a, 1, 'particulas', p, ej);
+    const y = a[2] === undefined && aqui() ? aqui()!.y : argNumero(a, 2, 'particulas', p, ej);
+    ctx.escena.particulas.emitir(config, x, y);
     return null;
   });
 

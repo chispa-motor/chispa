@@ -12,7 +12,7 @@
  * El código de los scripts NO entra en este historial: el editor de código
  * tiene su propio deshacer, letra a letra (como en cualquier editor).
  */
-import { migrarProyecto, proyectoVacio, type DefEscena, type DefObjeto, type DefProyecto } from '../../proyecto/formato';
+import { migrarProyecto, proyectoVacio, tipoPorNombre, type DefEscena, type DefObjeto, type DefProyecto } from '../../proyecto/formato';
 import type { DefAnimacion } from '../../objetos/componentes/Animador';
 import type { TipoCasilla } from '../../objetos/componentes/MapaCasillas';
 import { normalizar } from '../../utilidades/texto';
@@ -198,7 +198,8 @@ export class EstadoEditor {
     const base: Record<TipoNuevoObjeto, [string, DefObjeto]> = {
       rectangulo: ['Cuadrado', { sprite: { forma: 'rectangulo', color, ancho: 64, alto: 64 }, colision: {} }],
       circulo: ['Circulo', { sprite: { forma: 'circulo', color, ancho: 64, alto: 64 }, colision: {} }],
-      texto: ['Texto', { sprite: { forma: 'texto', texto: 'Texto', tamano: 32, color: 'blanco', ancho: 160, alto: 40 } }],
+      // Los textos nuevos son de INTERFAZ (pegados a la pantalla): casi siempre son vidas, puntos o títulos
+      texto: ['Texto', { sprite: { forma: 'texto', texto: 'Texto', tamano: 32, color: 'blanco', ancho: 160, alto: 40, fijo: true } }],
       boton: ['Boton', { sprite: { forma: 'rectangulo', color: '#3b82f6', ancho: 180, alto: 56, texto: 'Boton', tamano: 24, fijo: true } }],
       imagen: [imagen ?? 'Imagen', { sprite: { imagen, ancho: 64, alto: 64 }, colision: {} }],
       mapa: ['Mapa', { mapa: { tamano: 48, tipos: { suelo: { color: '#5ad17a', solida: true } }, celdas: {} } }],
@@ -240,6 +241,36 @@ export class EstadoEditor {
       indice = ref.indice + 1;
     });
     this.seleccionarIndice(indice);
+  }
+
+  /** Copia del objeto seleccionado (Ctrl+C), para pegarla en esta u otra escena (Ctrl+V). */
+  portapapeles: DefObjeto | null = null;
+
+  copiarSeleccionado(): boolean {
+    const def = this.seleccion?.tipo === 'escena' ? this.seleccionado : null;
+    if (!def) return false;
+    this.portapapeles = structuredClone(def);
+    this.avisar('seleccion'); // para que aparezca el botón Pegar
+    return true;
+  }
+
+  /** Pega lo copiado en la escena actual. Si ya hay uno en ese sitio, un poco desplazado. Devuelve su posición en la lista. */
+  pegar(): number {
+    const copia = this.portapapeles;
+    if (!copia) return -1;
+    let indice = -1;
+    this.cambiar('objetos', () => {
+      const nuevo = structuredClone(copia);
+      nuevo.nombre = this.nombreLibre(copia.nombre ?? 'Objeto');
+      while (this.escena.objetos.some((o) => o.x === nuevo.x && o.y === nuevo.y && !o.mapa)) {
+        nuevo.x = (nuevo.x ?? 0) + 24;
+        nuevo.y = (nuevo.y ?? 0) - 24;
+      }
+      this.escena.objetos.push(nuevo);
+      indice = this.escena.objetos.length - 1;
+    });
+    this.seleccionarIndice(indice);
+    return indice;
   }
 
   /** Cambia el orden (sube o baja en la lista). */
@@ -465,7 +496,7 @@ export class EstadoEditor {
     if (this.proyecto.escenas[nombre]) this.cambiar('escena', () => (this.proyecto.escenaInicial = nombre));
   }
 
-  cambiarEscenaPropiedad(ruta: 'colorFondo' | 'gravedad' | 'camara.zoom' | 'camara.seguir' | 'camara.x' | 'camara.y', valor: unknown): void {
+  cambiarEscenaPropiedad(ruta: 'colorFondo' | 'gravedad' | 'camara.zoom' | 'camara.seguir' | 'camara.x' | 'camara.y' | 'camara.limitarAlMapa', valor: unknown): void {
     this.cambiar('escena', () => {
       const e = this.escena;
       if (ruta === 'colorFondo') e.colorFondo = String(valor);
@@ -475,7 +506,10 @@ export class EstadoEditor {
       } else {
         e.camara ??= {};
         if (ruta === 'camara.zoom') e.camara.zoom = Number(valor) || 1;
-        else if (ruta === 'camara.seguir') {
+        else if (ruta === 'camara.limitarAlMapa') {
+          if (valor) e.camara.limitarAlMapa = true;
+          else delete e.camara.limitarAlMapa;
+        } else if (ruta === 'camara.seguir') {
           if (valor) e.camara.seguir = String(valor);
           else delete e.camara.seguir;
         } else {
@@ -489,18 +523,25 @@ export class EstadoEditor {
 
   // ═════════════════════════ Plantillas ═════════════════════════
 
-  /** Guarda una copia del objeto seleccionado como plantilla (para crear("Nombre")). */
+  /**
+   * Convierte el objeto en una plantilla (para crear("Nombre") desde el código):
+   * lo SACA de la escena y lo guarda en Plantillas. Para poner copias en la
+   * escena, se arrastra la plantilla desde el panel Proyecto.
+   */
   convertirEnPlantilla(ref: RefObjeto): string | null {
     const def = this.definicion(ref);
     if (!def || ref.tipo !== 'escena') return null;
-    const nombre = this.nombreLibre(def.nombre ?? 'Plantilla', Object.keys(this.proyecto.plantillas));
+    const nombre = this.nombreLibre(tipoPorNombre(def.nombre ?? 'Plantilla'), Object.keys(this.proyecto.plantillas));
     this.cambiar('recursos', () => {
       const copia = structuredClone(def);
       delete copia.nombre;
+      delete copia.tipo;
       copia.x = 0;
       copia.y = 0;
       this.proyecto.plantillas[nombre] = copia;
+      this.proyecto.escenas[ref.escena].objetos.splice(ref.indice, 1);
     });
+    this.seleccionar({ tipo: 'plantilla', nombre });
     return nombre;
   }
 
@@ -583,6 +624,23 @@ export class EstadoEditor {
     });
   }
 
+  /** Pinta (o borra) todas las casillas de un rectángulo (Mayús + arrastrar con el pincel). */
+  pintarRectangulo(ref: RefObjeto, c0: number, f0: number, c1: number, f1: number, tipo: string | null): void {
+    const mapa = this.definicion(ref)?.mapa;
+    if (!mapa) return;
+    const [ca, cb] = [Math.min(c0, c1), Math.max(c0, c1)];
+    const [fa, fb] = [Math.min(f0, f1), Math.max(f0, f1)];
+    if ((cb - ca + 1) * (fb - fa + 1) > 250_000) return; // demasiado grande: seguro que es un error
+    this.cambiar('objetos', () => {
+      for (let c = ca; c <= cb; c++) {
+        for (let f = fa; f <= fb; f++) {
+          if (tipo === null) delete mapa.celdas[`${c},${f}`];
+          else mapa.celdas[`${c},${f}`] = tipo;
+        }
+      }
+    });
+  }
+
   /** Crea o cambia un tipo de casilla. */
   ponerTipoCasilla(ref: RefObjeto, nombre: string, tipo: TipoCasilla): string {
     const mapa = this.definicion(ref)?.mapa;
@@ -610,5 +668,16 @@ export function nombreDeRecurso(archivo: string): string {
 }
 
 function plantillaDeScript(nombre: string): string {
-  return `# Script de ${nombre}\n\ncuando empieza:\n    mostrar("¡Hola! Soy " + yo.nombre)\n`;
+  return [
+    `# Script de ${nombre}`,
+    '# Aquí dices qué hace este objeto. ¿Ideas? Mira la pestaña Guía > Recetas.',
+    '',
+    'cuando empieza:',
+    '    mostrar("Hola, soy " + yo.nombre)',
+    '',
+    '# Para moverte con las flechas, quita los # de estas dos líneas:',
+    '# cuando cada fotograma:',
+    '#     yo.moverConFlechas(300)',
+    '',
+  ].join('\n');
 }

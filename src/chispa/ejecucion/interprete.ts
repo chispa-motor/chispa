@@ -63,6 +63,12 @@ export class Interprete {
   readonly globales = new Entorno();
   /** Qué hacer con mostrar(). Lo cambia quien usa el intérprete (la consola del motor, los tests...). */
   alMostrar: (texto: string) => void = (t) => console.log(t);
+  /**
+   * El objeto cuyo script se está ejecutando ahora mismo (lo pone ScriptChispa).
+   * Sirve para que crear("Bala") o particulas("humo") sin posición salgan
+   * donde está el objeto que los pide.
+   */
+  objetoActual: unknown = null;
   /** Nombres de los objetos de la escena (para dar mejores pistas en los errores). */
   nombresDeObjetos: () => string[] = () => [];
 
@@ -650,7 +656,7 @@ export class Interprete {
 }
 
 /** Métodos de las listas: lista.añadir(x), lista.quitar(1) */
-const METODOS_LISTA: Record<string, (lista: Valor[], args: Valor[], pos: Posicion) => Valor> = {
+export const METODOS_LISTA: Record<string, (lista: Valor[], args: Valor[], pos: Posicion) => Valor> = {
   añadir: (l, a) => (l.push(copiarSiVector(a[0] ?? null)), null),
   anadir: (l, a) => (l.push(copiarSiVector(a[0] ?? null)), null),
   agregar: (l, a) => (l.push(copiarSiVector(a[0] ?? null)), null),

@@ -92,6 +92,8 @@ export interface DefCamara {
   /** Nombre del objeto al que sigue desde el principio. */
   seguir?: string;
   limites?: Limites;
+  /** La cámara no enseña nada fuera de los mapas de casillas de la escena. */
+  limitarAlMapa?: boolean;
 }
 
 export interface DefEscena {
@@ -172,8 +174,22 @@ export function proyectoVacio(nombre = 'Mi juego'): DefProyecto {
   return completar({ nombre } as DefProyecto);
 }
 
-/** Todos los nombres de objetos que pueden existir: los de todas las escenas y las plantillas. */
+/**
+ * El TIPO de un objeto si no se ha dicho otro: su nombre sin los números del
+ * final. Así "Moneda", "Moneda2" y "Moneda3" son todas del tipo "Moneda", y
+ * `cuando toco Moneda` funciona con todas (al duplicar un objeto sale "Moneda2").
+ */
+export function tipoPorNombre(nombre: string): string {
+  return nombre.replace(/\d+$/, '') || nombre;
+}
+
+/** El tipo de un objeto definido en el editor. */
+export function tipoDe(def: DefObjeto, nombrePorDefecto = 'Objeto'): string {
+  return def.tipo ?? tipoPorNombre(def.nombre ?? nombrePorDefecto);
+}
+
+/** Todos los nombres (y tipos) de objetos que pueden existir: los de todas las escenas y las plantillas. */
 export function nombresDeObjetos(p: DefProyecto): string[] {
-  const nombres = Object.values(p.escenas).flatMap((e) => e.objetos.map((o) => o.nombre ?? o.tipo ?? ''));
+  const nombres = Object.values(p.escenas).flatMap((e) => e.objetos.flatMap((o) => [o.nombre ?? '', tipoDe(o)]));
   return [...new Set([...nombres, ...Object.keys(p.plantillas)])].filter(Boolean);
 }

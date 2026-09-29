@@ -114,6 +114,8 @@ export interface ContextoNombres {
   deUsuario: string[];
   /** Nombres de objetos de la escena. */
   objetosEscena?: string[];
+  /** Nombres que se escriben ENTRE COMILLAS: teclas, colores, plantillas, escenas, sonidos... */
+  textos?: string[];
 }
 
 /**
@@ -126,12 +128,17 @@ export interface ContextoNombres {
 export function pistaNombreDesconocido(nombre: string, c: ContextoNombres, comoCrearla = `Si es una variable nueva, créala antes con: variable ${nombre} = ...`): string {
   const ingles = pistaIngles(nombre);
   if (ingles) return ingles;
-  const parecido = sugerir(nombre, c.visibles);
-  if (parecido) return `¿Querías decir '${parecido}'?`;
+  // teclado.pulsada(derecha) → faltan las comillas
+  const texto = c.textos?.find((n) => normalizar(n) === normalizar(nombre));
+  if (texto) {
+    return `¿Querías escribir "${texto}" entre comillas? Los nombres de teclas, colores, plantillas, escenas, sonidos e imágenes van entre comillas. Ejemplo: teclado.pulsada("derecha")`;
+  }
   const objeto = c.objetosEscena?.find((n) => normalizar(n) === normalizar(nombre));
   if (objeto) {
     return `Hay un objeto llamado '${objeto}' en la escena, pero para usarlo primero hay que buscarlo: variable ${nombre.toLowerCase()} = buscar("${objeto}"). Dentro de "cuando toco ${objeto}:" lo tienes en 'otro'.`;
   }
+  const parecido = sugerir(nombre, c.visibles);
+  if (parecido) return `¿Querías decir '${parecido}'?`;
   if (c.deUsuario.length) return `Las variables que sí existen aquí son: ${enumerar(c.deUsuario)}. ${comoCrearla}`;
   return comoCrearla;
 }

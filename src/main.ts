@@ -43,7 +43,8 @@ async function arrancarEditor(): Promise<void> {
   const raiz = document.getElementById('editor')!;
   raiz.hidden = false;
   const app = new Aplicacion(raiz);
-  await app.recuperar();
+  // ?limpio = empezar con el ejemplo, sin recuperar lo guardado (lo usan las pruebas del navegador)
+  if (!new URLSearchParams(location.search).has('limpio')) await app.recuperar();
   // Para poder inspeccionarlo desde la consola del navegador (F12) y en las pruebas
   (window as unknown as { chispa: unknown }).chispa = app;
 }

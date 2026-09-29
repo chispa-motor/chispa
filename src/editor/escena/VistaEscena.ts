@@ -49,7 +49,8 @@ type Arrastre =
   | { tipo: 'mover'; dx: number; dy: number }
   | { tipo: 'tamano'; ancho0: number; alto0: number; x0: number; y0: number }
   | { tipo: 'vista'; px: number; py: number }
-  | { tipo: 'pintar' };
+  | { tipo: 'pintar' }
+  | { tipo: 'rectangulo'; c0: number; f0: number; c1: number; f1: number };
 
 export const OBJETOS_NUEVOS: { tipo: TipoNuevoObjeto; texto: string; icono: string; ayuda: string }[] = [
   { tipo: 'rectangulo', texto: 'Cuadrado', icono: 'objeto', ayuda: 'Un rectángulo de color con colisión' },
@@ -76,6 +77,7 @@ export class VistaEscena {
   private r: Renderizador;
   private barra: HTMLElement;
   private etiquetaZoom: HTMLElement;
+  private etiquetaRaton: HTMLElement;
   private objetos: ObjetoJuego[] = [];
   private imagenesCargadas = new Map<string, string>();
   private sucio = true;
@@ -92,6 +94,7 @@ export class VistaEscena {
     this.canvas = h('canvas', { class: 'lienzo-escena', tabindex: '0', 'aria-label': 'Vista de la escena' });
     const contenedorLienzo = h('div', { class: 'contenedor-lienzo' }, this.canvas);
     this.etiquetaZoom = h('span', { class: 'etiqueta-zoom', title: 'Zoom de la vista (rueda del ratón)' }, '100%');
+    this.etiquetaRaton = h('span', { class: 'etiqueta-raton', title: 'Dónde está el ratón en el mundo del juego (la Y crece hacia arriba)' });
     this.barra = h('div', { class: 'barra-escena' });
     this.elemento = h('div', { class: 'vista-escena' }, this.barra, contenedorLienzo);
     this.r = new Renderizador(this.canvas, 1, 1, estado.proyecto.pixelArt ?? false, true);
@@ -129,7 +132,7 @@ export class VistaEscena {
     this.barra.replaceChildren(
       h('div', { class: 'grupo' },
         herramienta('mover', 'mover', 'Mover y seleccionar (V)'),
-        herramienta('pincel', 'pincel', 'Pintar casillas en el mapa seleccionado (B)'),
+        herramienta('pincel', 'pincel', 'Pintar casillas en el mapa seleccionado (B). Con Mayús, un rectángulo entero'),
         herramienta('goma', 'goma', 'Borrar casillas del mapa seleccionado (E)'),
       ),
       h('div', { class: 'grupo' },
@@ -145,6 +148,7 @@ export class VistaEscena {
         botonIcono('centrar', 'Ver la pantalla del juego entera (F)', () => this.encuadrar()),
         this.etiquetaZoom,
       ),
+      h('div', { class: 'grupo' }, this.etiquetaRaton),
       h('div', { class: 'grupo derecha' }, this.menuAnadir()),
     );
   }
@@ -173,7 +177,10 @@ export class VistaEscena {
     const m = this.marco();
     const centro = { x: this.camara.x, y: this.camara.y };
     // Los botones son de interfaz: su posición es en la pantalla del juego
-    const pos = tipo === 'boton' ? { x: (m.derecha - m.izquierda) * m.zoom / 2, y: (m.arriba - m.abajo) * m.zoom / 2 } : centro;
+    // Los botones y textos son de interfaz: su posición es en la PANTALLA del juego
+    const ancho = (m.derecha - m.izquierda) * m.zoom;
+    const alto = (m.arriba - m.abajo) * m.zoom;
+    const pos = tipo === 'boton' ? { x: ancho / 2, y: alto / 2 } : tipo === 'texto' ? { x: 112, y: alto - 40 } : centro;
     let x = this.iman ? ajustar(pos.x, PASO_IMAN) : Math.round(pos.x);
     const y = this.iman ? ajustar(pos.y, PASO_IMAN) : Math.round(pos.y);
     // Si ya hay algo justo ahí, lo ponemos un poco a la derecha (para que no queden uno encima del otro)
@@ -460,6 +467,20 @@ export class VistaEscena {
       ctx.strokeRect(b.x - TAMANO_TIRADOR / 2 + 1, b.y - TAMANO_TIRADOR / 2 + 1, TAMANO_TIRADOR, TAMANO_TIRADOR);
     }
 
+    // Mayús + arrastrar: el rectángulo que se va a pintar
+    const r = this.arrastre;
+    if (def.mapa && r?.tipo === 'rectangulo') {
+      const t = def.mapa.tamano;
+      const esq1 = cam.aPantalla((def.x ?? 0) + Math.min(r.c0, r.c1) * t, (def.y ?? 0) + (Math.max(r.f0, r.f1) + 1) * t);
+      const esq2 = cam.aPantalla((def.x ?? 0) + (Math.max(r.c0, r.c1) + 1) * t, (def.y ?? 0) + Math.min(r.f0, r.f1) * t);
+      ctx.fillStyle = this.herramienta === 'goma' ? '#ff6b6b33' : '#ffffff33';
+      ctx.fillRect(esq1.x, esq1.y, esq2.x - esq1.x, esq2.y - esq1.y);
+      ctx.strokeStyle = this.herramienta === 'goma' ? '#ff6b6b' : '#fff';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(esq1.x, esq1.y, esq2.x - esq1.x, esq2.y - esq1.y);
+      return;
+    }
+
     // Pincel: la casilla bajo el ratón
     if (def.mapa && this.herramienta !== 'mover' && this.raton) {
       const t = def.mapa.tamano;
@@ -495,15 +516,26 @@ export class VistaEscena {
     return Math.abs(px - b.x) <= TAMANO_TIRADOR && Math.abs(py - b.y) <= TAMANO_TIRADOR;
   }
 
+  /** La casilla del mapa seleccionado que hay bajo un punto de la pantalla. */
+  private casillaEn(px: number, py: number): { columna: number; fila: number } | null {
+    const def = this.estado.seleccionado;
+    if (!def?.mapa) return null;
+    const m = this.camara.aMundo(px, py);
+    return { columna: Math.floor((m.x - (def.x ?? 0)) / def.mapa.tamano), fila: Math.floor((m.y - (def.y ?? 0)) / def.mapa.tamano) };
+  }
+
+  /** Con qué tipo pinta ahora (null = borrar). */
+  private tipoParaPintar(): string | null {
+    const mapa = this.estado.seleccionado?.mapa;
+    if (!mapa || this.herramienta === 'goma') return null;
+    return this.tipoPincel && mapa.tipos[this.tipoPincel] ? this.tipoPincel : Object.keys(mapa.tipos)[0] ?? null;
+  }
+
   private pintar(px: number, py: number): void {
     const ref = this.estado.seleccion;
-    const def = this.estado.seleccionado;
-    if (!ref || !def?.mapa) return;
-    const m = this.camara.aMundo(px, py);
-    const col = Math.floor((m.x - (def.x ?? 0)) / def.mapa.tamano);
-    const fil = Math.floor((m.y - (def.y ?? 0)) / def.mapa.tamano);
-    const tipo = this.herramienta === 'goma' ? null : this.tipoPincel && def.mapa.tipos[this.tipoPincel] ? this.tipoPincel : Object.keys(def.mapa.tipos)[0] ?? null;
-    this.estado.pintarCasilla(ref, col, fil, tipo);
+    const c = this.casillaEn(px, py);
+    if (!ref || !c) return;
+    this.estado.pintarCasilla(ref, c.columna, c.fila, this.tipoParaPintar());
   }
 
   private escuchar(): void {
@@ -524,6 +556,13 @@ export class VistaEscena {
       const m = this.camara.aMundo(p.x, p.y);
 
       if (this.herramienta !== 'mover' && this.estado.seleccionado?.mapa) {
+        if (e.shiftKey) {
+          // Mayús + arrastrar: un rectángulo entero de casillas
+          const c = this.casillaEn(p.x, p.y)!;
+          this.arrastre = { tipo: 'rectangulo', c0: c.columna, f0: c.fila, c1: c.columna, f1: c.fila };
+          this.redibujar();
+          return;
+        }
         this.estado.empezarCambioLargo();
         this.arrastre = { tipo: 'pintar' };
         this.pintar(p.x, p.y);
@@ -551,6 +590,8 @@ export class VistaEscena {
     c.addEventListener('pointermove', (e) => {
       const p = this.posRaton(e);
       this.raton = p;
+      const mundo = this.camara.aMundo(p.x, p.y);
+      this.etiquetaRaton.textContent = `x: ${Math.round(mundo.x)}   y: ${Math.round(mundo.y)}`;
       const a = this.arrastre;
       if (!a) {
         c.style.cursor = this.espacioPulsado ? 'grab' : this.herramienta !== 'mover' ? 'crosshair' : this.enTirador(p.x, p.y) ? 'nwse-resize' : 'default';
@@ -566,6 +607,12 @@ export class VistaEscena {
         return;
       }
       if (a.tipo === 'pintar') return this.pintar(p.x, p.y);
+      if (a.tipo === 'rectangulo') {
+        const cas = this.casillaEn(p.x, p.y);
+        if (cas) [a.c1, a.f1] = [cas.columna, cas.fila];
+        this.redibujar();
+        return;
+      }
       const ref = this.estado.seleccion;
       const def = this.estado.seleccionado;
       if (!ref || !def) return;
@@ -602,7 +649,10 @@ export class VistaEscena {
     });
 
     const soltar = () => {
-      if (this.arrastre && this.arrastre.tipo !== 'vista') this.estado.terminarCambioLargo();
+      const a = this.arrastre;
+      if (a?.tipo === 'rectangulo' && this.estado.seleccion) {
+        this.estado.pintarRectangulo(this.estado.seleccion, a.c0, a.f0, a.c1, a.f1, this.tipoParaPintar());
+      } else if (a && a.tipo !== 'vista') this.estado.terminarCambioLargo();
       this.arrastre = null;
       c.style.cursor = 'default';
     };
@@ -610,6 +660,7 @@ export class VistaEscena {
     c.addEventListener('pointercancel', soltar);
     c.addEventListener('pointerleave', () => {
       this.raton = null;
+      this.etiquetaRaton.textContent = '';
       this.redibujar();
     });
 

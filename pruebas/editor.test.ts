@@ -173,9 +173,17 @@ describe('Plantillas y recursos', () => {
     e.crearObjeto('circulo', 0, 0);
     e.renombrar(e.seleccion!, 'Bala');
     e.convertirEnPlantilla(e.seleccion!);
+    // Convertir la saca de la escena (así no se queda una bala quieta al empezar)
+    expect(e.escena.objetos).toEqual([]);
+    expect(e.seleccion).toEqual({ tipo: 'plantilla', nombre: 'Bala' });
     e.colocarPlantilla('Bala', 50, 60);
+    e.colocarPlantilla('Bala', 80, 60);
     expect(e.proyecto.plantillas.Bala.nombre).toBeUndefined();
-    expect(e.seleccionado).toMatchObject({ nombre: 'Bala2', tipo: 'Bala', x: 50, y: 60 });
+    expect(e.seleccionado).toMatchObject({ nombre: 'Bala2', tipo: 'Bala', x: 80, y: 60 });
+    e.deshacer();
+    e.deshacer();
+    e.deshacer();
+    expect(e.escena.objetos.map((o) => o.nombre)).toEqual(['Bala']);
   });
 
   it('imágenes: nombres fáciles de escribir, y al borrarlas se quitan de donde se usaban', () => {
@@ -238,5 +246,55 @@ describe('Guardar y abrir', () => {
     expect(otro.proyecto).toEqual(e.proyecto);
     expect(otro.puedeDeshacer).toBe(false);
     expect(otro.modificado).toBe(false);
+  });
+});
+
+describe('Copiar, pegar, pintar rectángulos y la cámara (bloque 3)', () => {
+  it('copiar un objeto y pegarlo en otra escena (y en la misma, un poco desplazado)', () => {
+    const e = new EstadoEditor();
+    e.crearObjeto('rectangulo', 100, 100);
+    e.renombrar(e.seleccion!, 'Jugador');
+    expect(e.copiarSeleccionado()).toBe(true);
+    e.pegar();
+    expect(e.seleccionado).toMatchObject({ nombre: 'Jugador2', x: 124, y: 76 });
+    e.crearEscena('Nivel2');
+    e.pegar();
+    expect(e.escena.objetos.map((o) => [o.nombre, o.x, o.y])).toEqual([['Jugador', 100, 100]]);
+    e.deshacer();
+    expect(e.escena.objetos).toEqual([]);
+  });
+
+  it('pintar un rectángulo de casillas (y borrarlo) se deshace de una vez', () => {
+    const e = new EstadoEditor();
+    e.crearObjeto('mapa', 0, 0);
+    const ref = e.seleccion!;
+    e.pintarRectangulo(ref, 3, 2, 0, 0, 'suelo');
+    expect(Object.keys(e.seleccionado!.mapa!.celdas).length).toBe(12);
+    e.pintarRectangulo(ref, 1, 1, 2, 1, null);
+    expect(Object.keys(e.seleccionado!.mapa!.celdas).length).toBe(10);
+    e.deshacer();
+    expect(Object.keys(e.seleccionado!.mapa!.celdas).length).toBe(12);
+  });
+
+  it('los textos nuevos son de interfaz (fijos en la pantalla)', () => {
+    const e = new EstadoEditor();
+    e.crearObjeto('texto', 10, 10);
+    expect(e.seleccionado?.sprite?.fijo).toBe(true);
+  });
+
+  it('la plantilla de un script nuevo no tiene errores y enseña cómo moverse', () => {
+    const e = new EstadoEditor();
+    e.crearObjeto('rectangulo', 0, 0);
+    const archivo = e.crearScriptPara(e.seleccion!)!;
+    expect(e.proyecto.scripts[archivo]).toContain('yo.moverConFlechas(300)');
+    expect(revisarProyecto(e.proyecto).errores).toEqual([]);
+  });
+
+  it('la cámara puede no salir del mapa', () => {
+    const e = new EstadoEditor();
+    e.cambiarEscenaPropiedad('camara.limitarAlMapa', true);
+    expect(e.escena.camara?.limitarAlMapa).toBe(true);
+    e.cambiarEscenaPropiedad('camara.limitarAlMapa', false);
+    expect(e.escena.camara).toEqual({});
   });
 });

@@ -12,10 +12,12 @@
     "reproductor": "vite build -c vite.reproductor.config.ts",
     "pruebas": "vitest run",
     "pruebas:vigilar": "vitest",
-    "lineas": "node herramientas/contar-lineas.mjs"
+    "lineas": "node herramientas/contar-lineas.mjs",
+    "pruebas:navegador": "npm run build && node pruebas-navegador/editor.mjs"
   },
   "devDependencies": {
     "happy-dom": "^20.14.5",
+    "playwright": "^1.63.0",
     "typescript": "^5.9.0",
     "vite": "^7.1.0",
     "vitest": "^5.0.2"

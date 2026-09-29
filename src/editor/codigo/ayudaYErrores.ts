@@ -84,12 +84,13 @@ export function eventoDeLinea(texto: string): (typeof DOC_EVENTOS)[number] | nul
     : t.startsWith('hago clic encima') ? 'cuando hago clic encima'
     : t.startsWith('hago') ? 'cuando hago clic'
     : t.startsWith('termina') ? 'cuando termina la animacion'
+    : t.startsWith('salgo') ? 'cuando salgo de la pantalla'
     : null;
   return DOC_EVENTOS.find((e) => e.nombre === clave) ?? null;
 }
 
 /** Palabras que forman parte de la línea de un evento (para enseñar la ayuda del evento). */
-const PALABRAS_DE_EVENTO = new Set(['cuando', 'empieza', 'cada', 'fotograma', 'segundos', 'segundo', 'pasen', 'se', 'pulsa', 'mantiene', 'suelta', 'toco', 'dejo', 'de', 'tocar', 'hago', 'clic', 'encima', 'termina', 'la', 'animacion']);
+const PALABRAS_DE_EVENTO = new Set(['cuando', 'empieza', 'cada', 'fotograma', 'segundos', 'segundo', 'pasen', 'se', 'pulsa', 'mantiene', 'suelta', 'toco', 'dejo', 'de', 'tocar', 'hago', 'clic', 'encima', 'termina', 'la', 'animacion', 'salgo', 'pantalla']);
 
 /** Ayuda al pasar el ratón por encima de una palabra. */
 export const ayudaAlPasar = hoverTooltip((vista: EditorView, pos: number) => {
