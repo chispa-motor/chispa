@@ -1,4 +1,4 @@
-# Especificación del lenguaje Chispa · v0.2
+# Especificación del lenguaje Chispa · v0.3
 
 Chispa es un lenguaje de programación en español para crear videojuegos 2D dentro del motor Chispa.
 Los archivos llevan la extensión `.chs`. Cada objeto de la escena puede tener un script.
@@ -124,7 +124,7 @@ para cada enemigo en lista:          # listas
     mostrar(enemigo)
 para cada letra en "hola":           # textos, letra a letra
     mostrar(letra)
-para cada clave, valor en tabla:     # tablas
+para cada clave, valor en tabla:     # tablas (en el orden en que se añadieron las claves)
     mostrar(clave, valor)
 ```
 
@@ -164,6 +164,8 @@ ficha.quitar("nivel")
 ```
 
 - **Posición fuera de la lista** o **clave que no existe:** error con sugerencia, por ejemplo "¿querías decir 'vida'?".
+- **Orden de las claves:** siempre es el orden en que se añadieron. `para cada`, `.claves` y `mostrar()` recorren la tabla en ese orden, así que el resultado nunca parece aleatorio. Cambiar el valor de una clave que ya existe no la mueve de sitio. Si la quitas y la vuelves a añadir, pasa al final.
+- **Nombres especiales:** `.claves` y `.quitar()` siempre se refieren a esas acciones de la tabla. Si guardas una clave con uno de esos nombres, léela con corchetes: `ficha["claves"]`.
 - **Para comprobar si una clave existe** antes de leerla, usa `en`:
 
 ```
