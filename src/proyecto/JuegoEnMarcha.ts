@@ -30,6 +30,9 @@ import { Sprite } from '../objetos/componentes/Sprite';
 import { normalizar } from '../utilidades/texto';
 import { migrarProyecto, tipoPorNombre, type DefObjeto, type DefProyecto } from './formato';
 import { comprobarRevision, revisarProyecto } from './Revision';
+import { fuenteDeTexto, plantillaDeTexto, tieneHuecos } from './TextosConHuecos';
+import { Entorno } from '../chispa/ejecucion/entorno';
+import { referencia } from '../chispa/api/objetos';
 
 export interface OpcionesJuego {
   /** Qué hacer con mostrar(). Por defecto, la consola de la página. */
@@ -70,6 +73,7 @@ export class JuegoEnMarcha implements ContextoJuego {
     this.interprete.alMostrar = opciones.alMostrar ?? ((t) => escribirEnConsola(t));
     this.interprete.nombresDeObjetos = () => [...new Set(this.escena.objetos.map((o) => o.nombre))];
     instalarAPIMotor(this.interprete, this, this.datos);
+    this.interprete.alErrorVivo = (e) => this.informarError(e);
   }
 
   /** Carga las imágenes y sonidos del proyecto (rutas o "data URL"). */
@@ -230,9 +234,31 @@ export class JuegoEnMarcha implements ContextoJuego {
       }
       o.agregar(new ScriptChispa(this.interprete, programa, (e) => this.informarError(e)));
     }
+    this.textoConHuecos(o, def);
     // agregar() a la escena al final: si la escena ya está en marcha, esto
     // arranca el script (y lanza su "cuando empieza") con todo ya montado.
     return this.escena.agregar(o);
+  }
+
+  /**
+   * Si el texto del objeto tiene huecos ("Puntos: {juego.puntos}"), se
+   * recalcula solo. Dentro se pueden usar las variables del script del objeto.
+   */
+  private textoConHuecos(o: ObjetoJuego, def: DefObjeto): void {
+    const s = o.obtener(Sprite);
+    if (!s || !tieneHuecos(def.sprite?.texto)) return;
+    const plantilla = plantillaDeTexto(def.sprite!.texto!); // ya revisada antes de empezar
+    let propio: Entorno | null = null;
+    const entorno = () => {
+      const delScript = o.obtener(ScriptChispa)?.entornoDelScript;
+      if (delScript) return delScript;
+      if (!propio) {
+        propio = new Entorno(this.interprete.globales);
+        propio.declarar('yo', referencia(o));
+      }
+      return propio;
+    };
+    s.textoVivo = this.interprete.textoVivo(plantilla, entorno, { archivo: `texto de ${o.nombre}`, lineas: [fuenteDeTexto(def.sprite!.texto!)] });
   }
 
   /** Un script ha fallado (y ya se ha parado): se cuenta y se informa. */

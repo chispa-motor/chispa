@@ -69,6 +69,31 @@ export class Interprete {
    * donde está el objeto que los pide.
    */
   objetoActual: unknown = null;
+  /** El script que se está ejecutando ahora (para situar los errores de los textos con huecos). */
+  programaActual: { archivo: string; lineas: string[] } | null = null;
+  /** Qué hacer si falla un texto con huecos mientras se dibuja (lo pone el juego). */
+  alErrorVivo: ((e: ErrorChispa) => void) | null = null;
+
+  /**
+   * Un texto con huecos que se calcula de nuevo cada vez que se pide (para
+   * los textos de la pantalla, que se actualizan solos). Si falla, avisa una
+   * vez con alErrorVivo y devuelve null (y quien lo usa deja de pedirlo).
+   */
+  textoVivo(e: Expresion, entorno: () => Entorno, origen: { archivo: string; lineas: string[] } | null = this.programaActual): () => string | null {
+    return () => {
+      try {
+        this.reiniciarContadorDeVueltas();
+        const r = this.evaluar(e, entorno()).next();
+        if (!r.done) throw new ErrorChispa(e.pos, 'dentro de un texto con huecos no se puede usar esperar().');
+        return aTexto(r.value);
+      } catch (err) {
+        if (!(err instanceof ErrorChispa)) throw err;
+        if (origen) err.conArchivo(origen.archivo, origen.lineas);
+        this.alErrorVivo?.(err);
+        return null;
+      }
+    };
+  }
   /** Nombres de los objetos de la escena (para dar mejores pistas en los errores). */
   nombresDeObjetos: () => string[] = () => [];
 
@@ -210,6 +235,18 @@ export class Interprete {
 
   /** x = v,  yo.vida -= 1,  lista[2] = "hola",  tabla.nivel = 3 */
   private *asignar(objetivo: Expresion, operador: string, exprValor: Expresion, ent: Entorno, pos: Posicion): Ejecucion<void> {
+    // yo.texto = "Puntos: {juego.puntos}" → el texto se queda "vivo" y se actualiza solo
+    if (operador === '=' && objetivo.tipo === 'Miembro' && exprValor.tipo === 'Texto' && exprValor.partes) {
+      const obj = yield* this.evaluarContenedor(objetivo.objeto, ent, `cambiar '${objetivo.original}'`);
+      if (obj instanceof Anfitrion && obj.asignarVivo) {
+        const calcular = this.textoVivo(exprValor, () => ent);
+        const hecho = this.conErroresDelMotor(objetivo.pos, () => obj.asignarVivo!(objetivo.propiedad, calcular, objetivo.pos));
+        if (hecho) {
+          calcular(); // se calcula ya una vez: así, si algo está mal, el error sale aquí mismo
+          return;
+        }
+      }
+    }
     let valor = yield* this.evaluar(exprValor, ent);
 
     // Para += -= *= /= primero leemos el valor actual y operamos.
@@ -276,7 +313,14 @@ export class Interprete {
   *evaluar(e: Expresion, ent: Entorno): Ejecucion<Valor> {
     switch (e.tipo) {
       case 'Numero':
-      case 'Texto':
+        return e.valor;
+      case 'Texto': {
+        if (!e.partes) return e.valor;
+        // "Puntos: {juego.puntos}": cada hueco se calcula ahora y se une al resto
+        let r = '';
+        for (const p of e.partes) r += typeof p === 'string' ? p : aTexto(yield* this.evaluar(p, ent));
+        return r;
+      }
       case 'Logico':
         return e.valor;
       case 'Nulo':

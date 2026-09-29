@@ -31,13 +31,55 @@ interface Estado {
   lineaEspecial: boolean;
   /** ¿El token anterior era un punto? (entonces esto es una propiedad) */
   trasPunto: boolean;
+  /** Dentro de un texto: la comilla que lo cierra (o null si no estamos en un texto). */
+  enTexto: string | null;
+  /** Dentro de un hueco {…} de un texto: ahí va código normal. */
+  enHueco: boolean;
 }
 
-const parser: StreamParser<Estado> = {
+/** Sigue leyendo un texto hasta que se cierra o hasta un hueco "{". */
+function seguirTexto(stream: Parameters<StreamParser<Estado>['token']>[0], estado: Estado): string {
+  let escapado = false;
+  while (!stream.eol()) {
+    const ch = stream.peek()!;
+    if (!escapado && ch === '{' && stream.string[stream.pos + 1] !== '{') {
+      if (stream.current().length === 0) {
+        stream.next();
+        estado.enHueco = true;
+        return 'special';
+      }
+      return 'string'; // primero el trozo de texto; el "{" en la siguiente llamada
+    }
+    stream.next();
+    if (!escapado && ch === '{') stream.next(); // "{{" es una llave escrita
+    if (!escapado && (ch === estado.enTexto || (estado.enTexto === '”' && ch === '"'))) {
+      estado.enTexto = null;
+      return 'string';
+    }
+    escapado = !escapado && ch === '\\';
+  }
+  estado.enTexto = null; // un texto no sigue en la línea de abajo
+  return 'string';
+}
+
+export const parserChispa: StreamParser<Estado> = {
   name: 'chispa',
-  startState: () => ({ lineaEspecial: false, trasPunto: false }),
+  startState: () => ({ lineaEspecial: false, trasPunto: false, enTexto: null, enHueco: false }),
+  copyState: (e) => ({ ...e }),
   token(stream, estado) {
-    if (stream.sol()) estado.lineaEspecial = false;
+    if (stream.sol()) {
+      estado.lineaEspecial = false;
+      estado.enTexto = null;
+      estado.enHueco = false;
+    }
+    // Dentro de un texto (fuera de los huecos)
+    if (estado.enTexto && !estado.enHueco) return seguirTexto(stream, estado);
+    // Fin de un hueco: se vuelve al texto
+    if (estado.enHueco && stream.peek() === '}') {
+      stream.next();
+      estado.enHueco = false;
+      return 'special';
+    }
     if (stream.eatSpace()) return null;
 
     // Comentario hasta el final de la línea
@@ -47,17 +89,11 @@ const parser: StreamParser<Estado> = {
     }
     // Textos: "..." '...' “...”
     const c = stream.peek()!;
-    if (c === '"' || c === "'" || c === '“' || c === '«') {
-      const cierre = c === '“' ? '”' : c === '«' ? '»' : c;
+    if (!estado.enHueco && (c === '"' || c === "'" || c === '“' || c === '«')) {
       stream.next();
-      let escapado = false;
-      let ch: string | void;
-      while ((ch = stream.next()) !== undefined) {
-        if (!escapado && (ch === cierre || (c === '“' && ch === '"'))) break;
-        escapado = !escapado && ch === '\\';
-      }
+      estado.enTexto = c === '“' ? '”' : c === '«' ? '»' : c;
       estado.trasPunto = false;
-      return 'string';
+      return seguirTexto(stream, estado);
     }
     if (stream.match(/^[0-9]+(\.[0-9]+)?/)) {
       estado.trasPunto = false;
@@ -99,7 +135,7 @@ const parser: StreamParser<Estado> = {
   },
 };
 
-export const lenguajeChispa = StreamLanguage.define(parser);
+export const lenguajeChispa = StreamLanguage.define(parserChispa);
 
 /** Colores (tema oscuro). */
 export const coloresChispa = syntaxHighlighting(

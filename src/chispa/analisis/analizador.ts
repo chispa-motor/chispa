@@ -275,6 +275,9 @@ class Analizador {
 
   private expr(e: Expresion, amb: Ambito): void {
     switch (e.tipo) {
+      case 'Texto':
+        for (const p of e.partes ?? []) if (typeof p !== 'string') this.expr(p, amb);
+        return;
       case 'Identificador':
         this.identificador(e, amb);
         return;

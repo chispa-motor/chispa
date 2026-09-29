@@ -31,7 +31,8 @@ export interface EntradaTabla {
 
 export type Expresion =
   | { tipo: 'Numero'; valor: number; pos: Posicion }
-  | { tipo: 'Texto'; valor: string; pos: Posicion }
+  /** Un texto. Si tiene huecos ("Puntos: {juego.puntos}"), `partes` trae los trozos y los valores. */
+  | { tipo: 'Texto'; valor: string; pos: Posicion; partes?: (string | Expresion)[] }
   | { tipo: 'Logico'; valor: boolean; pos: Posicion }
   | { tipo: 'Nulo'; pos: Posicion }
   | { tipo: 'Identificador'; nombre: string; original: string; pos: Posicion }

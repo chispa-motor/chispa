@@ -100,12 +100,22 @@ function tiposDeCasilla(p: DefProyecto): string[] {
 export function fuenteAutocompletado(proyecto: () => DefProyecto): CompletionSource {
   return (c: CompletionContext): CompletionResult | null => {
     const linea = c.state.doc.lineAt(c.pos);
-    const antes = linea.text.slice(0, c.pos - linea.from);
+    let antes = linea.text.slice(0, c.pos - linea.from);
     const p = proyecto();
 
     // 1. Dentro de un texto: ¿qué nombres espera?
+    let enHueco = false;
     const comillas = /["“']([^"”']*)$/u.exec(antes);
     if (comillas && (antes.slice(0, comillas.index).match(/["“”']/g)?.length ?? 0) % 2 === 0) {
+      // ¿Dentro de un hueco {…}? Entonces es código normal: seguimos más abajo con lo que va tras la llave
+      const dentro = comillas[1];
+      const llave = dentro.lastIndexOf('{');
+      if (llave >= 0 && dentro[llave - 1] !== '{' && !dentro.slice(llave).includes('}')) {
+        enHueco = true;
+        antes = dentro.slice(llave + 1);
+      }
+    }
+    if (!enHueco && comillas && (antes.slice(0, comillas.index).match(/["“”']/g)?.length ?? 0) % 2 === 0) {
       const lista = listaParaTexto(antes.slice(0, comillas.index), p);
       if (!lista) return null;
       return {
@@ -130,7 +140,7 @@ export function fuenteAutocompletado(proyecto: () => DefProyecto): CompletionSou
     const palabra = c.matchBefore(/[\p{L}_][\p{L}\p{N}_]*/u);
     if (!palabra && !c.explicit) return null;
     const desde = palabra ? palabra.from : c.pos;
-    const antesDePalabra = antes.slice(0, desde - linea.from);
+    const antesDePalabra = enHueco ? '{' : antes.slice(0, desde - linea.from);
 
     // 3. "cuando toco ___" / "cuando dejo de tocar ___": objetos y tipos de casilla
     if (/^\s*cuando\s+(toco|dejo\s+de\s+tocar)\s+$/u.test(antesDePalabra)) {

@@ -35,6 +35,19 @@ export class Sprite extends Componente {
   /** Color de la letra de las etiquetas (en los objetos de texto se usa `color`). */
   colorTexto = 'blanco';
   alinear: 'izquierda' | 'centro' | 'derecha' = 'centro';
+  /**
+   * Texto con huecos ("Puntos: {juego.puntos}"): se recalcula cada vez que se
+   * dibuja. Si devuelve null (ha fallado), se deja de recalcular.
+   */
+  textoVivo: (() => string | null) | null = null;
+
+  /** Recalcula el texto con huecos, si lo tiene. */
+  actualizarTexto(): void {
+    if (!this.textoVivo) return;
+    const t = this.textoVivo();
+    if (t === null) this.textoVivo = null;
+    else this.texto = t;
+  }
 
   /** Tamaño real (incluyendo la escala de la Transformación). */
   get anchoFinal(): number {
@@ -52,6 +65,7 @@ export class Sprite extends Componente {
    * Canvas, positivo = a favor.
    */
   dibujarEn(r: Renderizador, x: number, y: number): void {
+    this.actualizarTexto();
     if (!this.visible || this.opacidad <= 0) return;
     const rotacion = -this.objeto.transformacion.rotacion;
     const w = this.anchoFinal;

@@ -111,6 +111,12 @@ export abstract class Anfitrion {
   tieneMiembro(_nombre: string): boolean | null {
     return null;
   }
+  /**
+   * Para los textos con huecos: guardar una propiedad que se recalcula sola
+   * (yo.texto = "Puntos: {juego.puntos}"). Devuelve falso si esa propiedad
+   * no admite textos vivos (entonces se guarda el valor calculado una vez).
+   */
+  asignarVivo?(propiedad: string, calcular: () => string | null, pos: Posicion): boolean;
   /** Si el miembro es otro módulo (escena.camara), lo devuelve para seguir comprobando. */
   submodulo(_nombre: string): Anfitrion | null {
     return null;

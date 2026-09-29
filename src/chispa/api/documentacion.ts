@@ -286,7 +286,7 @@ export const DOC_VALORES: { tipo: string; descripcion: string; miembros: Doc[] }
   },
   {
     tipo: 'texto',
-    descripcion: 'Un texto entre comillas: "Hola". Con + se une a otros textos y números.',
+    descripcion: 'Un texto entre comillas: "Hola". Con + se une a otros textos y números. Entre llaves se meten valores: "Puntos: {juego.puntos}" (para escribir una llave, dos: {{). Si se lo das a yo.texto, se actualiza solo.',
     miembros: [
       d('longitud', 'propiedad', 'texto.longitud', 'Cuántas letras tiene el texto.', 'mostrar(nombre.longitud)'),
       d('mayusculas', 'propiedad', 'texto.mayusculas', 'El mismo texto en MAYÚSCULAS.', 'yo.texto = nombre.mayusculas'),
@@ -345,8 +345,8 @@ export const RECETAS: Receta[] = [
   },
   {
     titulo: 'Enseñar los puntos (o la vida) en la pantalla',
-    descripcion: 'Añade un Texto (ya sale pegado a la pantalla) y ponle este script. «juego» guarda datos que ven todos los scripts; alguien tiene que darle valor primero (ver la receta anterior).',
-    codigo: 'cuando cada fotograma:\n    yo.texto = "Puntos: " + juego.puntos',
+    descripcion: 'Sin código: añade un Texto y escribe en su texto (Propiedades) Puntos: {juego.puntos}, o elige el dato en «Enseñar un dato». Lo que va entre llaves se actualiza solo mientras juegas. Alguien tiene que darle valor primero (ver la receta anterior). Desde el código es igual:',
+    codigo: 'cuando empieza:\n    yo.texto = "Puntos: {juego.puntos}"',
   },
   {
     titulo: 'Disparar',
@@ -391,12 +391,12 @@ export const RECETAS: Receta[] = [
   {
     titulo: 'Cuenta atrás',
     descripcion: 'En el script de un Texto.',
-    codigo: 'variable quedan = 30\n\ncuando cada 1 segundo:\n    quedan -= 1\n    yo.texto = "Tiempo: " + quedan\n    si quedan == 0:\n        escena.cambiar("Fin")',
+    codigo: 'variable quedan = 30\n\ncuando empieza:\n    yo.texto = "Tiempo: {quedan}"\n\ncuando cada 1 segundo:\n    quedan -= 1\n    si quedan == 0:\n        escena.cambiar("Fin")',
   },
   {
     titulo: 'Guardar el récord',
     descripcion: 'Los datos guardados siguen ahí aunque cierres el juego. Por ejemplo, en la escena Fin:',
-    codigo: 'cuando empieza:\n    variable record = cargar("record", 0)\n    si juego.puntos > record:\n        guardar("record", juego.puntos)\n        record = juego.puntos\n    yo.texto = "Récord: " + record',
+    codigo: 'cuando empieza:\n    variable record = cargar("record", 0)\n    si juego.puntos > record:\n        guardar("record", juego.puntos)\n        record = juego.puntos\n    yo.texto = "Récord: {record}"',
   },
 ];
 

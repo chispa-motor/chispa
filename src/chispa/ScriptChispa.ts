@@ -271,12 +271,20 @@ export class ScriptChispa extends Componente {
   /** Ejecuta algo sabiendo que "yo" es este objeto (y deja como estaba el anterior). */
   private comoObjetoActual<T>(fn: () => T): T {
     const anterior = this.interprete.objetoActual;
+    const programaAnterior = this.interprete.programaActual;
     this.interprete.objetoActual = this.objeto;
+    this.interprete.programaActual = this.programa;
     try {
       return fn();
     } finally {
       this.interprete.objetoActual = anterior;
+      this.interprete.programaActual = programaAnterior;
     }
+  }
+
+  /** Las variables del script (para los textos con huecos del editor, que pueden usarlas). */
+  get entornoDelScript(): Entorno | null {
+    return this.entorno ?? null;
   }
 
   private despertarHilos(): void {

@@ -61,6 +61,19 @@ cuando se pulsa "espacio":
 | vector | \`vector(10, 20)\` | Dos números juntos: una posición o una velocidad. |
 | objeto | \`yo\`, \`otro\`, \`buscar("Jugador")\` | Los objetos de la escena. |
 
+### Textos con huecos
+
+Dentro de un texto, lo que va **entre llaves** se cambia por su valor:
+
+\`\`\`
+mostrar("Vida: {yo.vida}")                  # Vida: 3
+mostrar("{a} + {b} = {a + b}")
+yo.texto = "Puntos: {juego.puntos}"         # este se actualiza solo
+\`\`\`
+
+- Si el texto se le da a \`yo.texto\` (o se escribe en el editor, en el texto de un objeto), **se actualiza solo** mientras juegas. En el editor, «Enseñar un dato» lo pone por ti.
+- Para escribir una llave de verdad se ponen dos: \`"{{"\` y \`"}}"\`.
+
 ### Variables
 
 \`\`\`

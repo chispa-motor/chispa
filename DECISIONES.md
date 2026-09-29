@@ -123,3 +123,14 @@ Ver PROBLEMAS_PRINCIPIANTE.md para la lista completa de lo que se encontró.
 | Las **pruebas de navegador** (`npm run pruebas:navegador`) no forman parte de `npm run pruebas`. | Necesitan descargar un navegador (unos 150 MB). Los tests normales siguen funcionando sin nada más. |
 | Imagen o sonido importado que no se puede leer: el mensaje dice **su nombre** y cómo arreglarlo, no la ruta. | La ruta de un recurso importado es un «data URL» de miles de letras. |
 | Nuevo **`raton.seSolto()`**, que es lo mismo que ya tenía `teclado`. | La función del motor ya existía, pero no se podía usar desde Chispa. |
+
+### Textos con huecos (sesión 3, bloque 1)
+
+| Decisión | Por qué |
+|---|---|
+| Lo que va **entre llaves** dentro de un texto se calcula: `"Puntos: {juego.puntos}"`. Dentro puede ir cualquier expresión (`{redondear(tiempo.total)}`). Para escribir una llave: `{{` y `}}`. | Es como se piensa un marcador («Puntos: y aquí los puntos»), y evita `"Puntos: " + texto(...)`. Las llaves no se usaban dentro de los textos, así que no se rompe nada. |
+| Un texto con huecos que se da a **`yo.texto`** (o que se escribe en el **texto de un objeto en el editor**) **se vuelve a calcular cada vez que se dibuja**: se actualiza solo. En cualquier otro sitio (`mostrar`, variables…) se calcula una vez, en ese momento. | Así un marcador funciona sin `cuando cada fotograma`. Guardar en una variable «el texto de ahora» sigue siendo lo normal. |
+| Dentro de un texto del editor se pueden usar `juego`, `yo`, las funciones y **las variables del script de ese objeto**. Se revisan antes de ejecutar, como el código. | Un error en un marcador tiene que salir antes de jugar, con su «¿querías decir…?». |
+| Si un hueco falla mientras se juega (por ejemplo, `juego.puntos` todavía no tiene valor), se avisa **una vez** en la consola y ese texto deja de recalcularse; el juego sigue. | Un error repetido 60 veces por segundo taparía todo lo demás. |
+| En el editor, **«Enseñar un dato»** ofrece los datos de `juego` que usan los scripts, las propiedades propias del objeto y de los demás, y el tiempo. Si el texto no decía nada («Texto»), le pone nombre: `Puntos: {juego.puntos}`. | Enlazar un texto a un dato sin escribir nada de código. |
+| Los huecos se **colorean como código** y se **autocompletan** dentro del texto. | Así se ve que lo de dentro no es texto normal. |

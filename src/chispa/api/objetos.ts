@@ -151,7 +151,18 @@ const PROPIEDADES: Record<string, PropiedadObjeto> = {
   },
   ancho: { obtener: (o, p) => necesitaSprite(o, 'ancho', p).ancho, asignar: (o, v, p) => (necesitaSprite(o, 'ancho', p).ancho = comoNumero(v, 'ancho', p)) },
   alto: { obtener: (o, p) => necesitaSprite(o, 'alto', p).alto, asignar: (o, v, p) => (necesitaSprite(o, 'alto', p).alto = comoNumero(v, 'alto', p)) },
-  texto: { obtener: (o, p) => necesitaSprite(o, 'texto', p).texto, asignar: (o, v, p) => (necesitaSprite(o, 'texto', p).texto = aTexto(v)) },
+  texto: {
+    obtener: (o, p) => {
+      const s = necesitaSprite(o, 'texto', p);
+      s.actualizarTexto(); // si tiene huecos, el valor de ahora mismo
+      return s.texto;
+    },
+    asignar: (o, v, p) => {
+      const s = necesitaSprite(o, 'texto', p);
+      s.textoVivo = null; // un texto normal sustituye al que tenía huecos
+      s.texto = aTexto(v);
+    },
+  },
   tamaño: {
     obtener: (o, p) => necesitaSprite(o, 'tamaño', p).tamano,
     asignar: (o, v, p) => (necesitaSprite(o, 'tamaño', p).tamano = comoNumero(v, 'tamaño', p)),
@@ -409,6 +420,13 @@ export class RefObjeto extends Anfitrion {
       `el objeto '${o.nombre}' no tiene nada llamado '${original}'.`,
       s ? `¿Querías decir '${s}'?` : `Si es una propiedad tuya, dale un valor antes, por ejemplo en "cuando empieza": yo.${original} = 0`,
     );
+  }
+
+  /** yo.texto = "Puntos: {juego.puntos}": el letrero se actualiza solo. */
+  asignarVivo(p: string, calcular: () => string | null, pos: Posicion): boolean {
+    if (p !== 'texto') return false;
+    necesitaSprite(this.objeto, 'texto', pos).textoVivo = calcular;
+    return true;
   }
 
   asignar(p: string, v: Valor, original: string, pos: Posicion): void {

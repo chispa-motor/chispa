@@ -63,6 +63,20 @@ await prueba('el editor arranca con el ejemplo y F5 ejecuta el juego', async (p)
   comprobar((await textoDe(p, '.estado-juego')).startsWith('Parado'), 'no se ha parado');
 });
 
+await prueba('un texto con «Enseñar un dato» se actualiza solo en el juego', async (p) => {
+  await estado(p, () => window.chispa.estado.cambiarCodigo('cuadrado.chs', 'cuando empieza:\n    juego.puntos = 0\ncuando cada fotograma:\n    juego.puntos += 1\n'));
+  await p.click('.boton-anadir');
+  await p.click('.opcion-menu:has-text("Texto")');
+  await p.selectOption('.menu-datos', '{juego.puntos}');
+  const texto = await estado(p, () => window.chispa.estado.seleccionado.sprite.texto);
+  comprobar(texto === 'Puntos: {juego.puntos}', 'el texto no tiene el dato: ' + texto);
+  await p.keyboard.press('F5');
+  await p.waitForFunction(() => document.querySelector('.estado-juego')?.textContent?.startsWith('Jugando'));
+  await p.waitForTimeout(500);
+  const enJuego = await estado(p, () => window.chispa.vistaJuego.juego.escena.buscar('Texto').obtener ? window.chispa.vistaJuego.juego.escena.objetos.find((o) => o.nombre === 'Texto').todosLosComponentes.find((c) => 'textoVivo' in c).texto : '');
+  comprobar(/^Puntos: \d+$/.test(enJuego) && enJuego !== 'Puntos: 0', 'el texto no se actualiza: ' + enJuego);
+});
+
 await prueba('los errores se subrayan mientras escribes y bloquean Ejecutar', async (p) => {
   await p.click('.nodo.hijo');
   await p.click('.cm-content');

@@ -40,6 +40,19 @@ cuando se pulsa "espacio":
 | vector | `vector(10, 20)` | Dos números juntos: una posición o una velocidad. |
 | objeto | `yo`, `otro`, `buscar("Jugador")` | Los objetos de la escena. |
 
+### Textos con huecos
+
+Dentro de un texto, lo que va **entre llaves** se cambia por su valor:
+
+```
+mostrar("Vida: {yo.vida}")                  # Vida: 3
+mostrar("{a} + {b} = {a + b}")
+yo.texto = "Puntos: {juego.puntos}"         # este se actualiza solo
+```
+
+- Si el texto se le da a `yo.texto` (o se escribe en el editor, en el texto de un objeto), **se actualiza solo** mientras juegas. En el editor, «Enseñar un dato» lo pone por ti.
+- Para escribir una llave de verdad se ponen dos: `"{{"` y `"}}"`.
+
 ### Variables
 
 ```
@@ -1458,7 +1471,7 @@ variable primero = cola.quitar(1)
 
 ### Textos
 
-Un texto entre comillas: "Hola". Con + se une a otros textos y números.
+Un texto entre comillas: "Hola". Con + se une a otros textos y números. Entre llaves se meten valores: "Puntos: {juego.puntos}" (para escribir una llave, dos: {{). Si se lo das a yo.texto, se actualiza solo.
 
 #### `texto.longitud`
 
@@ -1599,11 +1612,11 @@ cuando toco Moneda:
 
 ### Enseñar los puntos (o la vida) en la pantalla
 
-Añade un Texto (ya sale pegado a la pantalla) y ponle este script. «juego» guarda datos que ven todos los scripts; alguien tiene que darle valor primero (ver la receta anterior).
+Sin código: añade un Texto y escribe en su texto (Propiedades) Puntos: {juego.puntos}, o elige el dato en «Enseñar un dato». Lo que va entre llaves se actualiza solo mientras juegas. Alguien tiene que darle valor primero (ver la receta anterior). Desde el código es igual:
 
 ```
-cuando cada fotograma:
-    yo.texto = "Puntos: " + juego.puntos
+cuando empieza:
+    yo.texto = "Puntos: {juego.puntos}"
 ```
 
 ### Disparar
@@ -1712,9 +1725,11 @@ En el script de un Texto.
 ```
 variable quedan = 30
 
+cuando empieza:
+    yo.texto = "Tiempo: {quedan}"
+
 cuando cada 1 segundo:
     quedan -= 1
-    yo.texto = "Tiempo: " + quedan
     si quedan == 0:
         escena.cambiar("Fin")
 ```
@@ -1729,5 +1744,5 @@ cuando empieza:
     si juego.puntos > record:
         guardar("record", juego.puntos)
         record = juego.puntos
-    yo.texto = "Récord: " + record
+    yo.texto = "Récord: {record}"
 ```

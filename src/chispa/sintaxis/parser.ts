@@ -78,6 +78,15 @@ class Parser {
     private errores: ErrorChispa[],
   ) {}
 
+  /** Lee UNA expresión sola (lo que va dentro de un hueco {…} de un texto). */
+  expresionSola(): Expresion {
+    const e = this.expresion();
+    if (!this.es('nuevaLinea') && !this.es('fin')) {
+      this.error(`dentro de las llaves { } solo puede ir un valor, pero sobra ${this.describir(this.actual)}.`, 'Ejemplos: "Puntos: {juego.puntos}"   ·   "Vida: {yo.vida}"');
+    }
+    return e;
+  }
+
   // ───────────────────────── Utilidades ─────────────────────────
 
   private get actual(): Token {
@@ -714,7 +723,7 @@ class Parser {
         return { tipo: 'Numero', valor: t.numero!, pos };
       case 'texto':
         this.avanzar();
-        return { tipo: 'Texto', valor: t.valor, pos };
+        return textoConHuecos(t, this.lineas);
       case 'identificador':
         this.avanzar();
         return { tipo: 'Identificador', nombre: t.valor, original: t.original, pos };
@@ -821,5 +830,81 @@ class Parser {
     }
     this.avanzar();
     return { tipo: 'Tabla', entradas, pos: posicionDe(inicio) };
+  }
+}
+
+// ═════════════════════════ Textos con huecos ═════════════════════════
+
+/**
+ * "Puntos: {juego.puntos}" → partes: ["Puntos: ", <juego.puntos>].
+ *
+ * Los huecos se buscan en el texto TAL COMO SE ESCRIBIÓ (con sus \n y sus
+ * comillas), para que los errores apunten a la columna exacta.
+ * Para escribir una llave de verdad se ponen dos: "{{" y "}}".
+ */
+export function textoConHuecos(t: Token, lineas: string[] = []): Expresion {
+  const pos = posicionDe(t);
+  const original = t.original;
+  if (!original.includes('{') && !original.includes('}')) return { tipo: 'Texto', valor: t.valor, pos };
+  const partes: (string | Expresion)[] = [];
+  let literal = '';
+  // Quitamos la comilla de apertura y la de cierre
+  const cuerpo = original.slice(1, original.length - 1);
+  const errorEn = (i: number, largo: number, mensaje: string, pista?: string): never => {
+    throw new ErrorChispa({ linea: t.linea, columna: t.columna + 1 + i, longitud: Math.max(1, largo) }, mensaje, pista);
+  };
+  for (let i = 0; i < cuerpo.length; i++) {
+    const c = cuerpo[i];
+    if (c === '\\' && i + 1 < cuerpo.length) {
+      const sig = cuerpo[++i];
+      literal += sig === 'n' ? '\n' : sig === 't' ? '\t' : sig;
+      continue;
+    }
+    if (c === '{' && cuerpo[i + 1] === '{') {
+      literal += '{';
+      i++;
+      continue;
+    }
+    if (c === '}' && cuerpo[i + 1] === '}') {
+      literal += '}';
+      i++;
+      continue;
+    }
+    if (c === '}') errorEn(i, 1, "hay una llave '}' que cierra un hueco que nunca se abrió.", 'Los huecos se escriben así: "Puntos: {juego.puntos}". Para escribir una llave de verdad, pon dos: }}');
+    if (c !== '{') {
+      literal += c;
+      continue;
+    }
+    const cierre = cuerpo.indexOf('}', i + 1);
+    if (cierre < 0) errorEn(i, cuerpo.length - i, "hay un hueco '{' que no se cierra con '}'.", 'Los huecos se escriben así: "Puntos: {juego.puntos}". Para escribir una llave de verdad, pon dos: {{');
+    const dentro = cuerpo.slice(i + 1, cierre);
+    if (!dentro.trim()) errorEn(i, cierre - i + 1, 'hay un hueco { } vacío.', 'Dentro de las llaves va lo que quieres enseñar: "Puntos: {juego.puntos}"');
+    if (literal) partes.push(literal);
+    literal = '';
+    partes.push(expresionDeHueco(dentro, t, i + 1, lineas));
+    i = cierre;
+  }
+  if (literal) partes.push(literal);
+  return { tipo: 'Texto', valor: t.valor, pos, partes };
+}
+
+/** Analiza lo que hay dentro de un hueco, con las posiciones corregidas para que apunten al sitio de verdad. */
+function expresionDeHueco(fuente: string, t: Token, desplazamiento: number, lineas: string[]): Expresion {
+  const espacios = fuente.length - fuente.trimStart().length;
+  const limpio = fuente.trim();
+  const columnaBase = t.columna + 1 + desplazamiento + espacios; // columna del primer carácter del hueco
+  const errores: ErrorChispa[] = [];
+  const tokens = analizarLexico(limpio, errores).filter((k) => k.tipo !== 'indentar' && k.tipo !== 'desindentar');
+  const mover = (p: Posicion): Posicion => ({ linea: t.linea, columna: columnaBase + p.columna - 1, longitud: p.longitud });
+  if (errores.length) throw new ErrorChispa(mover(errores[0].posicion), errores[0].mensajeCorto, errores[0].pista);
+  for (const k of tokens) {
+    k.columna = columnaBase + k.columna - 1;
+    k.linea = t.linea;
+  }
+  try {
+    return new Parser(tokens, lineas, []).expresionSola();
+  } catch (e) {
+    if (e instanceof ErrorChispa) throw new ErrorChispa({ ...e.posicion, linea: t.linea }, e.mensajeCorto, e.pista);
+    throw e;
   }
 }

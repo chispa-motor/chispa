@@ -9,6 +9,8 @@
  */
 import { NOMBRES_COLORES } from '../../motor/Color';
 import { tipoPorNombre, type DefObjeto } from '../../proyecto/formato';
+import { tieneHuecos } from '../../proyecto/TextosConHuecos';
+import { datosParaTextos, insertarDato } from '../estado/datosTextos';
 import type { EstadoEditor, RefObjeto } from '../estado/EstadoEditor';
 import type { VistaEscena } from '../escena/VistaEscena';
 import { botonIcono, h, icono, rellenar } from '../interfaz/dom';
@@ -116,8 +118,10 @@ export class Inspector {
             campoNumero('alto', 'sprite.alto', s.alto ?? 64, cambiar('sprite.alto'), { ...largo, min: 1 }),
           ),
           s.forma === 'texto' || s.texto
-            ? campoTexto(s.forma === 'texto' ? 'texto' : 'etiqueta', 'sprite.texto', s.texto, (v) => cambiar('sprite.texto')(v || undefined), s.forma === 'texto' ? 'Lo que pone (desde el código: yo.texto = "…")' : 'Texto encima (para botones)')
+            ? campoTexto(s.forma === 'texto' ? 'texto' : 'etiqueta', 'sprite.texto', s.texto, (v) => cambiar('sprite.texto')(v || undefined), s.forma === 'texto' ? 'Lo que pone. Entre llaves, un dato que se actualiza solo: Puntos: {juego.puntos}' : 'Texto encima (para botones)')
             : h('button', { class: 'boton-enlace', onclick: () => cambiar('sprite.texto')('Boton') }, '+ Añadir un texto encima (para botones)'),
+          s.forma === 'texto' || s.texto ? this.menuDatos(ref, def) : null,
+          tieneHuecos(s.texto) ? h('p', { class: 'nota' }, 'Este texto se actualiza solo mientras juegas: lo que va entre llaves { } se cambia por su valor.') : null,
           s.forma === 'texto' || s.texto
             ? h('div', { class: 'dos-columnas' },
                 campoNumero('tamaño', 'sprite.tamano', s.tamano ?? 24, cambiar('sprite.tamano'), { ...largo, min: 4, ayuda: 'Tamaño de la letra' }),
@@ -199,6 +203,32 @@ export class Inspector {
       }, 'Borrar', 'peligro'),
     ));
     return partes.filter((p): p is HTMLElement => !!p);
+  }
+
+  /**
+   * «Enseñar un dato»: enlaza el texto a un dato sin escribir código. Pone un
+   * hueco {…} en el texto (por ejemplo, Puntos: {juego.puntos}).
+   */
+  private menuDatos(ref: RefObjeto, def: DefObjeto): HTMLElement {
+    const e = this.estado;
+    const opciones = datosParaTextos(e.proyecto, e.escena.objetos, def);
+    const lista = h('select', { class: 'campo menu-datos', 'data-ruta': 'sprite.dato', title: 'Enseña en el texto un dato que se actualiza solo mientras juegas (puntos, vidas, tiempo...)' },
+      h('option', { value: '' }, '{ } Enseñar un dato…'),
+      opciones.map(([grupo, datos]) => h('optgroup', { label: grupo }, datos.map(([hueco, texto]) => h('option', { value: hueco }, texto)))),
+      h('option', { value: '?' }, 'Otro dato del juego…'),
+    );
+    lista.addEventListener('change', async () => {
+      let hueco = lista.value;
+      lista.value = '';
+      if (hueco === '?') {
+        const n = await pedirTexto('Enseñar un dato del juego', 'Nombre del dato (por ejemplo: puntos, vidas, nivel). En el código se guarda con juego.puntos = 0', 'puntos');
+        if (!n) return;
+        hueco = `{juego.${n.trim().replace(/\s+/g, '_')}}`;
+      }
+      if (!hueco) return;
+      e.cambiarPropiedad(ref, 'sprite.texto', insertarDato(def.sprite?.texto, hueco));
+    });
+    return lista;
   }
 
   /** Al pegar un objeto a la pantalla (o despegarlo) conservamos dónde se ve. */

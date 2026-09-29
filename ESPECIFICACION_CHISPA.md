@@ -63,6 +63,8 @@ Chispa usa los ejes de las matemáticas y de Unity: **subir es sumar a la Y**.
 | objeto | `yo`, `otro`, `crear("Bala")` | Objetos de la escena. |
 | función | `funcion saltar(): ...` | Las funciones también son valores. |
 
+**Textos con huecos:** lo que va entre llaves dentro de un texto se calcula y se mete en él: `"Puntos: {juego.puntos}"`, `"{a} + {b} = {a + b}"`. Dentro puede ir cualquier expresión. Si un texto con huecos se asigna a `yo.texto` (o se escribe en el texto de un objeto en el editor), se vuelve a calcular en cada fotograma: **se actualiza solo**. Para escribir una llave: `{{` y `}}`.
+
 **Qué cuenta como falso en un `si`:** solo `falso` y `nulo`. El `0` y el texto vacío cuentan como verdadero, igual que en Luau.
 
 **Copias y referencias:**
@@ -278,7 +280,6 @@ Si el error pasa **dentro de una función**, se añade desde dónde se llamó:
 
 - Clases ni herencia (su lugar lo ocupan los objetos de la escena y las tablas).
 - Importar otros archivos.
-- Textos con huecos para variables, como `"Vida: {vida}"`.
 - Capturar errores (`intentar`/`si falla`).
 
 Se pueden añadir más adelante si hacen falta.

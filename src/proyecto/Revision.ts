@@ -13,6 +13,7 @@ import { Interprete } from '../chispa/ejecucion/interprete';
 import type { Programa } from '../chispa/sintaxis/ast';
 import { analizarSintaxis } from '../chispa/sintaxis/parser';
 import { nombresDeObjetos, type DefProyecto } from './formato';
+import { revisarTextos } from './TextosConHuecos';
 
 export interface ResultadoRevision {
   /** Árbol de cada script que se ha podido leer (aunque tenga errores de análisis). */
@@ -78,6 +79,12 @@ export function revisarProyecto(proyecto: DefProyecto, globales: Entorno = globa
       }
     }
     r.porArchivo.set(archivo, diagnosticos);
+  }
+  // Los textos con huecos de los objetos ("Puntos: {juego.puntos}")
+  const textos = revisarTextos(proyecto, globales, r.programas);
+  if (textos.length) {
+    r.porArchivo.set('', textos);
+    for (const d of textos) r.errores.push(new ErrorChispa(d.pos, d.mensaje, d.pista));
   }
   return r;
 }
