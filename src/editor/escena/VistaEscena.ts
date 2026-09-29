@@ -3,9 +3,11 @@
  * "Scene" de Unity o el editor 2D de Godot).
  *
  *   - Clic en un objeto: seleccionarlo.  Arrastrar: moverlo.
+ *   - Ctrl+clic: añadir o quitar de la selección.  Arrastrar el fondo: un
+ *     rectángulo que selecciona todo lo que toca (como en el escritorio).
  *   - Cuadradito de la esquina: cambiar el tamaño.
- *   - Rueda del ratón: acercar / alejar.  Arrastrar el fondo (o con el botón
- *     central, o con espacio pulsado): mover la vista.
+ *   - Rueda del ratón: acercar / alejar.  Botón derecho, botón central o
+ *     espacio + arrastrar: mover la vista.
  *   - Pincel / goma: pintar casillas en el mapa seleccionado.
  *   - Arrastrar una plantilla o una imagen desde el panel izquierdo (o una
  *     imagen desde tu ordenador): la coloca en la escena.
@@ -45,6 +47,8 @@ const TAMANO_TIRADOR = 9;
 
 type Arrastre =
   | { tipo: 'mover'; dx: number; dy: number }
+  | { tipo: 'moverVarios'; x0: number; y0: number; origenes: { indice: number; x: number; y: number }[] }
+  | { tipo: 'marco'; x0: number; y0: number; x1: number; y1: number; sumar: boolean }
   | { tipo: 'tamano'; ancho0: number; alto0: number; x0: number; y0: number }
   | { tipo: 'vista'; px: number; py: number }
   | { tipo: 'pintar' }
@@ -445,10 +449,35 @@ export class VistaEscena {
   }
 
   private dibujarSeleccion(marco: ReturnType<VistaEscena['marco']>): void {
-    const def = this.estado.seleccion?.tipo === 'escena' ? this.estado.seleccionado : null;
-    if (!def) return;
     const ctx = this.r.ctx;
     const cam = this.camara;
+    // El rectángulo de selección (arrastrando el fondo)
+    const r0 = this.arrastre;
+    if (r0?.tipo === 'marco') {
+      ctx.fillStyle = '#4aa3ff22';
+      ctx.strokeStyle = '#4aa3ff';
+      ctx.lineWidth = 1;
+      const x = Math.min(r0.x0, r0.x1);
+      const y = Math.min(r0.y0, r0.y1);
+      ctx.fillRect(x, y, Math.abs(r0.x1 - r0.x0), Math.abs(r0.y1 - r0.y0));
+      ctx.strokeRect(Math.round(x) + 0.5, Math.round(y) + 0.5, Math.round(Math.abs(r0.x1 - r0.x0)), Math.round(Math.abs(r0.y1 - r0.y0)));
+    }
+    // Varios seleccionados: un borde en cada uno (sin tiradores)
+    if (this.estado.variosSeleccionados) {
+      ctx.strokeStyle = '#4aa3ff';
+      ctx.lineWidth = 2;
+      for (const i of this.estado.indicesSeleccionados()) {
+        const d = this.estado.escena.objetos[i];
+        if (!d) continue;
+        const c = cajaDe(d, marco);
+        const a = cam.aPantalla(c.izquierda, c.arriba);
+        const b = cam.aPantalla(c.derecha, c.abajo);
+        ctx.strokeRect(Math.round(a.x) - 1.5, Math.round(a.y) - 1.5, Math.round(b.x - a.x) + 3, Math.round(b.y - a.y) + 3);
+      }
+      return;
+    }
+    const def = this.estado.seleccion?.tipo === 'escena' ? this.estado.seleccionado : null;
+    if (!def) return;
     const c = cajaDe(def, marco);
     const a = cam.aPantalla(c.izquierda, c.arriba);
     const b = cam.aPantalla(c.derecha, c.abajo);
@@ -578,6 +607,7 @@ export class VistaEscena {
 
   /** ¿Hay un punto del recorrido bajo el ratón? Devuelve su índice en `recorrido.puntos`. */
   private puntoEn(px: number, py: number): number | null {
+    if (this.estado.variosSeleccionados) return null;
     const def = this.estado.seleccion?.tipo === 'escena' ? this.estado.seleccionado : null;
     if (!def?.recorrido || this.herramienta !== 'mover') return null;
     const pts = this.puntosRecorrido(def, this.marco());
@@ -593,6 +623,7 @@ export class VistaEscena {
   }
 
   private enTirador(px: number, py: number): boolean {
+    if (this.estado.variosSeleccionados) return false;
     const def = this.estado.seleccion?.tipo === 'escena' ? this.estado.seleccionado : null;
     if (!def?.sprite || this.herramienta !== 'mover') return false;
     const c = cajaDe(def, this.marco());
@@ -620,6 +651,24 @@ export class VistaEscena {
     const c = this.casillaEn(px, py);
     if (!ref || !c) return;
     this.estado.pintarCasilla(ref, c.columna, c.fila, this.tipoParaPintar());
+  }
+
+  /** Selecciona todo lo que toca el rectángulo (menos los mapas, que ocupan mucho y casi nunca se quieren mover). */
+  private seleccionarEnMarco(a: { x0: number; y0: number; x1: number; y1: number; sumar: boolean }): void {
+    if (Math.abs(a.x1 - a.x0) < 4 && Math.abs(a.y1 - a.y0) < 4) return this.redibujar(); // era un clic
+    const p = this.camara.aMundo(a.x0, a.y0);
+    const q = this.camara.aMundo(a.x1, a.y1);
+    const [izq, der] = [Math.min(p.x, q.x), Math.max(p.x, q.x)];
+    const [abajo, arriba] = [Math.min(p.y, q.y), Math.max(p.y, q.y)];
+    const marco = this.marco();
+    const dentro = this.estado.escena.objetos.flatMap((d, i) => {
+      if (d.mapa) return [];
+      const c = cajaDe(d, marco);
+      return c.derecha >= izq && c.izquierda <= der && c.arriba >= abajo && c.abajo <= arriba ? [i] : [];
+    });
+    const antes = a.sumar ? this.estado.indicesSeleccionados() : [];
+    this.estado.seleccionarVarios([...antes, ...dentro]);
+    this.redibujar();
   }
 
   private escuchar(): void {
@@ -665,9 +714,22 @@ export class VistaEscena {
         return;
       }
       const i = objetoEn(this.estado.escena.objetos, marco, m.x, m.y, 3 / this.camara.zoom);
+      const sumar = e.ctrlKey || e.metaKey;
       if (i === null) {
-        this.estado.seleccionar(null);
-        this.arrastre = { tipo: 'vista', px: p.x, py: p.y };
+        // Fondo: rectángulo de selección (con Ctrl, se añade a lo que ya había)
+        if (!sumar) this.estado.seleccionar(null);
+        this.arrastre = { tipo: 'marco', x0: p.x, y0: p.y, x1: p.x, y1: p.y, sumar };
+        return;
+      }
+      if (sumar) {
+        this.estado.alternarSeleccion(i);
+        return;
+      }
+      if (this.estado.variosSeleccionados && this.estado.estaSeleccionado(i)) {
+        // Arrastrar uno de los seleccionados: se mueven todos
+        const origenes = this.estado.indicesSeleccionados().map((k) => ({ indice: k, ...posicionEnEditor(this.estado.escena.objetos[k], marco) }));
+        this.estado.empezarCambioLargo();
+        this.arrastre = { tipo: 'moverVarios', x0: m.x, y0: m.y, origenes };
         return;
       }
       this.estado.seleccionarIndice(i);
@@ -697,6 +759,24 @@ export class VistaEscena {
         return;
       }
       if (a.tipo === 'pintar') return this.pintar(p.x, p.y);
+      if (a.tipo === 'marco') {
+        a.x1 = p.x;
+        a.y1 = p.y;
+        this.redibujar();
+        return;
+      }
+      if (a.tipo === 'moverVarios') {
+        const m = this.camara.aMundo(p.x, p.y);
+        let dx = m.x - a.x0;
+        let dy = m.y - a.y0;
+        if (this.iman !== e.altKey) [dx, dy] = [ajustar(dx, PASO_IMAN), ajustar(dy, PASO_IMAN)];
+        const marco = this.marco();
+        this.estado.colocarObjetos(a.origenes.map((o) => {
+          const def = this.estado.escena.objetos[o.indice];
+          return { indice: o.indice, ...posicionGuardada(def, marco, o.x + dx, o.y + dy) };
+        }));
+        return;
+      }
       if (a.tipo === 'punto') {
         const ref = this.estado.seleccion;
         const def = this.estado.seleccionado;
@@ -755,6 +835,8 @@ export class VistaEscena {
       const a = this.arrastre;
       if (a?.tipo === 'rectangulo' && this.estado.seleccion) {
         this.estado.pintarRectangulo(this.estado.seleccion, a.c0, a.f0, a.c1, a.f1, this.tipoParaPintar());
+      } else if (a?.tipo === 'marco') {
+        this.seleccionarEnMarco(a);
       } else if (a && a.tipo !== 'vista') this.estado.terminarCambioLargo();
       this.arrastre = null;
       c.style.cursor = 'default';
@@ -851,7 +933,8 @@ export class VistaEscena {
     const d = mov[e.key];
     if (d) {
       e.preventDefault();
-      this.estado.moverObjeto(ref, (def.x ?? 0) + d[0], (def.y ?? 0) + d[1]);
+      if (this.estado.variosSeleccionados) this.estado.moverSeleccionados(d[0], d[1]);
+      else this.estado.moverObjeto(ref, (def.x ?? 0) + d[0], (def.y ?? 0) + d[1]);
     }
   }
 

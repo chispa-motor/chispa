@@ -328,3 +328,11 @@ kbd { display: inline-block; padding: 1px 6px; border-radius: 4px; border: 1px s
   .grupo-barra .boton-icono span { display: none; }
   .controles-juego .boton-icono span { display: inline; }
 }
+
+/* Copias enlazadas de una plantilla y selección múltiple */
+.nota-enlazada { display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-start; background: #b57cff14; border: 1px solid #b57cff44; border-radius: 6px; padding: 8px; }
+.nota-enlazada > svg { color: #b57cff; flex: none; margin-top: 2px; }
+.nota-enlazada > span:first-of-type { flex: 1; min-width: 160px; }
+.nota-enlazada .botones-nota { display: flex; gap: 10px; width: 100%; }
+.etiqueta.enlazada { color: #b57cff; display: inline-flex; align-items: center; }
+.titulo-varios { font-size: 14px; }

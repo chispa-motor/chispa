@@ -389,14 +389,17 @@ export class Aplicacion {
         [
           [[tecla('F5')], 'Ejecutar / reiniciar el juego'],
           [[tecla('Mayús'), '+', tecla('F5')], 'Parar el juego'],
-          [[tecla('Ctrl'), '+', tecla('Z'), ' / ', tecla('Ctrl'), '+', tecla('Y')], 'Deshacer / rehacer'],
+          [[tecla('Ctrl'), '+', tecla('Z'), ' / ', tecla('Ctrl'), '+', tecla('Y')], 'Deshacer / rehacer (cualquier cambio en la escena o el proyecto)'],
           [[tecla('Ctrl'), '+', tecla('S')], 'Guardar (descargar el proyecto)'],
-          [[tecla('Ctrl'), '+', tecla('D')], 'Duplicar el objeto seleccionado'],
+          [[tecla('Ctrl'), '+', tecla('D')], 'Duplicar lo seleccionado'],
+          [[tecla('Ctrl'), '+ clic'], 'Seleccionar varios objetos (en la escena o en la lista)'],
+          [['Arrastrar el fondo'], 'Seleccionar con un rectángulo todo lo que toque'],
+          [[tecla('Ctrl'), '+', tecla('A')], 'Seleccionar todos los objetos de la escena (menos los mapas)'],
           [[tecla('Ctrl'), '+', tecla('C'), ' / ', tecla('Ctrl'), '+', tecla('V')], 'Copiar y pegar objetos (también de una escena a otra)'],
           [[tecla('Mayús'), ' + arrastrar'], 'Con el pincel: pintar un rectángulo de casillas'],
-          [[tecla('Supr')], 'Borrar el objeto seleccionado'],
-          [[tecla('Flechas')], 'Mover el objeto seleccionado (con Mayús, de 10 en 10)'],
-          [[tecla('Espacio'), ' + arrastrar'], 'Mover la vista de la escena (o arrastra el fondo)'],
+          [[tecla('Supr')], 'Borrar lo seleccionado'],
+          [[tecla('Flechas')], 'Mover lo seleccionado (con Mayús, de 10 en 10)'],
+          [['Botón derecho + arrastrar'], 'Mover la vista de la escena (también con el botón central, o con Espacio + arrastrar)'],
           [[tecla('Rueda')], 'Acercar / alejar la escena'],
           [[tecla('V'), ' ', tecla('B'), ' ', tecla('E')], 'Mover · pintar casillas · borrar casillas'],
           [[tecla('Ctrl'), '+', tecla('Espacio')], 'Sugerencias en el editor de código'],
@@ -444,6 +447,9 @@ export class Aplicacion {
         ev.preventDefault();
         if (k === 'y' || ev.shiftKey) this.estado.rehacer();
         else this.estado.deshacer();
+      } else if (ctrl && k === 'a' && this.estado.pestanaActiva === 'escena') {
+        ev.preventDefault();
+        this.estado.seleccionarTodo();
       } else if (ctrl && k === 'd') {
         ev.preventDefault();
         this.estado.duplicarSeleccionado();

@@ -39,7 +39,8 @@ export class Inspector {
     const scroll = this.elemento.scrollTop;
     const ref = this.estado.seleccion;
     const def = this.estado.seleccionado;
-    if (ref && def) rellenar(this.elemento, ...this.objeto(ref, def));
+    if (this.estado.variosSeleccionados) rellenar(this.elemento, ...this.varios());
+    else if (ref && def) rellenar(this.elemento, ...this.objeto(ref, def));
     else rellenar(this.elemento, ...this.ajustesEscena());
     for (const d of this.elemento.querySelectorAll('details')) {
       const titulo = d.querySelector('.seccion-titulo')?.textContent ?? '';
@@ -70,8 +71,20 @@ export class Inspector {
         onchange: (ev: Event) => e.renombrar(ref, (ev.target as HTMLInputElement).value),
       }),
     );
+    const enlazada = esPlantilla ? null : e.plantillaDe(ref);
+    const copias = esPlantilla ? e.copiasDe(ref.nombre).length : 0;
     const info = esPlantilla
-      ? h('p', { class: 'nota' }, 'Plantilla: no está en la escena. Créala desde el código con ', h('code', {}, `crear("${nombre}")`), ' o arrástrala a la escena.')
+      ? h('p', { class: 'nota' }, 'Plantilla: créala desde el código con ', h('code', {}, `crear("${nombre}")`), ' o arrástrala a la escena.',
+          copias ? ` Lo que cambies aquí cambia también en sus ${copias} ${copias === 1 ? 'copia' : 'copias'} de las escenas.` : '')
+      : enlazada
+        ? h('div', { class: 'nota nota-enlazada' },
+            icono('plantilla', 14),
+            h('span', {}, 'Copia de la plantilla ', h('code', {}, enlazada), `. Lo que cambies aquí cambia en la plantilla y en todas sus copias (${e.copiasDe(enlazada).length}), menos el nombre y el sitio.`),
+            h('span', { class: 'botones-nota' },
+              h('button', { class: 'boton-enlace', title: 'Ver la plantilla en el inspector', onclick: () => e.seleccionar({ tipo: 'plantilla', nombre: enlazada }) }, 'Ver la plantilla'),
+              h('button', { class: 'boton-enlace desvincular', title: 'Esta copia se separa: a partir de ahora se cambia ella sola', onclick: () => e.desvincular(ref) }, 'Desvincular'),
+            ),
+          )
       : def.tipo && def.tipo !== def.nombre
         ? h('p', { class: 'nota' }, 'Copia de la plantilla ', h('code', {}, def.tipo), '.')
         : /\d$/.test(nombre) && tipoPorNombre(nombre) !== nombre
@@ -207,6 +220,28 @@ export class Inspector {
       }, 'Borrar', 'peligro'),
     ));
     return partes.filter((p): p is HTMLElement => !!p);
+  }
+
+  // ═════════════════════════ Varios objetos ═════════════════════════
+
+  private varios(): HTMLElement[] {
+    const e = this.estado;
+    const indices = e.indicesSeleccionados();
+    const nombres = indices.map((i) => e.escena.objetos[i]?.nombre ?? '(sin nombre)');
+    return [
+      h('div', { class: 'inspector-cabecera' }, icono('objeto', 20), h('strong', { class: 'titulo-varios' }, `${indices.length} objetos seleccionados`)),
+      h('p', { class: 'nota' }, nombres.join(', ')),
+      h('p', { class: 'nota' }, 'Arrastra uno de ellos en la escena para moverlos todos a la vez (o usa las flechas). Ctrl+clic añade o quita uno de la selección.'),
+      h('div', { class: 'acciones-objeto' },
+        botonIcono('copiar', 'Duplicar todos (Ctrl+D)', () => e.duplicarSeleccionado(), 'Duplicar'),
+        botonIcono('copiar', 'Copiar todos (Ctrl+C), para pegarlos en otra escena con Ctrl+V', () => {
+          if (e.copiarSeleccionado()) notificar(`${indices.length} objetos copiados. Pégalos con Ctrl+V (también en otra escena).`, 'ok');
+        }, 'Copiar'),
+        botonIcono('basura', 'Borrar todos (Supr)', async () => {
+          if (await confirmar('Borrar', `¿Borrar estos ${indices.length} objetos?`, 'Borrar', true)) e.borrarSeleccionado();
+        }, 'Borrar', 'peligro'),
+      ),
+    ];
   }
 
   /**

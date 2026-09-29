@@ -97,6 +97,50 @@ await prueba('una plataforma con Recorrido: se arrastra su punto y se mueve al j
   comprobar(enJuego.x !== def.x || enJuego.y !== def.y, 'la plataforma no se mueve al jugar');
 });
 
+await prueba('seleccionar varios con un rectángulo y con Ctrl+clic, moverlos juntos y deshacer', async (p) => {
+  await estado(p, () => {
+    const e = window.chispa.estado;
+    e.crearObjeto('circulo', 600, 270);
+    e.crearObjeto('rectangulo', 720, 270);
+    e.seleccionar(null);
+  });
+  const lienzo = await p.locator('.lienzo-escena').boundingBox();
+  const pantalla = (x, y) => estado(p, ([x, y]) => window.chispa.vistaEscena.camara.aPantalla(x, y), [x, y]);
+  const a = await pantalla(420, 330);
+  const b = await pantalla(650, 210);
+  // Rectángulo desde el fondo: coge el Cuadrado (480) y el Círculo (600), no el tercero (720)
+  await p.mouse.move(lienzo.x + a.x, lienzo.y + a.y);
+  await p.mouse.down();
+  await p.mouse.move(lienzo.x + b.x, lienzo.y + b.y, { steps: 5 });
+  await p.mouse.up();
+  let sel = await estado(p, () => window.chispa.estado.indicesSeleccionados());
+  comprobar(JSON.stringify(sel) === '[0,1]', 'el rectángulo no ha seleccionado los dos: ' + JSON.stringify(sel));
+  comprobar((await textoDe(p, '.inspector')).includes('2 objetos seleccionados'), 'el inspector no dice que hay 2 seleccionados');
+  // Ctrl+clic en el tercero lo añade
+  const c = await pantalla(720, 270);
+  await p.keyboard.down('Control');
+  await p.mouse.click(lienzo.x + c.x, lienzo.y + c.y);
+  await p.keyboard.up('Control');
+  sel = await estado(p, () => window.chispa.estado.indicesSeleccionados());
+  comprobar(sel.length === 3, 'Ctrl+clic no ha añadido el tercero: ' + JSON.stringify(sel));
+  // Arrastrar uno mueve los tres
+  const d = await pantalla(600, 270);
+  await p.mouse.move(lienzo.x + d.x, lienzo.y + d.y);
+  await p.mouse.down();
+  await p.mouse.move(lienzo.x + d.x + 64, lienzo.y + d.y, { steps: 6 });
+  await p.mouse.up();
+  const xs = await estado(p, () => window.chispa.estado.escena.objetos.map((o) => o.x));
+  comprobar(xs[0] > 480 && xs[1] > 600 && xs[2] > 720 && xs[1] - xs[0] === 120, 'no se han movido los tres juntos: ' + xs);
+  // Un solo Ctrl+Z los devuelve
+  await p.keyboard.press('Control+z');
+  const vuelta = await estado(p, () => window.chispa.estado.escena.objetos.map((o) => o.x));
+  comprobar(vuelta.join() === '480,600,720', 'deshacer no los ha devuelto: ' + vuelta);
+  // Supr borra los tres
+  await p.keyboard.press('Control+a');
+  await p.keyboard.press('Delete');
+  comprobar((await estado(p, () => window.chispa.estado.escena.objetos.length)) === 0, 'Supr no ha borrado todos');
+});
+
 await prueba('los errores se subrayan mientras escribes y bloquean Ejecutar', async (p) => {
   await p.click('.nodo.hijo');
   await p.click('.cm-content');

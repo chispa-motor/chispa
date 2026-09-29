@@ -58,9 +58,9 @@ export class PanelIzquierdo {
   private firma(): string {
     const e = this.estado;
     const p = e.proyecto;
-    const comun = [this.pestana, e.escenaActual, JSON.stringify(e.seleccion), e.pestanaActiva, e.portapapeles?.nombre ?? ''];
+    const comun = [this.pestana, e.escenaActual, JSON.stringify(e.seleccion), e.seleccionados.join(), e.pestanaActiva, textoPortapapeles(e.portapapeles)];
     if (this.pestana === 'escena') {
-      return JSON.stringify([comun, Object.keys(p.escenas), p.escenaInicial, e.escena.objetos.map((o) => [o.nombre, o.script, o.script && o.script in p.scripts, iconoDe(o), o.sprite?.fijo])]);
+      return JSON.stringify([comun, Object.keys(p.escenas), p.escenaInicial, e.escena.objetos.map((o) => [o.nombre, o.script, o.script && o.script in p.scripts, iconoDe(o), o.sprite?.fijo, o.plantilla])]);
     }
     return JSON.stringify([comun, Object.keys(p.escenas), p.escenaInicial, Object.keys(p.scripts), Object.keys(p.plantillas), Object.keys(p.imagenes), Object.keys(p.sonidos), Object.entries(p.animaciones).map(([n, a]) => [n, a.fotogramas.length]), e.todosLosObjetos().map((o) => o.script)]);
   }
@@ -93,15 +93,15 @@ export class PanelIzquierdo {
     const objetos = e.escena.objetos;
     const lista = h('ul', { class: 'arbol', role: 'tree', 'aria-label': 'Objetos de la escena' });
     objetos.forEach((def, i) => {
-      const seleccionado = e.seleccion?.tipo === 'escena' && e.seleccion.indice === i;
+      const seleccionado = e.estaSeleccionado(i);
       const conScript = def.script && def.script in e.proyecto.scripts;
       const fila = h('li', {
         class: `nodo ${seleccionado ? 'seleccionado' : ''}`,
         draggable: 'true',
         role: 'treeitem',
         tabindex: '0',
-        title: 'Clic: seleccionar · Doble clic: renombrar · Arrastrar: cambiar el orden',
-        onclick: () => e.seleccionarIndice(i),
+        title: 'Clic: seleccionar · Ctrl+clic: seleccionar varios · Doble clic: renombrar · Arrastrar: cambiar el orden',
+        onclick: (ev: MouseEvent) => (ev.ctrlKey || ev.metaKey ? e.alternarSeleccion(i) : e.seleccionarIndice(i)),
         ondblclick: async () => {
           const n = await pedirTexto('Renombrar objeto', 'Nuevo nombre (sin espacios):', def.nombre);
           if (n) e.renombrar({ tipo: 'escena', escena: e.escenaActual, indice: i }, n);
@@ -131,6 +131,7 @@ export class PanelIzquierdo {
         icono(iconoDe(def), 15),
         h('span', { class: 'nombre' }, def.nombre ?? '(sin nombre)'),
         def.sprite?.fijo ? h('span', { class: 'etiqueta', title: 'Pegado a la pantalla (interfaz)' }, 'IU') : null,
+        def.plantilla && e.proyecto.plantillas[def.plantilla] ? h('span', { class: 'etiqueta enlazada', title: `Copia de la plantilla "${def.plantilla}": al cambiarla, cambian todas` }, icono('plantilla', 11)) : null,
       );
       lista.append(fila);
       if (conScript) {
@@ -148,7 +149,7 @@ export class PanelIzquierdo {
     return [
       selector,
       h('div', { class: 'titulo-lista' }, h('span', {}, `Objetos (${objetos.length})`),
-        e.portapapeles ? botonIcono('copiar', `Pegar "${e.portapapeles.nombre ?? 'objeto'}" en esta escena (Ctrl+V)`, () => e.pegar(), 'Pegar', 'pequeno') : null),
+        e.portapapeles ? botonIcono('copiar', `Pegar ${textoPortapapeles(e.portapapeles)} en esta escena (Ctrl+V)`, () => e.pegar(), 'Pegar', 'pequeno') : null),
       objetos.length ? lista : h('p', { class: 'nota' }, 'La escena está vacía. Añade un objeto con los botones de abajo.'),
       h('div', { class: 'titulo-lista' }, h('span', {}, 'Añadir')),
       anadir,
@@ -217,7 +218,9 @@ export class PanelIzquierdo {
       this.fila('plantilla', n, [
         botonIcono('basura', 'Borrar la plantilla', async () => {
           e.seleccionar({ tipo: 'plantilla', nombre: n });
-          if (await confirmar('Borrar plantilla', `¿Borrar la plantilla "${n}"?`, 'Borrar', true)) e.borrarSeleccionado();
+          const copias = e.copiasDe(n).length;
+          const aviso = copias ? ` Sus ${copias} copias en las escenas se quedan, pero ya no estarán enlazadas.` : '';
+          if (await confirmar('Borrar plantilla', `¿Borrar la plantilla "${n}"?${aviso}`, 'Borrar', true)) e.borrarSeleccionado();
         }, undefined, 'pequeno'),
       ], {
         class: `fila-recurso ${e.seleccion?.tipo === 'plantilla' && e.seleccion.nombre === n ? 'seleccionado' : ''}`,
@@ -348,4 +351,10 @@ export class PanelIzquierdo {
       { texto: 'Guardar', clase: 'principal', alPulsar: () => e.cambiarAnimacion(nombre, { fotogramas, velocidad: Math.max(1, Number(velocidad.value) || 8), repetir: repetir.checked }) },
     ], 'dialogo-ancho');
   }
+}
+
+/** "Moneda" o "3 objetos": lo que hay copiado, para el botón Pegar. */
+function textoPortapapeles(lista: DefObjeto[] | null): string {
+  if (!lista?.length) return '';
+  return lista.length === 1 ? `"${lista[0].nombre ?? 'objeto'}"` : `${lista.length} objetos`;
 }

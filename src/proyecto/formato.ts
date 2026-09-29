@@ -83,6 +83,11 @@ export interface DefMapa {
 export interface DefObjeto {
   nombre?: string;
   tipo?: string;
+  /**
+   * Si es una copia ENLAZADA de una plantilla, su nombre: al cambiar una copia
+   * (o la plantilla) cambian todas, menos el nombre y el sitio de cada una.
+   */
+  plantilla?: string;
   x?: number;
   y?: number;
   rotacion?: number;

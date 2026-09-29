@@ -70,7 +70,7 @@ programar**.
 | **Todo sin interfaz primero**: la lógica del editor (crear, borrar, deshacer...) vive en `EstadoEditor`, sin HTML. Los paneles solo la llaman y se redibujan. | Se puede probar todo con tests, sin navegador. |
 | **Deshacer** guarda una foto del proyecto antes de cada cambio. Arrastrar o pintar se deshace **de una vez**. El código **no** entra en ese deshacer: el editor de código tiene el suyo, letra a letra. | Es lo más sencillo y a prueba de fallos. Con el código, Ctrl+Z se comporta como en cualquier editor de texto. |
 | La vista de la escena **dibuja con el mismo código que el juego** (Sprite y MapaCasillas del motor). | Lo que ves al editar es exactamente lo que ves al jugar. |
-| Arrastrar el **fondo** mueve la vista (también con el botón central o con Espacio). La **rueda** hace zoom hacia el ratón. | Es lo primero que prueba cualquiera, sin tener que conocer atajos. |
+| ~~Arrastrar el **fondo** mueve la vista.~~ **Cambiado en la sesión 3**: arrastrar el fondo selecciona con un rectángulo (ver «Editor»). La **rueda** hace zoom hacia el ratón. | — |
 | **Imán activado por defecto** (múltiplos de 16 px). Con Alt se coloca libre. | Los niveles quedan alineados sin esfuerzo; las plataformas encajan. |
 | Los objetos de **interfaz** (`fijo`) se enseñan **dentro del marco de la pantalla**, y al marcarlos como fijos se recalcula su posición para que no «salten». | Se colocan viendo dónde quedarán de verdad en la pantalla. |
 | Los números del panel de propiedades se cambian también **arrastrando su nombre** a los lados, y se guardan al pulsar Intro o salir del campo. | Como en Unity y Godot; y no se llena el deshacer con un cambio por cada letra. |
@@ -146,3 +146,19 @@ Ver PROBLEMAS_PRINCIPIANTE.md para la lista completa de lo que se encontró.
 | **Lo que está encima viaja con el soporte**, tanto si lo mueve un recorrido como si lo mueve un script (`yo.x = …`). | Esto resuelve la limitación anterior («las plataformas movidas por script no llevan al jugador»). |
 | Si una plataforma que se mueve se mete dentro de un cuerpo, el cuerpo **se aparta por el lado más corto** antes de moverse. | Sin esto, un ascensor que sube empujaba al jugador hacia un lado como si fuera una pared. |
 | **«Solo desde arriba»** (casilla en Colisión y en los tipos de casilla del mapa): se atraviesa saltando desde abajo y de lado, y se para al caer encima. Cuenta como «encima» si los pies estaban como mucho **4 píxeles** por debajo del borde. | El margen evita que el jugador atraviese una plataforma que sube hacia él. |
+
+### Editor: varios a la vez, plantillas enlazadas y deshacer (sesión 3, bloque 3)
+
+| Decisión | Por qué |
+|---|---|
+| **Arrastrar el fondo** de la escena dibuja un **rectángulo de selección** (como en el escritorio del ordenador, en Unity o en Godot). La vista se mueve con el **botón derecho**, el central o **Espacio + arrastrar**. | Con selección múltiple, el gesto del rectángulo es el que todo el mundo conoce del escritorio. Antes ese gesto movía la vista; ahora lo hace el botón derecho, que está a mano y no choca con nada. |
+| El rectángulo selecciona lo que **toca** (no hace falta que quede entero dentro) y **no coge los mapas**. | Es más fácil acertar. Un mapa ocupa todo el nivel: si entrara en cada rectángulo, al mover unas monedas se movería el suelo. Con Ctrl+clic sí se puede añadir. |
+| **Ctrl+clic** añade o quita uno (en la escena y en la lista). **Ctrl+A** selecciona todo menos los mapas. | Los atajos de siempre. |
+| Con varios seleccionados, el inspector enseña **cuántos y sus nombres** y los botones Duplicar, Copiar y Borrar. No se editan propiedades de varios a la vez. | Editar a la vez objetos distintos (un texto y un círculo) confunde más de lo que ayuda. Para cambiar muchos iguales están las plantillas enlazadas. |
+| Mover, duplicar, copiar, pegar y borrar varios es **un solo paso** de deshacer. Al pegar un grupo, **todo el grupo se desplaza igual** si choca con lo que ya había. | Deshacer tiene que deshacer lo que la persona ha hecho, no una parte. El grupo conserva su forma. |
+| Las copias que se ponen **arrastrando una plantilla** a la escena quedan **enlazadas** (`"plantilla": "Moneda"` en el proyecto). Cambiar **una copia** (o la plantilla) cambia la plantilla y **todas las copias**, en todas las escenas. | «Editar la plantilla dentro de la escena»: se toca la moneda que se ve y cambian todas, sin ir a buscar la plantilla. |
+| Cada copia solo tiene suyo **el nombre y el sitio** (x, y). Todo lo demás (dibujo, tamaño, giro, física, script, propiedades…) es compartido. | Una regla que se explica en una línea. El giro y la escala también se comparten: si una moneda tiene que ser distinta, se desvincula. |
+| **Desvincular** separa una copia (sigue siendo del mismo tipo para `cuando toco Moneda`). Borrar la plantilla desvincula sus copias (no las borra). Renombrarla mantiene el enlace. | Nunca se pierde nada sin avisar. |
+| Los proyectos antiguos **no se enlazan solos**, aunque sus copias vengan de una plantilla. | Sus copias pueden haberse cambiado a propósito: enlazarlas las igualaría y se perderían esos cambios. |
+| Un test recorre **todos los métodos del estado del editor** y comprueba que cada cambio se deshace y se rehace; si alguien añade un método nuevo sin probarlo, el test falla. | «Deshacer para todo» tiene que seguir siendo verdad aunque el editor crezca. Lo único fuera del historial es el código (el editor de código tiene su propio deshacer, letra a letra). |
+| **Ctrl+Mayús+Z** también rehace. | Es el atajo de Mac y de muchos programas. |

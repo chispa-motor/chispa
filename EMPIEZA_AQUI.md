@@ -38,7 +38,7 @@ el navegador (http://localhost:5173).
   pestaña *Proyecto* están las escenas, imágenes, sonidos y plantillas.
 - **Centro:** la escena o el código de un script. En la escena:
   - Arrastra un objeto para moverlo.
-  - Arrastra el fondo para moverte por la escena.
+  - Arrastra el fondo con el botón derecho (o con Espacio pulsado) para moverte por la escena. Con el botón izquierdo, el fondo dibuja un rectángulo que selecciona varios objetos.
   - La rueda del ratón acerca y aleja.
   - Arriba ves la **x** y la **y** del ratón.
 - **Derecha:** el juego funcionando y las propiedades del objeto seleccionado.
