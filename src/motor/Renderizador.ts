@@ -35,6 +35,8 @@ export interface EstiloTexto {
   tamano?: number;
   alinear?: 'izquierda' | 'centro' | 'derecha';
   negrita?: boolean;
+  /** Sombra oscura debajo del texto, para que se lea sobre cualquier fondo. */
+  sombra?: boolean;
 }
 
 export interface EstiloImagen {
@@ -159,6 +161,12 @@ export class Renderizador {
     ctx.fillStyle = resolverColor(estilo.color ?? 'blanco');
     ctx.textAlign = ALINEACIONES[estilo.alinear ?? 'izquierda'];
     ctx.textBaseline = 'top';
+    if (estilo.sombra) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillText(texto, x + 2, y + 2);
+      ctx.restore();
+    }
     ctx.fillText(texto, x, y);
   }
 

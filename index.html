@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chispa · Fase 1</title>
+    <title>Chispa</title>
     <link rel="icon" href="imagenes/estrella.svg" />
   </head>
   <body>
@@ -11,6 +11,14 @@
     <div id="contenedor-juego">
       <canvas id="lienzo"></canvas>
     </div>
+    <!-- Menú para cambiar de demo -->
+    <nav id="menu-demos">
+      <a href="?demo=1" data-demo="1">Fase 1</a>
+      <a href="?demo=2" data-demo="2">Fase 2</a>
+      <a href="./" data-demo="">Plataformas (Chispa)</a>
+    </nav>
+    <!-- Lo que escribe "mostrar" en Chispa -->
+    <div id="consola" hidden></div>
     <!-- Aquí aparecerán los errores del motor, en español -->
     <div id="panel-error" hidden></div>
     <script type="module" src="/src/main.ts"></script>

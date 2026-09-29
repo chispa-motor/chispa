@@ -242,9 +242,14 @@ export class Entrada {
   }
 
   /**
+   * validarTecla / comprobarTecla:
    * Normaliza el nombre y avisa si parece un error de escritura.
    * Ejemplo: "espaico" → error amable en vez de devolver siempre "falso" sin decir nada.
    */
+  validarTecla(tecla: string): string {
+    return this.comprobarTecla(tecla);
+  }
+
   private comprobarTecla(tecla: string): string {
     const n = normalizarNombreTecla(tecla);
     const esCaracter = [...n].length === 1;

@@ -41,3 +41,46 @@ html, body {
 #panel-error h2 { margin: 0 0 8px; font-size: 18px; color: #ff8a80; }
 #panel-error p { margin: 6px 0; line-height: 1.45; }
 #panel-error .pista { color: #ffd98a; }
+
+#panel-error pre {
+  margin: 8px 0;
+  padding: 8px 10px;
+  background: #1c0709;
+  border-radius: 6px;
+  color: #ffd98a;
+  font: 14px ui-monospace, Consolas, monospace;
+  white-space: pre-wrap;
+}
+#panel-error p { white-space: pre-wrap; }
+
+/* Menú de demos */
+#menu-demos {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 6px;
+}
+#menu-demos a {
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 13px;
+  text-decoration: none;
+}
+#menu-demos a.activo { background: #f1c40f; color: #222; }
+
+/* Consola de "mostrar" */
+#consola {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  max-width: min(560px, calc(100vw - 24px));
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 8px;
+  color: #e8f6ff;
+  font: 14px ui-monospace, Consolas, monospace;
+  pointer-events: none;
+}

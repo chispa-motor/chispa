@@ -17,10 +17,7 @@
  * 3. normalize('NFC') vuelve a juntar "n" + "~" en "ñ".
  */
 export function quitarTildes(texto: string): string {
-  return texto
-    .normalize('NFD')
-    .replace(/[̀-̂̄-ͯ]/g, '')
-    .normalize('NFC');
+  return texto.normalize('NFD').replace(/[\u0300-\u0302\u0304-\u036f]/g, '').normalize('NFC');
 }
 
 /** Pasa a minúsculas, quita espacios de los lados y quita tildes. */

@@ -52,6 +52,12 @@ export interface Tiempo {
   escala: number;
 }
 
+/** Lo que el motor necesita de una escena (la Escena de la Fase 2 cumple esto). */
+export interface EscenaActiva {
+  actualizar(dt: number): void;
+  dibujar(r: Renderizador): void;
+}
+
 type FuncionActualizar = (dt: number) => void;
 type FuncionDibujar = (r: Renderizador) => void;
 
@@ -63,6 +69,8 @@ export class Motor {
   readonly recursos = new Recursos();
   readonly tiempo: Tiempo = { delta: 0, deltaReal: 0, total: 0, fotogramas: 0, fps: 0, escala: 1 };
   colorFondo: string;
+  /** Escena que se actualiza y dibuja en cada fotograma (Fase 2). */
+  escena: EscenaActiva | null = null;
 
   private actualizadores: FuncionActualizar[] = [];
   private dibujadores: FuncionDibujar[] = [];
@@ -106,6 +114,13 @@ export class Motor {
     cancelAnimationFrame(this.idFotograma);
   }
 
+  /** Quita todas las funciones registradas y la escena (al parar un juego en el editor). */
+  limpiarFunciones(): void {
+    this.actualizadores = [];
+    this.dibujadores = [];
+    this.escena = null;
+  }
+
   get estaCorriendo(): boolean {
     return this.corriendo;
   }
@@ -129,10 +144,12 @@ export class Motor {
     this.medirFps(dtReal);
 
     try {
-      // 2. Actualizar
+      // 2. Actualizar (primero las funciones sueltas, luego la escena)
       for (const f of this.actualizadores) f(t.delta);
-      // 3. Dibujar
+      this.escena?.actualizar(t.delta);
+      // 3. Dibujar (primero la escena, luego las funciones sueltas, que quedan encima)
       this.renderizador.limpiar(this.colorFondo);
+      this.escena?.dibujar(this.renderizador);
       for (const f of this.dibujadores) f(this.renderizador);
     } catch (error) {
       // Si algo falla, paramos el juego y lo explicamos, en vez de repetir el error 60 veces por segundo.
