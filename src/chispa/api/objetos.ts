@@ -20,6 +20,7 @@ import { Fisica } from '../../objetos/componentes/Fisica';
 import { Sprite } from '../../objetos/componentes/Sprite';
 import { Animador } from '../../objetos/componentes/Animador';
 import { MapaCasillas } from '../../objetos/componentes/MapaCasillas';
+import { Recorrido } from '../../objetos/componentes/Recorrido';
 import { argTexto } from './argumentos';
 import { enumerar } from '../errores/sugerencias';
 import { normalizar } from '../../utilidades/texto';
@@ -226,6 +227,10 @@ const PROPIEDADES: Record<string, PropiedadObjeto> = {
     obtener: (o, p) => necesitaSprite(o, 'colorTexto', p).colorTexto,
     asignar: (o, v, p) => (necesitaSprite(o, 'colorTexto', p).colorTexto = aTexto(v)),
   },
+  moviendo: {
+    obtener: (o, p) => necesitaRecorrido(o, p).moviendo,
+    asignar: (o, v, p) => (necesitaRecorrido(o, p).moviendo = comoLogico(v, 'moviendo', p)),
+  },
   animacion: {
     obtener: (o) => o.obtener(Animador)?.actual ?? null,
     asignar: (o, v, p) => {
@@ -236,6 +241,13 @@ const PROPIEDADES: Record<string, PropiedadObjeto> = {
   ratonencima: { obtener: (o) => o.escena?.ratonEncima(o) ?? false },
   destruido: { obtener: (o) => o.destruido },
 };
+
+/** yo.moviendo solo existe si el objeto tiene un recorrido (se pone en el editor). */
+function necesitaRecorrido(o: ObjetoJuego, pos: Posicion): Recorrido {
+  const r = o.obtener(Recorrido);
+  if (!r) throw new ErrorChispa(pos, `el objeto '${o.nombre}' no tiene recorrido, así que no tiene 'moviendo'.`, 'El recorrido se pone en el editor: Propiedades > Recorrido (para plataformas que se mueven solas).');
+  return r;
+}
 
 /** Acciones de cualquier objeto: yo.saltar(), yo.mover(10, 0)... */
 const METODOS: Record<string, (o: ObjetoJuego, args: Valor[], pos: Posicion) => Valor> = {
@@ -375,7 +387,7 @@ const METODOS: Record<string, (o: ObjetoJuego, args: Valor[], pos: Posicion) => 
 const NOMBRES_BONITOS = [
   'nombre', 'tipo', 'x', 'y', 'posicion', 'rotacion', 'escala', 'velocidad', 'gravedad', 'enSuelo', 'tocaPared', 'tocaTecho',
   'color', 'visible', 'ancho', 'alto', 'texto', 'tamaño', 'colorTexto', 'imagen', 'opacidad', 'voltear', 'capa', 'fijo',
-  'solido', 'fantasma', 'rozamiento', 'rebote', 'masa', 'estatico', 'animacion', 'ratonEncima', 'destruido',
+  'solido', 'fantasma', 'rozamiento', 'rebote', 'masa', 'estatico', 'moviendo', 'animacion', 'ratonEncima', 'destruido',
   'saltar', 'mover', 'rotar', 'destruir', 'distanciaA', 'empujar', 'animar', 'pararAnimacion', 'moverHacia', 'mirarA', 'direccionA',
   'moverConFlechas', 'casilla', 'ponerCasilla', 'quitarCasilla', 'casillaEn', 'columnaEn', 'filaEn', 'centroDeCasilla',
 ];

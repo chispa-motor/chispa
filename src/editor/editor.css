@@ -243,6 +243,10 @@ input[type=checkbox] { accent-color: var(--acento); width: 15px; height: 15px; m
 .tipo-casilla.elegido .tipo-detalles { display: flex; }
 .lista-propiedades { display: flex; flex-direction: column; gap: 4px; }
 .propiedad-propia { display: grid; grid-template-columns: 90px 1fr auto; align-items: center; gap: 6px; }
+.lista-puntos { display: flex; flex-direction: column; gap: 4px; }
+.punto-recorrido { display: grid; grid-template-columns: 22px 1fr 1fr auto; align-items: center; gap: 6px; }
+.punto-recorrido .campo-fila { grid-template-columns: auto 1fr; }
+.numero-punto { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #ffcb6b; color: #ffcb6b; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
 .propiedad-propia code { color: #9cdcfe; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; }
 
 /* ───────────── Panel de abajo: consola, problemas, guía ───────────── */

@@ -26,6 +26,8 @@ export interface TipoCasilla {
   color?: string;
   /** verdadero = pared/suelo; falso = fantasma (se atraviesa pero se detecta). */
   solida: boolean;
+  /** Si es sólida: solo para a lo que cae encima (se atraviesa desde abajo y los lados). */
+  soloDesdeArriba?: boolean;
 }
 
 export interface CasillaEncontrada {

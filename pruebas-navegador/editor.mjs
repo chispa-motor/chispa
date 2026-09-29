@@ -77,6 +77,26 @@ await prueba('un texto con «Enseñar un dato» se actualiza solo en el juego', 
   comprobar(/^Puntos: \d+$/.test(enJuego) && enJuego !== 'Puntos: 0', 'el texto no se actualiza: ' + enJuego);
 });
 
+await prueba('una plataforma con Recorrido: se arrastra su punto y se mueve al jugar', async (p) => {
+  await p.click('.nodo');
+  await p.check('details.seccion:has(.seccion-titulo:text-is("Recorrido")) .interruptor');
+  const def = await estado(p, () => window.chispa.estado.escena.objetos[0]);
+  comprobar(def.recorrido?.puntos?.length === 1, 'no se ha añadido el recorrido');
+  const lienzo = await p.locator('.lienzo-escena').boundingBox();
+  const asa = await estado(p, (d) => window.chispa.vistaEscena.camara.aPantalla(d.x + d.recorrido.puntos[0].x, d.y + d.recorrido.puntos[0].y), def);
+  await p.mouse.move(lienzo.x + asa.x, lienzo.y + asa.y);
+  await p.mouse.down();
+  await p.mouse.move(lienzo.x + asa.x, lienzo.y + asa.y + 80, { steps: 6 });
+  await p.mouse.up();
+  const punto = await estado(p, () => window.chispa.estado.escena.objetos[0].recorrido.puntos[0]);
+  comprobar(Math.abs(punto.y) > 20, 'arrastrar el punto no lo ha movido: ' + JSON.stringify(punto));
+  await p.keyboard.press('F5');
+  await p.waitForFunction(() => document.querySelector('.estado-juego')?.textContent?.startsWith('Jugando'));
+  await p.waitForTimeout(600);
+  const enJuego = await estado(p, (n) => window.chispa.vistaJuego.juego.escena.objetos.find((o) => o.nombre === n).posicion, def.nombre);
+  comprobar(enJuego.x !== def.x || enJuego.y !== def.y, 'la plataforma no se mueve al jugar');
+});
+
 await prueba('los errores se subrayan mientras escribes y bloquean Ejecutar', async (p) => {
   await p.click('.nodo.hijo');
   await p.click('.cm-content');

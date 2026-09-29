@@ -48,6 +48,20 @@ export interface DefColision {
   solido?: boolean;
   desplazamientoX?: number;
   desplazamientoY?: number;
+  /** Plataforma que se atraviesa desde abajo (solo para a lo que cae encima). */
+  soloDesdeArriba?: boolean;
+}
+
+/** Camino que sigue el objeto él solo (plataformas que se mueven, enemigos que patrullan). */
+export interface DefRecorrido {
+  /** Puntos RELATIVOS al sitio donde empieza el objeto (el inicio no se escribe). */
+  puntos: { x: number; y: number }[];
+  /** Píxeles por segundo (100 si no se dice). */
+  rapidez?: number;
+  /** idaYVuelta (por defecto) o bucle. */
+  modo?: 'idaYVuelta' | 'bucle';
+  /** Segundos parado en cada extremo (0.5 si no se dice). */
+  pausa?: number;
 }
 
 export interface DefFisica {
@@ -77,6 +91,7 @@ export interface DefObjeto {
   colision?: DefColision;
   fisica?: DefFisica;
   mapa?: DefMapa;
+  recorrido?: DefRecorrido;
   /** Animación con la que empieza. */
   animacion?: string;
   /** Nombre de un script de `proyecto.scripts`. */

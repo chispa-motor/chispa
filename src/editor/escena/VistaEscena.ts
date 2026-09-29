@@ -48,7 +48,8 @@ type Arrastre =
   | { tipo: 'tamano'; ancho0: number; alto0: number; x0: number; y0: number }
   | { tipo: 'vista'; px: number; py: number }
   | { tipo: 'pintar' }
-  | { tipo: 'rectangulo'; c0: number; f0: number; c1: number; f1: number };
+  | { tipo: 'rectangulo'; c0: number; f0: number; c1: number; f1: number }
+  | { tipo: 'punto'; indice: number };
 
 export const OBJETOS_NUEVOS: { tipo: TipoNuevoObjeto; texto: string; icono: string; ayuda: string }[] = [
   { tipo: 'rectangulo', texto: 'Cuadrado', icono: 'objeto', ayuda: 'Un rectángulo de color con colisión' },
@@ -481,6 +482,9 @@ export class VistaEscena {
     ctx.fillStyle = '#fff';
     ctx.fillText(nombre, Math.round(a.x) + 3, Math.round(a.y) - 6);
 
+    // Recorrido: el camino, dónde estará el objeto en cada punto, y los puntos para arrastrar
+    if (def.recorrido && this.herramienta === 'mover') this.dibujarRecorrido(def, marco);
+
     // Tirador para cambiar el tamaño (solo objetos con dibujo)
     if (def.sprite && this.herramienta === 'mover') {
       ctx.fillStyle = '#fff';
@@ -522,6 +526,63 @@ export class VistaEscena {
       ctx.lineWidth = 2;
       ctx.strokeRect(esq.x, esq.y, t * cam.zoom, t * cam.zoom);
     }
+  }
+
+  /** Los puntos del recorrido del objeto seleccionado, en la pantalla (el primero es el inicio). */
+  private puntosRecorrido(def: DefObjeto, marco: ReturnType<VistaEscena['marco']>): { x: number; y: number }[] {
+    const inicio = posicionEnEditor(def, marco);
+    return [inicio, ...(def.recorrido?.puntos ?? []).map((p) => ({ x: inicio.x + p.x, y: inicio.y + p.y }))].map((p) => this.camara.aPantalla(p.x, p.y));
+  }
+
+  private dibujarRecorrido(def: DefObjeto, marco: ReturnType<VistaEscena['marco']>): void {
+    const ctx = this.r.ctx;
+    const pts = this.puntosRecorrido(def, marco);
+    const caja = cajaDe(def, marco);
+    const inicio = this.camara.aPantalla((caja.izquierda + caja.derecha) / 2, (caja.abajo + caja.arriba) / 2);
+    const w = (caja.derecha - caja.izquierda) * this.camara.zoom;
+    const hh = (caja.arriba - caja.abajo) * this.camara.zoom;
+    const origen = pts[0];
+    ctx.save();
+    // El objeto "fantasma" en cada punto
+    ctx.strokeStyle = '#ffcb6b88';
+    ctx.setLineDash([4, 4]);
+    for (const p of pts.slice(1)) ctx.strokeRect(p.x + (inicio.x - origen.x) - w / 2, p.y + (inicio.y - origen.y) - hh / 2, w, hh);
+    // El camino
+    ctx.strokeStyle = '#ffcb6b';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    pts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+    if (def.recorrido?.modo === 'bucle' && pts.length > 2) ctx.closePath();
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // Los puntos (el 1 es el inicio: no se arrastra, se mueve el objeto)
+    pts.forEach((p, i) => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, i === 0 ? 5 : 8, 0, Math.PI * 2);
+      ctx.fillStyle = i === 0 ? '#ffcb6b' : '#1d212b';
+      ctx.fill();
+      ctx.strokeStyle = '#ffcb6b';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      if (i > 0) {
+        ctx.fillStyle = '#ffcb6b';
+        ctx.font = 'bold 10px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(i + 1), p.x, p.y + 0.5);
+      }
+    });
+    ctx.restore();
+  }
+
+  /** ¿Hay un punto del recorrido bajo el ratón? Devuelve su índice en `recorrido.puntos`. */
+  private puntoEn(px: number, py: number): number | null {
+    const def = this.estado.seleccion?.tipo === 'escena' ? this.estado.seleccionado : null;
+    if (!def?.recorrido || this.herramienta !== 'mover') return null;
+    const pts = this.puntosRecorrido(def, this.marco());
+    for (let i = pts.length - 1; i >= 1; i--) if (Math.hypot(pts[i].x - px, pts[i].y - py) <= 10) return i - 1;
+    return null;
   }
 
   // ═════════════════════════ Ratón y teclado ═════════════════════════
@@ -591,6 +652,12 @@ export class VistaEscena {
         this.pintar(p.x, p.y);
         return;
       }
+      const punto = this.puntoEn(p.x, p.y);
+      if (punto !== null) {
+        this.estado.empezarCambioLargo();
+        this.arrastre = { tipo: 'punto', indice: punto };
+        return;
+      }
       if (this.enTirador(p.x, p.y)) {
         const def = this.estado.seleccionado!;
         this.estado.empezarCambioLargo();
@@ -617,7 +684,7 @@ export class VistaEscena {
       this.etiquetaRaton.textContent = `x: ${Math.round(mundo.x)}   y: ${Math.round(mundo.y)}`;
       const a = this.arrastre;
       if (!a) {
-        c.style.cursor = this.espacioPulsado ? 'grab' : this.herramienta !== 'mover' ? 'crosshair' : this.enTirador(p.x, p.y) ? 'nwse-resize' : 'default';
+        c.style.cursor = this.espacioPulsado ? 'grab' : this.herramienta !== 'mover' ? 'crosshair' : this.puntoEn(p.x, p.y) !== null ? 'move' : this.enTirador(p.x, p.y) ? 'nwse-resize' : 'default';
         if (this.herramienta !== 'mover') this.redibujar();
         return;
       }
@@ -630,6 +697,19 @@ export class VistaEscena {
         return;
       }
       if (a.tipo === 'pintar') return this.pintar(p.x, p.y);
+      if (a.tipo === 'punto') {
+        const ref = this.estado.seleccion;
+        const def = this.estado.seleccionado;
+        if (!ref || !def?.recorrido) return;
+        const m = this.camara.aMundo(p.x, p.y);
+        const inicio = posicionEnEditor(def, this.marco());
+        let x = m.x - inicio.x;
+        let y = m.y - inicio.y;
+        if (this.iman !== e.altKey) [x, y] = [ajustar(x, PASO_IMAN), ajustar(y, PASO_IMAN)];
+        const puntos = def.recorrido.puntos.map((q, k) => (k === a.indice ? { x: Math.round(x), y: Math.round(y) } : q));
+        this.estado.cambiarPropiedad(ref, 'recorrido.puntos', puntos);
+        return;
+      }
       if (a.tipo === 'rectangulo') {
         const cas = this.casillaEn(p.x, p.y);
         if (cas) [a.c1, a.f1] = [cas.columna, cas.fila];

@@ -150,6 +150,7 @@ export class Inspector {
     const c = def.colision;
     partes.push(seccion('Colisión', c ? [
       campoCasilla('sólido', 'colision.solido', c.solido ?? true, (v) => cambiar('colision.solido')(v ? undefined : false), 'Sólido: los objetos chocan con él. Si lo quitas es un "fantasma": se atraviesa, pero avisa con "cuando toco"'),
+      (c.solido ?? true) ? campoCasilla('solo desde arriba', 'colision.soloDesdeArriba', c.soloDesdeArriba ?? false, (v) => cambiar('colision.soloDesdeArriba')(v || undefined), 'Plataforma que se atraviesa desde abajo: se puede saltar a través de ella, y solo para a lo que cae encima') : null,
       h('div', { class: 'dos-columnas' },
         campoNumero('ancho', 'colision.ancho', c.ancho, cambiar('colision.ancho'), { ...largo, min: 1, vacio: 'igual', ayuda: 'Vacío = igual que el dibujo' }),
         campoNumero('alto', 'colision.alto', c.alto, cambiar('colision.alto'), { ...largo, min: 1, vacio: 'igual', ayuda: 'Vacío = igual que el dibujo' }),
@@ -176,6 +177,9 @@ export class Inspector {
       e.activarComponente(ref, 'fisica', v);
       if (v && !def.colision) e.activarComponente(ref, 'colision', true);
     }, ayuda: 'Gravedad, velocidad, choques y empujones' }));
+
+    // Recorrido (plataformas que se mueven solas)
+    if (!def.mapa) partes.push(this.seccionRecorrido(ref, def));
 
     // Mapa de casillas
     if (def.mapa) partes.push(this.seccionMapa(ref, def));
@@ -231,6 +235,48 @@ export class Inspector {
     return lista;
   }
 
+  /** Recorrido: el objeto va solo por unos puntos (plataformas, ascensores, enemigos que patrullan). */
+  private seccionRecorrido(ref: RefObjeto, def: DefObjeto): HTMLElement {
+    const e = this.estado;
+    const r = def.recorrido;
+    const largo = { empezar: () => e.empezarCambioLargo(), terminar: () => e.terminarCambioLargo() };
+    const puntos = r?.puntos ?? [];
+    const cambiarPunto = (i: number, eje: 'x' | 'y', v: number) => {
+      const nuevos = puntos.map((p, k) => (k === i ? { ...p, [eje]: v } : p));
+      e.cambiarPropiedad(ref, 'recorrido.puntos', nuevos);
+    };
+    const contenido = r
+      ? [
+          h('div', { class: 'dos-columnas' },
+            campoNumero('rapidez', 'recorrido.rapidez', r.rapidez ?? 100, (v) => e.cambiarPropiedad(ref, 'recorrido.rapidez', v ?? 100), { ...largo, min: 1, paso: 10, ayuda: 'Píxeles por segundo' }),
+            campoNumero('pausa', 'recorrido.pausa', r.pausa ?? 0.5, (v) => e.cambiarPropiedad(ref, 'recorrido.pausa', v === 0.5 ? undefined : v), { ...largo, min: 0, paso: 0.25, ayuda: 'Segundos que se para en cada extremo' }),
+          ),
+          campoLista('al acabar', 'recorrido.modo', r.modo ?? 'idaYVuelta', [['idaYVuelta', 'Vuelve por el mismo camino'], ['bucle', 'Vuelve al principio (en círculo)']], (v) => e.cambiarPropiedad(ref, 'recorrido.modo', v === 'idaYVuelta' ? undefined : v), 'Qué hace al llegar al último punto'),
+          h('div', { class: 'lista-puntos' },
+            puntos.map((p, i) =>
+              h('div', { class: 'punto-recorrido' },
+                h('span', { class: 'numero-punto', title: 'Punto del camino (desde donde empieza el objeto)' }, String(i + 2)),
+                campoNumero('x', `recorrido.puntos.${i}.x`, p.x, (v) => cambiarPunto(i, 'x', v ?? 0), { ...largo, paso: 8, ayuda: 'Cuánto a la derecha del inicio (negativo: a la izquierda)' }),
+                campoNumero('y', `recorrido.puntos.${i}.y`, p.y, (v) => cambiarPunto(i, 'y', v ?? 0), { ...largo, paso: 8, ayuda: 'Cuánto por encima del inicio (negativo: por debajo)' }),
+                puntos.length > 1 ? botonIcono('cerrar', `Quitar el punto ${i + 2}`, () => e.cambiarPropiedad(ref, 'recorrido.puntos', puntos.filter((_, k) => k !== i)), undefined, 'pequeno') : null,
+              ),
+            ),
+          ),
+          h('button', { class: 'boton-enlace', onclick: () => {
+            const ultimo = puntos[puntos.length - 1] ?? { x: 0, y: 0 };
+            e.cambiarPropiedad(ref, 'recorrido.puntos', [...puntos, { x: ultimo.x, y: ultimo.y + 150 }]);
+          } }, '+ Añadir un punto al camino'),
+          h('p', { class: 'nota' }, 'El punto 1 es donde está el objeto. Arrastra los puntos en la escena. Lo que se pone encima viaja con él.'),
+        ]
+      : [];
+    return seccion('Recorrido', contenido, {
+      activo: !!r,
+      alActivar: (v) => e.activarComponente(ref, 'recorrido', v),
+      ayuda: 'Se mueve solo por un camino: plataformas que van y vienen, ascensores, enemigos que patrullan',
+      plegada: !r,
+    });
+  }
+
   /** Al pegar un objeto a la pantalla (o despegarlo) conservamos dónde se ve. */
   private cambiarFijo(ref: RefObjeto, def: DefObjeto, fijo: boolean): void {
     const e = this.estado;
@@ -273,6 +319,7 @@ export class Inspector {
             campoColor('color', `tipo.${nombre}.color`, t.color ?? 'gris', (v) => e.ponerTipoCasilla(ref, nombre, { ...t, color: v })),
             imagenes.length ? campoLista('imagen', `tipo.${nombre}.imagen`, t.imagen ?? '', [['', '(solo color)'], ...imagenes.map((i): [string, string] => [i, i])], (v) => e.ponerTipoCasilla(ref, nombre, { ...t, imagen: v || undefined })) : null,
             campoCasilla('sólida', `tipo.${nombre}.solida`, t.solida, (v) => e.ponerTipoCasilla(ref, nombre, { ...t, solida: v }), 'Sólida = pared o suelo. Si no, se atraviesa (agua, pinchos, monedas...) y avisa con "cuando toco"'),
+            t.solida ? campoCasilla('solo desde arriba', `tipo.${nombre}.soloDesdeArriba`, t.soloDesdeArriba ?? false, (v) => e.ponerTipoCasilla(ref, nombre, { ...t, soloDesdeArriba: v || undefined }), 'Plataforma que se atraviesa saltando desde abajo: solo para a lo que cae encima') : null,
             tipos.length > 1 ? botonIcono('basura', `Quitar el tipo "${nombre}" (y sus casillas)`, async () => {
               if (await confirmar('Quitar tipo de casilla', `¿Quitar "${nombre}" y borrar todas sus casillas del mapa?`, 'Quitar', true)) e.borrarTipoCasilla(ref, nombre);
             }, undefined, 'pequeno') : null,

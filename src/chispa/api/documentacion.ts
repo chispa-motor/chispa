@@ -230,6 +230,7 @@ export const DOC_OBJETO: Doc[] = [
   d('rebote', 'propiedad', 'yo.rebote', 'Cuánto rebota al chocar, de 0 (nada) a 1 (pelota perfecta).', 'yo.rebote = 0.8'),
   d('masa', 'propiedad', 'yo.masa', 'Cuánto pesa. Al chocar, el más pesado empuja al otro.', 'yo.masa = 10'),
   d('estatico', 'propiedad', 'yo.estatico', 'Si es verdadero, el objeto no se mueve nunca (como una pared).', 'yo.estatico = verdadero'),
+  d('moviendo', 'propiedad', 'yo.moviendo', 'Solo en objetos con recorrido (plataformas que se mueven solas): si es falso, se para donde está; si es verdadero, sigue su camino.', 'cuando toco Jugador:\n    yo.moviendo = verdadero'),
   d('enSuelo', 'propiedad', 'yo.enSuelo', 'Verdadero si está apoyado en el suelo (solo se lee).', 'si yo.enSuelo:\n    yo.saltar(600)'),
   d('tocaPared', 'propiedad', 'yo.tocaPared', 'Verdadero si ha chocado con una pared (solo se lee).', 'si yo.tocaPared:\n    direccion = -direccion'),
   d('tocaTecho', 'propiedad', 'yo.tocaTecho', 'Verdadero si se ha dado con la cabeza en un techo (solo se lee).', 'si yo.tocaTecho:\n    mostrar("¡Ay!")'),
@@ -382,6 +383,16 @@ export const RECETAS: Receta[] = [
     titulo: 'Una puerta que lleva a otra escena',
     descripcion: 'En el mapa de casillas, crea un tipo de casilla «puerta» y píntala. En el script del jugador (la otra escena se crea con el botón + junto al nombre de la escena):',
     codigo: 'cuando toco puerta:\n    escena.cambiar("Nivel2")',
+  },
+  {
+    titulo: 'Plataforma que se mueve (o un ascensor)',
+    descripcion: 'Sin código: selecciona la plataforma y activa Propiedades > Recorrido. Arrastra en la escena el punto 2 hasta donde tiene que llegar (puedes añadir más puntos). Lo que se pone encima viaja con ella. Desde el código se puede parar y poner en marcha:',
+    codigo: '# En el script de la plataforma: se pone en marcha cuando el jugador se sube\ncuando empieza:\n    yo.moviendo = falso\n\ncuando toco Jugador:\n    yo.moviendo = verdadero',
+  },
+  {
+    titulo: 'Plataforma que se atraviesa desde abajo',
+    descripcion: 'Sin código: en Propiedades > Colisión marca «solo desde arriba». Se puede saltar a través de ella desde abajo y, al caer, te quedas encima. En un mapa de casillas, es una opción de cada tipo de casilla. No hace falta ningún script; por ejemplo, el del jugador puede ser solo:',
+    codigo: 'cuando cada fotograma:\n    yo.moverConFlechas(300)\n\ncuando se pulsa "espacio":\n    yo.saltar(700)',
   },
   {
     titulo: 'Un enemigo que te persigue',

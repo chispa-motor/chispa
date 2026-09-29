@@ -26,6 +26,7 @@ import { Animador, type DefAnimacion } from '../objetos/componentes/Animador';
 import { Colision } from '../objetos/componentes/Colision';
 import { Fisica, GRAVEDAD_MUNDO } from '../objetos/componentes/Fisica';
 import { MapaCasillas } from '../objetos/componentes/MapaCasillas';
+import { Recorrido } from '../objetos/componentes/Recorrido';
 import { Sprite } from '../objetos/componentes/Sprite';
 import { normalizar } from '../utilidades/texto';
 import { migrarProyecto, tipoPorNombre, type DefObjeto, type DefProyecto } from './formato';
@@ -293,6 +294,14 @@ export function crearObjetoDesdeDefinicion(def: DefObjeto, nombrePorDefecto: str
     c.solido = def.colision.solido ?? true;
     c.desplazamiento.x = def.colision.desplazamientoX ?? 0;
     c.desplazamiento.y = def.colision.desplazamientoY ?? 0;
+    c.soloDesdeArriba = def.colision.soloDesdeArriba ?? false;
+  }
+  if (def.recorrido && def.recorrido.puntos.length) {
+    const r = o.agregar(new Recorrido());
+    r.puntos = def.recorrido.puntos.map((p) => new Vector2(p.x, p.y));
+    r.rapidez = def.recorrido.rapidez ?? 100;
+    r.modo = def.recorrido.modo ?? 'idaYVuelta';
+    r.pausa = def.recorrido.pausa ?? 0.5;
   }
   if (def.fisica) {
     const f = o.agregar(new Fisica());

@@ -336,12 +336,14 @@ export class EstadoEditor {
   }
 
   /** Pone o quita un componente entero: sprite, colision, fisica o mapa. */
-  activarComponente(ref: RefObjeto, componente: 'sprite' | 'colision' | 'fisica' | 'mapa', activo: boolean): void {
+  activarComponente(ref: RefObjeto, componente: 'sprite' | 'colision' | 'fisica' | 'mapa' | 'recorrido', activo: boolean): void {
     const porDefecto = {
       sprite: { forma: 'rectangulo', color: '#4aa3ff', ancho: 64, alto: 64 },
       colision: {},
       fisica: {},
       mapa: { tamano: 48, tipos: { suelo: { color: '#5ad17a', solida: true } }, celdas: {} },
+      // Una plataforma que va y viene 200 píxeles a la derecha
+      recorrido: { puntos: [{ x: 200, y: 0 }], rapidez: 100 },
     };
     this.cambiarPropiedad(ref, componente, activo ? structuredClone(porDefecto[componente]) : undefined);
   }

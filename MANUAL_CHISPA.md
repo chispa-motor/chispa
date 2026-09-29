@@ -745,6 +745,15 @@ Si es verdadero, el objeto no se mueve nunca (como una pared).
 yo.estatico = verdadero
 ```
 
+#### `yo.moviendo`
+
+Solo en objetos con recorrido (plataformas que se mueven solas): si es falso, se para donde está; si es verdadero, sigue su camino.
+
+```
+cuando toco Jugador:
+    yo.moviendo = verdadero
+```
+
 #### `yo.enSuelo`
 
 Verdadero si está apoyado en el suelo (solo se lee).
@@ -1705,6 +1714,31 @@ En el mapa de casillas, crea un tipo de casilla «puerta» y píntala. En el scr
 ```
 cuando toco puerta:
     escena.cambiar("Nivel2")
+```
+
+### Plataforma que se mueve (o un ascensor)
+
+Sin código: selecciona la plataforma y activa Propiedades > Recorrido. Arrastra en la escena el punto 2 hasta donde tiene que llegar (puedes añadir más puntos). Lo que se pone encima viaja con ella. Desde el código se puede parar y poner en marcha:
+
+```
+# En el script de la plataforma: se pone en marcha cuando el jugador se sube
+cuando empieza:
+    yo.moviendo = falso
+
+cuando toco Jugador:
+    yo.moviendo = verdadero
+```
+
+### Plataforma que se atraviesa desde abajo
+
+Sin código: en Propiedades > Colisión marca «solo desde arriba». Se puede saltar a través de ella desde abajo y, al caer, te quedas encima. En un mapa de casillas, es una opción de cada tipo de casilla. No hace falta ningún script; por ejemplo, el del jugador puede ser solo:
+
+```
+cuando cada fotograma:
+    yo.moverConFlechas(300)
+
+cuando se pulsa "espacio":
+    yo.saltar(700)
 ```
 
 ### Un enemigo que te persigue

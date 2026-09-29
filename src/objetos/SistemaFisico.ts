@@ -30,6 +30,7 @@ import { RejillaEspacial } from './RejillaEspacial';
 import { Colision, seSolapan, type Caja } from './componentes/Colision';
 import { Fisica } from './componentes/Fisica';
 import { MapaCasillas } from './componentes/MapaCasillas';
+import { Recorrido } from './componentes/Recorrido';
 
 const PASO = 1 / 120;
 const MAX_PASOS = 12;
@@ -70,6 +71,16 @@ interface Colisionador {
   colision: Colision;
 }
 
+/** Una caja sólida cerca de un cuerpo: de qué objeto es (para ir montado encima) y si solo para desde arriba. */
+interface SolidoCercano {
+  caja: Caja;
+  objeto: ObjetoJuego;
+  soloArriba: boolean;
+}
+
+/** Margen para las plataformas que se atraviesan desde abajo: si los pies estaban a esta distancia de la superficie, cuenta como "encima". */
+const MARGEN_ENCIMA = 4;
+
 interface Contacto {
   a: ObjetoJuego;
   b: ObjetoJuego;
@@ -81,19 +92,27 @@ export class SistemaFisico {
   private acumulador = 0;
   private contactos = new Map<string, Contacto>();
   private apoyados = new WeakMap<ObjetoJuego, boolean>();
+  /** Sobre qué está apoyado cada cuerpo (para moverse con él si se mueve: plataformas). */
+  private soportes = new WeakMap<ObjetoJuego, ObjetoJuego>();
+  /** Dónde estaba cada soporte en el paso anterior. */
+  private previas = new Map<ObjetoJuego, { x: number; y: number }>();
 
   actualizar(escena: Escena, dt: number): void {
-    const { cuerpos, solidos, colisionadores, mapas } = this.clasificar(escena);
+    const { cuerpos, solidos, moviles, recorridos, colisionadores, mapas } = this.clasificar(escena);
 
-    // Rejilla con los sólidos quietos (se consulta en cada paso)
+    // Rejilla con los sólidos quietos (se consulta en cada paso). Los que tienen
+    // recorrido se mueven durante los pasos: van aparte y se miran siempre.
     const rejillaSolidos = new RejillaEspacial<Colisionador>();
     for (const s of solidos) rejillaSolidos.insertar(s.colision.caja(), s);
+    const cerca = { rejilla: rejillaSolidos, moviles, mapas };
 
     this.acumulador += dt;
     let pasos = 0;
     while (this.acumulador >= PASO && pasos < MAX_PASOS) {
-      for (const c of cuerpos) this.moverCuerpo(c, escena.gravedad, rejillaSolidos, mapas);
-      this.separarCuerpos(cuerpos, rejillaSolidos, mapas);
+      for (const r of recorridos) r.avanzar(PASO);
+      this.llevarEncima(cuerpos);
+      for (const c of cuerpos) this.moverCuerpo(c, escena.gravedad, cerca);
+      this.separarCuerpos(cuerpos, cerca);
       this.acumulador -= PASO;
       pasos++;
     }
@@ -103,35 +122,62 @@ export class SistemaFisico {
     this.detectarContactos(colisionadores, mapas);
   }
 
+  /**
+   * Plataformas que se mueven: lo que está encima se mueve lo mismo que ellas
+   * (tanto si van con recorrido como si las mueve un script).
+   */
+  private llevarEncima(cuerpos: Cuerpo[]): void {
+    const actuales = new Map<ObjetoJuego, { x: number; y: number }>();
+    for (const c of cuerpos) {
+      const s = this.soportes.get(c.objeto);
+      if (!s || s.destruido || !c.apoyado) continue;
+      const p = s.transformacion.posicion;
+      const antes = this.previas.get(s);
+      if (antes) {
+        c.objeto.transformacion.posicion.x += p.x - antes.x;
+        c.objeto.transformacion.posicion.y += p.y - antes.y;
+      }
+      actuales.set(s, { x: p.x, y: p.y });
+    }
+    this.previas = actuales;
+  }
+
   /** Olvida todos los contactos (al reiniciar o cambiar de escena). */
   reiniciar(): void {
     this.contactos.clear();
+    this.previas.clear();
     this.acumulador = 0;
   }
 
   private clasificar(escena: Escena) {
     const cuerpos: Cuerpo[] = [];
     const solidos: Colisionador[] = [];
+    const moviles: Colisionador[] = [];
+    const recorridos: Recorrido[] = [];
     const colisionadores: Colisionador[] = [];
     const mapas: MapaCasillas[] = [];
     for (const objeto of escena.objetos) {
       if (objeto.destruido) continue;
       const mapa = objeto.obtener(MapaCasillas);
       if (mapa?.activo) mapas.push(mapa);
+      const recorrido = objeto.obtener(Recorrido);
+      const conRecorrido = recorrido !== undefined && recorrido.activo;
+      if (conRecorrido) recorridos.push(recorrido);
       const fisica = objeto.obtener(Fisica);
       const colision = objeto.obtener(Colision);
       const tieneColision = colision !== undefined && colision.activo;
-      const dinamico = fisica !== undefined && fisica.activo && !fisica.estatico;
+      // Un objeto con recorrido lo mueve su recorrido, no la física: es como una pared que se mueve
+      const dinamico = fisica !== undefined && fisica.activo && !fisica.estatico && !conRecorrido;
       if (dinamico) cuerpos.push({ objeto, fisica, colision: tieneColision ? colision : undefined, apoyado: this.apoyados.get(objeto) ?? false });
-      else if (tieneColision && colision.solido) solidos.push({ objeto, colision });
+      else if (tieneColision && colision.solido) (conRecorrido ? moviles : solidos).push({ objeto, colision });
       if (tieneColision) colisionadores.push({ objeto, colision });
     }
-    return { cuerpos, solidos, colisionadores, mapas };
+    return { cuerpos, solidos, moviles, recorridos, colisionadores, mapas };
   }
 
   // ───────────────────────── Movimiento de un cuerpo ─────────────────────────
 
-  private moverCuerpo(c: Cuerpo, gravedadMundo: number, solidos: RejillaEspacial<Colisionador>, mapas: MapaCasillas[]): void {
+  private moverCuerpo(c: Cuerpo, gravedadMundo: number, cerca: Cerca): void {
     const f = c.fisica;
     const pos = c.objeto.transformacion.posicion;
     f.enSuelo = f.tocaTecho = f.tocaPared = false;
@@ -152,10 +198,17 @@ export class SistemaFisico {
 
     const choca = c.colision?.solido;
 
-    // 3. Eje X: mover y, si nos metemos en un sólido, salir por el lado por el que entramos
+    // 3. Si algo que se mueve (una plataforma, un ascensor) se ha metido en el
+    //    cuerpo antes de que este se mueva, lo sacamos por el lado más corto.
+    //    (Si no, el paso del eje X lo confundiría con una pared.)
+    this.soportes.delete(c.objeto); // se vuelve a apuntar si sigue apoyado en algo
+    if (choca) this.apartarDeLoQueSeMueve(c, cerca);
+
+    // 4. Eje X: mover y, si nos metemos en un sólido, salir por el lado por el que entramos
     pos.x += f.velocidad.x * PASO;
     if (choca) {
-      for (const b of this.solidosCerca(c, solidos, mapas)) {
+      for (const { caja: b, soloArriba } of this.solidosCerca(c, cerca)) {
+        if (soloArriba) continue; // las plataformas de "solo desde arriba" no son paredes
         const a = c.colision!.caja();
         if (!solapanDeVerdad(a, b)) continue;
         const haciaDerecha = f.velocidad.x > 0 || (f.velocidad.x === 0 && centroX(a) < centroX(b));
@@ -165,16 +218,20 @@ export class SistemaFisico {
       }
     }
 
-    // 4. Eje Y
+    // 5. Eje Y
+    const piesAntes = choca ? c.colision!.caja().abajo : 0;
     pos.y += f.velocidad.y * PASO;
     if (choca) {
-      for (const b of this.solidosCerca(c, solidos, mapas)) {
+      for (const { caja: b, objeto: soporte, soloArriba } of this.solidosCerca(c, cerca)) {
         const a = c.colision!.caja();
         if (!solapanDeVerdad(a, b)) continue;
         const haciaAbajo = f.velocidad.y < 0 || (f.velocidad.y === 0 && centroY(a) > centroY(b));
+        // Plataforma que se atraviesa desde abajo: solo para si cae y los pies ya estaban encima
+        if (soloArriba && (f.velocidad.y > 0 || piesAntes < b.arriba - MARGEN_ENCIMA)) continue;
         if (haciaAbajo) {
           pos.y += b.arriba - a.abajo;
           f.enSuelo = true;
+          this.apoyarEn(c.objeto, soporte);
         } else {
           pos.y += b.abajo - a.arriba;
           f.tocaTecho = true;
@@ -185,12 +242,54 @@ export class SistemaFisico {
     c.apoyado = f.enSuelo;
   }
 
-  /** Cajas sólidas cerca de un cuerpo: objetos sólidos quietos y casillas sólidas de los mapas. */
-  private solidosCerca(c: Cuerpo, solidos: RejillaEspacial<Colisionador>, mapas: MapaCasillas[]): Caja[] {
+  /** Apunta sobre qué está apoyado un cuerpo, y dónde está eso ahora (para llevarlo si se mueve). */
+  private apoyarEn(cuerpo: ObjetoJuego, soporte: ObjetoJuego): void {
+    this.soportes.set(cuerpo, soporte);
+    if (!this.previas.has(soporte)) {
+      const p = soporte.transformacion.posicion;
+      this.previas.set(soporte, { x: p.x, y: p.y });
+    }
+  }
+
+  /** Saca al cuerpo de los sólidos con recorrido que se le han metido dentro (por el lado más corto). */
+  private apartarDeLoQueSeMueve(c: Cuerpo, cerca: Cerca): void {
+    if (cerca.moviles.length === 0) return;
+    for (const s of cerca.moviles) {
+      if (s.objeto === c.objeto || s.colision.soloDesdeArriba) continue;
+      const a = c.colision!.caja();
+      const b = s.colision.caja();
+      if (!solapanDeVerdad(a, b)) continue;
+      const pos = c.objeto.transformacion.posicion;
+      const opciones = [b.izquierda - a.derecha, b.derecha - a.izquierda, b.abajo - a.arriba, b.arriba - a.abajo];
+      const mejor = opciones.reduce((m, v) => (Math.abs(v) < Math.abs(m) ? v : m));
+      if (mejor === opciones[0] || mejor === opciones[1]) pos.x += mejor;
+      else {
+        pos.y += mejor;
+        if (mejor === opciones[3]) {
+          // Lo ha empujado hacia arriba: está encima (y se irá con él)
+          c.fisica.enSuelo = true;
+          c.apoyado = true;
+          c.fisica.velocidad.y = Math.max(0, c.fisica.velocidad.y);
+          this.apoyarEn(c.objeto, s.objeto);
+        }
+      }
+    }
+  }
+
+  /** Cajas sólidas cerca de un cuerpo: objetos sólidos (quietos y con recorrido) y casillas sólidas de los mapas. */
+  private solidosCerca(c: Cuerpo, cerca: Cerca): SolidoCercano[] {
     const caja = c.colision!.caja();
-    const res: Caja[] = [];
-    for (const s of solidos.consultarConGrandes(caja)) if (s.objeto !== c.objeto) res.push(s.colision.caja());
-    for (const m of mapas) for (const casilla of m.casillasEn(caja)) if (m.esSolida(casilla.tipo)) res.push(casilla.caja);
+    const res: SolidoCercano[] = [];
+    const meter = (s: Colisionador) => {
+      if (s.objeto !== c.objeto) res.push({ caja: s.colision.caja(), objeto: s.objeto, soloArriba: s.colision.soloDesdeArriba });
+    };
+    for (const s of cerca.rejilla.consultarConGrandes(caja)) meter(s);
+    for (const s of cerca.moviles) meter(s);
+    for (const m of cerca.mapas) {
+      for (const casilla of m.casillasEn(caja)) {
+        if (m.esSolida(casilla.tipo)) res.push({ caja: casilla.caja, objeto: m.objeto, soloArriba: m.tipos[casilla.tipo]?.soloDesdeArriba ?? false });
+      }
+    }
     return res;
   }
 
@@ -200,7 +299,7 @@ export class SistemaFisico {
    * Separa los cuerpos con física que se han metido uno dentro de otro, y
    * reparte el golpe según la masa (el más pesado se mueve menos).
    */
-  private separarCuerpos(cuerpos: Cuerpo[], solidos: RejillaEspacial<Colisionador>, mapas: MapaCasillas[]): void {
+  private separarCuerpos(cuerpos: Cuerpo[], cerca: Cerca): void {
     const solidosFisicos = cuerpos.filter((c) => c.colision?.solido);
     if (solidosFisicos.length < 2) return;
     const cajas = solidosFisicos.map((c) => c.colision!.caja());
@@ -226,7 +325,7 @@ export class SistemaFisico {
       if (!algo) break;
     }
     // Si al empujar hemos metido a alguien en una pared, lo sacamos
-    for (const c of solidosFisicos) this.sacarDeSolidos(c, solidos, mapas);
+    for (const c of solidosFisicos) this.sacarDeSolidos(c, cerca);
   }
 
   private resolverPareja(a: Cuerpo, b: Cuerpo): boolean {
@@ -272,8 +371,9 @@ export class SistemaFisico {
   }
 
   /** Saca un cuerpo de las paredes por el lado más corto (sin rebotes). */
-  private sacarDeSolidos(c: Cuerpo, solidos: RejillaEspacial<Colisionador>, mapas: MapaCasillas[]): void {
-    for (const b of this.solidosCerca(c, solidos, mapas)) {
+  private sacarDeSolidos(c: Cuerpo, cerca: Cerca): void {
+    for (const { caja: b, soloArriba } of this.solidosCerca(c, cerca)) {
+      if (soloArriba) continue;
       const a = c.colision!.caja();
       if (!solapanDeVerdad(a, b)) continue;
       const izq = b.izquierda - a.derecha;
@@ -383,6 +483,13 @@ function rebotar(v: number, rebote: number): number {
 
 function solapanDeVerdad(a: Caja, b: Caja): boolean {
   return a.izquierda < b.derecha - EPSILON && a.derecha > b.izquierda + EPSILON && a.abajo < b.arriba - EPSILON && a.arriba > b.abajo + EPSILON;
+}
+
+/** Lo que hace falta para buscar sólidos cerca de un cuerpo. */
+interface Cerca {
+  rejilla: RejillaEspacial<Colisionador>;
+  moviles: Colisionador[];
+  mapas: MapaCasillas[];
 }
 
 const centroX = (c: Caja) => (c.izquierda + c.derecha) / 2;

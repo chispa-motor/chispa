@@ -30,6 +30,11 @@ export class Colision extends Componente {
   ancho: number | null = null;
   alto: number | null = null;
   solido = true;
+  /**
+   * Plataforma que se atraviesa desde abajo: solo para a lo que cae encima.
+   * Se puede saltar a través de ella desde abajo o desde los lados.
+   */
+  soloDesdeArriba = false;
   /** Mueve la caja respecto al centro del objeto (útil si el dibujo no está centrado). */
   desplazamiento = new Vector2(0, 0);
 

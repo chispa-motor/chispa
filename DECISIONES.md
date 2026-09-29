@@ -44,7 +44,7 @@ programar**.
 | **Una animación = una lista de imágenes** (una por fotograma), más una velocidad y si se repite. No hay «hojas de sprites». | Filas, columnas y recortes de una imagen grande son difíciles de explicar; con imágenes sueltas se entiende a la primera. |
 | `rozamiento` y `rebote` van **de 0 a 1**. El rozamiento frena **solo en el suelo**, salvo en escenas sin gravedad (vista desde arriba), donde frena siempre y en las dos direcciones. | Son porcentajes fáciles de imaginar («0 = hielo», «1 = pelota perfecta»). Frenar en el aire estropearía los saltos. |
 | Entre objetos con física, al chocar se separan **por el lado más corto** y la velocidad se reparte **según la masa**. | Es lo que se espera sin saber física: el pesado empuja al ligero. |
-| Las **plataformas que se mueven por script no arrastran** al jugador que está encima. | Simplificación: añadirlo complica mucho la física. Queda como mejora futura. |
+| ~~Las plataformas que se mueven por script no arrastran al jugador.~~ **Resuelto en la sesión 3** (ver «Plataformas»). | — |
 | Un objeto **sin física pero con script** también detecta lo que toca. | Quien empieza mueve una bala con `yo.x += 10` y espera que `cuando toco Enemigo` funcione. |
 | Las zonas que se atraviesan se llaman **«fantasma»** (`yo.fantasma`), aunque `yo.solido` también existe. | «Fantasma» se entiende sin explicación. |
 | Los mapas de casillas **no giran ni se escalan**. La posición del objeto mapa es la esquina inferior izquierda de la casilla (0, 0). | Así saber qué casilla hay en un punto es una simple división, rapidísima con miles de casillas. |
@@ -134,3 +134,15 @@ Ver PROBLEMAS_PRINCIPIANTE.md para la lista completa de lo que se encontró.
 | Si un hueco falla mientras se juega (por ejemplo, `juego.puntos` todavía no tiene valor), se avisa **una vez** en la consola y ese texto deja de recalcularse; el juego sigue. | Un error repetido 60 veces por segundo taparía todo lo demás. |
 | En el editor, **«Enseñar un dato»** ofrece los datos de `juego` que usan los scripts, las propiedades propias del objeto y de los demás, y el tiempo. Si el texto no decía nada («Texto»), le pone nombre: `Puntos: {juego.puntos}`. | Enlazar un texto a un dato sin escribir nada de código. |
 | Los huecos se **colorean como código** y se **autocompletan** dentro del texto. | Así se ve que lo de dentro no es texto normal. |
+
+### Plataformas (sesión 3, bloque 2)
+
+| Decisión | Por qué |
+|---|---|
+| Una plataforma que se mueve es un objeto con el componente **Recorrido**: una lista de puntos, una rapidez, una pausa en cada punto y un modo (**ida y vuelta** o **en bucle**). Dos puntos = entre dos puntos; más = un camino. | Una sola idea sirve para plataformas, ascensores y enemigos que patrullan. |
+| Los puntos del camino son **relativos** a donde está el objeto al empezar. El primero (0, 0) es el sitio del objeto y no se escribe. | Al mover la plataforma en el editor, su camino se mueve con ella. Las copias de una plantilla hacen el mismo camino cada una desde su sitio. |
+| En la escena, el camino se **dibuja** (línea discontinua, fantasmas y números) y los puntos se **arrastran** con el ratón. | Configurarlo sin escribir números. |
+| Un objeto con Recorrido **no cae** aunque tenga Física: el recorrido manda. `yo.moviendo = falso` lo para. | Si la gravedad y el camino pelearan, la plataforma temblaría. |
+| **Lo que está encima viaja con el soporte**, tanto si lo mueve un recorrido como si lo mueve un script (`yo.x = …`). | Esto resuelve la limitación anterior («las plataformas movidas por script no llevan al jugador»). |
+| Si una plataforma que se mueve se mete dentro de un cuerpo, el cuerpo **se aparta por el lado más corto** antes de moverse. | Sin esto, un ascensor que sube empujaba al jugador hacia un lado como si fuera una pared. |
+| **«Solo desde arriba»** (casilla en Colisión y en los tipos de casilla del mapa): se atraviesa saltando desde abajo y de lado, y se para al caer encima. Cuenta como «encima» si los pies estaban como mucho **4 píxeles** por debajo del borde. | El margen evita que el jugador atraviese una plataforma que sube hacia él. |
