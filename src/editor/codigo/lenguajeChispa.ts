@@ -14,6 +14,7 @@
  *   verdadero, falso, nulo                 → naranja
  *   textos → verde · números → amarillo · comentarios → gris
  */
+import { EditorView } from '@codemirror/view';
 import { StreamLanguage, HighlightStyle, syntaxHighlighting, indentService, type StreamParser } from '@codemirror/language';
 import { tags as t } from '@lezer/highlight';
 import { PALABRAS_CLAVE } from '../../chispa/lexico/tokens';
@@ -131,7 +132,8 @@ export const parserChispa: StreamParser<Estado> = {
   languageData: {
     commentTokens: { line: '#' },
     closeBrackets: { brackets: ['(', '[', '{', '"', "'"] },
-    indentOnInput: /^\s*(sino)$/,
+    // Al escribir «sino» o «cuando », la línea se coloca sola a su altura
+    indentOnInput: /^\s*(sino|cuando\s)$/,
   },
 };
 
@@ -172,5 +174,35 @@ export const sangriaChispa = indentService.of((contexto, posicion) => {
   else if (/^\s*(devolver|romper|continuar)\b/.test(texto)) sangria = base - 4;
   // "sino" va a la altura de su "si"
   if (/^\s*sino\b/.test(actual.text) && !sinComentario.endsWith(':')) sangria = base - 4;
+  // "cuando" siempre va al principio de la línea (los eventos no se meten dentro de nada)
+  if (/^\s*cuando\b/.test(actual.text)) return 0;
   return Math.max(0, sangria);
 });
+
+/**
+ * Quien copia código de un ejemplo escribe también los espacios del principio.
+ * Si justo después de Intro (con la sangría ya puesta sola) lo primero que se
+ * escribe es un espacio, se quita la sangría automática: cuentan los espacios
+ * que escribe la persona. Así no salen 8 espacios donde tocaban 4.
+ */
+const lineaConSangriaAutomatica = new WeakMap<EditorView, number>();
+export const sangriaEscritaAMano = [
+  EditorView.updateListener.of((u) => {
+    if (!u.docChanged) return;
+    let intro = false;
+    for (const tr of u.transactions) tr.changes.iterChanges((_a, _b, _c, _d, texto) => {
+      if (tr.isUserEvent('input') && texto.toString().includes('\n')) intro = true;
+    });
+    const linea = u.state.doc.lineAt(u.state.selection.main.head);
+    if (intro && /^\s+$/.test(linea.text)) lineaConSangriaAutomatica.set(u.view, linea.number);
+    else if (!intro) lineaConSangriaAutomatica.delete(u.view);
+  }),
+  EditorView.inputHandler.of((vista, desde, hasta, texto) => {
+    if (texto !== ' ' || desde !== hasta) return false;
+    const linea = vista.state.doc.lineAt(desde);
+    if (lineaConSangriaAutomatica.get(vista) !== linea.number || !/^\s+$/.test(linea.text) || desde !== linea.to) return false;
+    lineaConSangriaAutomatica.delete(vista);
+    vista.dispatch({ changes: { from: linea.from, to: linea.to, insert: ' ' }, selection: { anchor: linea.from + 1 }, userEvent: 'input.type' });
+    return true;
+  }),
+];

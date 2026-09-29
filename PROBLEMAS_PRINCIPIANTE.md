@@ -75,3 +75,57 @@ ninguna variable» o «esperaba ':'». Ahora cada uno explica qué pasa.
 - Los datos de `juego` se conservan entre escenas, y eso hace fácil la pantalla de fin con los puntos.
 - `"Puntos: " + juego.puntos` funciona sin conversiones.
 - Las mayúsculas no importan: `variable Vida` y `vida` son la misma variable.
+
+---
+
+# Segunda prueba de principiante (sesión 3)
+
+Otra vez en el lugar de alguien de 12 años que no sabe programar. Esta vez:
+
+- **El tutorial nuevo** («¿Hacemos tu primer juego?»), de principio a fin y
+  cometiendo a propósito los despistes típicos: escribir un nombre y hacer
+  clic fuera sin pulsar Intro, pintar el suelo sin Mayús, y **copiar el código
+  de la burbuja tal cual, con sus espacios**.
+- **«Atrapa la fruta»**: una cesta que se mueve a los lados, fruta que cae desde
+  arriba (una plantilla creada desde el código cada segundo en un sitio al
+  azar), puntos y vidas en un marcador con huecos, una escena de fin con el
+  **récord guardado** y un botón para volver a jugar.
+- **«Sube a la cima»**: una escalada hacia arriba contra el reloj, con **nubes
+  que se atraviesan desde abajo** (copias enlazadas de una plantilla, colocadas
+  arrastrando), un **ascensor** con Recorrido, la **cámara que sigue** al
+  jugador, una **cuenta atrás** hecha con un texto con huecos y dos escenas de
+  final (ganar y quedarse sin tiempo).
+
+Todo en el editor de verdad, con un navegador automático que hacía clic,
+arrastraba y escribía como una persona, en una pantalla de portátil normal
+(1366 × 768). Los dos juegos funcionaron al final: se coge la fruta y suben los
+puntos, se pierden las vidas y sale el fin con el récord; se sube a una nube
+saltando desde abajo, el ascensor lleva al jugador hasta la meta y, si se acaba
+el tiempo, sale la escena de «sin tiempo». Los juegos se borraron después.
+
+## Fallos (cosas que no funcionaban)
+
+| # | Problema | Arreglo |
+|---|---|---|
+| 21 | **Copiar el código del tutorial tal cual (con los espacios del principio) lo rompía.** El editor ya pone la sangría solo al pulsar Intro, así que salían 8 espacios donde tocaban 4; y después de una línea en blanco, cada `cuando` quedaba metido dentro del anterior. Resultado: «los bloques cuando tienen que ir en el nivel principal». Le habría pasado a casi cualquiera. | Si en una línea recién sangrada lo primero que se escribe es un espacio, cuentan los espacios que escribe la persona. Y al escribir `cuando ` la línea salta sola al principio (un evento nunca va dentro de nada). Ahora da igual copiarlo con o sin espacios: sale bien. |
+| 22 | **Con la vista alejada, intentar mover un objeto pequeño lo deformaba.** El cuadradito de cambiar el tamaño tapaba el objeto entero: la meta (un círculo) se quedó en 504 × 8. | El tirador del tamaño solo aparece cuando el objeto se ve lo bastante grande en la pantalla. Si no, arrastrar siempre lo mueve. |
+
+## Difícil, largo o confuso
+
+| # | Problema | Arreglo |
+|---|---|---|
+| 23 | En una pantalla de portátil, la burbuja del tutorial en el paso del código **tapaba justo la parte del editor donde se escribe**. | Si lo resaltado es grande y hay sitio a su lado, la burbuja va fuera (encima del juego), sin tapar nada. |
+| 24 | El marcador «Puntos: {juego.puntos}» salía **cortado por la izquierda** en la escena («untos:»): los textos crecían por los dos lados y el marcador está pegado al borde. | Los textos nuevos crecen hacia la derecha (alineados a la izquierda) y salen en la esquina. |
+| 25 | Una **cesta que solo se mueva a los lados** obligaba a ponerle Física y un suelo solo para que no subiera y bajara. | Receta nueva en la Guía: «Moverse solo a los lados (una cesta, una raqueta)». |
+
+## Lo que funcionó bien a la primera
+
+- El tutorial avanza aunque no se pulse Intro al poner un nombre (basta con hacer clic fuera) y aunque se pinte sin Mayús.
+- Al cambiar el color de **una** nube, cambiaron **todas** sus copias; duplicar dos nubes seleccionadas con Ctrl+clic y subirlas juntas con Mayús+flechas fue un momento.
+- Saltar a través de una nube desde abajo y quedarse encima; el ascensor lleva al jugador sin que se caiga ni resbale.
+- Los textos con huecos: el marcador de puntos y vidas sin código, la cuenta atrás de la receta y el récord con una variable del evento.
+- Arrastrar la plantilla desde el panel Proyecto para poner copias.
+
+## Queda por mejorar (ideas, no arreglado)
+
+- «Añadir» pone el objeto en el centro de lo que se ve. Con la vista alejada o movida, ese centro puede quedar **debajo del suelo**, y el jugador cae al vacío al empezar. Se ve enseguida en la escena, pero se podría avisar.

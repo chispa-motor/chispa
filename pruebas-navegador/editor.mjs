@@ -247,6 +247,23 @@ await prueba('la primera vez ofrece el tutorial, y el tutorial se hace entero ha
   await paso('Tu primer juego');
 });
 
+await prueba('con la vista alejada, arrastrar un objeto pequeño lo mueve (no lo deforma)', async (p) => {
+  const lienzo = await p.locator('.lienzo-escena').boundingBox();
+  await p.mouse.move(lienzo.x + lienzo.width / 2, lienzo.y + lienzo.height / 2);
+  for (let i = 0; i < 3; i++) await p.mouse.wheel(0, 300);
+  await p.waitForTimeout(200);
+  await estado(p, () => window.chispa.estado.crearObjeto('circulo', 700, 300));
+  const antes = await estado(p, () => window.chispa.estado.seleccionado);
+  const desde = await estado(p, ([x, y]) => window.chispa.vistaEscena.camara.aPantalla(x, y), [antes.x, antes.y]);
+  await p.mouse.move(lienzo.x + desde.x, lienzo.y + desde.y);
+  await p.mouse.down();
+  await p.mouse.move(lienzo.x + desde.x + 40, lienzo.y + desde.y - 40, { steps: 6 });
+  await p.mouse.up();
+  const despues = await estado(p, () => window.chispa.estado.seleccionado);
+  comprobar(despues.sprite.ancho === 64 && despues.sprite.alto === 64, 'se ha deformado: ' + JSON.stringify(despues.sprite));
+  comprobar(despues.x > antes.x && despues.y > antes.y, 'no se ha movido');
+});
+
 await prueba('los errores se subrayan mientras escribes y bloquean Ejecutar', async (p) => {
   await p.click('.nodo.hijo');
   await p.click('.cm-content');
@@ -259,6 +276,24 @@ await prueba('los errores se subrayan mientras escribes y bloquean Ejecutar', as
   await p.keyboard.press('F5');
   await p.waitForTimeout(300);
   comprobar((await textoDe(p, '.consola-editor')).includes('No se puede ejecutar'), 'la consola no explica por qué no ejecuta');
+});
+
+await prueba('copiar código de un ejemplo, con o sin los espacios del principio, da la misma sangría', async (p) => {
+  const esperado = 'cuando empieza:\n    juego.puntos = 0\n\ncuando toco Moneda:\n    destruir(otro)\n    juego.puntos += 1';
+  for (const conEspacios of [true, false]) {
+    const archivo = await estado(p, (n) => window.chispa.estado.crearScriptSuelto(n), conEspacios ? 'con' : 'sin');
+    await p.waitForTimeout(150);
+    await p.click('.zona-codigo .cm-editor:not([style*="none"]) .cm-content');
+    await p.keyboard.press('Control+a');
+    await p.keyboard.press('Delete');
+    for (const linea of esperado.split('\n')) {
+      await p.keyboard.type(conEspacios ? linea : linea.trimStart(), { delay: 3 });
+      await p.keyboard.press('Enter');
+    }
+    const codigo = await estado(p, (a) => window.chispa.estado.proyecto.scripts[a], archivo);
+    const limpio = codigo.split('\n').map((l) => l.trimEnd()).join('\n').trim();
+    comprobar(limpio === esperado, `${conEspacios ? 'con' : 'sin'} espacios sale mal:\n` + codigo);
+  }
 });
 
 await prueba('la sangría se pone sola al pulsar Intro', async (p) => {

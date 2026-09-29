@@ -26,7 +26,7 @@ import { autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap } 
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search';
 import { forceLinting, lintGutter, lintKeymap } from '@codemirror/lint';
 import type { EstadoEditor } from '../estado/EstadoEditor';
-import { coloresChispa, lenguajeChispa, sangriaChispa } from './lenguajeChispa';
+import { coloresChispa, lenguajeChispa, sangriaChispa, sangriaEscritaAMano } from './lenguajeChispa';
 import { fuenteAutocompletado } from './autocompletado';
 import { ayudaAlPasar, posicionEnDocumento, revisionEnVivo } from './ayudaYErrores';
 
@@ -125,6 +125,7 @@ export class EditorCodigo {
       lenguajeChispa,
       coloresChispa,
       sangriaChispa,
+      sangriaEscritaAMano,
       lintGutter(),
       revisionEnVivo(() => archivo.nombre, proyecto),
       ayudaAlPasar,

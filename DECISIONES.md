@@ -181,9 +181,18 @@ Ver PROBLEMAS_PRINCIPIANTE.md para la lista completa de lo que se encontró.
 | Decisión | Por qué |
 |---|---|
 | **Exportar** abre un diálogo con tres opciones: **un archivo** (.html), **itch.io** (.zip) y **GitHub Pages** (index.html). Al elegir, se descarga el archivo y el diálogo enseña **los pasos**, numerados, con los nombres de los botones tal como salen en esa web (en inglés, en negrita, y traducidos entre paréntesis la primera vez). | Quien empieza no sabe qué archivo pide cada sitio ni dónde se pulsa. Los botones de esas webs están en inglés: hay que reconocerlos. |
-| **No se conecta a ninguna cuenta.** | Pedirlo el usuario. Además, conectar cuentas necesita permisos, contraseñas y un servidor; así no hay nada que pueda fallar ni ningún dato que guardar. |
+| **No se conecta a ninguna cuenta.** | Se pidió así. Además, conectar cuentas necesita permisos, contraseñas y un servidor; así no hay nada que pueda fallar ni ningún dato que guardar. |
 | Para itch.io, un **.zip con un index.html dentro**, y los pasos dicen **el tamaño exacto** del juego para «Viewport dimensions». | Es lo que pide itch.io para juegos HTML. Con el tamaño bien puesto, el juego no sale cortado ni con bandas. |
 | El .zip se hace **sin comprimir**, con un programa propio de unas 100 líneas (con su CRC-32). | No hace falta ninguna biblioteca. El juego es una sola página e itch.io la sirve comprimida de todas formas. |
 | Para GitHub Pages, **index.html** (tiene que llamarse así) y los pasos **desde la web** (subir el archivo, Settings → Pages), sin usar git. | Instalar y aprender git es demasiado para publicar el primer juego. |
 | La dirección de GitHub se sugiere con un **nombre corto** del juego (`Mi Juego del Ñandú` → `mi-juego-del-nandu`). | Sin espacios ni acentos, que en una dirección web dan problemas. |
 | Cada opción explica también **cómo subir una versión nueva**. | Es lo segundo que se pregunta siempre. |
+
+### Prueba de principiante (sesión 3, bloque 6)
+
+| Decisión | Por qué |
+|---|---|
+| Si justo después de Intro (con la sangría ya puesta) lo primero que se escribe es un **espacio**, se quita la sangría automática y cuentan los espacios escritos. | Quien copia un ejemplo escribe también sus espacios. Sin esto salían 8 donde tocaban 4. |
+| Al escribir **`cuando `**, la línea se va sola al principio. | Un evento nunca va dentro de nada: no hay ningún caso en que esa sangría sea buena. |
+| El tirador del tamaño **solo aparece si el objeto mide al menos 27 píxeles en la pantalla**. | Con la vista alejada, el tirador tapaba los objetos pequeños y moverlos los deformaba. Para cambiar el tamaño de algo pequeño, se acerca la vista (o se escribe en Propiedades). |
+| Los **textos nuevos se alinean a la izquierda** y salen en la esquina (x = 32). | Casi siempre son marcadores: crecen al subir los puntos y así nunca se salen por el borde. |

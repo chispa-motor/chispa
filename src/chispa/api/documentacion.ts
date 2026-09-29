@@ -335,6 +335,11 @@ export const RECETAS: Receta[] = [
     codigo: 'cuando cada fotograma:\n    yo.moverConFlechas(300)',
   },
   {
+    titulo: 'Moverse solo a los lados (una cesta, una raqueta)',
+    descripcion: 'Sin Física: con las flechas se mueve en las cuatro direcciones, así que fijamos su altura en cada fotograma.',
+    codigo: 'cuando cada fotograma:\n    yo.moverConFlechas(500)\n    yo.y = 60',
+  },
+  {
     titulo: 'Saltar',
     descripcion: 'El jugador necesita Física (Propiedades > Física) y algo debajo para apoyarse: un suelo sin Física, o un mapa de casillas. Solo salta si está en el suelo.',
     codigo: 'cuando se pulsa "espacio", "arriba":\n    yo.saltar(700)',

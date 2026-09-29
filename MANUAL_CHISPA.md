@@ -1596,6 +1596,16 @@ cuando cada fotograma:
     yo.moverConFlechas(300)
 ```
 
+### Moverse solo a los lados (una cesta, una raqueta)
+
+Sin Física: con las flechas se mueve en las cuatro direcciones, así que fijamos su altura en cada fotograma.
+
+```
+cuando cada fotograma:
+    yo.moverConFlechas(500)
+    yo.y = 60
+```
+
 ### Saltar
 
 El jugador necesita Física (Propiedades > Física) y algo debajo para apoyarse: un suelo sin Física, o un mapa de casillas. Solo salta si está en el suelo.

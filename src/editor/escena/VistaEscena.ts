@@ -44,6 +44,12 @@ export type Herramienta = 'mover' | 'pincel' | 'goma';
 /** Paso del imán (los objetos se colocan en múltiplos de 16 píxeles). */
 const PASO_IMAN = 16;
 const TAMANO_TIRADOR = 9;
+/**
+ * Por debajo de este tamaño en la pantalla (píxeles), un objeto no enseña el
+ * tirador de cambiar el tamaño: si no, con la vista alejada el tirador tapa el
+ * objeto entero y, al intentar moverlo, se deforma.
+ */
+const MINIMO_PARA_TIRADOR = TAMANO_TIRADOR * 3;
 
 type Arrastre =
   | { tipo: 'mover'; dx: number; dy: number }
@@ -192,7 +198,7 @@ export class VistaEscena {
     // Los botones y textos son de interfaz: su posición es en la PANTALLA del juego
     const ancho = (m.derecha - m.izquierda) * m.zoom;
     const alto = (m.arriba - m.abajo) * m.zoom;
-    const pos = tipo === 'boton' ? { x: ancho / 2, y: alto / 2 } : tipo === 'texto' ? { x: 112, y: alto - 40 } : centro;
+    const pos = tipo === 'boton' ? { x: ancho / 2, y: alto / 2 } : tipo === 'texto' ? { x: 32, y: alto - 40 } : centro;
     let x = this.iman ? ajustar(pos.x, PASO_IMAN) : Math.round(pos.x);
     const y = this.iman ? ajustar(pos.y, PASO_IMAN) : Math.round(pos.y);
     // Si ya hay algo justo ahí, lo ponemos un poco a la derecha (para que no queden uno encima del otro)
@@ -514,8 +520,8 @@ export class VistaEscena {
     // Recorrido: el camino, dónde estará el objeto en cada punto, y los puntos para arrastrar
     if (def.recorrido && this.herramienta === 'mover') this.dibujarRecorrido(def, marco);
 
-    // Tirador para cambiar el tamaño (solo objetos con dibujo)
-    if (def.sprite && this.herramienta === 'mover') {
+    // Tirador para cambiar el tamaño (solo objetos con dibujo, y si se ven lo bastante grandes)
+    if (def.sprite && this.herramienta === 'mover' && Math.min(b.x - a.x, b.y - a.y) >= MINIMO_PARA_TIRADOR) {
       ctx.fillStyle = '#fff';
       ctx.strokeStyle = '#4aa3ff';
       ctx.lineWidth = 2;
@@ -627,7 +633,9 @@ export class VistaEscena {
     const def = this.estado.seleccion?.tipo === 'escena' ? this.estado.seleccionado : null;
     if (!def?.sprite || this.herramienta !== 'mover') return false;
     const c = cajaDe(def, this.marco());
+    const a = this.camara.aPantalla(c.izquierda, c.arriba);
     const b = this.camara.aPantalla(c.derecha, c.abajo);
+    if (Math.min(b.x - a.x, b.y - a.y) < MINIMO_PARA_TIRADOR) return false;
     return Math.abs(px - b.x) <= TAMANO_TIRADOR && Math.abs(py - b.y) <= TAMANO_TIRADOR;
   }
 

@@ -170,8 +170,12 @@ export class Tutorial {
     let x: number;
     let y: number;
     const grande = caja.width > ancho * 0.4 || caja.height > alto * 0.5;
-    if (grande) {
-      // Objetivos grandes (la escena, el código): la burbuja dentro, en una esquina de arriba
+    if (grande && caja.right + separacion + bw < ancho) {
+      // Objetivos grandes con sitio a su derecha: la burbuja fuera, sin tapar nada de lo resaltado
+      x = caja.right + separacion;
+      y = this.guia.paso.esquina === 'abajo' ? caja.bottom - bh : caja.top;
+    } else if (grande) {
+      // Objetivos grandes sin sitio fuera (la escena, el código): la burbuja dentro, en una esquina
       x = caja.right - bw - 16;
       y = this.guia.paso.esquina === 'abajo' ? caja.bottom - bh - 16 : caja.top + 16;
     } else if (caja.right + separacion + bw < ancho) {
