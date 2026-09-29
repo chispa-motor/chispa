@@ -27,7 +27,7 @@ import type { Bloque, Expresion, Sentencia } from '../sintaxis/ast';
 import type { Posicion } from '../lexico/tokens';
 import { Entorno } from './entorno';
 import { ErrorChispa } from '../errores/ErrorChispa';
-import { sugerir } from '../errores/sugerencias';
+import { pistaNombreDesconocido, sugerir } from '../errores/sugerencias';
 import {
   Anfitrion,
   FuncionChispa,
@@ -40,6 +40,7 @@ import {
   formatearNumero,
   nombreTipo,
   sonIguales,
+  tipoConValor,
   type Valor,
 } from './valores';
 import { instalarBasicas } from '../api/basicas';
@@ -208,7 +209,7 @@ export class Interprete {
     // Para += -= *= /= primero leemos el valor actual y operamos.
     if (operador !== '=') {
       const actual = yield* this.evaluar(objetivo, ent);
-      valor = this.operar(operador[0], actual, valor, pos);
+      valor = this.operar(operador[0], actual, valor, pos, objetivo, exprValor);
     }
     valor = copiarSiVector(valor);
 
@@ -217,7 +218,7 @@ export class Interprete {
         throw new ErrorChispa(
           objetivo.pos,
           `la variable '${objetivo.original}' no existe todavía.`,
-          this.pistaNombre(objetivo.original, ent) ?? `Para crearla escribe: variable ${objetivo.original} = ...`,
+          this.pistaNombre(objetivo.original, ent, `Para crearla escribe: variable ${objetivo.original} = ...`),
         );
       }
       return;
@@ -280,8 +281,8 @@ export class Interprete {
         if (!c) {
           throw new ErrorChispa(
             e.pos,
-            `no conozco nada llamado '${e.original}'.`,
-            this.pistaNombre(e.original, ent) ?? `Si es una variable nueva, créala antes con: variable ${e.original} = ...`,
+            `intentas usar '${e.original}', pero no existe ninguna variable con ese nombre.`,
+            this.pistaNombre(e.original, ent),
           );
         }
         return c.valor;
@@ -319,7 +320,7 @@ export class Interprete {
         const a = yield* this.evaluar(e.izquierda, ent);
         const b = yield* this.evaluar(e.derecha, ent);
         if (e.operador === 'en') return this.contiene(b, a, e);
-        return this.operar(e.operador, a, b, e.pos);
+        return this.operar(e.operador, a, b, e.pos, e.izquierda, e.derecha);
       }
 
       case 'Miembro': {
@@ -372,8 +373,14 @@ export class Interprete {
       }
       const local = new Entorno(funcion.entorno);
       def.parametros.forEach((p, i) => local.declarar(p.nombre, copiarSiVector(args[i]), p.original));
-      const senal = yield* this.ejecutarBloque(def.cuerpo, local);
-      return senal?.tipo === 'devolver' ? senal.valor : null;
+      try {
+        const senal = yield* this.ejecutarBloque(def.cuerpo, local);
+        return senal?.tipo === 'devolver' ? senal.valor : null;
+      } catch (error) {
+        // El error "atraviesa" esta función: apuntamos desde dónde se la llamó (pila de llamadas)
+        if (error instanceof ErrorChispa) error.agregarLlamada(def.original, pos);
+        throw error;
+      }
     }
 
     throw new ErrorChispa(
@@ -385,7 +392,12 @@ export class Interprete {
 
   // ═════════════════════════ OPERADORES ═════════════════════════
 
-  private operar(op: string, a: Valor, b: Valor, pos: Posicion): Valor {
+  /**
+   * Hace la operación, o explica por qué no se puede, ENSEÑANDO LOS VALORES:
+   *   "intentas restar un texto ("10hola") y un número (1)."
+   * `ea` y `eb` son las expresiones de cada lado, para decir también su nombre si son variables.
+   */
+  private operar(op: string, a: Valor, b: Valor, pos: Posicion, ea?: Expresion, eb?: Expresion): Valor {
     switch (op) {
       case '+':
         if (typeof a === 'number' && typeof b === 'number') return a + b;
@@ -428,25 +440,32 @@ export class Interprete {
         }
         throw new ErrorChispa(
           pos,
-          `no puedo comparar ${nombreTipo(a)} con ${nombreTipo(b)} usando '${op}'.`,
-          typeof a === 'string' || typeof b === 'string'
-            ? '¿Uno de los dos es un número escrito como texto? Conviértelo con numero(...).'
-            : a === null || b === null
-              ? 'Uno de los dos está vacío (nulo). ¿Le has dado un valor antes?'
-              : undefined,
+          `intentas comparar ${this.operando(a, ea)} con ${this.operando(b, eb)} usando '${op}', y solo se pueden comparar dos números o dos textos.`,
+          this.pistaTipos(a, b, ea, eb),
         );
     }
     const verbos: Record<string, string> = { '+': 'sumar', '-': 'restar', '*': 'multiplicar', '/': 'dividir', '%': 'calcular el resto de' };
-    const unoTextoOtroNumero = (typeof a === 'string' && typeof b === 'number') || (typeof a === 'number' && typeof b === 'string');
-    throw new ErrorChispa(
-      pos,
-      `no puedo ${verbos[op]} ${nombreTipo(a)} y ${nombreTipo(b)}.`,
-      a === null || b === null
-        ? 'Uno de los dos está vacío (nulo). ¿Le has dado un valor antes?'
-        : unoTextoOtroNumero
-          ? 'Si es un número guardado como texto, conviértelo con numero(...).'
-          : undefined,
-    );
+    throw new ErrorChispa(pos, `intentas ${verbos[op]} ${this.operando(a, ea)} y ${this.operando(b, eb)}.`, this.pistaTipos(a, b, ea, eb, op));
+  }
+
+  /** "un número (10)" o, si es una variable, "'vida', que es un número (10)," */
+  private operando(v: Valor, e?: Expresion): string {
+    const conNombre = e && (e.tipo === 'Identificador' || e.tipo === 'Miembro' || e.tipo === 'Indice' || e.tipo === 'Llamada');
+    return conNombre ? `'${this.describir(e)}', que es ${tipoConValor(v)},` : tipoConValor(v);
+  }
+
+  /** La pista más útil según los tipos que se han mezclado. */
+  private pistaTipos(a: Valor, b: Valor, ea?: Expresion, eb?: Expresion, op?: string): string | undefined {
+    const nombre = (e?: Expresion, v?: Valor) => (e ? this.describir(e) : aTexto(v ?? null));
+    if (a === null || b === null) {
+      const e = a === null ? ea : eb;
+      return `${e && e.tipo !== 'Nulo' ? `'${this.describir(e)}'` : 'Uno de los dos'} está vacío (nulo). ¿Le has dado un valor antes?`;
+    }
+    if (typeof a === 'string' && typeof b === 'number') return `Si el texto guarda un número, conviértelo antes: numero(${nombre(ea, a)})`;
+    if (typeof a === 'number' && typeof b === 'string') return `Si el texto guarda un número, conviértelo antes: numero(${nombre(eb, b)})`;
+    if (Array.isArray(a) && op === '+') return `Para añadir un elemento a una lista usa: ${nombre(ea, a)}.añadir(...)`;
+    if (a instanceof Tabla || b instanceof Tabla) return 'Con las tablas no se puede operar directamente. Usa sus claves: tabla.clave';
+    return undefined;
   }
 
   /** `a en b`: ¿está a dentro de b? (clave en tabla, elemento en lista, trozo en texto) */
@@ -479,7 +498,7 @@ export class Interprete {
       throw new ErrorChispa(
         expr.pos,
         `intentas ${accion} de '${expr.original}', pero '${expr.original}' no existe.`,
-        this.pistaNombre(expr.original, ent) ?? '¿Lo has creado antes o está bien escrito el nombre?',
+        this.pistaNombre(expr.original, ent, '¿Lo has creado antes o está bien escrito el nombre?'),
       );
     }
     const obj = yield* this.evaluar(expr, ent);
@@ -600,15 +619,13 @@ export class Interprete {
     }
   }
 
-  /** "¿Querías decir 'vida'?" o "si es un objeto de la escena, búscalo con buscar(...)". */
-  private pistaNombre(nombre: string, ent: Entorno): string | null {
-    const parecido = sugerir(nombre, ent.nombresVisibles());
-    if (parecido) return `¿Querías decir '${parecido}'?`;
-    const objeto = this.nombresDeObjetos().find((n) => n.toLowerCase() === nombre.toLowerCase());
-    if (objeto) {
-      return `Hay un objeto llamado '${objeto}' en la escena, pero para usarlo primero hay que buscarlo: variable ${nombre.toLowerCase()} = buscar("${objeto}"). Dentro de "cuando toco ${objeto}:" lo tienes en 'otro'.`;
-    }
-    return null;
+  /** La pista para un nombre que no existe (ver pistaNombreDesconocido). */
+  private pistaNombre(nombre: string, ent: Entorno, comoCrearla?: string): string {
+    return pistaNombreDesconocido(
+      nombre,
+      { visibles: ent.nombresVisibles(), deUsuario: ent.nombresDeUsuario(this.globales), objetosEscena: this.nombresDeObjetos() },
+      comoCrearla,
+    );
   }
 
   /** Texto corto que describe una expresión: "yo.vida", "enemigo", "buscar(...)". */

@@ -49,13 +49,28 @@ class Modulo extends Anfitrion {
   ) {
     super();
   }
+  /** Módulos dentro de este módulo (escena.camara). */
+  private submodulos: Record<string, Modulo> = {};
+
   describir() {
     return `'${this.nombre}'`;
   }
   propiedadesConocidas() {
     return this.nombresBonitos.length ? this.nombresBonitos : [...Object.keys(this.props), ...Object.keys(this.metodos)];
   }
+  tieneMiembro(nombre: string): boolean {
+    return nombre in this.props || nombre in this.metodos || nombre in this.submodulos;
+  }
+  submodulo(nombre: string): Anfitrion | null {
+    return this.submodulos[nombre] ?? null;
+  }
+  /** Añade un módulo dentro de este (escena.camara). */
+  agregarSubmodulo(nombre: string, modulo: Modulo): this {
+    this.submodulos[nombre] = modulo;
+    return this;
+  }
   obtener(p: string, original: string, pos: Posicion): Valor {
+    if (this.submodulos[p]) return this.submodulos[p];
     if (this.props[p]) return this.props[p].obtener();
     if (this.metodos[p]) return new FuncionNativa(`${this.nombre}.${original}`, this.metodos[p]);
     const s = sugerir(original, this.propiedadesConocidas());
@@ -113,8 +128,8 @@ function argBoton(args: Valor[], funcion: string, pos: Posicion): BotonRaton {
 /** Añade al intérprete todo lo que depende del motor. */
 export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, datos: DatosJuego): void {
   const g = interprete.globales;
-  const { motor } = ctx;
-  const entrada = motor.entrada;
+  // OJO: no tocamos ctx.motor hasta que se USA una función. Así la API se puede
+  // instalar sin juego en marcha (el editor la necesita para revisar el código).
   const funcion = (nombre: string, fn: Metodo) => g.declarar(normalizar(nombre), new FuncionNativa(nombre, fn), nombre);
 
   // ── Objetos ──
@@ -146,9 +161,9 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
   g.declarar(
     'teclado',
     new Modulo('teclado', {}, {
-      pulsada: (a, p) => entrada.estaPulsada(argTexto(a, 0, 'teclado.pulsada', p, 'teclado.pulsada("izquierda")')),
-      sepulso: (a, p) => entrada.sePulso(argTexto(a, 0, 'teclado.sePulso', p, 'teclado.sePulso("espacio")')),
-      sesolto: (a, p) => entrada.seSolto(argTexto(a, 0, 'teclado.seSolto', p, 'teclado.seSolto("espacio")')),
+      pulsada: (a, p) => ctx.motor.entrada.estaPulsada(argTexto(a, 0, 'teclado.pulsada', p, 'teclado.pulsada("izquierda")')),
+      sepulso: (a, p) => ctx.motor.entrada.sePulso(argTexto(a, 0, 'teclado.sePulso', p, 'teclado.sePulso("espacio")')),
+      sesolto: (a, p) => ctx.motor.entrada.seSolto(argTexto(a, 0, 'teclado.seSolto', p, 'teclado.seSolto("espacio")')),
     }, ['pulsada', 'sePulso', 'seSolto']),
   );
 
@@ -161,11 +176,11 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
         x: { obtener: () => ctx.escena.ratonEnMundo().x },
         y: { obtener: () => ctx.escena.ratonEnMundo().y },
         posicion: { obtener: () => ctx.escena.ratonEnMundo() },
-        rueda: { obtener: () => entrada.rueda },
+        rueda: { obtener: () => ctx.motor.entrada.rueda },
       },
       {
-        pulsado: (a, p) => entrada.ratonPulsado(argBoton(a, 'pulsado', p)),
-        sepulso: (a, p) => entrada.ratonSePulso(argBoton(a, 'sePulso', p)),
+        pulsado: (a, p) => ctx.motor.entrada.ratonPulsado(argBoton(a, 'pulsado', p)),
+        sepulso: (a, p) => ctx.motor.entrada.ratonSePulso(argBoton(a, 'sePulso', p)),
       },
       ['x', 'y', 'posicion', 'rueda', 'pulsado', 'sePulso'],
     ),
@@ -200,7 +215,6 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
       'escena',
       {
         objetos: { obtener: () => ctx.escena.objetos.filter((o) => !o.destruido).map(referencia) },
-        camara: { obtener: () => camara },
       },
       {
         reiniciar: () => {
@@ -209,31 +223,30 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
         },
       },
       ['objetos', 'camara', 'reiniciar'],
-    ),
+    ).agregarSubmodulo('camara', camara),
   );
 
   // ── sonido ──
-  const sonido = motor.sonido;
   g.declarar(
     'sonido',
     new Modulo(
       'sonido',
-      { volumen: { obtener: () => sonido.volumen, asignar: (v, p) => (sonido.volumen = comoNumero(v, 'volumen', p)) } },
+      { volumen: { obtener: () => ctx.motor.sonido.volumen, asignar: (v, p) => (ctx.motor.sonido.volumen = comoNumero(v, 'volumen', p)) } },
       {
         reproducir: (a, p) => {
-          sonido.reproducir(argTexto(a, 0, 'sonido.reproducir', p, 'sonido.reproducir("salto")'));
+          ctx.motor.sonido.reproducir(argTexto(a, 0, 'ctx.motor.sonido.reproducir', p, 'ctx.motor.sonido.reproducir("salto")'));
           return null;
         },
         parar: (a, p) => {
-          sonido.parar(a[0] === undefined ? undefined : argTexto(a, 0, 'sonido.parar', p, 'sonido.parar("musica")'));
+          ctx.motor.sonido.parar(a[0] === undefined ? undefined : argTexto(a, 0, 'ctx.motor.sonido.parar', p, 'ctx.motor.sonido.parar("musica")'));
           return null;
         },
         tono: (a, p) => {
-          const ej = 'sonido.tono(440, 0.2)';
-          const f = argNumero(a, 0, 'sonido.tono', p, ej);
-          const s = argNumero(a, 1, 'sonido.tono', p, ej, 0.2);
+          const ej = 'ctx.motor.sonido.tono(440, 0.2)';
+          const f = argNumero(a, 0, 'ctx.motor.sonido.tono', p, ej);
+          const s = argNumero(a, 1, 'ctx.motor.sonido.tono', p, ej, 0.2);
           if (f <= 0 || s <= 0) throw new ErrorChispa(p, 'la frecuencia y la duración del tono tienen que ser mayores que 0.', ej);
-          sonido.tono(f, s);
+          ctx.motor.sonido.tono(f, s);
           return null;
         },
       },
@@ -245,16 +258,16 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
   g.declarar(
     'tiempo',
     new Modulo('tiempo', {
-      total: { obtener: () => motor.tiempo.total },
-      delta: { obtener: () => motor.tiempo.delta },
-      escala: { obtener: () => motor.tiempo.escala, asignar: (v, p) => (motor.tiempo.escala = Math.max(0, comoNumero(v, 'escala', p))) },
+      total: { obtener: () => ctx.motor.tiempo.total },
+      delta: { obtener: () => ctx.motor.tiempo.delta },
+      escala: { obtener: () => ctx.motor.tiempo.escala, asignar: (v, p) => (ctx.motor.tiempo.escala = Math.max(0, comoNumero(v, 'escala', p))) },
     }),
   );
   g.declarar(
     'pantalla',
     new Modulo('pantalla', {
-      ancho: { obtener: () => motor.renderizador.ancho },
-      alto: { obtener: () => motor.renderizador.alto },
+      ancho: { obtener: () => ctx.motor.renderizador.ancho },
+      alto: { obtener: () => ctx.motor.renderizador.alto },
     }),
   );
   g.declarar('juego', datos);

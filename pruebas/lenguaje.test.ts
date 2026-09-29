@@ -74,7 +74,7 @@ describe('Control de flujo', () => {
   });
 
   it('una variable creada dentro de un bloque no existe fuera', () => {
-    expect(() => ejecutar('si verdadero:\n    variable dentro = 1\nmostrar(dentro)')).toThrow(/no conozco nada llamado 'dentro'/);
+    expect(() => ejecutar('si verdadero:\n    variable dentro = 1\nmostrar(dentro)')).toThrow(/intentas usar 'dentro', pero no existe ninguna variable con ese nombre/);
   });
 });
 

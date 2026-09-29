@@ -51,6 +51,8 @@ export type Evento =
   | { tipo: 'empieza' }
   | { tipo: 'fotograma' }
   | { tipo: 'intervalo'; segundos: Expresion }
+  /** "cuando pasen 3 segundos:" → una sola vez, a los 3 segundos de aparecer el objeto */
+  | { tipo: 'pasen'; segundos: Expresion }
   | { tipo: 'tecla'; modo: 'pulsa' | 'mantiene' | 'suelta'; teclas: Expresion[] }
   /** con = null → cualquier objeto. dejar = verdadero → "cuando dejo de tocar" */
   | { tipo: 'toco'; con: string | null; original: string | null; dejar: boolean }
@@ -76,7 +78,7 @@ export interface SentenciaFuncion {
 }
 
 export type Sentencia =
-  | { tipo: 'Variable'; nombre: string; original: string; valor: Expresion; pos: Posicion }
+  | { tipo: 'Variable'; nombre: string; original: string; valor: Expresion; pos: Posicion; posNombre: Posicion }
   | { tipo: 'Asignacion'; objetivo: Expresion; operador: string; valor: Expresion; pos: Posicion }
   | { tipo: 'Si'; ramas: { condicion: Expresion; cuerpo: Bloque }[]; sino: Bloque | null; pos: Posicion }
   | { tipo: 'Mientras'; condicion: Expresion; cuerpo: Bloque; pos: Posicion }

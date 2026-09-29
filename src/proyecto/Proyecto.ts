@@ -10,10 +10,11 @@
  * en Roblox: objetos que no están en la escena pero que se pueden clonar con
  * crear("Nombre").
  */
-import { compilar } from '../chispa/sintaxis/parser';
 import { DatosJuego, instalarAPIMotor, type ContextoJuego } from '../chispa/api/motor';
 import { Interprete } from '../chispa/ejecucion/interprete';
 import { ScriptChispa } from '../chispa/ScriptChispa';
+import { formatearDiagnostico, type Diagnostico, type ErrorChispa } from '../chispa/errores/ErrorChispa';
+import { comprobarRevision, revisarProyecto } from './Revision';
 import type { Programa } from '../chispa/sintaxis/ast';
 import { ErrorMotor } from '../motor/Errores';
 import { escribirEnConsola, limpiarConsola } from '../motor/Consola';
@@ -93,6 +94,14 @@ export interface DefProyecto {
 export interface OpcionesJuego {
   /** Qué hacer con mostrar(). Por defecto, la consola de la página. */
   alMostrar?: (texto: string) => void;
+  /**
+   * Qué hacer cuando un script falla mientras el juego funciona. El script se
+   * para y el juego sigue. `veces` cuenta cuántas veces ha pasado el MISMO
+   * error (por ejemplo, en 50 copias de una plantilla), para enseñarlo una vez con "×50".
+   */
+  alError?: (error: ErrorChispa, veces: number) => void;
+  /** Avisos encontrados al revisar el código antes de empezar. */
+  alAviso?: (avisos: Diagnostico[]) => void;
 }
 
 export class JuegoEnMarcha implements ContextoJuego {
@@ -101,6 +110,8 @@ export class JuegoEnMarcha implements ContextoJuego {
   private datos = new DatosJuego();
   private programas = new Map<string, Programa>();
   private reinicioPendiente = false;
+  private erroresVistos = new Map<string, number>();
+  private opciones: OpcionesJuego;
 
   private constructor(
     readonly motor: Motor,
@@ -108,7 +119,8 @@ export class JuegoEnMarcha implements ContextoJuego {
     opciones: OpcionesJuego = {},
   ) {
     this.escena = new Escena(motor);
-    this.interprete.alMostrar = opciones.alMostrar ?? escribirEnConsola;
+    this.opciones = opciones;
+    this.interprete.alMostrar = opciones.alMostrar ?? ((t) => escribirEnConsola(t));
     this.interprete.nombresDeObjetos = () => [...new Set(this.escena.objetos.map((o) => o.nombre))];
     instalarAPIMotor(this.interprete, this, this.datos);
   }
@@ -128,9 +140,12 @@ export class JuegoEnMarcha implements ContextoJuego {
    */
   static preparar(motor: Motor, proyecto: DefProyecto, opciones: OpcionesJuego = {}): JuegoEnMarcha {
     const juego = new JuegoEnMarcha(motor, proyecto, opciones);
-    // Compilamos todos los scripts al principio: así un error de escritura
-    // sale nada más pulsar Ejecutar, y no a los 5 minutos de partida.
-    for (const [archivo, codigo] of Object.entries(proyecto.scripts)) juego.programas.set(archivo, compilar(codigo, archivo));
+    // Revisamos TODOS los scripts al principio: así los errores salen todos
+    // a la vez nada más pulsar Ejecutar, y no a los 5 minutos de partida.
+    const revision = revisarProyecto(proyecto, juego.interprete.globales);
+    comprobarRevision(revision);
+    if (revision.avisos.length) (opciones.alAviso ?? avisosEnConsola)(revision.avisos);
+    juego.programas = revision.programas;
     motor.colorFondo = proyecto.colorFondo;
     motor.escena = juego.escena;
     motor.alActualizar((dt) => juego.antesDelFotograma(dt));
@@ -155,6 +170,15 @@ export class JuegoEnMarcha implements ContextoJuego {
       this.reinicioPendiente = false;
       this.construir();
     }
+  }
+
+  /** Un script ha fallado (y ya se ha parado): se cuenta y se informa. */
+  private informarError(e: ErrorChispa): void {
+    const clave = `${e.ubicacion.archivo}:${e.linea}:${e.mensajeCorto}`;
+    const veces = (this.erroresVistos.get(clave) ?? 0) + 1;
+    this.erroresVistos.set(clave, veces);
+    if (this.opciones.alError) this.opciones.alError(e, veces);
+    else if (veces === 1) escribirEnConsola(formatearDiagnostico(e.diagnostico(), this.programas.get(e.ubicacion.archivo ?? '')?.lineas), 'error');
   }
 
   pedirReinicio(): void {
@@ -211,10 +235,15 @@ export class JuegoEnMarcha implements ContextoJuego {
           `Los scripts que hay son: ${Object.keys(this.proyecto.scripts).join(', ') || 'ninguno'}.`,
         );
       }
-      o.agregar(new ScriptChispa(this.interprete, programa));
+      o.agregar(new ScriptChispa(this.interprete, programa, (e) => this.informarError(e)));
     }
     // agregar() a la escena al final: si la escena ya está en marcha, esto
     // arranca el script (y lanza su "cuando empieza") con todo ya montado.
     return this.escena.agregar(o);
   }
+}
+
+/** Por defecto, los avisos se escriben en la consola de la página. */
+function avisosEnConsola(avisos: Diagnostico[]): void {
+  for (const a of avisos) escribirEnConsola(formatearDiagnostico(a), 'aviso');
 }

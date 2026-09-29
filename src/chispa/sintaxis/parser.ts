@@ -12,26 +12,54 @@
  *     o  →  y  →  no  →  == != < > <= >= en  →  + -  →  * / %  →  -x  →  llamadas . [ ]
  * Cada nivel llama al siguiente para leer sus "trozos". Por eso en
  * "2 + 3 * 4" la multiplicación se agrupa antes y el resultado es 14.
+ *
+ * ── Recuperación de errores ("modo pánico") ──
+ * Cuando una línea tiene un error, lo apuntamos y SINCRONIZAMOS: saltamos
+ * hasta el final de esa línea y, si abría un bloque, también el bloque
+ * entero. Luego seguimos leyendo. Así salen TODOS los errores a la vez, y un
+ * ':' olvidado no provoca diez errores falsos en las líneas de debajo.
  */
 import type { Bloque, EntradaTabla, Evento, Expresion, Nombre, Programa, Sentencia } from './ast';
-import { ErrorChispa } from '../errores/ErrorChispa';
+import { ErrorChispa, ErrorCompilacion } from '../errores/ErrorChispa';
+import { EQUIVALENCIAS_INGLES, PALABRAS_DE_INICIO, sugerir } from '../errores/sugerencias';
 import { analizarLexico } from '../lexico/lexer';
 import { SIGNIFICADO_PALABRA, posicionDe, type Posicion, type Token } from '../lexico/tokens';
 
 const OPERADORES_ASIGNACION = ['=', '+=', '-=', '*=', '/='];
 const COMPARACIONES = ['==', '!=', '<', '>', '<=', '>='];
 
-/** Compila código Chispa a un Programa (AST). Lanza ErrorChispa si hay errores. */
-export function compilar(codigo: string, archivo: string): Programa {
+/** Como mucho, cuántos errores de escritura se enseñan a la vez. */
+export const MAXIMO_ERRORES = 10;
+
+export interface ResultadoSintaxis {
+  programa: Programa;
+  /** Errores de escritura (ordenados, como mucho uno por línea). Vacío si todo está bien. */
+  errores: ErrorChispa[];
+}
+
+/**
+ * Analiza el código y devuelve el árbol y TODOS los errores de escritura
+ * encontrados. No lanza excepciones: lo usa el editor para subrayar.
+ */
+export function analizarSintaxis(codigo: string, archivo: string): ResultadoSintaxis {
   const lineas = codigo.replace(/\r\n?/g, '\n').split('\n');
-  try {
-    const tokens = analizarLexico(codigo);
-    const sentencias = new Parser(tokens, lineas).programa();
-    return { sentencias, archivo, lineas };
-  } catch (e) {
-    if (e instanceof ErrorChispa) e.conArchivo(archivo, lineas);
-    throw e;
-  }
+  const errores: ErrorChispa[] = [];
+  const tokens = analizarLexico(codigo, errores);
+  const sentencias = new Parser(tokens, lineas, errores).programa();
+
+  // Como mucho un error por línea (el primero suele ser el de verdad; los demás, consecuencias)
+  const porLinea = new Map<number, ErrorChispa>();
+  for (const e of errores) if (!porLinea.has(e.linea)) porLinea.set(e.linea, e);
+  const limpios = [...porLinea.values()].sort((a, b) => a.linea - b.linea || a.posicion.columna - b.posicion.columna).slice(0, MAXIMO_ERRORES);
+  for (const e of limpios) e.conArchivo(archivo, lineas);
+  return { programa: { sentencias, archivo, lineas }, errores: limpios };
+}
+
+/** Compila código Chispa a un Programa (AST). Si hay errores, lanza un ErrorCompilacion con todos. */
+export function compilar(codigo: string, archivo: string): Programa {
+  const { programa, errores } = analizarSintaxis(codigo, archivo);
+  if (errores.length) throw new ErrorCompilacion(errores);
+  return programa;
 }
 
 class Parser {
@@ -40,10 +68,13 @@ class Parser {
   private bucles = 0;
   /** ¿Estamos dentro de un bloque? (los 'cuando' tienen que ir en el nivel principal) */
   private profundidad = 0;
+  /** ¿Dentro de cuántas funciones o eventos estamos? (para saber si 'devolver' está bien usado) */
+  private funciones = 0;
 
   constructor(
     private tokens: Token[],
     private lineas: string[],
+    private errores: ErrorChispa[],
   ) {}
 
   // ───────────────────────── Utilidades ─────────────────────────
@@ -93,8 +124,48 @@ class Parser {
 
   programa(): Bloque {
     const sentencias: Bloque = [];
-    while (!this.es('fin')) sentencias.push(this.sentencia());
+    while (!this.es('fin') && this.errores.length < MAXIMO_ERRORES * 2) this.sentenciaSegura(sentencias);
     return sentencias;
+  }
+
+  /** Lee una sentencia; si falla, apunta el error y se recupera. */
+  private sentenciaSegura(destino: Bloque): void {
+    const inicio = this.pos;
+    try {
+      destino.push(this.sentencia());
+    } catch (e) {
+      if (!(e instanceof ErrorChispa)) throw e;
+      this.errores.push(e);
+      this.sincronizar();
+      if (this.pos === inicio) this.avanzar(); // pase lo que pase, avanzamos (nunca un bucle infinito)
+    }
+  }
+
+  /** Salta hasta el final de la línea con el error y, si abría un bloque, el bloque entero. */
+  private sincronizar(): void {
+    while (!this.es('fin')) {
+      if (this.es('desindentar')) return; // el error estaba al final de un bloque: lo cierra quien lo abrió
+      if (this.es('indentar')) {
+        this.saltarBloque();
+        return;
+      }
+      if (this.es('nuevaLinea')) {
+        this.avanzar();
+        if (this.es('indentar')) this.saltarBloque();
+        return;
+      }
+      this.avanzar();
+    }
+  }
+
+  /** Estamos en un INDENTAR: saltamos hasta su DESINDENTAR correspondiente. */
+  private saltarBloque(): void {
+    let nivel = 0;
+    do {
+      if (this.es('indentar')) nivel++;
+      else if (this.es('desindentar')) nivel--;
+      this.avanzar();
+    } while (nivel > 0 && !this.es('fin'));
   }
 
   /** Lee ":" + salto de línea + bloque con sangría. `que` describe la línea para los errores. */
@@ -128,8 +199,11 @@ class Parser {
     this.avanzar();
     this.profundidad++;
     const sentencias: Bloque = [];
-    while (!this.es('desindentar') && !this.es('fin')) sentencias.push(this.sentencia());
-    this.profundidad--;
+    try {
+      while (!this.es('desindentar') && !this.es('fin')) this.sentenciaSegura(sentencias);
+    } finally {
+      this.profundidad--;
+    }
     this.avanzar(); // desindentar
     return sentencias;
   }
@@ -140,6 +214,15 @@ class Parser {
       return;
     }
     if (this.es('fin')) return;
+    // 3,5 → en Chispa los decimales van con punto
+    const anterior = this.tokens[this.pos - 1];
+    const siguiente = this.tokens[this.pos + 1];
+    if (this.esSimbolo(',') && anterior?.tipo === 'numero' && siguiente?.tipo === 'numero' && siguiente.columna === this.actual.columna + 1) {
+      this.error(
+        'en Chispa los números con decimales se escriben con punto, no con coma.',
+        `Escribe ${anterior.original}.${siguiente.original} en lugar de ${anterior.original},${siguiente.original}`,
+      );
+    }
     this.error(
       `sobra algo al final de la línea: ${this.describir(this.actual)}.`,
       'Cada orden va en su propia línea. Revisa si te falta un operador (+, -, ==...) o una coma.',
@@ -176,6 +259,12 @@ class Parser {
         case 'cuando':
           return this.sentenciaCuando();
         case 'devolver': {
+          if (this.funciones === 0) {
+            this.error(
+              "'devolver' solo se puede usar dentro de una función (o de un 'cuando', para terminarlo antes).",
+              'Si querías guardar un valor, usa una variable: variable resultado = ...',
+            );
+          }
           this.avanzar();
           const valor = this.es('nuevaLinea') || this.es('fin') ? null : this.expresion();
           this.finDeLinea();
@@ -192,6 +281,9 @@ class Parser {
         }
       }
     }
+
+    // ¿Una palabra clave mal escrita? ("mientas vida > 0:", "fucnion saltar():", "sin:")
+    if (t.tipo === 'identificador') this.comprobarPalabraMalEscrita(t);
 
     // Si no empieza por palabra clave: es una asignación (x = 5) o una llamada (yo.saltar())
     const expr = this.expresion();
@@ -210,6 +302,38 @@ class Parser {
     }
     this.finDeLinea();
     return { tipo: 'ExpresionSuelta', expresion: expr, pos: expr.pos };
+  }
+
+  /**
+   * Una línea que empieza con un nombre seguido de otra cosa que no sea
+   * =, (, . o [ no tiene sentido... salvo que el nombre sea una palabra clave
+   * mal escrita: "mientas vida > 0:", "varible x = 3", "sin:", "elif x:".
+   */
+  private comprobarPalabraMalEscrita(t: Token): void {
+    const sig = this.tokens[this.pos + 1];
+    const sospechoso =
+      sig.tipo === 'identificador' ||
+      sig.tipo === 'numero' ||
+      sig.tipo === 'texto' ||
+      (sig.tipo === 'palabraClave' && !['y', 'o', 'en'].includes(sig.valor)) ||
+      (sig.tipo === 'simbolo' && sig.valor === ':');
+    if (!sospechoso) return;
+
+    const ingles = EQUIVALENCIAS_INGLES[t.valor];
+    if (ingles) {
+      this.error(`has escrito '${t.original}', que es una palabra de otro lenguaje de programación.`, `En Chispa se escribe: ${ingles}`, t);
+    }
+    // "sin:" → lo más probable es 'sino' (lo único que va solo antes de ':')
+    const candidatos = sig.valor === ':' ? ['sino', ...PALABRAS_DE_INICIO] : PALABRAS_DE_INICIO;
+    const parecida = sugerir(t.original, candidatos);
+    if (parecida) {
+      this.error(`has escrito '${t.original}', que no es ninguna palabra de Chispa.`, `¿Querías decir '${parecida}'?`, t);
+    }
+    this.error(
+      `no entiendo qué quieres hacer con '${t.original}' al principio de la línea.`,
+      'Una línea puede empezar con una palabra de Chispa (si, mientras, variable...), con una variable a la que das valor (vida = 5) o con una llamada a una función (saltar()).',
+      t,
+    );
   }
 
   /** Lee un nombre nuevo (variable, parámetro, función) y da un buen error si es una palabra reservada. */
@@ -235,13 +359,16 @@ class Parser {
   private sentenciaVariable(): Sentencia {
     const inicio = this.avanzar();
     const n = this.nombreNuevo('variable');
+    if (this.esSimbolo('==')) {
+      this.error("para crear una variable se usa un solo '='. El '==' sirve para comparar.", `Escribe: variable ${n.original} = ...`);
+    }
     if (!this.esSimbolo('=')) {
       this.error(`falta el '=' y el valor inicial de la variable '${n.original}'.`, `Ejemplo: variable ${n.original} = 0`);
     }
     this.avanzar();
     const valor = this.expresion();
     this.finDeLinea();
-    return { tipo: 'Variable', nombre: n.nombre, original: n.original, valor, pos: posicionDe(inicio) };
+    return { tipo: 'Variable', nombre: n.nombre, original: n.original, valor, pos: posicionDe(inicio), posNombre: n.pos };
   }
 
   private sentenciaSi(): Sentencia {
@@ -263,9 +390,11 @@ class Parser {
 
   private cuerpoDeBucle(que: string): Bloque {
     this.bucles++;
-    const cuerpo = this.bloque(que);
-    this.bucles--;
-    return cuerpo;
+    try {
+      return this.bloque(que);
+    } finally {
+      this.bucles--;
+    }
   }
 
   private sentenciaMientras(): Sentencia {
@@ -318,8 +447,14 @@ class Parser {
     // Los bucles de fuera no cuentan dentro de la función ('romper' no puede salir de ella)
     const buclesFuera = this.bucles;
     this.bucles = 0;
-    const cuerpo = this.bloque(`funcion ${n.original}(...)`);
-    this.bucles = buclesFuera;
+    this.funciones++;
+    let cuerpo: Bloque;
+    try {
+      cuerpo = this.bloque(`funcion ${n.original}(...)`);
+    } finally {
+      this.bucles = buclesFuera;
+      this.funciones--;
+    }
     return { tipo: 'Funcion', nombre: n.nombre, original: n.original, parametros, cuerpo, pos: posicionDe(inicio) };
   }
 
@@ -333,7 +468,12 @@ class Parser {
       );
     }
     const evento = this.evento();
-    return { tipo: 'Cuando', evento, cuerpo: this.bloque('cuando ...'), pos: posicionDe(inicio) };
+    this.funciones++; // dentro de un 'cuando' se puede usar 'devolver' para terminar antes
+    try {
+      return { tipo: 'Cuando', evento, cuerpo: this.bloque('cuando ...'), pos: posicionDe(inicio) };
+    } finally {
+      this.funciones--;
+    }
   }
 
   /** Reconoce el evento que va después de "cuando". */
@@ -341,7 +481,7 @@ class Parser {
     const t = this.actual;
     const ayuda =
       'Los eventos que existen son:\n' +
-      '    cuando empieza:\n    cuando cada fotograma:\n    cuando cada 2 segundos:\n' +
+      '    cuando empieza:\n    cuando cada fotograma:\n    cuando cada 2 segundos:\n    cuando pasen 3 segundos:\n' +
       '    cuando se pulsa "espacio":   (también "se mantiene" y "se suelta")\n' +
       '    cuando toco Enemigo:\n    cuando dejo de tocar Enemigo:\n    cuando hago clic:';
 
@@ -361,6 +501,15 @@ class Parser {
         return { tipo: 'intervalo', segundos };
       }
       this.error("después de 'cuando cada' esperaba 'fotograma' o 'N segundos'.", 'Ejemplos:\n    cuando cada fotograma:\n    cuando cada 2 segundos:');
+    }
+    if (this.esPalabra('pasen') || this.esPalabra('pase')) {
+      this.avanzar();
+      const segundos = this.suma();
+      if (!this.esPalabra('segundos') && !this.esPalabra('segundo')) {
+        this.error("después de 'cuando pasen' va un número y la palabra 'segundos'.", 'Ejemplo: cuando pasen 3 segundos:');
+      }
+      this.avanzar();
+      return { tipo: 'pasen', segundos };
     }
     if (this.esPalabra('se')) {
       this.avanzar();
@@ -390,7 +539,8 @@ class Parser {
       if (!this.esPalabra('tocar')) this.error("esperaba 'cuando dejo de tocar ...'.");
       dejar = true;
     } else if (!this.esPalabra('toco')) {
-      this.error(`no conozco el evento 'cuando ${t.original}'.`, ayuda);
+      const parecido = sugerir(t.original, ['empieza', 'toco', 'hago', 'dejo', 'se', 'cada', 'pasen', 'termina']);
+      this.error(`no conozco el evento 'cuando ${t.original}'.`, parecido ? `¿Querías decir 'cuando ${parecido} ...'?\n${ayuda}` : ayuda);
     }
     this.avanzar(); // "toco" o "tocar"
     if (this.esSimbolo(':')) return { tipo: 'toco', con: null, original: null, dejar }; // cualquier objeto

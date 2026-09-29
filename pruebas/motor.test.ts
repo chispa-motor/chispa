@@ -139,15 +139,11 @@ describe('Objetos, datos compartidos y sonido', () => {
   });
 
   it('un error en un script dice el archivo, la línea y el código', () => {
-    let error: unknown;
-    try {
-      const j = unObjeto('cuando cada fotograma:\n    yo.vida = yo.vidda - 1');
-      j.avanzar();
-    } catch (e) {
-      error = e;
-    }
-    expect(error).toBeInstanceOf(ErrorChispa);
-    const e = error as ErrorChispa;
+    const j = unObjeto('cuando cada fotograma:\n    yo.vida = yo.vidda - 1');
+    j.avanzar();
+    expect(j.errores).toHaveLength(1);
+    const e = j.errores[0].error;
+    expect(e).toBeInstanceOf(ErrorChispa);
     expect(e.ubicacion.archivo).toBe('prueba.chs');
     expect(e.linea).toBe(2);
     expect(e.ubicacion.codigo).toBe('    yo.vida = yo.vidda - 1');

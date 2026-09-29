@@ -104,6 +104,17 @@ export abstract class Anfitrion {
   propiedadesConocidas(): string[] {
     return [];
   }
+  /**
+   * Para el análisis ANTES de ejecutar: ¿tiene este miembro?
+   * verdadero/falso si se sabe seguro; null si no se puede saber (datos que cambian).
+   */
+  tieneMiembro(_nombre: string): boolean | null {
+    return null;
+  }
+  /** Si el miembro es otro módulo (escena.camara), lo devuelve para seguir comprobando. */
+  submodulo(_nombre: string): Anfitrion | null {
+    return null;
+  }
 }
 
 // ───────────────────────── Utilidades ─────────────────────────
@@ -119,6 +130,22 @@ export function nombreTipo(v: Valor): string {
   if (v instanceof Vector2) return 'un vector';
   if (v instanceof FuncionChispa || v instanceof FuncionNativa) return 'una función';
   return v.describir();
+}
+
+/**
+ * El tipo Y el valor, para los errores: `un número (10)`, `un texto ("hola")`.
+ * Los valores largos se recortan con "…".
+ */
+export function tipoConValor(v: Valor): string {
+  const recortar = (t: string, max: number) => (t.length > max ? t.slice(0, max - 1) + '…' : t);
+  if (v === null) return 'nulo (vacío)';
+  if (typeof v === 'number') return `un número (${formatearNumero(v)})`;
+  if (typeof v === 'string') return `un texto ("${recortar(v, 24)}")`;
+  if (typeof v === 'boolean') return `un valor lógico (${v ? 'verdadero' : 'falso'})`;
+  if (Array.isArray(v)) return `una lista (${recortar(aTexto(v), 30)})`;
+  if (v instanceof Tabla) return `una tabla (${recortar(aTexto(v), 30)})`;
+  if (v instanceof Vector2) return `un vector ${aTexto(v)}`;
+  return nombreTipo(v);
 }
 
 /** Convierte cualquier valor a texto (para mostrar() y para unir textos con +). */

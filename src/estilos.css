@@ -83,4 +83,7 @@ html, body {
   color: #e8f6ff;
   font: 14px ui-monospace, Consolas, monospace;
   pointer-events: none;
+  white-space: pre-wrap;
 }
+#consola .linea-error { color: #ff9b91; margin: 4px 0; }
+#consola .linea-aviso { color: #ffd98a; margin: 4px 0; }

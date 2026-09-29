@@ -31,3 +31,9 @@ export function resolverColor(color: string): string {
 
 /** Lista de nombres disponibles (útil para el editor y los mensajes de error). */
 export const NOMBRES_COLORES = Object.keys(COLORES);
+
+/** ¿Es un color que el motor sabe dibujar? (un nombre en español, "#ff8800", "rgb(...)"...) */
+export function esColorValido(color: string): boolean {
+  const c = color.trim();
+  return normalizar(c) in COLORES || /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(c) || /^(rgb|rgba|hsl|hsla)\(.+\)$/i.test(c);
+}

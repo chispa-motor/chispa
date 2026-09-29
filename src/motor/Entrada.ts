@@ -19,6 +19,7 @@
 import { ErrorMotor } from './Errores';
 import { Vector2 } from './Vector2';
 import { normalizar } from '../utilidades/texto';
+import { sugerir } from '../chispa/errores/sugerencias';
 
 export type BotonRaton = 'izquierdo' | 'medio' | 'derecho';
 
@@ -66,6 +67,27 @@ const TECLAS_CONOCIDAS = new Set([
 
 /** Teclas que el navegador usa para hacer scroll: se lo impedimos durante el juego. */
 const EVITAR_SCROLL = new Set(['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab']);
+
+/** Nombres de las teclas especiales (para el autocompletado y las sugerencias). */
+export const NOMBRES_TECLAS = [...TECLAS_CONOCIDAS];
+
+/**
+ * Comprueba un nombre de tecla y devuelve su forma oficial.
+ * Si no existe, lanza un error amable con sugerencia ("espaico" → "espacio").
+ */
+export function comprobarNombreTecla(tecla: string): string {
+  const n = normalizarNombreTecla(tecla);
+  const esCaracter = [...n].length === 1;
+  if (!esCaracter && !TECLAS_CONOCIDAS.has(n)) {
+    const parecida = sugerir(n, NOMBRES_TECLAS);
+    throw new ErrorMotor(
+      `No conozco ninguna tecla llamada "${tecla}".`,
+      (parecida ? `¿Querías decir "${parecida}"? ` : '') +
+        `Las teclas especiales son: ${NOMBRES_TECLAS.join(', ')}. Para letras y números escribe solo el carácter, por ejemplo "a" o "1".`,
+    );
+  }
+  return n;
+}
 
 /** "Espacio", "ESPACIO", "intro" → nombre oficial ("espacio", "enter"). */
 export function normalizarNombreTecla(nombre: string): string {
@@ -251,15 +273,6 @@ export class Entrada {
   }
 
   private comprobarTecla(tecla: string): string {
-    const n = normalizarNombreTecla(tecla);
-    const esCaracter = [...n].length === 1;
-    if (!esCaracter && !TECLAS_CONOCIDAS.has(n)) {
-      throw new ErrorMotor(
-        `No conozco ninguna tecla llamada "${tecla}".`,
-        `Las teclas especiales son: ${[...TECLAS_CONOCIDAS].join(', ')}. ` +
-          'Para letras y números escribe solo el carácter, por ejemplo "a" o "1".',
-      );
-    }
-    return n;
+    return comprobarNombreTecla(tecla);
   }
 }

@@ -14,6 +14,11 @@
  *
  * Dentro de ( ), [ ] o { } ignoramos los saltos de línea, para poder
  * escribir listas y tablas largas en varias líneas.
+ *
+ * ── Recuperación de errores ──
+ * Si una línea tiene un error (un símbolo raro, un texto sin cerrar...), lo
+ * apuntamos, nos saltamos el resto de ESA línea y seguimos con la siguiente.
+ * Así se pueden enseñar todos los errores a la vez y no solo el primero.
  */
 import { ErrorChispa } from '../errores/ErrorChispa';
 import { PALABRAS_CLAVE, SIMBOLOS_DOBLES, SIMBOLOS_SIMPLES, type Token } from './tokens';
@@ -24,7 +29,11 @@ const ESPACIOS_POR_TABULADOR = 4;
 const COMILLAS_CIERRE: Record<string, string> = { '"': '"', "'": "'", '“': '”', '«': '»', '‘': '’' };
 const CIERRE_DE: Record<string, string> = { '(': ')', '[': ']', '{': '}' };
 
-export function analizarLexico(codigo: string): Token[] {
+/**
+ * @param errores Si se pasa una lista, los errores se apuntan en ella y se
+ *                sigue analizando. Si no, se lanza el primero.
+ */
+export function analizarLexico(codigo: string, errores?: ErrorChispa[]): Token[] {
   const tokens: Token[] = [];
   const pilaSangria = [0];
   /** Paréntesis, corchetes y llaves abiertos (con su posición, para avisar si alguno no se cierra). */
@@ -37,10 +46,28 @@ export function analizarLexico(codigo: string): Token[] {
   const error = (linea: number, col: number, longitud: number, mensaje: string, pista?: string): never => {
     throw new ErrorChispa({ linea, columna: col + 1, longitud }, mensaje, pista);
   };
+  /** Un error que no impide seguir analizando la línea (la sangría rara se "redondea" al nivel anterior). */
+  const errorSinParar = (linea: number, col: number, longitud: number, mensaje: string, pista?: string) => {
+    const e = new ErrorChispa({ linea, columna: col + 1, longitud }, mensaje, pista);
+    if (!errores) throw e;
+    errores.push(e);
+  };
 
   for (let i = 0; i < lineas.length; i++) {
     const texto = lineas[i];
     const nLinea = i + 1;
+    try {
+      analizarLinea(texto, nLinea);
+    } catch (e) {
+      if (!(e instanceof ErrorChispa) || !errores) throw e;
+      errores.push(e);
+      // Recuperación: olvidamos lo que se abrió en esta línea y la cerramos.
+      while (abiertos.length && abiertos[abiertos.length - 1].linea === nLinea) abiertos.pop();
+      if (abiertos.length === 0 && tokens.length && tokens[tokens.length - 1].tipo !== 'nuevaLinea') agregar('nuevaLinea', '', nLinea, texto.length + 1);
+    }
+  }
+
+  function analizarLinea(texto: string, nLinea: number): void {
     let col = 0;
 
     // ── 1. Sangría (solo si no estamos dentro de un paréntesis) ──
@@ -51,7 +78,7 @@ export function analizarLexico(codigo: string): Token[] {
         col++;
       }
       const resto = texto.slice(col);
-      if (resto === '' || resto.startsWith('#')) continue; // línea vacía o comentario: no cuenta
+      if (resto === '' || resto.startsWith('#')) return; // línea vacía o comentario: no cuenta
 
       const actual = pilaSangria[pilaSangria.length - 1];
       if (ancho > actual) {
@@ -63,7 +90,7 @@ export function analizarLexico(codigo: string): Token[] {
           agregar('desindentar', '', nLinea, 1);
         }
         if (ancho !== pilaSangria[pilaSangria.length - 1]) {
-          error(
+          errorSinParar(
             nLinea,
             0,
             Math.max(1, col),
@@ -183,7 +210,11 @@ export function analizarLexico(codigo: string): Token[] {
 
   if (abiertos.length > 0) {
     const a = abiertos[abiertos.length - 1];
-    error(a.linea, a.columna, 1, `abriste un '${a.simbolo}' que nunca se cierra.`, `Añade '${CIERRE_DE[a.simbolo]}' donde termine.`);
+    const e = new ErrorChispa({ linea: a.linea, columna: a.columna + 1, longitud: 1 }, `abriste un '${a.simbolo}' que nunca se cierra.`, `Añade '${CIERRE_DE[a.simbolo]}' donde termine.`);
+    if (!errores) throw e;
+    errores.push(e);
+    abiertos.length = 0;
+    agregar('nuevaLinea', '', a.linea, 1);
   }
 
   const ultima = lineas.length;

@@ -17,6 +17,11 @@
  * segundos, se mantiene) NO se lanzan otra vez si el anterior sigue dormido.
  * Si no, un `esperar(1)` dentro de `cuando cada fotograma` crearía 60 hilos
  * por segundo y el juego acabaría muy lento.
+ *
+ * ── Un error no para el juego entero ──
+ * Si un evento de este objeto falla, el error se INFORMA (sale en la consola),
+ * este script se DETIENE y el resto de objetos siguen funcionando. Solo los
+ * errores internos del motor (fallos nuestros, no del juego) paran todo.
  */
 import type { Bloque, Evento, Expresion, Programa } from './sintaxis/ast';
 import type { Posicion } from './lexico/tokens';
@@ -49,14 +54,21 @@ interface EventoRegistrado {
   acumulado: number;
 }
 
+/** A quién avisar cuando un script falla. */
+export type InformarError = (error: ErrorChispa, objeto: ObjetoJuego) => void;
+
 export class ScriptChispa extends Componente {
   private entorno!: Entorno;
   private eventos: EventoRegistrado[] = [];
   private hilos: Hilo[] = [];
+  /** Verdadero si el script se ha parado por un error. */
+  detenido = false;
 
   constructor(
     private interprete: Interprete,
     readonly programa: Programa,
+    /** Si no se da, los errores se lanzan (y paran el juego). */
+    private informar?: InformarError,
   ) {
     super();
   }
@@ -106,15 +118,12 @@ export class ScriptChispa extends Componente {
             }
           });
         }
-        if (s.evento.tipo === 'intervalo') {
+        if (s.evento.tipo === 'intervalo' || s.evento.tipo === 'pasen') {
           const segundos = s.evento.segundos;
           const v = this.evaluarYa(segundos);
+          const ejemplo = s.evento.tipo === 'pasen' ? 'cuando pasen 3 segundos:' : 'cuando cada 2 segundos:';
           if (typeof v !== 'number' || v <= 0)
-            throw new ErrorChispa(
-              segundos.pos,
-              "en 'cuando cada N segundos', N tiene que ser un número mayor que 0.",
-              'Ejemplo: cuando cada 2 segundos:',
-            );
+            throw new ErrorChispa(segundos.pos, `el número de segundos tiene que ser mayor que 0.`, `Ejemplo: ${ejemplo}`);
           reg.segundos = v;
         }
         this.eventos.push(reg);
@@ -138,6 +147,14 @@ export class ScriptChispa extends Componente {
         switch (e.tipo) {
           case 'fotograma':
             this.lanzarEvento(ev, undefined, ev.clave);
+            break;
+          case 'pasen':
+            // Una sola vez: cuando el tiempo acumulado llega, se lanza y se "apaga" (segundos = Infinito)
+            ev.acumulado += dt;
+            if (ev.acumulado >= ev.segundos) {
+              ev.segundos = Infinity;
+              this.lanzarEvento(ev);
+            }
             break;
           case 'intervalo':
             ev.acumulado += dt;
@@ -234,13 +251,28 @@ export class ScriptChispa extends Componente {
     return r.value;
   }
 
-  /** Si hay un error de Chispa, le añade el nombre del archivo y la línea de código. */
+  /**
+   * Ejecuta algo del script con "red de seguridad":
+   *  - añade el archivo y la línea de código a los errores de Chispa;
+   *  - si hay a quién informar, informa, detiene ESTE script y el juego sigue.
+   */
   private conArchivo(fn: () => void): void {
+    if (this.detenido) return;
     try {
       fn();
     } catch (e) {
-      if (e instanceof ErrorChispa) e.conArchivo(this.programa.archivo, this.programa.lineas);
-      throw e;
+      if (!(e instanceof ErrorChispa)) throw e; // error interno del motor: sí para todo
+      e.conArchivo(this.programa.archivo, this.programa.lineas);
+      if (!this.informar) throw e;
+      this.detener();
+      this.informar(e, this.objeto);
     }
+  }
+
+  /** Para este script: sin más eventos ni hilos. El objeto sigue en la escena. */
+  detener(): void {
+    this.detenido = true;
+    this.hilos = [];
+    this.activo = false;
   }
 }

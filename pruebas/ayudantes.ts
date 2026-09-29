@@ -9,7 +9,8 @@
 import { compilar } from '../src/chispa/sintaxis/parser';
 import { Interprete } from '../src/chispa/ejecucion/interprete';
 import { Entorno } from '../src/chispa/ejecucion/entorno';
-import { ErrorChispa } from '../src/chispa/errores/ErrorChispa';
+import { ErrorChispa, ErrorCompilacion, type Diagnostico } from '../src/chispa/errores/ErrorChispa';
+import { analizar } from '../src/chispa/analisis/analizador';
 import { Entrada } from '../src/motor/Entrada';
 import { Recursos } from '../src/motor/Recursos';
 import { Sonido } from '../src/motor/Sonido';
@@ -26,11 +27,21 @@ export interface Resultado {
   pausas: number;
 }
 
-export function ejecutar(codigo: string): Resultado {
+/**
+ * Ejecuta como lo hace el motor: compila, ANALIZA (si hay errores, no ejecuta) y ejecuta.
+ * Con `analisis: false` se salta el análisis, para probar los errores que da el intérprete.
+ */
+export function ejecutar(codigo: string, opciones: { analisis?: boolean } = {}): Resultado {
   const salida: string[] = [];
   const interprete = new Interprete();
   interprete.alMostrar = (t) => salida.push(t);
   const programa = compilar(codigo, 'prueba.chs');
+  if (opciones.analisis !== false) {
+    const errores = analizar(programa, { globales: interprete.globales })
+      .filter((d) => d.gravedad === 'error')
+      .map((d) => new ErrorChispa(d.pos, d.mensaje, d.pista).conArchivo('prueba.chs', programa.lineas));
+    if (errores.length) throw new ErrorCompilacion(errores);
+  }
   const hilo = interprete.ejecutarBloque(programa.sentencias, new Entorno(interprete.globales));
   let pausas = 0;
   try {
@@ -47,9 +58,15 @@ export function mostrado(codigo: string): string {
   return ejecutar(codigo).salida.join(' | ');
 }
 
-export function errorDe(codigo: string): ErrorChispa {
+/** Los avisos (en amarillo) que da el análisis. */
+export function avisosDe(codigo: string): Diagnostico[] {
+  const interprete = new Interprete();
+  return analizar(compilar(codigo, 'prueba.chs'), { globales: interprete.globales }).filter((d) => d.gravedad === 'aviso');
+}
+
+export function errorDe(codigo: string, opciones: { analisis?: boolean } = {}): ErrorChispa {
   try {
-    ejecutar(codigo);
+    ejecutar(codigo, opciones);
   } catch (e) {
     if (e instanceof ErrorChispa) return e;
     throw e;
@@ -113,6 +130,8 @@ export interface OpcionesJuegoPrueba {
 export function juegoDePrueba(opciones: OpcionesJuegoPrueba) {
   const m = motorDePrueba();
   const salida: string[] = [];
+  const errores: { error: ErrorChispa; veces: number }[] = [];
+  const avisos: Diagnostico[] = [];
   const proyecto: DefProyecto = {
     formato: 'chispa-proyecto',
     version: 1,
@@ -125,13 +144,21 @@ export function juegoDePrueba(opciones: OpcionesJuegoPrueba) {
     plantillas: opciones.plantillas ?? {},
     escena: opciones.escena ?? [],
   };
-  const juego = JuegoEnMarcha.preparar(m.motor, proyecto, { alMostrar: (t) => salida.push(t) });
+  const juego = JuegoEnMarcha.preparar(m.motor, proyecto, {
+    alMostrar: (t) => salida.push(t),
+    alError: (error, veces) => {
+      const ya = errores.find((x) => x.error.mensajeCorto === error.mensajeCorto && x.error.linea === error.linea);
+      if (ya) ya.veces = veces;
+      else errores.push({ error, veces });
+    },
+    alAviso: (a) => avisos.push(...a),
+  });
   const buscar = (nombre: string) => {
     const o = juego.escena.buscar(nombre);
     if (!o) throw new Error(`No hay ningún objeto "${nombre}" en la escena`);
     return o;
   };
-  return { ...m, juego, salida, buscar };
+  return { ...m, juego, salida, errores, avisos, buscar };
 }
 
 /** Atajo: un único objeto "Prueba" con este script. */

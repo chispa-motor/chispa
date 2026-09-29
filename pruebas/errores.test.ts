@@ -94,7 +94,7 @@ describe('Errores de ejecución', () => {
   });
 
   it('operar con tipos que no encajan', () => {
-    expect(errorDe('mostrar([1] - "a")').message).toMatch(/no puedo restar una lista y un texto/);
+    expect(errorDe('mostrar([1] - "a")').message).toMatch(/intentas restar una lista \(\[1\]\) y un texto \("a"\)/);
   });
 
   it('detecta bucles infinitos en vez de congelar el navegador', () => {

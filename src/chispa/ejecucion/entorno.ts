@@ -60,4 +60,25 @@ export class Entorno {
     }
     return nombres;
   }
+
+  /** Nombres creados por quien programa: los de este entorno y sus padres, sin llegar a `limite` (las globales). */
+  nombresDeUsuario(limite: Entorno): string[] {
+    const nombres: string[] = [];
+    let e: Entorno | null = this;
+    while (e && e !== limite) {
+      for (const [n, c] of e.variables) if (n !== 'yo') nombres.push(c.original);
+      e = e.padre;
+    }
+    return nombres;
+  }
+
+  /** Nombres (normalizados) declarados directamente en este entorno. */
+  nombresPropios(): string[] {
+    return [...this.variables.keys()];
+  }
+
+  /** El valor de un nombre declarado directamente aquí (sin subir a los padres). */
+  valorPropio(nombre: string): Valor | undefined {
+    return this.variables.get(nombre)?.valor;
+  }
 }

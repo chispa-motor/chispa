@@ -1,4 +1,4 @@
-# Especificación del lenguaje Chispa · v0.3
+# Especificación del lenguaje Chispa · v0.4
 
 Chispa es un lenguaje de programación en español para crear videojuegos 2D dentro del motor Chispa.
 Los archivos llevan la extensión `.chs`. Cada objeto de la escena puede tener un script.
@@ -16,7 +16,7 @@ Los archivos llevan la extensión `.chs`. Cada objeto de la escena puede tener u
 | Regla | Detalle |
 |---|---|
 | Bloques | Por **sangría** (4 espacios), estilo Python. La línea que abre un bloque termina en `:`. |
-| Tildes | Dan igual en palabras clave, variables y API: `función` = `funcion`, `posición` = `posicion`. La **ñ** sí cuenta (`año` ≠ `ano`). |
+| Tildes | **La forma oficial es SIN tildes**: `funcion`, `posicion`, `rotacion`. Si alguien escribe la tilde, también funciona (`función` = `funcion`), pero el motor nunca la sugiere. La **ñ** no es una tilde y sí cuenta (`año` ≠ `ano`). |
 | Mayúsculas | Dan igual: `Si` = `si`, `Vida` = `vida`. |
 | Comentarios | Empiezan con `#` y llegan hasta el final de la línea. |
 | Líneas largas | Dentro de `( )`, `[ ]` o `{ }` se puede saltar de línea libremente. |
@@ -184,6 +184,7 @@ cuando se pulsa "espacio":         # al pulsar la tecla
 cuando se pulsa "espacio", "w":    # cualquiera de varias teclas
 cuando toco Enemigo:               # al empezar a tocar un objeto con ese nombre o tipo; el otro es 'otro'
 cuando hago clic:                  # clic izquierdo en la vista del juego
+cuando pasen 3 segundos:           # una sola vez, 3 segundos después de aparecer el objeto
 ```
 
 **Eventos extra:**
@@ -276,31 +277,31 @@ Cada error lleva cuatro partes:
 3. Una explicación en español sencillo.
 4. Una sugerencia para arreglarlo.
 
-**Tipos de errores:**
+Si el error pasa **dentro de una función**, se añade desde dónde se llamó:
+`Esto pasó dentro de la función 'dañar', que se llamó desde la línea 4.`
 
-- **De escritura:**
-  - Palabras mal escritas, comparando con las palabras clave, las variables que existen y la API.
-  - Falta `:`.
-  - Sangría incorrecta.
-  - Textos o paréntesis sin cerrar.
-  - `=` en lugar de `==`.
-  - `mostrar "hola"` sin paréntesis, con la sugerencia: "escribe `mostrar("hola")`".
-  - Símbolos que no existen en Chispa (`;`, `{` fuera de una tabla, `&&`…).
-- **De ejecución:**
-  - Variable que no existe (el mensaje enumera las que sí existen).
-  - Objeto nulo.
-  - Operar con tipos que no encajan (sumar una lista y un número, por ejemplo).
-  - Posición fuera de la lista.
-  - Número incorrecto de valores al llamar a una función.
-  - Bucle infinito.
-- **Avisos (en amarillo, no paran el programa):**
-  - Una variable creada que nunca se usa.
-  - Código que hay después de un `devolver` y nunca se ejecutará.
+**Tres momentos:**
 
-**Cuándo aparecen:**
+1. **Al escribir (errores de escritura).** Se enseñan **todos a la vez**, como mucho uno por línea y diez por archivo. Un `:` olvidado no provoca errores falsos en las líneas de debajo. Por ejemplo:
+   - Palabras mal escritas (`mientas` → `mientras`), palabras de otros lenguajes (`print` → `mostrar`, `elif` → `sino si`) y `=` en lugar de `==`.
+   - Falta `:`, sangría incorrecta, textos o paréntesis sin cerrar, `3,5` en vez de `3.5`.
+   - `mostrar "hola"` sin paréntesis (sugiere `mostrar("hola")`), `devolver` fuera de una función, `romper` fuera de un bucle.
+2. **Antes de ejecutar (análisis).** Se revisa el programa sin ejecutarlo. Si encuentra un **error**, no deja pulsar Ejecutar:
+   - Variables que no existen, con sugerencia o con la lista de las que sí existen.
+   - `otro` fuera de un `cuando toco`.
+   - Miembros de la API mal escritos (`teclado.pulsado`, `yo.velocidda`).
+   - Teclas, plantillas, escenas, sonidos, animaciones, imágenes o colores que no existen, si van escritos entre comillas.
 
-- Los errores de escritura se detectan **mientras escribes**, y el editor subraya el trozo en rojo.
-- Los de ejecución aparecen al ejecutar: el programa se para, el error sale en la consola y el editor salta a la línea.
+   Los **avisos** salen en amarillo y no impiden ejecutar:
+   - Una variable creada que nunca se usa.
+   - Código después de `devolver`, `romper` o `continuar`, que nunca se ejecutará.
+3. **Al ejecutar.** Por ejemplo:
+   - Operar con tipos que no encajan, **enseñando los valores**: `intentas restar 'nombre', que es un texto ("Ana"), y un número (1).`
+   - Un objeto nulo, una posición fuera de la lista, un número incorrecto de valores al llamar a una función o un bucle infinito.
+
+   **Un error al ejecutar no para todo el juego:**
+   - Sale en la consola y solo se detiene el script de ese objeto; el resto sigue funcionando.
+   - Si el mismo error ocurre en muchas copias de una plantilla, se enseña una vez con el número de veces (×50).
 
 ## 10. Lo que Chispa NO tiene (por ahora)
 

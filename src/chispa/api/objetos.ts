@@ -110,7 +110,7 @@ const PROPIEDADES: Record<string, PropiedadObjeto> = {
   ancho: { obtener: (o, p) => necesitaSprite(o, 'ancho', p).ancho, asignar: (o, v, p) => (necesitaSprite(o, 'ancho', p).ancho = comoNumero(v, 'ancho', p)) },
   alto: { obtener: (o, p) => necesitaSprite(o, 'alto', p).alto, asignar: (o, v, p) => (necesitaSprite(o, 'alto', p).alto = comoNumero(v, 'alto', p)) },
   texto: { obtener: (o, p) => necesitaSprite(o, 'texto', p).texto, asignar: (o, v, p) => (necesitaSprite(o, 'texto', p).texto = aTexto(v)) },
-  tamano: {
+  tamaño: {
     obtener: (o, p) => necesitaSprite(o, 'tamaño', p).tamano,
     asignar: (o, v, p) => (necesitaSprite(o, 'tamaño', p).tamano = comoNumero(v, 'tamaño', p)),
   },
@@ -185,6 +185,12 @@ interface PropiedadPropia {
   original: string;
 }
 
+// "tamano" (sin ñ) también vale, para teclados sin ñ
+PROPIEDADES.tamano = PROPIEDADES['tamaño'];
+
+/** Nombres de las propiedades y acciones del motor, tal como se escriben oficialmente. */
+export const NOMBRES_PROPIEDADES_OBJETO = NOMBRES_BONITOS;
+
 export class RefObjeto extends Anfitrion {
   constructor(readonly objeto: ObjetoJuego) {
     super();
@@ -227,6 +233,27 @@ export class RefObjeto extends Anfitrion {
     if (METODOS[p]) {
       throw new ErrorChispa(pos, `'${original}' es una acción del objeto (se usa con paréntesis), no se le puede dar un valor.`, `Ejemplo: yo.${original}(...)`);
     }
+    // ¿Un nombre casi igual a uno del motor? Seguramente está mal escrito (yo.velocidda → velocidad)
+    const parecido = this.propias().has(p) ? null : propiedadMalEscrita(original);
+    if (parecido) {
+      throw new ErrorChispa(
+        pos,
+        `has escrito 'yo.${original}', que se parece mucho a '${parecido}', una propiedad del motor.`,
+        `¿Querías decir '${parecido}'? Si de verdad quieres una propiedad tuya con este nombre, elige uno que no se parezca tanto a los del motor.`,
+      );
+    }
     this.propias().set(p, { valor: copiarSiVector(v), original });
   }
+}
+
+/** Si `nombre` se parece mucho a una propiedad del motor (pero no es igual), devuelve la del motor. */
+export function propiedadMalEscrita(nombre: string): string | null {
+  // Con nombres cortos (xp, hp...) habría demasiados falsos avisos: solo comprobamos desde 4 letras.
+  if (nombre.length < 4) return null;
+  return sugerir(nombre, NOMBRES_BONITOS);
+}
+
+/** ¿Es una propiedad o acción del motor? (nombre normalizado) */
+export function esMiembroDelMotor(nombre: string): boolean {
+  return nombre in PROPIEDADES || nombre in METODOS;
 }

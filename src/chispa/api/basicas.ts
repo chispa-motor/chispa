@@ -5,7 +5,8 @@
  * El intérprete las instala siempre al crearse, así que funcionan también en
  * los tests, sin juego ni escena.
  *
- * Los nombres se registran normalizados (sin tildes): `raíz` y `raiz` son lo mismo.
+ * Los nombres oficiales son SIN TILDES (raiz, minimo, numero). Si alguien los
+ * escribe con tilde también funcionan, porque se normalizan.
  */
 import { argNumero, sinDemasiados } from './argumentos';
 import { ErrorChispa } from '../errores/ErrorChispa';
@@ -48,16 +49,16 @@ export function instalarBasicas(interprete: Interprete): void {
     return Math.round(argNumero(a, 0, 'redondear', p, 'redondear(3.7)') * f) / f;
   });
   funcion('absoluto', (a, p) => Math.abs(argNumero(a, 0, 'absoluto', p, 'absoluto(-5)')));
-  funcion('raíz', (a, p) => {
-    const n = argNumero(a, 0, 'raíz', p, 'raiz(16)');
+  funcion('raiz', (a, p) => {
+    const n = argNumero(a, 0, 'raiz', p, 'raiz(16)');
     if (n < 0) throw new ErrorChispa(p, 'no existe la raíz cuadrada de un número negativo.');
     return Math.sqrt(n);
   });
-  funcion('mínimo', (a, p) => {
+  funcion('minimo', (a, p) => {
     if (a.length === 0) throw new ErrorChispa(p, "a 'minimo' le faltan números.", 'Ejemplo: minimo(3, 8)');
     return Math.min(...a.map((_, i) => argNumero(a, i, 'minimo', p, 'minimo(3, 8)')));
   });
-  funcion('máximo', (a, p) => {
+  funcion('maximo', (a, p) => {
     if (a.length === 0) throw new ErrorChispa(p, "a 'maximo' le faltan números.", 'Ejemplo: maximo(3, 8)');
     return Math.max(...a.map((_, i) => argNumero(a, i, 'maximo', p, 'maximo(3, 8)')));
   });
@@ -78,7 +79,7 @@ export function instalarBasicas(interprete: Interprete): void {
     throw new ErrorChispa(p, `'longitud' funciona con textos, listas y tablas, pero le das ${v === undefined ? 'nada' : nombreTipo(v)}.`, 'Ejemplo: longitud("hola") da 4');
   });
   funcion('texto', (a) => aTexto(a[0] ?? null));
-  funcion('número', (a, p) => {
+  funcion('numero', (a, p) => {
     const v = a[0];
     if (typeof v === 'number') return v;
     const n = typeof v === 'string' && v.trim() !== '' ? Number(v.replace(',', '.')) : NaN;
