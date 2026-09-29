@@ -62,7 +62,9 @@ export type Evento =
   /** "cuando termina la animacion:" (solo las que no se repiten) */
   | { tipo: 'animacion' }
   /** cuando salgo de la pantalla: */
-  | { tipo: 'pantalla' };
+  | { tipo: 'pantalla' }
+  /** cuando recibo "abrir_puerta":  (mensaje: el nombre normalizado; original: como se escribió) */
+  | { tipo: 'recibo'; mensaje: string; original: string };
 
 // ───────────────────────── Sentencias (órdenes) ─────────────────────────
 

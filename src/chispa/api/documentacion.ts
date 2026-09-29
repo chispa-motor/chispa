@@ -69,6 +69,7 @@ export const DOC_EVENTOS: Doc[] = [
   d('cuando hago clic', 'evento', 'cuando hago clic:', 'Se ejecuta al hacer clic en cualquier sitio de la pantalla del juego.', 'cuando hago clic:\n    crear("Bola", raton.x, raton.y)', 'cuando hago clic:\n    '),
   d('cuando hago clic encima', 'evento', 'cuando hago clic encima:', 'Se ejecuta al hacer clic ENCIMA de este objeto. Sirve para hacer botones.', 'cuando hago clic encima:\n    escena.cambiar("Nivel1")', 'cuando hago clic encima:\n    '),
   d('cuando termina la animacion', 'evento', 'cuando termina la animacion:', 'Se ejecuta cuando termina una animación que no se repite.', 'cuando termina la animacion:\n    yo.animar("quieto")', 'cuando termina la animacion:\n    '),
+  d('cuando recibo', 'evento', 'cuando recibo "mensaje":', "Se ejecuta cuando alguien hace enviar(\"mensaje\") en cualquier script (le llega a TODOS los que lo escuchen, al empezar el siguiente fotograma). Si el mensaje trae algo, esta en 'dato'.", 'cuando recibo "abrir_puerta":\n    yo.ocultar()', 'cuando recibo "${1:mensaje}":\n    '),
   d('cuando salgo de la pantalla', 'evento', 'cuando salgo de la pantalla:', 'Se ejecuta cuando el objeto sale de lo que se ve (por un borde de la pantalla). Sirve para borrar balas y enemigos que ya no se ven, o para perder si el jugador se cae.', 'cuando salgo de la pantalla:\n    destruir(yo)', 'cuando salgo de la pantalla:\n    '),
 ];
 
@@ -107,6 +108,7 @@ export const DOC_FUNCIONES: Doc[] = [
   d('potencia', 'funcion', 'potencia(base, exponente)', 'Multiplica un número por sí mismo varias veces: potencia(2, 3) = 2 × 2 × 2 = 8.', 'mostrar(potencia(2, 10))', 'potencia(${1:2}, ${2:3})'),
   d('ruido', 'funcion', 'ruido(x, y)', 'Un número entre 0 y 1 «al azar pero suave»: cambia poco a poco al cambiar x. Para nubes, terrenos o movimientos naturales.', 'yo.y = 200 + ruido(tiempo.total) * 100', 'ruido(${1:tiempo.total})'),
   d('unir', 'funcion', 'unir(lista, separador)', 'Junta los elementos de una lista en un texto, con el separador entre medias (por defecto ", ").', 'yo.texto = unir(inventario, " - ")', 'unir(${1:lista}, ${2:", "})'),
+  d('enviar', 'funcion', 'enviar("mensaje", dato)', "Avisa a todos los objetos que tengan 'cuando recibo \"mensaje\"'. El dato es opcional (un numero, un texto, un objeto...) y llega en 'dato'.", 'cuando toco Llave:\n    enviar("abrir_puerta")', 'enviar("${1:mensaje}")'),
   d('contar', 'funcion', 'contar("Tipo")', 'Cuántos objetos hay con ese nombre o tipo.', 'si contar("Enemigo") == 0:\n    escena.cambiar("Ganaste")', 'contar("${1:Tipo}")'),
   d('clonar', 'funcion', 'clonar(objeto)', 'Hace una copia del objeto tal como está ahora (sitio, color, tamaño, propiedades), con su script. Devuelve la copia.', 'variable copia = clonar(yo)\ncopia.x += 50', 'clonar(${1:yo})'),
   d('buscarConEtiqueta', 'funcion', 'buscarConEtiqueta("etiqueta")', 'Una lista con los objetos que tienen esa etiqueta (ver yo.ponerEtiqueta).', 'para cada e en buscarConEtiqueta("malo"):\n    e.color = "rojo"', 'buscarConEtiqueta("${1:etiqueta}")'),
@@ -266,6 +268,7 @@ export const DOC_ESPECIALES: Doc[] = [
   d('yo', 'variable', 'yo', 'El objeto al que pertenece este script.', 'yo.x += 10'),
   d('otro', 'variable', 'otro', "Dentro de 'cuando toco': el objeto que has tocado.", 'cuando toco Enemigo:\n    destruir(otro)'),
   d('casilla', 'variable', 'casilla', "Dentro de 'cuando toco': si has tocado una casilla de un mapa, su tipo (si no, nulo).", 'cuando toco:\n    si casilla == "agua":\n        yo.gravedad = 0.2'),
+  d('dato', 'variable', 'dato', "Dentro de 'cuando recibo': lo que se envio junto al mensaje con enviar(\"mensaje\", dato). Si no se envio nada, es nulo.", 'cuando recibo "dano":\n    yo.vida -= dato'),
   d('juego', 'variable', 'juego', 'Datos compartidos por todos los scripts (puntos, vidas...). Se conservan al cambiar de escena.', 'juego.puntos += 1'),
   d('pi', 'variable', 'pi', 'El número pi (3.14159...): lo que mide una vuelta entera dividido entre su ancho.', 'variable vuelta = 2 * pi * radio'),
   d('delta', 'variable', 'delta', 'Segundos desde el fotograma anterior (unos 0.016). Multiplica por delta las velocidades para que el juego vaya igual en cualquier ordenador.', 'yo.x += 200 * delta'),

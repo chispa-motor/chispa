@@ -48,7 +48,7 @@ export class PanelDepurador {
   private tablaVariables(filas: VariableVista[]): HTMLElement {
     if (!filas.length) return h('p', { class: 'nota' }, 'No hay variables que ver en esta línea.');
     const grupos = [...new Set(filas.map((f) => f.grupo))];
-    const titulos: Record<string, string> = { 'Aquí': 'Variables de aquí', 'Más fuera': 'Variables de los bloques de fuera', 'Del script': 'Variables del script', yo: 'El objeto (yo)' };
+    const titulos: Record<string, string> = { 'Aquí': 'Variables de aquí', 'Más fuera': 'Variables de los bloques de fuera', 'Del script': 'Variables del script', yo: 'El objeto (yo)', juego: 'Datos del juego (juego)' };
     return h('div', { class: 'variables-depuracion' },
       grupos.map((grupo) =>
         h('section', {},

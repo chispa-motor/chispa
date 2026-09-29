@@ -12,7 +12,7 @@ import { argNumero, comoLogico, comoNumero, comoVector } from './argumentos';
 import { ErrorChispa } from '../errores/ErrorChispa';
 import { sugerir } from '../errores/sugerencias';
 import type { Posicion } from '../lexico/tokens';
-import { Anfitrion, FuncionNativa, aTexto, copiarSiVector, nombreTipo, type Valor } from '../ejecucion/valores';
+import { Anfitrion, FuncionNativa, aTexto, copiarSiVector, nombreTipo, type FuncionChispa, type Valor } from '../ejecucion/valores';
 import { Vector2 } from '../../motor/Vector2';
 import type { ObjetoJuego } from '../../objetos/ObjetoJuego';
 import { Colision } from '../../objetos/componentes/Colision';
@@ -25,6 +25,13 @@ import { SUAVIZADOS } from '../../objetos/AnimadorDeValores';
 import { argTexto } from './argumentos';
 import { enumerar } from '../errores/sugerencias';
 import { normalizar } from '../../utilidades/texto';
+
+/** Lo que RefObjeto necesita del script de un objeto (ScriptChispa lo cumple). */
+interface ScriptDeObjeto {
+  funcionDelScript(nombre: string): FuncionChispa | null;
+  nombresDeFunciones(): string[];
+  tieneVariable(nombre: string): boolean;
+}
 
 /** Una sola RefObjeto por objeto: así `otro == jugador` funciona (mismo objeto = misma referencia). */
 const referencias = new WeakMap<ObjetoJuego, RefObjeto>();
@@ -659,7 +666,12 @@ export class RefObjeto extends Anfitrion {
   }
 
   propiedadesConocidas(): string[] {
-    return [...NOMBRES_BONITOS, ...[...this.propias().values()].map((x) => x.original)];
+    return [...NOMBRES_BONITOS, ...[...this.propias().values()].map((x) => x.original), ...(this.script()?.nombresDeFunciones() ?? [])];
+  }
+
+  /** Su script (si tiene): para llamar a sus funciones desde otros objetos. */
+  private script(): ScriptDeObjeto | null {
+    return (this.objeto.todosLosComponentes.find((c) => 'funcionDelScript' in c) as unknown as ScriptDeObjeto | undefined) ?? null;
   }
 
   obtener(p: string, original: string, pos: Posicion): Valor {
@@ -668,11 +680,22 @@ export class RefObjeto extends Anfitrion {
     if (METODOS[p]) return new FuncionNativa(original, (args, pos2) => METODOS[p](o, args, pos2));
     const propia = this.propias().get(p);
     if (propia) return propia.valor;
+    // Una función de su script: buscar("Puerta").abrir()
+    const script = this.script();
+    const funcion = script?.funcionDelScript(p);
+    if (funcion) return funcion;
     const s = sugerir(original, this.propiedadesConocidas());
+    if (!s && script?.tieneVariable(p)) {
+      throw new ErrorChispa(
+        pos,
+        `'${original}' es una variable del script de '${o.nombre}', y las variables de un script solo se ven dentro de él.`,
+        `Para que otros objetos la lean, guárdala como propiedad del objeto: en su script, yo.${original} = ... (y desde fuera: ${o.nombre.toLowerCase()}.${original}). O hazle una función que la devuelva.`,
+      );
+    }
     throw new ErrorChispa(
       pos,
       `el objeto '${o.nombre}' no tiene nada llamado '${original}'.`,
-      s ? `¿Querías decir '${s}'?` : `Si es una propiedad tuya, dale un valor antes, por ejemplo en "cuando empieza": yo.${original} = 0`,
+      s ? `¿Querías decir '${s}'?` : `Si es una propiedad tuya, dale un valor antes, por ejemplo en "cuando empieza": yo.${original} = 0. Si es una función, tiene que estar escrita en el script de '${o.nombre}': funcion ${original}():`,
     );
   }
 

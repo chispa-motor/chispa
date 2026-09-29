@@ -29,7 +29,7 @@ import { Entorno } from './ejecucion/entorno';
 import { ErrorChispa } from './errores/ErrorChispa';
 import type { Ejecucion, Interprete } from './ejecucion/interprete';
 import { referencia } from './api/objetos';
-import { nombreTipo } from './ejecucion/valores';
+import { FuncionChispa, nombreTipo, type Valor } from './ejecucion/valores';
 import { Sprite } from '../objetos/componentes/Sprite';
 import { ErrorMotor } from '../motor/Errores';
 import { Componente } from '../objetos/Componente';
@@ -244,7 +244,17 @@ export class ScriptChispa extends Componente {
     });
   }
 
-  private lanzarEvento(ev: EventoRegistrado, otro?: ObjetoJuego, clave: string | null = null, casilla: string | null = null): void {
+  /** Ha llegado un mensaje (enviar("...")): se lanzan los «cuando recibo» de ese mensaje. */
+  recibirMensaje(mensaje: string, dato: Valor): void {
+    this.conArchivo(() => {
+      for (const ev of this.eventos) {
+        if (this.objeto.destruido) return;
+        if (ev.evento.tipo === 'recibo' && ev.evento.mensaje === mensaje) this.lanzarEvento(ev, undefined, null, null, dato);
+      }
+    });
+  }
+
+  private lanzarEvento(ev: EventoRegistrado, otro?: ObjetoJuego, clave: string | null = null, casilla: string | null = null, dato: Valor = null): void {
     const interprete = this.interprete;
     const entorno = this.entorno;
     function* cuerpo(): Ejecucion<void> {
@@ -253,6 +263,7 @@ export class ScriptChispa extends Componente {
         local.declarar('otro', referencia(otro));
         local.declarar('casilla', casilla);
       }
+      if (ev.evento.tipo === 'recibo') local.declarar('dato', dato);
       yield* interprete.ejecutarBloque(ev.cuerpo, local);
     }
     // Un punto de parada en la línea del «cuando» para en la primera línea de dentro
@@ -305,6 +316,30 @@ export class ScriptChispa extends Componente {
       this.interprete.objetoActual = anterior;
       this.interprete.programaActual = programaAnterior;
     }
+  }
+
+  /**
+   * Una función escrita en este script, para que la llamen OTROS objetos:
+   * buscar("Puerta").abrir(). Solo las funciones: las variables del script son suyas.
+   */
+  funcionDelScript(nombre: string): FuncionChispa | null {
+    const c = this.entorno?.buscar(nombre);
+    return c && c.valor instanceof FuncionChispa && this.entorno.nombresPropios().includes(nombre) ? c.valor : null;
+  }
+
+  /** Los nombres de sus funciones (para sugerir cuando alguien se equivoca). */
+  nombresDeFunciones(): string[] {
+    if (!this.entorno) return [];
+    return this.entorno.nombresPropios().flatMap((n) => {
+      const c = this.entorno.buscar(n)!;
+      return c.valor instanceof FuncionChispa ? [c.original] : [];
+    });
+  }
+
+  /** ¿Tiene el script una variable (no función) con este nombre? Para explicar por qué no se puede leer desde fuera. */
+  tieneVariable(nombre: string): boolean {
+    const c = this.entorno?.buscar(nombre);
+    return !!c && !(c.valor instanceof FuncionChispa) && this.entorno.nombresPropios().includes(nombre) && nombre !== 'yo';
   }
 
   /** Las variables del script (para los textos con huecos del editor, que pueden usarlas). */

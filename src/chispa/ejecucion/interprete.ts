@@ -182,7 +182,7 @@ export class Interprete {
         return yield* this.paraCada(s, ent);
 
       case 'Funcion':
-        ent.declarar(s.nombre, new FuncionChispa(s, ent), s.original);
+        ent.declarar(s.nombre, new FuncionChispa(s, ent, { programa: this.programaActual, objeto: this.objetoActual }), s.original);
         return;
 
       case 'Devolver':
@@ -456,6 +456,32 @@ export class Interprete {
   private idsDeLugares = new WeakMap<object, number>();
   private ultimoIdDeLugar = 0;
 
+  /**
+   * Ejecuta un trozo de código como si fuera de otro objeto (su «yo» y su
+   * script), y deja todo como estaba al terminar. También si se duerme en un
+   * esperar(): al despertar, sigue siendo del otro objeto.
+   */
+  private *comoDueno<T>(dueno: NonNullable<FuncionChispa['dueno']>, gen: Ejecucion<T>): Ejecucion<T> {
+    const antes = { programa: this.programaActual, objeto: this.objetoActual };
+    const poner = (p: typeof dueno.programa, o: unknown) => {
+      this.programaActual = p;
+      this.objetoActual = o;
+    };
+    try {
+      poner(dueno.programa, dueno.objeto);
+      let r = gen.next();
+      while (!r.done) {
+        poner(antes.programa, antes.objeto);
+        yield r.value;
+        poner(dueno.programa, dueno.objeto);
+        r = gen.next();
+      }
+      return r.value;
+    } finally {
+      poner(antes.programa, antes.objeto);
+    }
+  }
+
   /** Llama a una función (de Chispa o del motor). */
   *llamar(funcion: Valor, args: Valor[], pos: Posicion, descripcion = 'esa función'): Ejecucion<Valor> {
     if (funcion instanceof FuncionNativa) {
@@ -483,12 +509,18 @@ export class Interprete {
       // Para el depurador: «siguiente línea» no se mete dentro de las funciones
       const hilo = this.hiloActual;
       if (hilo) hilo.profundidad++;
+      const dueno = funcion.dueno;
+      const deOtro = !!dueno && (dueno.programa !== this.programaActual || dueno.objeto !== this.objetoActual);
       try {
-        const senal = yield* this.ejecutarBloque(def.cuerpo, local);
+        const senal = deOtro ? yield* this.comoDueno(dueno!, this.ejecutarBloque(def.cuerpo, local)) : yield* this.ejecutarBloque(def.cuerpo, local);
         return senal?.tipo === 'devolver' ? senal.valor : null;
       } catch (error) {
-        // El error "atraviesa" esta función: apuntamos desde dónde se la llamó (pila de llamadas)
-        if (error instanceof ErrorChispa) error.agregarLlamada(def.original, pos);
+        if (error instanceof ErrorChispa) {
+          // Un error dentro de la función de otro objeto: es de SU script
+          if (deOtro && dueno!.programa) error.conArchivo(dueno!.programa.archivo, dueno!.programa.lineas);
+          // El error "atraviesa" esta función: apuntamos desde dónde se la llamó (pila de llamadas)
+          error.agregarLlamada(def.original, pos);
+        }
         throw error;
       } finally {
         if (hilo) hilo.profundidad--;

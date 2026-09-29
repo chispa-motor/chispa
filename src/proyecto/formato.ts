@@ -102,7 +102,7 @@ export interface DefObjeto {
   /** Nombre de un script de `proyecto.scripts`. */
   script?: string;
   /** Propiedades propias con su valor inicial (como los Attributes de Roblox): vida = 3... */
-  propiedades?: Record<string, number | string | boolean>;
+  propiedades?: Record<string, DatoInicial>;
 }
 
 export interface DefCamara {
@@ -141,6 +141,20 @@ export interface DefProyecto {
   plantillas: Record<string, DefObjeto>;
   escenas: Record<string, DefEscena>;
   escenaInicial: string;
+  /** Valores con los que empieza `juego` (puntos, vidas...), puestos en el editor. */
+  datos?: Record<string, DatoInicial>;
+}
+
+/** Un valor inicial (de `juego` o de una propiedad propia): un número, un texto o verdadero/falso. */
+export type DatoInicial = number | string | boolean;
+
+/** Lo que se escribe en el editor como valor inicial: "3" → 3, "verdadero" → verdadero, lo demás es texto. */
+export function leerDatoInicial(texto: string): DatoInicial {
+  const t = texto.trim();
+  if (t === 'verdadero' || t === 'falso') return t === 'verdadero';
+  const n = Number(t.replace(',', '.'));
+  if (t !== '' && Number.isFinite(n)) return n;
+  return t.replace(/^"(.*)"$/, '$1');
 }
 
 /**
@@ -186,6 +200,7 @@ function completar(p: DefProyecto): DefProyecto {
     plantillas: p.plantillas ?? {},
     escenas,
     escenaInicial: p.escenaInicial && escenas[p.escenaInicial] ? p.escenaInicial : Object.keys(escenas)[0],
+    datos: p.datos ?? {},
   };
 }
 

@@ -362,6 +362,19 @@ await prueba('recursos: dibujar un sprite de dos fotogramas, soltar un sonido en
   await p.click('.dialogo button:has-text("Cancelar")');
 });
 
+await prueba('«Datos del juego» en el inspector: se crean sin código y el juego empieza con ellos', async (p) => {
+  await estado(p, () => window.chispa.estado.seleccionar(null));
+  await p.click('[data-ruta="juego.nuevo"]');
+  await p.fill('.dialogo input.campo', 'vidas');
+  await p.click('.dialogo button:has-text("Aceptar")');
+  await p.fill('.dialogo input.campo', '3');
+  await p.click('.dialogo button:has-text("Aceptar")');
+  await p.waitForSelector('[data-ruta="juego.vidas"]');
+  const datos = await estado(p, () => window.chispa.estado.proyecto.datos);
+  comprobar(datos?.vidas === 3, 'el dato no se ha guardado como número: ' + JSON.stringify(datos));
+  comprobar((await p.getAttribute('.propiedad-propia code', 'title')) === 'En el código: juego.vidas', 'no explica cómo se usa en el código');
+});
+
 await prueba('los errores se subrayan mientras escribes y bloquean Ejecutar', async (p) => {
   await p.click('.nodo.hijo');
   await p.click('.cm-content');

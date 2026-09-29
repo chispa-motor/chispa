@@ -8,7 +8,7 @@ import type { DefObjeto, DefProyecto } from '../../proyecto/formato';
 export function datosParaTextos(proyecto: DefProyecto, objetosEscena: DefObjeto[], def: DefObjeto): [string, [string, string][]][] {
   const grupos: [string, [string, string][]][] = [];
   // Los datos de juego que ya usan los scripts (juego.puntos, juego.vidas...)
-  const deJuego = new Set<string>();
+  const deJuego = new Set<string>(Object.keys(proyecto.datos ?? {}));
   for (const codigo of Object.values(proyecto.scripts)) {
     for (const m of codigo.matchAll(/\bjuego\.([\p{L}_][\p{L}\p{N}_]*)/gu)) deJuego.add(m[1]);
   }

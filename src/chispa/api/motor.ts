@@ -38,6 +38,8 @@ export interface ContextoJuego {
   crearDesdePlantilla(nombre: string, x: number | null, y: number | null): ObjetoJuego;
   pedirReinicio(): void;
   cambiarEscena(nombre: string, fundido?: number): void;
+  /** enviar("mensaje", dato): llega a todos los «cuando recibo» al empezar el siguiente fotograma. */
+  enviarMensaje(mensaje: string, original: string, dato: Valor): void;
   /** Datos del jugador (texto JSON), guardados en el navegador. */
   guardarDato(clave: string, texto: string): void;
   cargarDato(clave: string): string | null;
@@ -125,6 +127,10 @@ export class DatosJuego extends Anfitrion {
   }
   asignar(p: string, v: Valor, original: string): void {
     this.datos.set(p, { valor: copiarSiVector(v), original });
+  }
+  /** Para el depurador: todo lo guardado en juego, con los nombres como se escribieron. */
+  resumenParaDepurar(): [string, Valor][] {
+    return [...this.datos.values()].map((d) => [d.original, d.valor]);
   }
   /** Lee un dato desde fuera del lenguaje (el editor, el tutorial). `undefined` si no hay nada guardado. */
   leer(nombre: string): Valor | undefined {
@@ -238,6 +244,13 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
     return p1.distancia(p2);
   });
 
+  funcion('enviar', (a, p) => {
+    const ej = 'enviar("abrir_puerta")';
+    const mensaje = argTexto(a, 0, 'enviar', p, ej).trim();
+    if (!mensaje) throw new ErrorChispa(p, 'el nombre del mensaje está vacío.', `Ejemplo: ${ej}`);
+    ctx.enviarMensaje(normalizar(mensaje), mensaje, copiarSiVector(a[1] ?? null));
+    return null;
+  });
   funcion('contar', (a, p) => ctx.escena.buscarTodos(argTexto(a, 0, 'contar', p, 'contar("Enemigo")')).length);
   funcion('clonar', (a, p) => {
     const o = argObjeto(a, 0, 'clonar', p, 'clonar(yo)');

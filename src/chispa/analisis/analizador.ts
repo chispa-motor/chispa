@@ -219,6 +219,7 @@ class Analizador {
             a.simbolos.set('otro', { original: 'otro', pos: s.pos, tipo: 'especial', usado: true });
             a.simbolos.set('casilla', { original: 'casilla', pos: s.pos, tipo: 'especial', usado: true });
           }
+          if (ev.tipo === 'recibo') a.simbolos.set('dato', { original: 'dato', pos: s.pos, tipo: 'especial', usado: true });
           this.bloque(s.cuerpo, a);
         });
         return;

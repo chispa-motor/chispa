@@ -8,7 +8,7 @@
  * o quitarlas (como los componentes de Unity).
  */
 import { NOMBRES_COLORES } from '../../motor/Color';
-import { tipoPorNombre, type DefObjeto } from '../../proyecto/formato';
+import { leerDatoInicial, tipoPorNombre, type DatoInicial, type DefObjeto } from '../../proyecto/formato';
 import { tieneHuecos } from '../../proyecto/TextosConHuecos';
 import { datosParaTextos, insertarDato } from '../estado/datosTextos';
 import type { EstadoEditor, RefObjeto } from '../estado/EstadoEditor';
@@ -382,35 +382,9 @@ export class Inspector {
   }
 
   private seccionPropiedades(ref: RefObjeto, def: DefObjeto): HTMLElement {
-    const e = this.estado;
-    const filas = Object.entries(def.propiedades ?? {}).map(([nombre, valor]) => {
-      const tipo = typeof valor;
-      const control =
-        tipo === 'boolean'
-          ? h('input', { type: 'checkbox', checked: valor, 'data-ruta': `prop.${nombre}`, onchange: (ev: Event) => e.cambiarPropiedadPropia(ref, nombre, (ev.target as HTMLInputElement).checked) })
-          : h('input', { class: 'campo', type: tipo === 'number' ? 'number' : 'text', value: String(valor), 'data-ruta': `prop.${nombre}`, onchange: (ev: Event) => {
-              const t = (ev.target as HTMLInputElement).value;
-              e.cambiarPropiedadPropia(ref, nombre, tipo === 'number' ? Number(t.replace(',', '.')) || 0 : t);
-            } });
-      return h('div', { class: 'propiedad-propia' },
-        h('code', { title: `En el código: yo.${nombre}` }, nombre),
-        control,
-        botonIcono('cerrar', `Quitar "${nombre}"`, () => e.cambiarPropiedadPropia(ref, nombre, undefined), undefined, 'pequeno'),
-      );
-    });
-    const nueva = h('button', { class: 'boton-enlace', onclick: async () => {
-      const n = await pedirTexto('Nueva propiedad', 'Nombre de la propiedad (por ejemplo: vida, puntos, velocidad). En el código será yo.vida');
-      if (!n) return;
-      const limpio = n.replace(/\s+/g, '_');
-      if (!/^[\p{L}_][\p{L}\p{N}_]*$/u.test(limpio)) return notificar('Un nombre de propiedad empieza por una letra y solo lleva letras, números y _', 'error');
-      const valor = await pedirTexto('Valor inicial', `Valor con el que empieza ${limpio} (un número, un texto, verdadero o falso)`, '0');
-      if (valor === null) return;
-      const v = valor === 'verdadero' ? true : valor === 'falso' ? false : Number.isFinite(Number(valor.replace(',', '.'))) ? Number(valor.replace(',', '.')) : valor;
-      e.cambiarPropiedadPropia(ref, limpio, v);
-    } }, '+ Nueva propiedad');
     return seccion('Propiedades propias', [
-      filas.length ? h('div', { class: 'lista-propiedades' }, filas) : h('p', { class: 'nota' }, 'Datos tuyos para este objeto (vida, puntos...). En el código: yo.vida'),
-      nueva,
+      listaDeDatos(def.propiedades ?? {}, 'prop', 'yo', (n, v) => this.estado.cambiarPropiedadPropia(ref, n, v),
+        'Datos tuyos para este objeto (vida, puntos...). En el código: yo.vida', '+ Nueva propiedad'),
     ], { ayuda: 'Como los Attributes de Roblox: datos con un valor inicial que el código puede leer y cambiar' });
   }
 
@@ -460,6 +434,52 @@ export class Inspector {
         campoCasilla('píxeles nítidos', 'proyecto.pixelArt', e.proyecto.pixelArt ?? false, (v) => e.cambiarAjusteProyecto('pixelArt', v), 'Dibuja las imágenes pequeñas con píxeles nítidos, sin suavizar'),
         h('p', { class: 'nota' }, 'Colores con nombre: ', NOMBRES_COLORES.filter((c) => c !== 'violeta').join(', '), '.'),
       ]),
+      seccion('Datos del juego', [
+        listaDeDatos(e.proyecto.datos ?? {}, 'juego', 'juego', (n, v) => e.cambiarDatoJuego(n, v),
+          'Datos que comparten todos los scripts (puntos, vidas, nivel...). En el código: juego.puntos', '+ Nuevo dato'),
+      ], { ayuda: 'Los valores con los que empieza juego. Se pueden leer y cambiar desde cualquier script' }),
     ];
   }
+}
+
+/**
+ * Una lista de datos con su valor inicial (número, texto o verdadero/falso),
+ * para las propiedades propias de un objeto (yo.vida) y los datos del juego (juego.puntos).
+ */
+function listaDeDatos(
+  datos: Record<string, DatoInicial>,
+  ruta: string,
+  prefijo: 'yo' | 'juego',
+  alCambiar: (nombre: string, valor: DatoInicial | undefined) => void,
+  explicacion: string,
+  textoNuevo: string,
+): HTMLElement {
+  const filas = Object.entries(datos).map(([nombre, valor]) => {
+    const tipo = typeof valor;
+    const control =
+      tipo === 'boolean'
+        ? h('input', { type: 'checkbox', checked: valor, 'data-ruta': `${ruta}.${nombre}`, onchange: (ev: Event) => alCambiar(nombre, (ev.target as HTMLInputElement).checked) })
+        : h('input', { class: 'campo', type: tipo === 'number' ? 'number' : 'text', value: String(valor), 'data-ruta': `${ruta}.${nombre}`, onchange: (ev: Event) => {
+            const t = (ev.target as HTMLInputElement).value;
+            alCambiar(nombre, tipo === 'number' ? Number(t.replace(',', '.')) || 0 : t);
+          } });
+    return h('div', { class: 'propiedad-propia' },
+      h('code', { title: `En el código: ${prefijo}.${nombre}` }, nombre),
+      control,
+      botonIcono('cerrar', `Quitar "${nombre}"`, () => alCambiar(nombre, undefined), undefined, 'pequeno'),
+    );
+  });
+  const nueva = h('button', { class: 'boton-enlace', 'data-ruta': `${ruta}.nuevo`, onclick: async () => {
+    const n = await pedirTexto('Nuevo dato', `Nombre (por ejemplo: vida, puntos, nivel). En el código será ${prefijo}.vida`);
+    if (!n) return;
+    const limpio = n.trim().replace(/\s+/g, '_');
+    if (!/^[\p{L}_][\p{L}\p{N}_]*$/u.test(limpio)) return notificar('Un nombre empieza por una letra y solo lleva letras, números y _', 'error');
+    const valor = await pedirTexto('Valor inicial', `Valor con el que empieza ${limpio} (un número, un texto, verdadero o falso)`, '0');
+    if (valor === null) return;
+    alCambiar(limpio, leerDatoInicial(valor));
+  } }, textoNuevo);
+  return h('div', {},
+    filas.length ? h('div', { class: 'lista-propiedades' }, filas) : h('p', { class: 'nota' }, explicacion),
+    nueva,
+  );
 }

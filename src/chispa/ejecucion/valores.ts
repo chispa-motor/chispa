@@ -78,6 +78,12 @@ export class FuncionChispa {
   constructor(
     readonly definicion: SentenciaFuncion,
     readonly entorno: Entorno,
+    /**
+     * De qué script y de qué objeto es. Si la llama OTRO objeto
+     * (buscar("Puerta").abrir()), se ejecuta como si fuera la puerta: los
+     * errores dicen su archivo y el depurador para en sus líneas.
+     */
+    readonly dueno: { programa: { archivo: string; lineas: string[] } | null; objeto: unknown } | null = null,
   ) {}
 }
 

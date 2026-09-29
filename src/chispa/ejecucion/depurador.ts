@@ -204,6 +204,11 @@ export class Depurador {
     if (yo instanceof Anfitrion && yo.resumenParaDepurar) {
       for (const [nombre, valor] of yo.resumenParaDepurar()) filas.push({ grupo: 'yo', nombre: `yo.${nombre}`, valor: valorParaVer(valor) });
     }
+    // Y lo compartido por todos los scripts (juego.puntos...)
+    const juego = globales.buscar('juego')?.valor;
+    if (juego instanceof Anfitrion && juego.resumenParaDepurar) {
+      for (const [nombre, valor] of juego.resumenParaDepurar()) filas.push({ grupo: 'juego', nombre: `juego.${nombre}`, valor: valorParaVer(valor) });
+    }
     return filas;
   }
 }

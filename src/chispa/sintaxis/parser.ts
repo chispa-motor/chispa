@@ -503,7 +503,7 @@ class Parser {
       'Los eventos que existen son:\n' +
       '    cuando empieza:\n    cuando cada fotograma:\n    cuando cada 2 segundos:\n    cuando pasen 3 segundos:\n' +
       '    cuando se pulsa "espacio":   (también "se mantiene" y "se suelta")\n' +
-      '    cuando toco Enemigo:\n    cuando dejo de tocar Enemigo:\n    cuando hago clic:\n    cuando hago clic encima:\n    cuando termina la animacion:\n    cuando salgo de la pantalla:';
+      '    cuando toco Enemigo:\n    cuando dejo de tocar Enemigo:\n    cuando hago clic:\n    cuando hago clic encima:\n    cuando termina la animacion:\n    cuando salgo de la pantalla:\n    cuando recibo "mensaje":';
 
     if (this.esPalabra('empieza') || this.esPalabra('empiece') || this.esPalabra('comienza')) {
       this.avanzar();
@@ -570,6 +570,18 @@ class Parser {
       this.avanzar();
       return { tipo: 'pantalla' };
     }
+    if (this.esPalabra('recibo')) {
+      this.avanzar();
+      // Con comillas o sin ellas: cuando recibo "abrir_puerta":  ·  cuando recibo abrir_puerta:
+      const m = this.actual;
+      if (m.tipo !== 'texto' && m.tipo !== 'identificador') {
+        this.error('después de "recibo" va el nombre del mensaje.', 'Ejemplo: cuando recibo "abrir_puerta":   (y en otro script: enviar("abrir_puerta"))');
+      }
+      this.avanzar();
+      const original = m.tipo === 'texto' ? m.valor : m.original;
+      if (!original.trim()) this.error('el nombre del mensaje está vacío.', 'Ejemplo: cuando recibo "abrir_puerta":');
+      return { tipo: 'recibo', mensaje: normalizar(original), original };
+    }
     let dejar = false;
     if (this.esPalabra('dejo')) {
       this.avanzar();
@@ -588,9 +600,10 @@ class Parser {
         clic: 'cuando hago clic:', click: 'cuando hago clic:', pincho: 'cuando hago clic:',
         empiece: 'cuando empieza:', inicia: 'cuando empieza:', comienza: 'cuando empieza:', arranca: 'cuando empieza:',
         salga: 'cuando salgo de la pantalla:', acaba: 'cuando termina la animacion:',
+        recibe: 'cuando recibo "mensaje":', reciba: 'cuando recibo "mensaje":', llega: 'cuando recibo "mensaje":', escucho: 'cuando recibo "mensaje":', oigo: 'cuando recibo "mensaje":',
       };
       const forma = SINONIMOS[normalizar(t.original)];
-      const parecido = sugerir(t.original, ['empieza', 'toco', 'hago', 'dejo', 'se', 'cada', 'pasen', 'termina', 'salgo']);
+      const parecido = sugerir(t.original, ['empieza', 'toco', 'hago', 'dejo', 'se', 'cada', 'pasen', 'termina', 'salgo', 'recibo']);
       this.error(
         `no conozco el evento 'cuando ${t.original}'.`,
         forma ? `En Chispa se escribe así: ${forma}\n${ayuda}` : parecido ? `¿Querías decir 'cuando ${parecido} ...'?\n${ayuda}` : ayuda,

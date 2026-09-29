@@ -12,7 +12,7 @@
  * El código de los scripts NO entra en este historial: el editor de código
  * tiene su propio deshacer, letra a letra (como en cualquier editor).
  */
-import { migrarProyecto, proyectoVacio, tipoPorNombre, type DefEscena, type DefObjeto, type DefProyecto } from '../../proyecto/formato';
+import { migrarProyecto, proyectoVacio, tipoPorNombre, type DatoInicial, type DefEscena, type DefObjeto, type DefProyecto } from '../../proyecto/formato';
 import type { DefAnimacion } from '../../objetos/componentes/Animador';
 import type { TipoCasilla } from '../../objetos/componentes/MapaCasillas';
 import { normalizar } from '../../utilidades/texto';
@@ -166,6 +166,17 @@ export class EstadoEditor {
     this.cambiar('proyecto', () => {
       if (ajuste === 'pixelArt') this.proyecto.pixelArt = Boolean(valor);
       else this.proyecto[ajuste] = Math.max(64, Math.min(4096, Math.round(Number(valor) || 0)));
+    });
+  }
+
+  /** Un dato de «Datos del juego» (con qué empieza juego.puntos...). `undefined` lo quita. */
+  cambiarDatoJuego(nombre: string, valor: DatoInicial | undefined): void {
+    const n = nombre.trim();
+    if (!n) return;
+    this.cambiar('proyecto', () => {
+      const datos = (this.proyecto.datos ??= {});
+      if (valor === undefined) delete datos[n];
+      else datos[n] = valor;
     });
   }
 

@@ -33,6 +33,7 @@ import { migrarProyecto, tipoPorNombre, type DefObjeto, type DefProyecto } from 
 import { comprobarRevision, revisarProyecto } from './Revision';
 import { fuenteDeTexto, plantillaDeTexto, tieneHuecos } from './TextosConHuecos';
 import { Entorno } from '../chispa/ejecucion/entorno';
+import type { Valor } from '../chispa/ejecucion/valores';
 import { referencia } from '../chispa/api/objetos';
 import type { Depurador } from '../chispa/ejecucion/depurador';
 
@@ -69,6 +70,8 @@ export class JuegoEnMarcha implements ContextoJuego {
   }
   private programas = new Map<string, Programa>();
   private pendiente: Pendiente = null;
+  /** Mensajes enviados con enviar(): se reparten al empezar el siguiente fotograma. */
+  private buzon: { mensaje: string; dato: Valor }[] = [];
   private erroresVistos = new Map<string, number>();
 
   private constructor(
@@ -83,6 +86,8 @@ export class JuegoEnMarcha implements ContextoJuego {
     this.interprete.alMostrar = opciones.alMostrar ?? ((t) => escribirEnConsola(t));
     this.interprete.nombresDeObjetos = () => [...new Set(this.escena.objetos.map((o) => o.nombre))];
     instalarAPIMotor(this.interprete, this, this.datos);
+    // Los «Datos del juego» del editor: están antes de que empiece ningún script
+    for (const [nombre, valor] of Object.entries(proyecto.datos ?? {})) this.datos.asignar(normalizar(nombre), valor, nombre);
     this.interprete.alErrorVivo = (e) => this.informarError(e);
     this.interprete.depurador = opciones.depurador ?? null;
   }
@@ -157,6 +162,7 @@ export class JuegoEnMarcha implements ContextoJuego {
 
   private antesDelFotograma(dt: number): void {
     this.interprete.globales.declarar('delta', dt);
+    this.repartirMensajes();
     const p = this.pendiente;
     if (!p) return;
     // Cambio con fundido: primero se oscurece la pantalla (en tiempo real, aunque el juego esté en pausa)
@@ -172,6 +178,27 @@ export class JuegoEnMarcha implements ContextoJuego {
   pedirReinicio(): void {
     // No reiniciamos en mitad de un script: lo hacemos al principio del siguiente fotograma.
     this.pendiente = { tipo: 'reiniciar' };
+  }
+
+  enviarMensaje(mensaje: string, _original: string, dato: Valor): void {
+    this.buzon.push({ mensaje, dato });
+  }
+
+  /**
+   * Reparte los mensajes que se enviaron en el fotograma anterior a todos los
+   * objetos que los escuchan. Los que se envíen mientras tanto (un «cuando
+   * recibo» que envía otro mensaje) llegarán en el siguiente: así dos objetos
+   * que se contestan no se quedan contestándose para siempre en un fotograma.
+   */
+  private repartirMensajes(): void {
+    if (!this.buzon.length) return;
+    const mensajes = this.buzon;
+    this.buzon = [];
+    for (const { mensaje, dato } of mensajes) {
+      for (const o of [...this.escena.objetos]) {
+        if (!o.destruido) o.obtener(ScriptChispa)?.recibirMensaje(mensaje, dato);
+      }
+    }
   }
 
   /** Cambia de escena. Con `fundido` (segundos), la pantalla se oscurece, cambia y se vuelve a aclarar. */

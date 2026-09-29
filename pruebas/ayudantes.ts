@@ -147,6 +147,8 @@ export interface OpcionesJuegoPrueba {
   imagenes?: Record<string, string>;
   gravedad?: number;
   depurador?: Depurador;
+  /** «Datos del juego»: con qué empieza juego. */
+  datos?: DefProyecto['datos'];
 }
 
 export function juegoDePrueba(opciones: OpcionesJuegoPrueba) {
@@ -167,6 +169,7 @@ export function juegoDePrueba(opciones: OpcionesJuegoPrueba) {
     plantillas: opciones.plantillas ?? {},
     escenas: { Principal: { colorFondo: 'negro', gravedad: opciones.gravedad, objetos: opciones.escena ?? [] }, ...opciones.escenas },
     escenaInicial: 'Principal',
+    datos: opciones.datos,
   };
   // Los sonidos "se cargan" (sin audio de verdad en los tests)
   for (const nombre of Object.keys(proyecto.sonidos)) void m.motor.sonido.cargar(nombre, 'no-hay-audio');

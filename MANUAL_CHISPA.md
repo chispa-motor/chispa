@@ -369,6 +369,15 @@ cuando termina la animacion:
     yo.animar("quieto")
 ```
 
+#### `cuando recibo "mensaje":`
+
+Se ejecuta cuando alguien hace enviar("mensaje") en cualquier script (le llega a TODOS los que lo escuchen, al empezar el siguiente fotograma). Si el mensaje trae algo, esta en 'dato'.
+
+```
+cuando recibo "abrir_puerta":
+    yo.ocultar()
+```
+
 #### `cuando salgo de la pantalla:`
 
 Se ejecuta cuando el objeto sale de lo que se ve (por un borde de la pantalla). Sirve para borrar balas y enemigos que ya no se ven, o para perder si el jugador se cae.
@@ -405,6 +414,15 @@ Dentro de 'cuando toco': si has tocado una casilla de un mapa, su tipo (si no, n
 cuando toco:
     si casilla == "agua":
         yo.gravedad = 0.2
+```
+
+#### `dato`
+
+Dentro de 'cuando recibo': lo que se envio junto al mensaje con enviar("mensaje", dato). Si no se envio nada, es nulo.
+
+```
+cuando recibo "dano":
+    yo.vida -= dato
 ```
 
 #### `juego`
@@ -693,6 +711,15 @@ Junta los elementos de una lista en un texto, con el separador entre medias (por
 
 ```
 yo.texto = unir(inventario, " - ")
+```
+
+#### `enviar("mensaje", dato)`
+
+Avisa a todos los objetos que tengan 'cuando recibo "mensaje"'. El dato es opcional (un numero, un texto, un objeto...) y llega en 'dato'.
+
+```
+cuando toco Llave:
+    enviar("abrir_puerta")
 ```
 
 #### `contar("Tipo")`
