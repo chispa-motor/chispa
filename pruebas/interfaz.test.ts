@@ -103,13 +103,14 @@ describe('Vista de la escena: geometría', () => {
 // ═════════════════════════ Paneles ═════════════════════════
 
 describe('Paneles del editor', () => {
-  it('el panel izquierdo lista los objetos de la escena con sus scripts', () => {
+  it('el panel izquierdo lista los objetos de la escena con sus scripts (se redibuja en el siguiente fotograma)', async () => {
     const e = new EstadoEditor(proyectoMinimo);
     const panel = new PanelIzquierdo(e, vistaFalsa());
     const texto = panel.elemento.textContent ?? '';
     expect(texto).toContain('Cuadrado');
     expect(texto).toContain('cuadrado.chs');
     e.crearObjeto('circulo', 0, 0);
+    await new Promise((r) => requestAnimationFrame(r));
     expect(panel.elemento.querySelectorAll('.nodo:not(.hijo)').length).toBe(2);
     expect(panel.elemento.querySelector('.nodo.seleccionado')?.textContent).toContain('Circulo');
     // Clic en el script: se abre en una pestaña

@@ -76,7 +76,7 @@ export class Renderizador {
     private libre = false,
   ) {
     const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Este navegador no permite dibujar en Canvas 2D.');
+    if (!ctx) throw new Error('Este navegador no permite dibujar el juego.');
     this.ctx = ctx;
 
     // Cada vez que cambia el tamaño del contenedor, recalculamos la escala.

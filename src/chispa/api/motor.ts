@@ -195,8 +195,9 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
       {
         pulsado: (a, p) => ctx.motor.entrada.ratonPulsado(argBoton(a, 'pulsado', p)),
         sepulso: (a, p) => ctx.motor.entrada.ratonSePulso(argBoton(a, 'sePulso', p)),
+        sesolto: (a, p) => ctx.motor.entrada.ratonSeSolto(argBoton(a, 'seSolto', p)),
       },
-      ['x', 'y', 'posicion', 'rueda', 'pulsado', 'sePulso'],
+      ['x', 'y', 'posicion', 'rueda', 'pulsado', 'sePulso', 'seSolto'],
     ),
   );
 

@@ -111,3 +111,15 @@ Ver PROBLEMAS_PRINCIPIANTE.md para la lista completa de lo que se encontró.
 | Copiar y pegar usan **Ctrl+C / Ctrl+V** y un botón **Pegar**. Dentro de un campo de texto, Ctrl+V pega texto, como siempre. | Es lo que se espera en cualquier programa. El botón sirve cuando el cursor está en un campo. |
 | **Mayús + arrastrar** con el pincel pinta un rectángulo. | Paredes y suelos en un solo gesto. |
 | `?limpio` en la dirección abre el editor sin recuperar lo guardado. | Para las pruebas del navegador (cada prueba empieza igual). |
+
+### Pulido (bloque 5)
+
+| Decisión | Por qué |
+|---|---|
+| El manual (**MANUAL_CHISPA.md**) **se genera** a partir de las fichas de la ayuda del editor, y un test comprueba que está al día (`npm run manual`). | Así el manual y la ayuda del editor no pueden contradecirse nunca. |
+| La especificación ya **no repite la API**: remite al manual. | Tener dos listas de la API es la forma más segura de que acaben diciendo cosas distintas. |
+| Vista de la escena: los objetos se **reconstruyen una sola vez por fotograma** y **solo los que han cambiado**. El panel de objetos solo se redibuja si cambia lo que enseña. | Con 500 objetos, arrastrar uno rehacía los 500 en cada movimiento del ratón. Ahora va a 60 fotogramas por segundo. |
+| Física: la rejilla ajusta el **tamaño de sus celdas al de los objetos**, las **parejas cercanas se buscan una vez por paso** y las cajas se calculan sin crear objetos nuevos. `obtener(Componente)` recuerda el resultado. | Con 500 objetos con física amontonados, el juego iba a 10 fotogramas por segundo; ahora va a 60. |
+| Las **pruebas de navegador** (`npm run pruebas:navegador`) no forman parte de `npm run pruebas`. | Necesitan descargar un navegador (unos 150 MB). Los tests normales siguen funcionando sin nada más. |
+| Imagen o sonido importado que no se puede leer: el mensaje dice **su nombre** y cómo arreglarlo, no la ruta. | La ruta de un recurso importado es un «data URL» de miles de letras. |
+| Nuevo **`raton.seSolto()`**, que es lo mismo que ya tenía `teclado`. | La función del motor ya existía, pero no se podía usar desde Chispa. |

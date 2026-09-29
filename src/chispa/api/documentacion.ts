@@ -133,6 +133,7 @@ export const DOC_MODULOS: DocModulo[] = [
       d('rueda', 'propiedad', 'raton.rueda', 'Cuánto se ha girado la rueda en este fotograma (positivo = hacia abajo).', 'escena.camara.zoom -= raton.rueda * 0.1'),
       d('pulsado', 'accion', 'raton.pulsado("izquierdo")', 'Verdadero mientras el botón esté pulsado ("izquierdo", "derecho" o "medio").', 'si raton.pulsado("izquierdo"):\n    disparar()', 'pulsado("${1:izquierdo}")'),
       d('sePulso', 'accion', 'raton.sePulso("izquierdo")', 'Verdadero solo en el fotograma en que se pulsa el botón.', 'si raton.sePulso():\n    mostrar("clic")', 'sePulso()'),
+      d('seSolto', 'accion', 'raton.seSolto("izquierdo")', 'Verdadero solo en el fotograma en que se suelta el botón (por ejemplo, para soltar algo que arrastras).', 'si raton.seSolto():\n    mostrar("soltado")', 'seSolto()'),
     ],
   },
   {

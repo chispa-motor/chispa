@@ -31,6 +31,8 @@ export class ObjetoJuego {
   readonly propiedades = new Map<string, unknown>();
 
   private componentes: Componente[] = [];
+  /** Recuerda qué componente es de cada clase: obtener() se usa miles de veces por fotograma. */
+  private porClase = new Map<Function, Componente | undefined>();
 
   constructor(nombre: string, tipo = nombre) {
     this.nombre = nombre;
@@ -42,6 +44,7 @@ export class ObjetoJuego {
   agregar<T extends Componente>(componente: T): T {
     componente.objeto = this;
     this.componentes.push(componente);
+    this.porClase.clear();
     // Si el objeto ya está en una escena en marcha, el componente arranca ya.
     if (this.escena?.iniciada) componente.iniciar?.();
     return componente;
@@ -49,7 +52,10 @@ export class ObjetoJuego {
 
   /** Devuelve el componente de esa clase, o undefined si no lo tiene. Ej: obj.obtener(Fisica) */
   obtener<T extends Componente>(clase: ClaseComponente<T>): T | undefined {
-    return this.componentes.find((c) => c instanceof clase) as T | undefined;
+    if (this.porClase.has(clase)) return this.porClase.get(clase) as T | undefined;
+    const c = this.componentes.find((x) => x instanceof clase) as T | undefined;
+    this.porClase.set(clase, c);
+    return c;
   }
 
   get todosLosComponentes(): readonly Componente[] {

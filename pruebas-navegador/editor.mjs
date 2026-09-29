@@ -179,12 +179,20 @@ await prueba('rendimiento: 500 objetos en la escena', async (p) => {
   await estado(p, () => {
     const e = window.chispa.estado;
     e.empezarCambioLargo();
-    for (let i = 0; i < 500; i++) e.crearObjeto(i % 2 ? 'circulo' : 'rectangulo', (i % 25) * 40, Math.floor(i / 25) * 40);
+    // Un suelo y 500 objetos CON FÍSICA que caen y se amontonan (lo más costoso para el motor)
+    e.crearObjeto('mapa', 0, 0);
+    e.pintarRectangulo(e.seleccion, 0, 0, 19, 0, 'suelo');
+    for (let i = 0; i < 500; i++) {
+      e.crearObjeto(i % 2 ? 'circulo' : 'rectangulo', 40 + (i % 25) * 36, 100 + Math.floor(i / 25) * 36);
+      e.activarComponente(e.seleccion, 'fisica', true);
+      e.cambiarPropiedad(e.seleccion, 'sprite.ancho', 20);
+      e.cambiarPropiedad(e.seleccion, 'sprite.alto', 20);
+    }
     e.terminarCambioLargo();
   });
   // Arrastrar un objeto con 500 en la escena: cuánto tarda cada fotograma
   const lienzo = await p.locator('.lienzo-escena').boundingBox();
-  const inicio = await estado(p, () => window.chispa.vistaEscena.camara.aPantalla(0, 0));
+  const inicio = await estado(p, () => window.chispa.vistaEscena.camara.aPantalla(40, 100));
   const medida = await estado(p, () => {
     window.__tiempos = [];
     let anterior = performance.now();
@@ -210,9 +218,9 @@ await prueba('rendimiento: 500 objetos en la escena', async (p) => {
   // Y el juego con esos 500 objetos
   await p.keyboard.press('F5');
   await p.waitForFunction(() => document.querySelector('.estado-juego')?.textContent?.startsWith('Jugando'));
-  await p.waitForTimeout(1500);
+  await p.waitForTimeout(3000);
   const juego = await estado(p, () => window.chispa.vistaJuego.motor.tiempo.fps);
-  console.log(`      (juego con 500 objetos: ${juego} fotogramas por segundo)`);
+  console.log(`      (juego con 500 objetos con física amontonados: ${juego} fotogramas por segundo)`);
   comprobar(juego > 30, `el juego va a ${juego} fotogramas por segundo`);
 });
 

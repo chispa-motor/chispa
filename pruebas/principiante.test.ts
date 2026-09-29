@@ -207,3 +207,12 @@ describe('Errores con las formas de hablar de quien empieza', () => {
     it(nombre, () => expect(pistaDe(codigo)).toContain(esperado));
   }
 });
+
+describe('raton.seSolto', () => {
+  it('es verdadero en el fotograma en que se suelta el botón', () => {
+    const j = unObjeto('cuando cada fotograma:\n    si raton.seSolto():\n        mostrar("soltado")\n');
+    j.clic(100, 100);
+    j.avanzar(2);
+    expect(j.salida).toEqual(['soltado']);
+  });
+});

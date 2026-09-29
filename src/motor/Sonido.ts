@@ -174,10 +174,9 @@ export class Sonido {
       const datos = await (await fetch(ruta)).arrayBuffer();
       this.buffers.set(nombre, await ctx.decodeAudioData(datos));
     } catch {
-      throw new ErrorMotor(
-        `No he podido cargar el sonido "${ruta}".`,
-        'Comprueba que el archivo existe dentro de la carpeta "public" y que es .mp3, .ogg o .wav.',
-      );
+      throw ruta.startsWith('data:')
+        ? new ErrorMotor(`No he podido cargar el sonido "${nombre}".`, 'El archivo está dañado o no es un sonido que el navegador entienda (usa .mp3, .ogg o .wav). Bórralo y vuelve a importarlo (Proyecto > Sonidos).')
+        : new ErrorMotor(`No he podido cargar el sonido "${ruta}".`, 'Comprueba que el archivo existe dentro de la carpeta "public" y que es .mp3, .ogg o .wav.');
     }
   }
 

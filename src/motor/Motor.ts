@@ -130,17 +130,6 @@ export class Motor {
     this.renderizador.destruir();
   }
 
-  /** Quita todas las funciones registradas y la escena (al parar un juego en el editor). */
-  limpiarFunciones(): void {
-    this.actualizadores = [];
-    this.dibujadores = [];
-    this.escena = null;
-  }
-
-  get estaCorriendo(): boolean {
-    return this.corriendo;
-  }
-
   /**
    * Un fotograma del bucle.
    * Es una "función flecha" guardada en una propiedad para que `this` siga

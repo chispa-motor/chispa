@@ -22,11 +22,13 @@ export class Recursos {
       };
       img.onerror = () =>
         rechazar(
-          new ErrorMotor(
-            `No he podido cargar la imagen "${ruta}".`,
-            'Comprueba que el archivo existe dentro de la carpeta "public" y que el nombre está bien escrito ' +
-              '(las mayúsculas y minúsculas cuentan: "Estrella.svg" no es lo mismo que "estrella.svg").',
-          ),
+          ruta.startsWith('data:')
+            ? new ErrorMotor(`No he podido cargar la imagen "${nombre}".`, 'El archivo está dañado o no es una imagen. Bórrala y vuelve a importarla (Proyecto > Imágenes).')
+            : new ErrorMotor(
+                `No he podido cargar la imagen "${ruta}".`,
+                'Comprueba que el archivo existe dentro de la carpeta "public" y que el nombre está bien escrito ' +
+                  '(las mayúsculas y minúsculas cuentan: "Estrella.svg" no es lo mismo que "estrella.svg").',
+              ),
         );
       img.src = ruta;
     });

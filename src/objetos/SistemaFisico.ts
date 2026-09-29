@@ -46,7 +46,24 @@ interface Cuerpo {
   colision: Colision | undefined;
   /** ¿Estaba en el suelo en el paso anterior? (para el rozamiento) */
   apoyado: boolean;
+  /** Medio ancho, medio alto y desplazamiento de su caja (se calculan una vez por paso, para ir rápido). */
+  medio?: { x: number; y: number; dx: number; dy: number };
 }
+
+/** La caja de un cuerpo a partir de su posición y su "medio" (sin crear objetos nuevos si se le pasa uno). */
+function cajaRapida(c: Cuerpo, r: Caja): Caja {
+  const p = c.objeto.transformacion.posicion;
+  const m = c.medio!;
+  const cx = p.x + m.dx;
+  const cy = p.y + m.dy;
+  r.izquierda = cx - m.x;
+  r.derecha = cx + m.x;
+  r.abajo = cy - m.y;
+  r.arriba = cy + m.y;
+  return r;
+}
+const cajaA: Caja = { izquierda: 0, derecha: 0, abajo: 0, arriba: 0 };
+const cajaB: Caja = { izquierda: 0, derecha: 0, abajo: 0, arriba: 0 };
 
 interface Colisionador {
   objeto: ObjetoJuego;
@@ -186,17 +203,26 @@ export class SistemaFisico {
   private separarCuerpos(cuerpos: Cuerpo[], solidos: RejillaEspacial<Colisionador>, mapas: MapaCasillas[]): void {
     const solidosFisicos = cuerpos.filter((c) => c.colision?.solido);
     if (solidosFisicos.length < 2) return;
-    const rejilla = new RejillaEspacial<Cuerpo>();
-    for (const c of solidosFisicos) rejilla.insertar(c.colision!.caja(), c);
+    const cajas = solidosFisicos.map((c) => c.colision!.caja());
+    solidosFisicos.forEach((c, i) => {
+      const k = cajas[i];
+      const p = c.objeto.transformacion.posicion;
+      c.medio = { x: (k.derecha - k.izquierda) / 2, y: (k.arriba - k.abajo) / 2, dx: (k.izquierda + k.derecha) / 2 - p.x, dy: (k.abajo + k.arriba) / 2 - p.y };
+    });
+    const rejilla = new RejillaEspacial<Cuerpo>(tamanoDeCelda(cajas));
+    solidosFisicos.forEach((c, i) => rejilla.insertar(cajas[i], c));
 
+    // 1. Qué parejas están cerca (una sola vez por paso: es lo que más cuesta)
+    const parejas: [Cuerpo, Cuerpo][] = [];
+    solidosFisicos.forEach((a, i) => {
+      for (const b of rejilla.consultarConGrandes(agrandar(cajas[i], 2))) {
+        if (b.objeto.id > a.objeto.id) parejas.push([a, b]); // cada pareja una sola vez
+      }
+    });
+    // 2. Separarlas (varias vueltas: al empujar a uno se puede meter en otro)
     for (let it = 0; it < ITERACIONES; it++) {
       let algo = false;
-      for (const a of solidosFisicos) {
-        for (const b of rejilla.consultarConGrandes(a.colision!.caja())) {
-          if (b === a || b.objeto.id < a.objeto.id) continue; // cada pareja una sola vez
-          if (this.resolverPareja(a, b)) algo = true;
-        }
-      }
+      for (const [a, b] of parejas) if (this.resolverPareja(a, b)) algo = true;
       if (!algo) break;
     }
     // Si al empujar hemos metido a alguien en una pared, lo sacamos
@@ -204,8 +230,8 @@ export class SistemaFisico {
   }
 
   private resolverPareja(a: Cuerpo, b: Cuerpo): boolean {
-    const ca = a.colision!.caja();
-    const cb = b.colision!.caja();
+    const ca = cajaRapida(a, cajaA);
+    const cb = cajaRapida(b, cajaB);
     if (!solapanDeVerdad(ca, cb)) return false;
     const solapeX = Math.min(ca.derecha - cb.izquierda, cb.derecha - ca.izquierda);
     const solapeY = Math.min(ca.arriba - cb.abajo, cb.arriba - ca.abajo);
@@ -276,8 +302,9 @@ export class SistemaFisico {
    * le interesan a nadie.
    */
   private detectarContactos(colisionadores: Colisionador[], mapas: MapaCasillas[]): void {
-    const rejilla = new RejillaEspacial<Colisionador>();
-    for (const c of colisionadores) rejilla.insertar(c.colision.caja(), c);
+    const cajas = colisionadores.map((c) => c.colision.caja());
+    const rejilla = new RejillaEspacial<Colisionador>(tamanoDeCelda(cajas));
+    colisionadores.forEach((c, i) => rejilla.insertar(cajas[i], c));
 
     const nuevos = new Map<string, Contacto>();
     for (const a of colisionadores) {
@@ -331,6 +358,22 @@ function avisar(a: ObjetoJuego, b: ObjetoJuego, evento: 'alTocar' | 'alDejarDeTo
 
 function claveContacto(a: ObjetoJuego, b: ObjetoJuego): string {
   return a.id < b.id ? `${a.id}-${b.id}` : `${b.id}-${a.id}`;
+}
+
+/**
+ * Tamaño de las celdas de la rejilla según lo grandes que son los objetos:
+ * unas dos veces su tamaño medio. Con celdas muy grandes, cada celda tiene
+ * demasiados objetos; con celdas muy pequeñas, cada objeto ocupa muchas.
+ */
+function tamanoDeCelda(cajas: Caja[]): number {
+  if (cajas.length === 0) return 128;
+  let suma = 0;
+  for (const c of cajas) suma += Math.max(c.derecha - c.izquierda, c.arriba - c.abajo);
+  return Math.min(256, Math.max(32, (2 * suma) / cajas.length));
+}
+
+function agrandar(c: Caja, m: number): Caja {
+  return { izquierda: c.izquierda - m, derecha: c.derecha + m, abajo: c.abajo - m, arriba: c.arriba + m };
 }
 
 function rebotar(v: number, rebote: number): number {

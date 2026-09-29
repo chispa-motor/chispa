@@ -29,14 +29,12 @@ import {
   ajustar,
   CamaraEditor,
   cajaDe,
-  dentro,
   marcoDelJuego,
   objetoEn,
   ordenDeDibujo,
   pasoDeCuadricula,
   posicionEnEditor,
   posicionGuardada,
-  type Caja,
 } from './geometria';
 
 export type Herramienta = 'mover' | 'pincel' | 'goma';
@@ -79,6 +77,9 @@ export class VistaEscena {
   private etiquetaZoom: HTMLElement;
   private etiquetaRaton: HTMLElement;
   private objetos: ObjetoJuego[] = [];
+  /** El JSON de cada objeto la última vez que se construyó: solo se reconstruye lo que ha cambiado. */
+  private construidos: string[] = [];
+  private hayQueReconstruir = false;
   private imagenesCargadas = new Map<string, string>();
   private sucio = true;
   private tamanoDibujado = '';
@@ -93,7 +94,7 @@ export class VistaEscena {
   constructor(private estado: EstadoEditor) {
     this.canvas = h('canvas', { class: 'lienzo-escena', tabindex: '0', 'aria-label': 'Vista de la escena' });
     const contenedorLienzo = h('div', { class: 'contenedor-lienzo' }, this.canvas);
-    this.etiquetaZoom = h('span', { class: 'etiqueta-zoom', title: 'Zoom de la vista (rueda del ratón)' }, '100%');
+    this.etiquetaZoom = h('span', { class: 'etiqueta-zoom', title: 'Cuánto se acerca la vista (rueda del ratón)' }, '100%');
     this.etiquetaRaton = h('span', { class: 'etiqueta-raton', title: 'Dónde está el ratón en el mundo del juego (la Y crece hacia arriba)' });
     this.barra = h('div', { class: 'barra-escena' });
     this.elemento = h('div', { class: 'vista-escena' }, this.barra, contenedorLienzo);
@@ -102,9 +103,15 @@ export class VistaEscena {
     this.escuchar();
     this.reconstruir();
     this.quitarOyente = estado.alCambiar((c) => {
-      if (c === 'seleccion' || c === 'historial') return this.redibujar();
+      if (c === 'seleccion' || c === 'historial') {
+        this.comprobarHerramienta();
+        return this.redibujar();
+      }
       if (c === 'codigo' || c === 'archivos') return;
-      this.reconstruir();
+      // No reconstruimos YA: se hace una sola vez, justo antes de dibujar el siguiente fotograma
+      // (al arrastrar llegan muchos cambios seguidos y solo importa el último)
+      this.hayQueReconstruir = true;
+      this.redibujar();
     });
     const bucle = () => {
       this.idFotograma = requestAnimationFrame(bucle);
@@ -214,11 +221,20 @@ export class VistaEscena {
 
   /** Vuelve a crear los objetos del motor a partir del JSON (tras cualquier cambio). */
   private reconstruir(): void {
+    this.hayQueReconstruir = false;
     this.sincronizarImagenes();
     const p = this.estado.proyecto;
     // Un "falso" contenedor para que los sprites encuentren las imágenes
     const falsa = { motor: { recursos: this.recursos } } as unknown as ObjetoJuego['escena'];
+    // Solo se vuelve a crear lo que ha cambiado (con 500 objetos, arrastrar uno solo rehace uno)
+    const animaciones = JSON.stringify(p.animaciones);
+    const anteriores = new Map(this.construidos.map((clave, i) => [clave, this.objetos[i]]));
+    const claves: string[] = [];
     this.objetos = this.estado.escena.objetos.map((def, i) => {
+      const clave = `${i}|${JSON.stringify(def)}|${def.animacion ? animaciones : ''}`;
+      claves.push(clave);
+      const ya = anteriores.get(clave);
+      if (ya) return ya;
       const o = crearObjetoDesdeDefinicion(def, `objeto${i + 1}`, p);
       o.escena = falsa;
       const s = o.obtener(Sprite);
@@ -226,16 +242,22 @@ export class VistaEscena {
       if (s && anim?.fotogramas[0]) s.imagen = anim.fotogramas[0];
       return o;
     });
-    if (this.herramienta !== 'mover' && !this.estado.seleccionado?.mapa) {
-      this.herramienta = 'mover';
-      this.dibujarBarra();
-      this.alCambiarHerramienta();
-    }
+    this.construidos = claves;
+    this.comprobarHerramienta();
     if (this.escenaVista !== this.estado.escenaActual) {
       this.escenaVista = this.estado.escenaActual;
       this.encuadrada = false;
     }
     this.redibujar();
+  }
+
+  /** El pincel y la goma solo tienen sentido con un mapa seleccionado. */
+  private comprobarHerramienta(): void {
+    if (this.herramienta !== 'mover' && !this.estado.seleccionado?.mapa) {
+      this.herramienta = 'mover';
+      this.dibujarBarra();
+      this.alCambiarHerramienta();
+    }
   }
 
   /** Carga las imágenes nuevas del proyecto (y olvida las borradas). */
@@ -266,6 +288,7 @@ export class VistaEscena {
     if (!this.canvas.isConnected) return;
     const tamano = `${this.r.ancho}x${this.r.alto}`;
     if (this.r.ancho <= 1 || this.r.alto <= 1) return;
+    if (this.hayQueReconstruir) this.reconstruir();
     if (!this.sucio && tamano === this.tamanoDibujado) return;
     this.camara.ancho = this.r.ancho;
     this.camara.alto = this.r.alto;
@@ -752,18 +775,6 @@ export class VistaEscena {
     }
   }
 
-  /** La caja de lo que se ve ahora (para tests y para el inspector). */
-  zonaVisible(): Caja {
-    const a = this.camara.aMundo(0, 0);
-    const b = this.camara.aMundo(this.camara.ancho, this.camara.alto);
-    return { izquierda: a.x, derecha: b.x, arriba: a.y, abajo: b.y };
-  }
-
-  /** ¿Está el punto (del mundo) dentro del objeto seleccionado? (para tests) */
-  tocaSeleccion(x: number, y: number): boolean {
-    const def = this.estado.seleccionado;
-    return !!def && dentro(cajaDe(def, this.marco()), x, y);
-  }
 }
 
 export function leerComoDataURL(archivo: File): Promise<string> {

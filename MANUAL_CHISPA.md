@@ -1158,6 +1158,15 @@ si raton.sePulso():
     mostrar("clic")
 ```
 
+#### `raton.seSolto("izquierdo")`
+
+Verdadero solo en el fotograma en que se suelta el botón (por ejemplo, para soltar algo que arrastras).
+
+```
+si raton.seSolto():
+    mostrar("soltado")
+```
+
 ### `escena`
 
 La escena que se está jugando.

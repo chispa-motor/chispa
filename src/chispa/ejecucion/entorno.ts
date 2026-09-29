@@ -76,9 +76,4 @@ export class Entorno {
   nombresPropios(): string[] {
     return [...this.variables.keys()];
   }
-
-  /** El valor de un nombre declarado directamente aquí (sin subir a los padres). */
-  valorPropio(nombre: string): Valor | undefined {
-    return this.variables.get(nombre)?.valor;
-  }
 }

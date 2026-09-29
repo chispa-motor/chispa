@@ -36,12 +36,37 @@ export class PanelIzquierdo {
   ) {
     this.elemento = h('div', { class: 'panel-izquierdo' }, this.cabecera, this.cuerpo);
     estado.alCambiar((c) => {
-      if (c !== 'codigo' && c !== 'historial') this.dibujar();
+      if (c !== 'codigo' && c !== 'historial') this.dibujarLuego();
     });
     this.dibujar();
   }
 
+  private pendiente = false;
+  private firmaDibujada = '';
+
+  /** Redibuja en el siguiente fotograma, y solo si ha cambiado algo de lo que se ve. */
+  private dibujarLuego(): void {
+    if (this.pendiente) return;
+    this.pendiente = true;
+    requestAnimationFrame(() => {
+      this.pendiente = false;
+      if (this.firma() !== this.firmaDibujada) this.dibujar();
+    });
+  }
+
+  /** Todo lo que enseña el panel, en un texto (si no cambia, no hace falta redibujar: por ejemplo, al arrastrar). */
+  private firma(): string {
+    const e = this.estado;
+    const p = e.proyecto;
+    const comun = [this.pestana, e.escenaActual, JSON.stringify(e.seleccion), e.pestanaActiva, e.portapapeles?.nombre ?? ''];
+    if (this.pestana === 'escena') {
+      return JSON.stringify([comun, Object.keys(p.escenas), p.escenaInicial, e.escena.objetos.map((o) => [o.nombre, o.script, o.script && o.script in p.scripts, iconoDe(o), o.sprite?.fijo])]);
+    }
+    return JSON.stringify([comun, Object.keys(p.escenas), p.escenaInicial, Object.keys(p.scripts), Object.keys(p.plantillas), Object.keys(p.imagenes), Object.keys(p.sonidos), Object.entries(p.animaciones).map(([n, a]) => [n, a.fotogramas.length]), e.todosLosObjetos().map((o) => o.script)]);
+  }
+
   dibujar(): void {
+    this.firmaDibujada = this.firma();
     const scroll = this.cuerpo.scrollTop;
     const pestana = (p: Pestana, texto: string, ic: string) =>
       h('button', { class: `pestana-panel ${this.pestana === p ? 'activa' : ''}`, onclick: () => {
@@ -62,10 +87,7 @@ export class PanelIzquierdo {
       h('select', { class: 'campo', title: 'Escena que estás editando', onchange: (ev: Event) => e.cambiarEscenaActual((ev.target as HTMLSelectElement).value) },
         escenas.map((n) => h('option', { value: n, selected: n === e.escenaActual }, n + (n === e.proyecto.escenaInicial ? '  ★' : ''))),
       ),
-      botonIcono('mas', 'Nueva escena (por ejemplo, otro nivel o un menú)', async () => {
-        const n = await pedirTexto('Nueva escena', 'Nombre de la escena (por ejemplo: Menu, Nivel2, Final). En el código: escena.cambiar("Nivel2")', 'Nivel2');
-        if (n) e.crearEscena(n);
-      }),
+      botonIcono('mas', 'Nueva escena (por ejemplo, otro nivel o un menú)', () => this.nuevaEscena()),
     );
 
     const objetos = e.escena.objetos;
@@ -240,10 +262,7 @@ export class PanelIzquierdo {
     );
 
     return [
-      this.grupo('Escenas', 'escena', [botonIcono('mas', 'Nueva escena', async () => {
-        const n = await pedirTexto('Nueva escena', 'Nombre de la escena:', 'Nivel2');
-        if (n) e.crearEscena(n);
-      }, undefined, 'pequeno')], escenas, ''),
+      this.grupo('Escenas', 'escena', [botonIcono('mas', 'Nueva escena', () => this.nuevaEscena(), undefined, 'pequeno')], escenas, ''),
       this.grupo('Scripts', 'script', [botonIcono('mas', 'Nuevo script (sin objeto)', async () => {
         const n = await pedirTexto('Nuevo script', 'Nombre del archivo:', 'script');
         if (n) e.crearScriptSuelto(n);
@@ -262,6 +281,11 @@ export class PanelIzquierdo {
         if (n) this.editarAnimacion(e.crearAnimacion(n));
       }, undefined, 'pequeno')], animaciones, 'Una animación es una lista de imágenes que se van cambiando.'),
     ];
+  }
+
+  private async nuevaEscena(): Promise<void> {
+    const n = await pedirTexto('Nueva escena', 'Nombre de la escena (por ejemplo: Menu, Nivel2, Fin). En el código: escena.cambiar("Nivel2")', 'Nivel2');
+    if (n) this.estado.crearEscena(n);
   }
 
   private escuchar(url: string): void {

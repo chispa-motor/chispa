@@ -17,7 +17,7 @@ const CLAVE_AUTO = 'ultimo';
 
 function abrirBase(): Promise<IDBDatabase> {
   return new Promise((resolver, rechazar) => {
-    if (typeof indexedDB === 'undefined') return rechazar(new Error('Este navegador no tiene IndexedDB.'));
+    if (typeof indexedDB === 'undefined') return rechazar(new Error('Este navegador no permite guardar proyectos.'));
     const peticion = indexedDB.open(BASE, 1);
     peticion.onupgradeneeded = () => peticion.result.createObjectStore(ALMACEN);
     peticion.onsuccess = () => resolver(peticion.result);

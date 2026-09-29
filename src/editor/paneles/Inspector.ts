@@ -345,7 +345,7 @@ export class Inspector {
           campoNumero('ancho', 'proyecto.ancho', e.proyecto.ancho, (v) => e.cambiarAjusteProyecto('ancho', v ?? 960), { min: 64, max: 4096, paso: 16, ayuda: 'Ancho de la pantalla del juego, en píxeles' }),
           campoNumero('alto', 'proyecto.alto', e.proyecto.alto, (v) => e.cambiarAjusteProyecto('alto', v ?? 540), { min: 64, max: 4096, paso: 16, ayuda: 'Alto de la pantalla del juego, en píxeles' }),
         ),
-        campoCasilla('pixel art', 'proyecto.pixelArt', e.proyecto.pixelArt ?? false, (v) => e.cambiarAjusteProyecto('pixelArt', v), 'Dibuja las imágenes pequeñas con píxeles nítidos, sin suavizar'),
+        campoCasilla('píxeles nítidos', 'proyecto.pixelArt', e.proyecto.pixelArt ?? false, (v) => e.cambiarAjusteProyecto('pixelArt', v), 'Dibuja las imágenes pequeñas con píxeles nítidos, sin suavizar'),
         h('p', { class: 'nota' }, 'Colores con nombre: ', NOMBRES_COLORES.filter((c) => c !== 'violeta').join(', '), '.'),
       ]),
     ];

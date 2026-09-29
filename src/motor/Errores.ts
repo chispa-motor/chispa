@@ -76,8 +76,3 @@ export function mostrarError(error: unknown): void {
   }
   panel.hidden = false;
 }
-
-export function ocultarError(): void {
-  const panel = document.getElementById('panel-error');
-  if (panel) panel.hidden = true;
-}

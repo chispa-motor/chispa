@@ -199,10 +199,4 @@ export class EditorCodigo {
   revisarTodo(): void {
     for (const p of this.pestanas.values()) forceLinting(p.vista);
   }
-
-  /** Cierra todas las pestañas (al abrir otro proyecto). */
-  cerrarTodo(): void {
-    for (const p of this.pestanas.values()) p.vista.destroy();
-    this.pestanas.clear();
-  }
 }
