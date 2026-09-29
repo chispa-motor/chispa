@@ -30,6 +30,7 @@ Las demos de las primeras fases siguen en `?demo=1`, `?demo=2` y `?demo=0` (el e
 - [x] Motor 2D completo: física, cámara, mapas de casillas, animaciones, interfaz, partículas, sonido y música, escenas, guardar/cargar, temporizadores
 - [x] Fase 4: editor visual
 - [x] Fase 5: exportar el juego como página web
+- [x] Sesión 3: textos con huecos (`"Puntos: {juego.puntos}"`), plataformas que se mueven y que se atraviesan desde abajo, selección múltiple, copias enlazadas de plantillas, deshacer para todo, tutorial guiado y publicar en itch.io / GitHub Pages
 
 ## Carpetas
 ```

@@ -79,3 +79,30 @@ Tests:
 | Guardar datos | HECHA | 2 tests. |
 | Temporizadores y aleatorios | HECHA | Tests de `cada N segundos`, `pasen N segundos`, `esperar`, `aleatorio`, `elegir` y `probabilidad`. |
 
+
+
+## Sesión 3 (versión `s3-despues-de-bloque-6`)
+
+| Parte | Archivos | Líneas |
+|---|---:|---:|
+| Lenguaje (`src/chispa`) | 19 | 5.290 |
+| Motor (motor, objetos, proyecto, reproductor, utilidades) | 30 | 3.745 |
+| Editor (editor, exportar, main, estilos, index.html) | 27 | 6.283 |
+| Tests (`pruebas` y `pruebas-navegador`) | 18 | 3.793 |
+| Ejemplos y demos | 4 | 341 |
+| Documentación (.md) | 7 | 2.720 |
+| Configuración y herramientas | 7 | 163 |
+| **Total** | **112** | **22.335** |
+
+Tests: **359** automáticos (vitest), todos pasando, y **15 pruebas en un navegador de verdad** (`npm run pruebas:navegador`), también pasando.
+
+| Bloque | Estado | Detalle |
+|---|---|---|
+| 1 · Textos con huecos | HECHA | `{…}` en cualquier texto, se actualiza solo en `yo.texto` y en los textos del editor; «Enseñar un dato» sin código; revisión antes de jugar; colores y autocompletado dentro de los huecos. |
+| 2 · Plataformas | HECHA | Componente Recorrido (dos puntos o un camino, ida y vuelta o en bucle, pausa), puntos arrastrables en la escena, lleva al jugador encima (también si la mueve un script), «solo desde arriba» en objetos y casillas. |
+| 3 · Editor | HECHA | Rectángulo y Ctrl+clic, mover/borrar/duplicar/copiar varios, Ctrl+A; copias enlazadas de plantillas con «Desvincular»; un test recorre **todos** los métodos del editor y comprueba que se deshacen y rehacen. |
+| 4 · Tutorial guiado | HECHA | 20 pasos dentro del editor, con resaltado, «Hazlo por mí», se puede saltar y volver a abrir desde Ayuda. Se ofrece solo la primera vez. Probado entero en el navegador y en tests (el juego final funciona). |
+| 5 · Publicar | HECHA | Archivo .html, .zip para itch.io (con su CRC-32, comprobado también con `unzip` y Python) e index.html para GitHub Pages, cada uno con sus pasos. Sin cuentas. |
+| 6 · Prueba de principiante | HECHA | Tutorial + «Atrapa la fruta» + «Sube a la cima». 5 problemas encontrados y arreglados (ver PROBLEMAS_PRINCIPIANTE.md, n.º 21–25), cada uno con su test. |
+
+**Límites conocidos:** el zip no se comprime (a propósito); las propiedades de varios objetos no se editan a la vez (solo mover, duplicar, copiar y borrar); los proyectos antiguos no enlazan sus copias de plantillas solos; «Añadir» con la vista alejada puede poner un objeto debajo del suelo.
