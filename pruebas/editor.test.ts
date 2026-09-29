@@ -276,6 +276,20 @@ describe('Copiar, pegar, pintar rectángulos y la cámara (bloque 3)', () => {
     expect(Object.keys(e.seleccionado!.mapa!.celdas).length).toBe(12);
   });
 
+  it('duplicar Moneda2 da Moneda3 (y no Moneda22), y los scripts repetidos se numeran antes del .chs', () => {
+    const e = new EstadoEditor();
+    e.crearObjeto('circulo', 0, 0);
+    e.renombrar(e.seleccion!, 'Moneda');
+    e.duplicarSeleccionado();
+    e.duplicarSeleccionado();
+    expect(e.escena.objetos.map((o) => o.nombre)).toEqual(['Moneda', 'Moneda2', 'Moneda3']);
+    e.seleccionarIndice(0);
+    e.crearScriptPara(e.seleccion!);
+    e.seleccionarIndice(1);
+    e.renombrar(e.seleccion!, 'Moneda');
+    expect(e.crearScriptPara(e.seleccion!)).toBe('moneda2.chs');
+  });
+
   it('los textos nuevos son de interfaz (fijos en la pantalla)', () => {
     const e = new EstadoEditor();
     e.crearObjeto('texto', 10, 10);

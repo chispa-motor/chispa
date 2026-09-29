@@ -252,7 +252,10 @@ export class Inspector {
     );
     const nuevoTipo = h('button', { class: 'boton-enlace', onclick: async () => {
       const n = await pedirTexto('Nuevo tipo de casilla', 'Nombre (por ejemplo: pared, agua, pinchos). Lo usarás en "cuando toco pinchos".');
-      if (n) this.vista.tipoPincel = e.ponerTipoCasilla(ref, n, { color: '#b57cff', solida: true });
+      if (!n) return;
+      this.vista.tipoPincel = e.ponerTipoCasilla(ref, n, { color: '#b57cff', solida: true });
+      if (this.vista.herramienta === 'mover') this.vista.ponerHerramienta('pincel');
+      this.dibujar(); // el tipo nuevo queda elegido y con sus opciones a la vista
     } }, '+ Nuevo tipo de casilla');
     return seccion('Mapa de casillas', [
       herramientas,

@@ -183,3 +183,27 @@ describe('Cámara', () => {
     expect(j.juego.escena.camara.zoom).toBe(1);
   });
 });
+
+describe('Errores con las formas de hablar de quien empieza', () => {
+  const pistaDe = (codigo: string) => {
+    const e = erroresAlPreparar({ scripts: { 'p.chs': codigo }, escena: [{ nombre: 'P', script: 'p.chs' }] });
+    return `${e.errores[0].mensajeCorto} || ${e.errores[0].pista}`;
+  };
+  const casos: [string, string, string][] = [
+    ['"entonces" en un si', 'variable p = 0\ncuando empieza:\n    si p == 1 entonces:\n        mostrar(1)\n', "no se escribe 'entonces'"],
+    ['"es" para comparar', 'variable p = 0\ncuando empieza:\n    si p es 1:\n        mostrar(1)\n', 'se usa =='],
+    ['"si no" separado', 'variable p = 0\ncuando empieza:\n    si p == 1:\n        mostrar(1)\n    si no:\n        mostrar(2)\n', 'sino'],
+    ['p++', 'variable p = 0\ncuando empieza:\n    p++\n', 'puntos += 1'],
+    ['cuando pulso', 'cuando pulso "espacio":\n    mostrar(1)\n', 'cuando se pulsa "espacio":'],
+    ['cuando choco con', 'cuando choco con Pared:\n    mostrar(1)\n', 'cuando toco Enemigo:'],
+    ['cuando empiece el juego', 'cuando empiece el juego:\n    mostrar(1)\n', "va ':' directamente"],
+    ['comparar sin guardar', 'variable p = 0\ncuando empieza:\n    p == 5\n', 'un solo ='],
+    ['acción sin paréntesis', 'cuando empieza:\n    yo.destruir\n', 'yo.destruir()'],
+    ['"fin" al final de un bloque', 'cuando empieza:\n    mostrar(1)\nfin\n', "no se cierran con 'fin'"],
+    ['color sin comillas', 'cuando empieza:\n    yo.color = rojo\n', '"rojo" entre comillas'],
+    ['tecla sin comillas en un evento', 'cuando se pulsa espacio:\n    mostrar(1)\n', '"espacio" entre comillas'],
+  ];
+  for (const [nombre, codigo, esperado] of casos) {
+    it(nombre, () => expect(pistaDe(codigo)).toContain(esperado));
+  }
+});

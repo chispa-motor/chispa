@@ -92,7 +92,13 @@ export const PALABRAS_DE_INICIO = ['si', 'sino', 'mientras', 'repetir', 'para', 
 
 /** Si `nombre` es una palabra de otro lenguaje, la pista para escribirla en Chispa. */
 export function pistaIngles(nombre: string): string | null {
-  const equivalente = EQUIVALENCIAS_INGLES[normalizar(nombre)];
+  const n = normalizar(nombre);
+  // Palabras del "pseudocódigo" que se enseña en clase (fin si, fin mientras...)
+  if (['fin', 'finsi', 'fin_si', 'finmientras', 'fin_mientras', 'finpara', 'end', 'endif'].includes(n)) {
+    return "En Chispa los bloques no se cierran con 'fin': terminan solos cuando las líneas dejan de tener sangría. Borra esta línea.";
+  }
+  if (n === 'inicio' || n === 'begin') return "En Chispa no hace falta marcar el inicio: el código empieza con 'cuando empieza:'. Borra esta línea.";
+  const equivalente = EQUIVALENCIAS_INGLES[n];
   return equivalente ? `'${nombre}' es de otro lenguaje de programación. En Chispa se escribe: ${equivalente}` : null;
 }
 

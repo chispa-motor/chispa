@@ -221,9 +221,26 @@ class Analizador {
         return;
       }
 
-      case 'ExpresionSuelta':
+      case 'ExpresionSuelta': {
         this.expr(s.expresion, amb);
+        // Una línea que no llama a nada no hace nada: casi siempre es un despiste
+        const e = s.expresion;
+        if (e.tipo === 'Llamada') return;
+        if (e.tipo === 'Binaria' && e.operador === '==') {
+          this.error(e.pos, 'esta línea compara dos cosas, pero no hace nada con el resultado.', 'Para GUARDAR un valor se usa un solo =. Ejemplo: puntos = 5');
+        } else if (e.tipo === 'Miembro') {
+          const dueno = e.objeto.tipo === 'Identificador' ? `${e.objeto.original}.` : '';
+          this.error(e.pos, `esta línea nombra '${e.original}', pero no hace nada con él.`, `Si es una acción, lleva paréntesis al final: ${dueno}${e.original}()`);
+        } else if (e.tipo === 'Identificador') {
+          // Si no existe, ya se ha avisado arriba ("no existe ninguna variable...")
+          if (amb.buscar(e.nombre) || this.ctx.globales.buscar(e.nombre)) {
+            this.error(e.pos, `esta línea nombra '${e.original}', pero no hace nada con él.`, `Si es una función, lleva paréntesis al final: ${e.original}()`);
+          }
+        } else {
+          this.error(e.pos, 'esta línea calcula un valor, pero no hace nada con él.', 'Guárdalo en una variable (variable total = ...) o enséñalo con mostrar(...).');
+        }
         return;
+      }
 
       case 'Romper':
       case 'Continuar':

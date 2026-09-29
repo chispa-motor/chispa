@@ -22,6 +22,7 @@
 import type { Bloque, EntradaTabla, Evento, Expresion, Nombre, Programa, Sentencia } from './ast';
 import { ErrorChispa, ErrorCompilacion } from '../errores/ErrorChispa';
 import { EQUIVALENCIAS_INGLES, PALABRAS_DE_INICIO, sugerir } from '../errores/sugerencias';
+import { normalizar } from '../../utilidades/texto';
 import { analizarLexico } from '../lexico/lexer';
 import { SIGNIFICADO_PALABRA, posicionDe, type Posicion, type Token } from '../lexico/tokens';
 
@@ -177,10 +178,17 @@ class Parser {
       );
     }
     if (!this.esSimbolo(':')) {
-      this.error(
-        `esperaba ':' al final de la línea (${que}), pero he encontrado ${this.describir(this.actual)}.`,
-        "En Chispa, las líneas que abren un bloque (si, mientras, repetir, para cada, funcion, cuando) terminan en dos puntos ':'.",
-      );
+      const t = this.actual;
+      const palabra = t.tipo === 'identificador' ? t.valor : '';
+      let pista = "En Chispa, las líneas que abren un bloque (si, mientras, repetir, para cada, funcion, cuando) terminan en dos puntos ':'.";
+      if (palabra === 'entonces' || palabra === 'hacer' || palabra === 'haz') {
+        pista = `En Chispa no se escribe '${t.original}': la línea termina directamente en ':'. Ejemplo: si vida == 0:`;
+      } else if (palabra === 'es' || palabra === 'igual' || palabra === 'vale') {
+        pista = 'Para comparar se usa == (dos iguales). Ejemplo: si puntos == 10:';
+      } else if (que.startsWith('cuando') && t.tipo !== 'nuevaLinea') {
+        pista = "Después del evento va ':' directamente, sin más palabras. Ejemplos: cuando empieza:   ·   cuando toco Moneda:";
+      }
+      this.error(`esperaba ':' al final de la línea (${que}), pero he encontrado ${this.describir(t)}.`, pista);
     }
     this.avanzar();
     if (!this.es('nuevaLinea')) {
@@ -373,6 +381,9 @@ class Parser {
 
   private sentenciaSi(): Sentencia {
     const inicio = this.avanzar();
+    if (this.esClave('no') && this.tokens[this.pos + 1]?.valor === ':') {
+      this.error("'si no' se escribe todo junto: sino", "Ejemplo:\n    si vida > 0:\n        mostrar(\"Vivo\")\n    sino:\n        mostrar(\"Fin\")");
+    }
     const ramas = [{ condicion: this.expresion(), cuerpo: this.bloque('si ...') }];
     let sino: Bloque | null = null;
     while (this.esClave('sino')) {
@@ -558,8 +569,23 @@ class Parser {
       if (!this.esPalabra('tocar')) this.error("esperaba 'cuando dejo de tocar ...'.");
       dejar = true;
     } else if (!this.esPalabra('toco')) {
+      // Formas naturales de decirlo que no son las de Chispa: explicamos cuál es
+      const SINONIMOS: Record<string, string> = {
+        pulso: 'cuando se pulsa "espacio":', pulse: 'cuando se pulsa "espacio":', presiono: 'cuando se pulsa "espacio":', presione: 'cuando se pulsa "espacio":',
+        aprieto: 'cuando se pulsa "espacio":', apriete: 'cuando se pulsa "espacio":', pulsa: 'cuando se pulsa "espacio":', presiona: 'cuando se pulsa "espacio":',
+        suelto: 'cuando se suelta "espacio":', mantengo: 'cuando se mantiene "espacio":',
+        choco: 'cuando toco Enemigo:', choque: 'cuando toco Enemigo:', toque: 'cuando toco Enemigo:', toca: 'cuando toco Enemigo:',
+        tocar: 'cuando toco Enemigo:', colisiono: 'cuando toco Enemigo:', golpeo: 'cuando toco Enemigo:',
+        clic: 'cuando hago clic:', click: 'cuando hago clic:', pincho: 'cuando hago clic:',
+        empiece: 'cuando empieza:', inicia: 'cuando empieza:', comienza: 'cuando empieza:', arranca: 'cuando empieza:',
+        salga: 'cuando salgo de la pantalla:', acaba: 'cuando termina la animacion:',
+      };
+      const forma = SINONIMOS[normalizar(t.original)];
       const parecido = sugerir(t.original, ['empieza', 'toco', 'hago', 'dejo', 'se', 'cada', 'pasen', 'termina', 'salgo']);
-      this.error(`no conozco el evento 'cuando ${t.original}'.`, parecido ? `¿Querías decir 'cuando ${parecido} ...'?\n${ayuda}` : ayuda);
+      this.error(
+        `no conozco el evento 'cuando ${t.original}'.`,
+        forma ? `En Chispa se escribe así: ${forma}\n${ayuda}` : parecido ? `¿Querías decir 'cuando ${parecido} ...'?\n${ayuda}` : ayuda,
+      );
     }
     this.avanzar(); // "toco" o "tocar"
     if (this.esSimbolo(':')) return { tipo: 'toco', con: null, original: null, dejar }; // cualquier objeto
@@ -727,9 +753,15 @@ class Parser {
     if (t.tipo === 'nuevaLinea' || t.tipo === 'fin') {
       this.error('la línea se ha acabado antes de tiempo: falta un valor al final.', 'Revisa si has dejado un operador (+, -, =, y, o...) sin nada detrás.');
     }
+    const anterior = this.tokens[this.pos - 1];
+    const doble = (t.valor === '+' || t.valor === '-') && anterior?.valor === t.valor;
     this.error(
       `aquí esperaba un valor (un número, un texto, una variable...) pero he encontrado ${this.describir(t)}.`,
-      t.valor === '=' ? "Parece que sobra un '='. Para comparar usa '==' y para guardar un valor, un solo '='." : undefined,
+      t.valor === '='
+        ? "Parece que sobra un '='. Para comparar usa '==' y para guardar un valor, un solo '='."
+        : doble
+          ? `En Chispa, para sumar o restar 1 se escribe: puntos ${t.valor}= 1`
+          : undefined,
     );
   }
 

@@ -92,3 +92,22 @@ programar**.
 | En el juego exportado, **`mostrar()` solo escribe en la consola del navegador** (F12). Los errores sí se enseñan en pantalla. | `mostrar` es una herramienta para quien programa, no para quien juega. |
 | Los textos del juego **no pueden romper la página** (un `mostrar("</script>")` o un nombre con `<b>`). | Una página rota sin explicación es muy difícil de entender para quien empieza. |
 | No se puede exportar con errores en el código. | Exportaría un juego que no arranca. |
+
+### Prueba de principiante (bloque 3)
+
+Ver PROBLEMAS_PRINCIPIANTE.md para la lista completa de lo que se encontró.
+
+| Decisión | Por qué |
+|---|---|
+| El **tipo** de un objeto es, si no se dice otro, su **nombre sin los números del final** (`Moneda2` → `Moneda`). | Al duplicar sale `Moneda2`, y `cuando toco Moneda` tiene que funcionar con todas las copias. Quien pone `Enemigo1` y `Enemigo2` puede seguir usando cada nombre por separado. |
+| Nueva acción **`yo.moverConFlechas(rapidez)`**: flechas o W A S D. Si el objeto cae, solo a los lados; si no, en las cuatro direcciones. La imagen mira hacia donde anda. | Moverse es lo primero que se programa y pedía 8 líneas y entender `delta`. Una sola forma que sirve para plataformas, vista desde arriba y naves. |
+| `crear()` y `particulas()` **sin posición** salen donde está el objeto que las pide. | «La nave crea una bala» se entiende sin coordenadas. |
+| Nuevo evento **`cuando salgo de la pantalla:`**. Solo cuenta si el objeto **ha estado dentro** antes. | Para borrar balas y enemigos y para caer al vacío. Así, los enemigos que aparecen por encima de la pantalla no desaparecen nada más nacer. |
+| El botón **Plantilla convierte** (saca el objeto de la escena), después de preguntar. | Lo normal es que una bala o un enemigo de plantilla no esté ya en la escena al empezar. Para poner copias, se arrastra desde Proyecto. |
+| Los **textos nuevos son de interfaz** (fijos en la pantalla) y salen arriba a la izquierda. | Casi siempre son puntos, vidas o títulos. |
+| Una línea que **no hace nada** (`puntos == 5`, `yo.destruir` sin paréntesis) es un **error**, no un aviso. | Nunca es a propósito, y si no se avisa, el fallo pasa desapercibido. |
+| Las formas naturales de decir un evento (`cuando pulso`, `cuando choco con`…) **no se aceptan**, pero el error dice cómo se escribe. | Principio del lenguaje: una sola forma de hacer cada cosa. La pista hace que no cueste aprenderla. |
+| En la Guía, las **Recetas** («¿cómo hago…?») van antes que la referencia. | Quien empieza busca «disparar», no `crear`. |
+| Copiar y pegar usan **Ctrl+C / Ctrl+V** y un botón **Pegar**. Dentro de un campo de texto, Ctrl+V pega texto, como siempre. | Es lo que se espera en cualquier programa. El botón sirve cuando el cursor está en un campo. |
+| **Mayús + arrastrar** con el pincel pinta un rectángulo. | Paredes y suelos en un solo gesto. |
+| `?limpio` en la dirección abre el editor sin recuperar lo guardado. | Para las pruebas del navegador (cada prueba empieza igual). |

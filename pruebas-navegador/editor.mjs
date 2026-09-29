@@ -101,6 +101,14 @@ await prueba('añadir objetos, arrastrarlos y deshacer', async (p) => {
   comprobar(vuelto.x === 480 && vuelto.y === 270, 'deshacer no lo ha devuelto a su sitio');
   await p.click('.boton-anadir');
   await p.click('.opcion-menu:has-text("Texto")');
+  // Copiar, crear otra escena y pegar (con el botón Pegar)
+  await p.keyboard.press('Control+c');
+  await p.click('.selector-escena .boton-icono');
+  await p.fill('.dialogo input', 'Nivel2');
+  await p.press('.dialogo input', 'Enter');
+  comprobar((await textoDe(p, '.pestana.activa')).includes('Nivel2'), 'la pestaña no dice el nombre de la escena nueva');
+  await p.click('button:has-text("Pegar")');
+  comprobar((await estado(p, () => window.chispa.estado.escena.objetos.map((o) => o.nombre))).join() === 'Texto', 'no se ha pegado el texto en Nivel2');
   comprobar((await estado(p, () => window.chispa.estado.seleccionado.sprite.fijo)) === true, 'el texto nuevo no es de interfaz');
 });
 

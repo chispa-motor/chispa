@@ -189,7 +189,10 @@ export class EstadoEditor {
   nombreLibre(base: string, usados: string[] = this.escena.objetos.map((o) => o.nombre ?? '')): string {
     const ocupados = new Set(usados.map(normalizar));
     if (!ocupados.has(normalizar(base))) return base;
-    for (let i = 2; ; i++) if (!ocupados.has(normalizar(`${base}${i}`))) return `${base}${i}`;
+    // "Moneda2" ocupado → "Moneda3" (y no "Moneda22"). Los archivos (.chs) conservan su extensión.
+    const extension = /\.[a-z]+$/i.exec(base)?.[0] ?? '';
+    const raiz = tipoPorNombre(base.slice(0, base.length - extension.length));
+    for (let i = 2; ; i++) if (!ocupados.has(normalizar(`${raiz}${i}${extension}`))) return `${raiz}${i}${extension}`;
   }
 
   /** Crea un objeto nuevo en la escena actual y lo selecciona. Devuelve su posición en la lista. */

@@ -63,7 +63,7 @@ export class Aplicacion {
     this.dibujarPestanas();
 
     e.alCambiar((c) => {
-      if (c === 'proyecto' || c === 'archivos' || c === 'scripts') {
+      if (c === 'proyecto' || c === 'archivos' || c === 'scripts' || c === 'escena') {
         this.editorCodigo.sincronizar();
         this.dibujarPestanas();
       }
