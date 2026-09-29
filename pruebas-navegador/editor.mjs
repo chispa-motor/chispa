@@ -141,9 +141,13 @@ await prueba('seleccionar varios con un rectángulo y con Ctrl+clic, moverlos ju
   comprobar((await estado(p, () => window.chispa.estado.escena.objetos.length)) === 0, 'Supr no ha borrado todos');
 });
 
-await prueba('la primera vez ofrece el tutorial, y el tutorial se hace entero haciendo clic donde señala', async (p) => {
-  // Primera visita (sin nada guardado): «¿Hacemos tu primer juego?»
-  await p.evaluate(() => localStorage.clear());
+await prueba('la primera vez ofrece el tutorial, y el tutorial se hace entero haciendo clic donde señala', async () => {
+  // Primera visita de verdad: un navegador sin nada guardado (ni proyectos de otras pruebas ni la marca del tutorial)
+  const limpio = await navegador.newContext({ viewport: { width: 1440, height: 860 } });
+  const p = await limpio.newPage();
+  const erroresLimpio = [];
+  p.on('pageerror', (e) => erroresLimpio.push(e.message));
+  try {
   await p.goto(direccion);
   await p.waitForSelector('.dialogo:has-text("¿Hacemos tu primer juego?")', { timeout: 5000 });
   await p.click('.dialogo button:has-text("¡Vamos!")');
@@ -245,6 +249,10 @@ await prueba('la primera vez ofrece el tutorial, y el tutorial se hace entero ha
   await p.click('.dialogo button:has-text("Tutorial: tu primer juego")');
   await p.click('.dialogo button:has-text("Empezar el tutorial")');
   await paso('Tu primer juego');
+  comprobar(!erroresLimpio.length, 'Errores en la página: ' + erroresLimpio.join(' | '));
+  } finally {
+    await limpio.close();
+  }
 });
 
 await prueba('con la vista alejada, arrastrar un objeto pequeño lo mueve (no lo deforma)', async (p) => {

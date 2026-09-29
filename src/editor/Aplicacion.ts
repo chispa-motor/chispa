@@ -96,12 +96,19 @@ export class Aplicacion {
     window.addEventListener('beforeunload', () => void guardarAutomatico(e.aJSON()));
   }
 
+  /**
+   * ¿Se ha abierto un proyecto guardado de antes? (entonces, antes de cerrarlo,
+   * se pregunta). El ejemplo del principio no cuenta, aunque se guarde solo.
+   */
+  private recuperado = false;
+
   /** Recupera el último proyecto guardado en el navegador (si hay). */
   async recuperar(): Promise<void> {
     const guardado = await cargarAutomatico();
     if (!guardado) return;
     try {
       this.estado.abrir(JSON.parse(guardado.json));
+      this.recuperado = true;
       this.guardadoEn = guardado.fecha;
       this.vistaEscena.encuadrar();
       this.dibujarBarra();
@@ -146,7 +153,7 @@ export class Aplicacion {
       [
         { texto: 'Ahora no' },
         // Si se ha recuperado un proyecto guardado, se pregunta antes de cerrarlo
-        { texto: '¡Vamos!', clase: 'principal', alPulsar: () => void this.empezarTutorial(this.guardadoEn !== null || this.estado.modificado) },
+        { texto: '¡Vamos!', clase: 'principal', alPulsar: () => void this.empezarTutorial(this.recuperado || this.estado.modificado) },
       ]);
   }
 
