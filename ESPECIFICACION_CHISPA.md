@@ -1,4 +1,4 @@
-# Especificación del lenguaje Chispa · v0.4
+# Especificación del lenguaje Chispa · v0.5
 
 Chispa es un lenguaje de programación en español para crear videojuegos 2D dentro del motor Chispa.
 Los archivos llevan la extensión `.chs`. Cada objeto de la escena puede tener un script.
@@ -180,20 +180,21 @@ Los bloques `cuando` van en el nivel principal del script, sin sangría:
 ```
 cuando empieza:                    # una vez, al aparecer el objeto
 cuando cada fotograma:             # unas 60 veces por segundo
-cuando se pulsa "espacio":         # al pulsar la tecla
-cuando se pulsa "espacio", "w":    # cualquiera de varias teclas
-cuando toco Enemigo:               # al empezar a tocar un objeto con ese nombre o tipo; el otro es 'otro'
-cuando hago clic:                  # clic izquierdo en la vista del juego
-cuando pasen 3 segundos:           # una sola vez, 3 segundos después de aparecer el objeto
+cuando cada 2 segundos:            # una y otra vez, cada cierto tiempo
+cuando pasen 3 segundos:           # una sola vez, 3 segundos después de aparecer
+cuando se pulsa "espacio":         # al pulsar la tecla (también varias: "espacio", "w")
+cuando se mantiene "espacio":      # en cada fotograma mientras esté pulsada
+cuando se suelta "espacio":        # al soltarla
+cuando toco Enemigo:               # al EMPEZAR a tocar un objeto (nombre o tipo) o una casilla de ese tipo
+cuando dejo de tocar Enemigo:      # al dejar de tocarlo
+cuando toco:                       # con cualquier cosa
+cuando hago clic:                  # clic en cualquier sitio de la pantalla del juego
+cuando hago clic encima:           # clic ENCIMA de este objeto (botones)
+cuando termina la animacion:       # al acabar una animación que no se repite
 ```
 
-**Eventos extra:**
-
-- `cuando cada 2 segundos:`
-- `cuando se suelta "espacio":`
-- `cuando se mantiene "espacio":`
-- `cuando dejo de tocar Enemigo:`
-- `cuando toco:` (con cualquier objeto)
+- Dentro de `cuando toco`, **`otro`** es el objeto tocado y **`casilla`** es el tipo de casilla (o `nulo` si no era un mapa).
+- Un clic solo lo recibe el objeto de más arriba (la interfaz `fijo` va siempre por encima del mundo).
 
 **Nombres de las teclas:**
 
@@ -205,57 +206,93 @@ cuando pasen 3 segundos:           # una sola vez, 3 segundos después de aparec
 
 - Cada evento se ejecuta como un **hilo**. `esperar(segundos)` pausa **solo ese evento**, no el juego, igual que `task.wait()` en Roblox.
 - Un evento que se repite solo (`cada fotograma`, `cada N segundos`, `se mantiene`) no se lanza otra vez mientras el anterior siga esperando.
+- `devolver` dentro de un `cuando` termina ese evento.
 
 ## 8. API del motor
 
-Todo lo que aparece aquí se puede escribir con o sin tildes.
+La forma oficial es **sin tildes**. Con tilde también funciona, pero el motor nunca la sugiere.
+En el editor, todo lo que aparece aquí tiene ayuda al pasar el ratón y está en la pestaña **Guía**.
 
-**`yo` y `otro` (objetos de la escena)**
+### Variables especiales
+
+| Nombre | Qué es |
+|---|---|
+| `yo` | El objeto al que pertenece el script. |
+| `otro` | Dentro de `cuando toco`: el objeto tocado. |
+| `casilla` | Dentro de `cuando toco`: el tipo de casilla tocada (o `nulo`). |
+| `juego` | Datos compartidos por todos los scripts: `juego.puntos = 0`. **Se conservan** al cambiar de escena y al reiniciar. |
+| `delta` | Segundos desde el fotograma anterior (unos 0,016). Multiplica las velocidades por `delta`. |
+
+### Objetos: `yo`, `otro` y los que devuelven `crear` y `buscar`
 
 | Propiedad | Qué es |
 |---|---|
-| `x`, `y`, `posicion` | Dónde está su centro. La **Y crece hacia arriba**. |
-| `rotacion` (grados), `escala` | Giro (positivo = contrario a las agujas del reloj) y tamaño. |
-| `velocidad`, `gravedad` | Solo si el objeto tiene física. |
-| `enSuelo`, `tocaPared`, `tocaTecho` | Solo lectura; las calcula la física. |
-| `color`, `visible`, `ancho`, `alto`, `opacidad`, `voltear`, `capa`, `imagen`, `texto` | Aspecto. |
-| `nombre`, `tipo`, `destruido` | Otros datos del objeto. |
+| `nombre`, `tipo`, `destruido` | Datos del objeto. El tipo suele ser la plantilla de la que salió. |
+| `x`, `y`, `posicion` | Su centro. **La Y crece hacia arriba.** |
+| `rotacion` (grados), `escala` | Giro (positivo = contrario a las agujas del reloj) y tamaño (1 = normal). |
+| `velocidad`, `gravedad`, `rozamiento`, `rebote`, `masa`, `estatico` | Física. Rozamiento y rebote van de 0 a 1. |
+| `enSuelo`, `tocaPared`, `tocaTecho` | Solo se leen; los calcula la física. |
+| `solido`, `fantasma` | Un fantasma se atraviesa, pero avisa con `cuando toco` (monedas, metas, zonas). |
+| `color`, `visible`, `ancho`, `alto`, `opacidad`, `voltear`, `capa`, `imagen` | Aspecto. |
+| `texto`, `tamaño`, `colorTexto`, `fijo` | Textos y botones. `fijo` = pegado a la pantalla (interfaz). |
+| `animacion`, `ratonEncima` | La animación actual; si el ratón está encima (para resaltar botones). |
 
 **Acciones:**
 
-- `yo.saltar(fuerza)`: solo salta si está en el suelo. Pone `velocidad.y` en positivo, es decir, hacia arriba.
-- `yo.mover(dx, dy)`
-- `yo.rotar(grados)`
-- `yo.destruir()`
-- `yo.distanciaA(otro)`
+| Acción | Qué hace |
+|---|---|
+| `yo.saltar(fuerza)` | Salta, solo si está en el suelo. Devuelve si ha saltado. |
+| `yo.mover(x, y)`, `yo.rotar(grados)` | Mueve y gira. |
+| `yo.empujar(x, y)` | Un golpe: cambia la velocidad según la masa. |
+| `yo.moverHacia(destino, rapidez)` | Avanza hacia un objeto o posición sin pasarse. Devuelve `verdadero` al llegar. |
+| `yo.mirarA(destino)`, `yo.direccionA(destino)` | Mirar hacia algo; vector de largo 1 hacia algo (para disparar). |
+| `yo.distanciaA(otro)` | Distancia en píxeles. |
+| `yo.animar("nombre")`, `yo.pararAnimacion()` | Animaciones por fotogramas. |
+| `yo.destruir()` | Quita el objeto del juego. |
 
-**Propiedades propias:** puedes inventarte las tuyas. Por ejemplo, `yo.vida = 100` le crea una propiedad `vida` al objeto.
+**Propiedades propias:** puedes inventarte las tuyas (`yo.vida = 100`) o ponerlas en el editor con un valor inicial.
 
-**Funciones globales**
+**Mapas de casillas** (objetos con un mapa, pintado en el editor):
+
+| Acción | Qué hace |
+|---|---|
+| `mapa.casilla(columna, fila)` | El tipo de una casilla, o `nulo`. |
+| `mapa.ponerCasilla(columna, fila, "tipo")`, `mapa.quitarCasilla(columna, fila)` | Cambiar casillas mientras se juega. |
+| `mapa.casillaEn(x, y)`, `mapa.columnaEn(x)`, `mapa.filaEn(y)` | Qué casilla hay en un punto del mundo. |
+| `mapa.centroDeCasilla(columna, fila)` | El centro de una casilla (vector). |
+
+### Funciones
 
 | Función | Qué hace |
 |---|---|
-| `mostrar(a, b, ...)` | Escribe en la consola del motor. Los paréntesis son obligatorios, como en todas las funciones. |
+| `mostrar(a, b, ...)` | Escribe en la consola. Los paréntesis son obligatorios. |
+| `esperar(segundos)` | Pausa el evento actual. Sin número, un fotograma. |
 | `crear("Plantilla", x, y)` | Crea un objeto a partir de una plantilla y lo devuelve. |
-| `destruir(objeto)` | Elimina un objeto. |
-| `buscar("Nombre")` / `buscarTodos("Tipo")` | Busca objetos. `buscar` devuelve `nulo` si no encuentra nada. |
-| `esperar(segundos)` | Pausa el evento actual. Sin número, espera un fotograma. |
-| `aleatorio(min, max)` | Entero entre `min` y `max`, ambos incluidos. `aleatorio()` da un decimal entre 0 y 1. |
-| `vector(x, y)`, `distancia(a, b)` | Vectores. |
+| `destruir(objeto)` | Quita un objeto. |
+| `buscar("Nombre")`, `buscarTodos("Tipo")` | Busca objetos. `buscar` da `nulo` si no encuentra nada. |
+| `distancia(a, b)` | Entre dos objetos o posiciones. |
+| `particulas("tipo", x, y)` | Efectos: `"explosion"`, `"humo"`, `"chispas"`, `"polvo"`, `"confeti"`, `"estrellas"`. También con una tabla: `{tipo: "humo", color: "verde", cantidad: 30}`. |
+| `guardar("clave", valor)`, `cargar("clave", porDefecto)`, `borrarGuardado("clave")` | Datos del jugador que se conservan al cerrar el juego (récords, niveles). Cada proyecto guarda los suyos. |
+| `aleatorio(min, max)`, `elegir(lista)`, `probabilidad(porcentaje)` | Azar. `aleatorio()` sin nada da un decimal entre 0 y 1. |
 | `redondear`, `absoluto`, `raiz`, `minimo`, `maximo`, `seno`, `coseno` | Matemáticas. Los ángulos van en grados. |
-| `longitud(x)`, `texto(x)`, `numero(x)` | Tamaño y conversiones. |
+| `vector(x, y)`, `longitud(x)`, `texto(x)`, `numero(x)` | Vectores, tamaño y conversiones. |
 
-**Módulos**
+### Módulos
 
 | Módulo | Qué tiene |
 |---|---|
-| `teclado` | `.pulsada("a")`, `.sePulso("a")`, `.seSolto("a")` |
-| `raton` | `.x`, `.y`, `.posicion`, `.pulsado("izquierdo")`, `.sePulso()`, `.rueda` |
-| `escena` | `.reiniciar()`, `.objetos`, `.camara.seguir(obj)`, `.camara.limites(x1, y1, x2, y2)` |
-| `sonido` | `.reproducir("nombre")`, `.parar("nombre")`, `.volumen` (de 0 a 1), `.tono(frecuencia, segundos)` (un pitido generado, sin necesitar archivos) |
-| `tiempo` | `.total`, `.delta`, `.escala` (0 = pausa, 0.5 = cámara lenta) |
+| `teclado` | `.pulsada("a")` (mientras está pulsada), `.sePulso("a")` y `.seSolto("a")` (solo en ese fotograma) |
+| `raton` | `.x`, `.y`, `.posicion` (en el mundo), `.rueda`, `.pulsado("izquierdo")`, `.sePulso("izquierdo")` |
+| `escena` | `.nombre`, `.objetos`, `.gravedad`, `.cambiar("Nivel2")`, `.reiniciar()` |
+| `escena.camara` | `.seguir(objeto)`, `.limites(izquierda, abajo, derecha, arriba)`, `.temblar(intensidad, segundos)`, `.zoom`, `.x`, `.y`, `.suavizado` |
+| `sonido` | `.reproducir("nombre")`, `.parar("nombre")`, `.tono(frecuencia, segundos)`, `.volumen` |
+| `musica` | `.reproducir("nombre")` (en bucle, una sola a la vez), `.parar()`, `.volumen`, `.actual` |
+| `tiempo` | `.total`, `.delta`, `.escala` (0 = pausa, 0,5 = cámara lenta) |
 | `pantalla` | `.ancho`, `.alto` |
-| `juego` | Datos compartidos por todos los scripts, por ejemplo `juego.puntos = 0`. |
+
+### Colores
+
+Un nombre (`"rojo"`, `"verde"`, `"azul"`, `"amarillo"`, `"naranja"`, `"morado"`, `"rosa"`, `"cian"`, `"blanco"`, `"negro"`, `"gris"`, `"marron"`, `"transparente"`) o un código como `"#ff8800"`.
 
 ## 9. Errores
 

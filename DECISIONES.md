@@ -58,3 +58,37 @@ programar**.
 | Imágenes y sonidos importados se guardan **dentro del proyecto** (como «data URL»). | Un proyecto es un único archivo que nunca pierde recursos por el camino. |
 | Las **propiedades propias** de un objeto (`vida = 3`) se pueden poner en el editor, como los Attributes de Roblox. | Se ajustan sin tocar el código. |
 | Nuevas funciones **`elegir(lista)`** y **`probabilidad(porcentaje)`**, y nuevas acciones `moverHacia`, `mirarA` y `direccionA`. | Son las que más se echan de menos al hacer el primer juego (enemigos que persiguen, premios al azar). |
+
+### 3D y Fase 4 · El editor
+
+| Decisión | Por qué |
+|---|---|
+| La **Zona de Programación (3D)** y el **editor visual (Fase 4)** son **la misma ventana**. En la pestaña «Escena» colocas objetos; al abrir un script, el centro pasa a ser el editor de código, y el juego, la consola y la lista de objetos siguen a la vista. Por eso las etiquetas `despues-de-3D` y `despues-de-4` apuntan al mismo commit. | Un solo programa que aprender. Es lo que hacen Godot y Roblox Studio. |
+| El editor de código usa **CodeMirror 6** (una librería de código abierto), con el lenguaje, los colores, el autocompletado, la ayuda y los errores hechos a medida para Chispa. | Hacer desde cero un editor con cursor, selección, deshacer, buscar y teclados de todos los idiomas llevaría meses y funcionaría peor. El **lenguaje** sigue siendo 100 % nuestro. |
+| Los errores del editor salen del **mismo analizador que usa el motor** al pulsar Ejecutar. | Lo que se subraya en rojo es exactamente lo que impediría ejecutar: nunca se contradicen. |
+| El **autocompletado y la ayuda al pasar el ratón** salen del catálogo de documentación, que los tests comparan con la API real. | Una sola fuente: si algo existe en el motor, tiene ayuda; si tiene ayuda, existe. |
+| **Todo sin interfaz primero**: la lógica del editor (crear, borrar, deshacer...) vive en `EstadoEditor`, sin HTML. Los paneles solo la llaman y se redibujan. | Se puede probar todo con tests, sin navegador. |
+| **Deshacer** guarda una foto del proyecto antes de cada cambio. Arrastrar o pintar se deshace **de una vez**. El código **no** entra en ese deshacer: el editor de código tiene el suyo, letra a letra. | Es lo más sencillo y a prueba de fallos. Con el código, Ctrl+Z se comporta como en cualquier editor de texto. |
+| La vista de la escena **dibuja con el mismo código que el juego** (Sprite y MapaCasillas del motor). | Lo que ves al editar es exactamente lo que ves al jugar. |
+| Arrastrar el **fondo** mueve la vista (también con el botón central o con Espacio). La **rueda** hace zoom hacia el ratón. | Es lo primero que prueba cualquiera, sin tener que conocer atajos. |
+| **Imán activado por defecto** (múltiplos de 16 px). Con Alt se coloca libre. | Los niveles quedan alineados sin esfuerzo; las plataformas encajan. |
+| Los objetos de **interfaz** (`fijo`) se enseñan **dentro del marco de la pantalla**, y al marcarlos como fijos se recalcula su posición para que no «salten». | Se colocan viendo dónde quedarán de verdad en la pantalla. |
+| Los números del panel de propiedades se cambian también **arrastrando su nombre** a los lados, y se guardan al pulsar Intro o salir del campo. | Como en Unity y Godot; y no se llena el deshacer con un cambio por cada letra. |
+| **Ejecutar crea un motor nuevo con una COPIA del proyecto.** Lo que cambias mientras juegas se verá la próxima vez. | El juego siempre empieza limpio y editar nunca rompe una partida en marcha. |
+| Con errores en el código, **Ejecutar se queda en rojo** y al pulsarlo lista los errores (con clic para ir a la línea). | Decisión 8: fallaría igualmente; así se ve antes y todo junto. |
+| Las teclas solo llegan al juego si **no estás escribiendo ni en la vista de la escena**. Al pulsar Ejecutar, el foco pasa al juego. | Si no, mover un objeto con las flechas también movería al jugador. |
+| **Pausa** congela también el sonido (y lo reanuda donde iba). | Es lo que se espera de «pausa». |
+| **Guardado automático** en el navegador (IndexedDB) cada vez que cambias algo; **Guardar** descarga el archivo `.chispa.json`. Al abrir el editor se recupera lo último. | Nadie pierde su trabajo por cerrar la pestaña. IndexedDB y no localStorage porque este solo admite ~5 MB y las imágenes ocupan más. |
+| La primera vez se abre el **ejemplo mínimo**; «Nuevo» deja elegir entre vacío o el ejemplo. | Empezar con algo que ya funciona enseña más que una pantalla vacía. |
+| **F5 ejecuta** (y no recarga la página); Mayús+F5 para. | Es el atajo de Ejecutar en Visual Studio y en muchos editores. |
+| La **Guía** (pestaña de abajo) es la documentación completa con buscador, y cada ejemplo se puede copiar. | Tener la ayuda dentro del editor evita salir a buscar en internet. |
+
+### Fase 5 · Exportar
+
+| Decisión | Por qué |
+|---|---|
+| Exportar genera **un único archivo .html** que lo lleva todo dentro: motor, código, imágenes y sonidos. | Se abre con doble clic, sin internet, y se sube tal cual a itch.io, GitHub Pages o Netlify. |
+| El juego exportado usa un **reproductor**: el motor y el intérprete **sin el editor** (unos 120 KB), compilado aparte en `public/reproductor.js`. Se genera solo al hacer `npm run dev` o `npm run build`. | Quien juega no necesita descargar el editor de código. |
+| En el juego exportado, **`mostrar()` solo escribe en la consola del navegador** (F12). Los errores sí se enseñan en pantalla. | `mostrar` es una herramienta para quien programa, no para quien juega. |
+| Los textos del juego **no pueden romper la página** (un `mostrar("</script>")` o un nombre con `<b>`). | Una página rota sin explicación es muy difícil de entender para quien empieza. |
+| No se puede exportar con errores en el código. | Exportaría un juego que no arranca. |

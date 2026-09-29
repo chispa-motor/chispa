@@ -116,7 +116,7 @@ export class Inspector {
             : h('button', { class: 'boton-enlace', onclick: () => cambiar('sprite.texto')('Boton') }, '+ Añadir un texto encima (para botones)'),
           s.forma === 'texto' || s.texto
             ? h('div', { class: 'dos-columnas' },
-                campoNumero('tamano', 'sprite.tamano', s.tamano ?? 24, cambiar('sprite.tamano'), { ...largo, min: 4, ayuda: 'Tamaño de la letra' }),
+                campoNumero('tamaño', 'sprite.tamano', s.tamano ?? 24, cambiar('sprite.tamano'), { ...largo, min: 4, ayuda: 'Tamaño de la letra' }),
                 s.forma === 'texto' && !s.imagen
                   ? campoLista('alinear', 'sprite.alinear', s.alinear ?? 'centro', [['izquierda', 'Izquierda'], ['centro', 'Centro'], ['derecha', 'Derecha']], cambiar('sprite.alinear'))
                   : campoColor('letra', 'sprite.colorTexto', s.colorTexto ?? 'blanco', cambiar('sprite.colorTexto'), 'Color de la letra'),

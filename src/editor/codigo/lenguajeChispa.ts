@@ -123,13 +123,18 @@ export const coloresChispa = syntaxHighlighting(
  * (si, mientras, cuando...), la línea nueva empieza con 4 espacios más.
  */
 export const sangriaChispa = indentService.of((contexto, posicion) => {
-  const linea = contexto.lineAt(posicion, -1);
-  const anterior = linea.from > 0 ? contexto.lineAt(linea.from - 1) : null;
-  const texto = anterior ? anterior.text : '';
+  // La línea que se va a sangrar (al pulsar Intro, la parte que queda DESPUÉS del salto)
+  const actual = contexto.lineAt(posicion, 1);
+  if (actual.from === 0) return 0;
+  // La línea de arriba (al pulsar Intro, la parte que queda ANTES del salto)
+  const texto = contexto.lineAt(actual.from - 1, -1).text;
   const base = texto.match(/^\s*/)![0].replace(/\t/g, '    ').length;
   const sinComentario = texto.replace(/\s+#.*$/, '').trimEnd();
-  if (sinComentario.endsWith(':')) return base + 4;
+  let sangria = base;
+  if (sinComentario.endsWith(':')) sangria = base + 4;
   // Después de devolver/romper/continuar, normalmente se sale del bloque
-  if (/^\s*(devolver|romper|continuar)\b/.test(texto)) return Math.max(0, base - 4);
-  return base;
+  else if (/^\s*(devolver|romper|continuar)\b/.test(texto)) sangria = base - 4;
+  // "sino" va a la altura de su "si"
+  if (/^\s*sino\b/.test(actual.text) && !sinComentario.endsWith(':')) sangria = base - 4;
+  return Math.max(0, sangria);
 });

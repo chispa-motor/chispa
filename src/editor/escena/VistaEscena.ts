@@ -174,7 +174,12 @@ export class VistaEscena {
     const centro = { x: this.camara.x, y: this.camara.y };
     // Los botones son de interfaz: su posición es en la pantalla del juego
     const pos = tipo === 'boton' ? { x: (m.derecha - m.izquierda) * m.zoom / 2, y: (m.arriba - m.abajo) * m.zoom / 2 } : centro;
-    this.estado.crearObjeto(tipo, this.iman ? ajustar(pos.x, PASO_IMAN) : pos.x, this.iman ? ajustar(pos.y, PASO_IMAN) : pos.y);
+    let x = this.iman ? ajustar(pos.x, PASO_IMAN) : Math.round(pos.x);
+    const y = this.iman ? ajustar(pos.y, PASO_IMAN) : Math.round(pos.y);
+    // Si ya hay algo justo ahí, lo ponemos un poco a la derecha (para que no queden uno encima del otro)
+    const ocupado = (px: number) => this.estado.escena.objetos.some((o) => !o.mapa && o.x === px && o.y === y);
+    for (let i = 0; i < 20 && ocupado(x); i++) x += 80;
+    this.estado.crearObjeto(tipo, x, y);
     if (tipo === 'mapa') this.ponerHerramienta('pincel');
     this.canvas.focus();
   }

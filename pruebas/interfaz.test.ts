@@ -287,3 +287,29 @@ describe('Exportar el juego', () => {
     expect(nombreDeArchivo('???', '.chispa.json')).toBe('mi_juego.chispa.json');
   });
 });
+
+// ═════════════════════════ Sangría automática ═════════════════════════
+
+describe('Sangría automática del editor de código', () => {
+  it('Intro después de ":" mete 4 espacios; "sino" vuelve a la altura de su "si"', async () => {
+    const { getIndentation, IndentContext } = await import('@codemirror/language');
+    const { lenguajeChispa, sangriaChispa } = await import('../src/editor/codigo/lenguajeChispa');
+    // Como al pulsar Intro al final del texto
+    const sangria = (doc: string) => {
+      const estado = EditorState.create({ doc, extensions: [lenguajeChispa, sangriaChispa] });
+      return getIndentation(new IndentContext(estado, { simulateBreak: doc.length }), doc.length);
+    };
+    // Como al re-sangrar una línea que ya existe (la última)
+    const linea = (doc: string) => {
+      const estado = EditorState.create({ doc, extensions: [lenguajeChispa, sangriaChispa] });
+      return getIndentation(estado, doc.lastIndexOf('\n') + 1);
+    };
+    expect(sangria('cuando empieza:')).toBe(4);
+    expect(sangria('cuando empieza:\n    si vida > 0:')).toBe(8);
+    expect(sangria('cuando empieza:\n    mostrar(1)')).toBe(4);
+    expect(sangria('funcion f():\n    devolver 1')).toBe(0);
+    expect(sangria('si a:  # comentario')).toBe(4);
+    expect(linea('si a:\n    mostrar(1)\n    sino:')).toBe(0);
+    expect(linea('cuando empieza:\n    si a:\n        mostrar(1)\n        sino')).toBe(4);
+  });
+});
