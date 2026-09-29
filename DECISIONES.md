@@ -196,3 +196,32 @@ Ver PROBLEMAS_PRINCIPIANTE.md para la lista completa de lo que se encontró.
 | Al escribir **`cuando `**, la línea se va sola al principio. | Un evento nunca va dentro de nada: no hay ningún caso en que esa sangría sea buena. |
 | El tirador del tamaño **solo aparece si el objeto mide al menos 27 píxeles en la pantalla**. | Con la vista alejada, el tirador tapaba los objetos pequeños y moverlos los deformaba. Para cambiar el tamaño de algo pequeño, se acerca la vista (o se escribe en Propiedades). |
 | Los **textos nuevos se alinean a la izquierda** y salen en la esquina (x = 32). | Casi siempre son marcadores: crecen al subir los puntos y así nunca se salen por el borde. |
+
+## Noche
+
+### API completa (noche, bloque 0)
+
+| Decisión | Por qué |
+|---|---|
+| La lista de referencia es **LÖVE**, comparada con Scratch, GDevelop, Godot 2D y Roblox. Cada módulo de LÖVE y lo que se hace en Chispa está en **API_QUE_FALTA.md**, con el porqué de lo que se deja fuera. | Un motor real muy usado dice qué hace falta de verdad; los otros cuatro, cómo se lo explicas a alguien que empieza. |
+| Lo que en LÖVE es una función que se llama en cada fotograma, en Chispa suele ser **una propiedad de un objeto** (`yo.color`, `yo.arrastrable`). | Los objetos de Chispa ya se dibujan y se mueven solos: no hay que «dibujar a mano». |
+| **`animar(yo.tamano, 2, 0.5)`** recibe el SITIO (`yo.tamano`), no su valor. Se puede animar todo lo que se puede cambiar desde el código: números, posiciones, colores… También variables y cosas como `escena.camara.zoom`. | Es como lo escribiría alguien que empieza. Por dentro, la función pide un «Lugar» en vez de un valor; ninguna otra función cambia. Si se le da un número suelto (`animar(5, ...)`), se avisa antes de jugar. |
+| Siete **suavizados** con nombre en español: suave (el normal), lineal, entrada, salida, rebote, elastico, atras. | Los de siempre (Roblox y Godot tienen estos mismos), sin nombres técnicos como *easeInOutCubic*. |
+| Al terminar una animación, el valor es **exactamente** el pedido (`"rojo"`, no `"#e74c3c"`). | Así `si yo.color == "rojo":` funciona después de animar. |
+| Una animación nueva de un sitio **sustituye** a la que hubiera en ese sitio. Si el objeto se destruye, su animación se acaba sin error. | Dos animaciones del mismo valor a la vez pelean y el objeto tiembla. |
+| **`yo.tamano`** es lo grande que es el objeto (1 = normal, 2 = el doble). En un objeto de **texto** sigue siendo el tamaño de la letra. Para la letra de un botón está **`yo.tamanoLetra`**. | «Hazlo el doble de grande» se escribe `yo.tamano = 2`. Antes, en un cuadrado no hacía nada visible. |
+| Para hacer visible un objeto: **`yo.aparecer()`**, no `mostrar`. Su contrario es **`yo.ocultar()`**. | `mostrar()` ya escribe en la consola; con el mismo nombre para dos cosas, el error estaría garantizado. |
+| **`yo.transparencia`** existe además de `yo.opacidad` (y es su contrario). | Es la palabra que busca alguien que empieza. |
+| Los sitios se pueden dar de **tres formas**: un objeto, un vector o dos números. Vale en `yo.irA`, `teletransportar`, `distanciaA`, `anguloA` y `rotarHacia`. | `yo.irA(400, 300)` es lo primero que se escribe; `yo.irA(buscar("Meta"))` también tiene que valer. |
+| **`yo.irA(sitio, segundos)`** va suave; **`yo.teletransportar(sitio)`** va de golpe y quita la velocidad. | Los dos casos de «ir a un punto»: el que se ve y el que no. Sin quitar la velocidad, un objeto con física saldría disparado al llegar. |
+| **Etiquetas**: `yo.ponerEtiqueta("peligro")`. Las entienden `cuando toco peligro:`, `yo.tocando("peligro")`, `yo.cercanos(…, "peligro")` y `buscarConEtiqueta("peligro")`. | Agrupar cosas distintas (lava, pinchos y enemigos son «peligro») sin repetir el código para cada una. |
+| **`yo.pegarA(otro)`**: el hijo se mueve lo mismo que su padre (y puede moverse además por su cuenta). Si el padre se destruye, sus hijos también. No se puede hacer un bucle de padres. | Como en Roblox y Godot. Mover «lo mismo que el padre», en vez de fijarlo a una distancia, deja que la espada también se balancee. |
+| **`yo.arrastrable = verdadero`** y el motor hace el resto (se coge el de más arriba; mientras se lleva, no cae). | Puzles e inventarios sin escribir el código del ratón. |
+| **`dibujar.linea / circulo / rectangulo / texto`** dibuja en el mundo durante **un fotograma**. | Es para ver cosas mientras programas (a dónde apunta algo, hasta dónde ve un enemigo). Si durara para siempre, llenaría la pantalla. |
+| **`tiempo.pausar()`** para el juego pero no las teclas: los eventos siguen llegando (con `delta` = 0) para poder quitar la pausa. | Si una pausa parara también las teclas, no habría forma de salir de ella. |
+| **Fundidos**: `pantalla.oscurecer(1)` y `pantalla.aclarar(1)`, y `escena.cambiar("Nivel2", 1)` oscurece, cambia y aclara. Van en tiempo real: funcionan aunque el juego esté en pausa. El fundido se conserva al cambiar de escena. | El cambio de nivel con fundido es lo que más «profesional» hace sentir un juego, y es una sola línea. |
+| **Sonido**: volumen y tono en el mismo `sonido.reproducir("salto", 0.5, 1.2)`; `sonido.bucle()` para los que se repiten; `sonido.pausar()` pausa **todo** el sonido a la vez. La música tiene fundido de entrada y salida, y pausa por donde iba. | Pausar un «pum» de medio segundo no tiene sentido; lo que se pausa es el juego entero. |
+| **Listas y textos**: `ordenar`, `mezclar` e `invertir` cambian la lista (y la devuelven); `sublista` y todo lo de los textos dan uno **nuevo**. | Como en Python y Lua. Los textos no se pueden cambiar por dentro en casi ningún lenguaje. |
+| `para cada i, x en lista:` da **la posición y el valor**. Antes era un error. | Recorrer con la posición es de lo más pedido («el enemigo número 3»). La forma de dos nombres ya existía para las tablas. |
+| `texto(3.5, 2)` da `"3.50"`: **siempre esos decimales**. | Para marcadores de tiempo que no bailan (3.5, 3.48, 3.5…). |
+| Ángulos siempre en **grados** (también `tangente` y `angulo`), con **0 = derecha y 90 = arriba**. | Es lo que se aprende en el colegio, y ya era así en el resto del motor. |

@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { DOC_ESPECIALES, DOC_EVENTOS, DOC_FUNCIONES, DOC_MODULOS, DOC_OBJETO, DOC_PALABRAS, DOC_VALORES, RECETAS, buscarDoc, miembrosDe } from '../src/chispa/api/documentacion';
-import { METODOS_LISTA } from '../src/chispa/ejecucion/interprete';
+import { METODOS_LISTA, METODOS_TEXTO } from '../src/chispa/ejecucion/interprete';
 import { revisarScript } from '../src/proyecto/Revision';
 import { proyectoVacio } from '../src/proyecto/formato';
 import { globalesDelMotor } from '../src/proyecto/Revision';
@@ -82,8 +82,11 @@ describe('Documentación de la API', () => {
 
   it('los métodos de las listas están documentados (sin contar los otros nombres que también valen)', () => {
     const lista = DOC_VALORES.find((v) => v.tipo === 'lista')!.miembros.map((d) => d.nombre).sort();
-    const reales = ['longitud', ...Object.keys(METODOS_LISTA).filter((k) => k !== 'anadir' && k !== 'agregar')].sort();
+    const reales = ['longitud', 'primero', 'ultimo', ...Object.keys(METODOS_LISTA).filter((k) => k !== 'anadir' && k !== 'agregar')].sort();
     expect(lista).toEqual(reales);
+    // Y los de los textos
+    const textos = DOC_VALORES.find((v) => v.tipo === 'texto')!.miembros.map((d) => normalizar(d.nombre)).sort();
+    expect(textos).toEqual(['longitud', 'mayusculas', 'minusculas', ...Object.keys(METODOS_TEXTO)].sort());
     expect(buscarDoc('colores.añadir')?.firma).toBe('lista.añadir(valor)');
     expect(buscarDoc('nombre.mayusculas')?.tipo).toBe('propiedad');
     // Después de "colores." se sugieren también los de las listas; después de "yo.", solo los de los objetos

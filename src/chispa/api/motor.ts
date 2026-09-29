@@ -8,13 +8,16 @@
  * Todos los nombres se buscan NORMALIZADOS (sin tildes ni mayúsculas):
  * `escena.cámara` y `escena.camara` son lo mismo.
  */
-import { argNumero, argTexto, comoNumero } from './argumentos';
+import { argNumero, argTexto, comoLogico, comoNumero } from './argumentos';
 import { argObjeto, referencia, RefObjeto } from './objetos';
 import { ErrorChispa } from '../errores/ErrorChispa';
 import { sugerir } from '../errores/sugerencias';
 import type { Posicion } from '../lexico/tokens';
 import type { Interprete } from '../ejecucion/interprete';
-import { Anfitrion, FuncionNativa, PeticionEspera, aTexto, copiarSiVector, type Valor } from '../ejecucion/valores';
+import { Anfitrion, FuncionNativa, Lugar, PeticionEspera, aTexto, copiarSiVector, nombreTipo, type Valor } from '../ejecucion/valores';
+import { NOMBRES_SUAVIZADOS, SUAVIZADOS, mezclar, type ValorAnimable } from '../../objetos/AnimadorDeValores';
+import type { DibujoDepuracion } from '../../objetos/Escena';
+import { esColorValido } from '../../motor/Color';
 import type { BotonRaton } from '../../motor/Entrada';
 import type { Motor } from '../../motor/Motor';
 import { Vector2 } from '../../motor/Vector2';
@@ -34,7 +37,7 @@ export interface ContextoJuego {
   nombreEscena: string;
   crearDesdePlantilla(nombre: string, x: number | null, y: number | null): ObjetoJuego;
   pedirReinicio(): void;
-  cambiarEscena(nombre: string): void;
+  cambiarEscena(nombre: string, fundido?: number): void;
   /** Datos del jugador (texto JSON), guardados en el navegador. */
   guardarDato(clave: string, texto: string): void;
   cargarDato(clave: string): string | null;
@@ -130,6 +133,57 @@ export class DatosJuego extends Anfitrion {
   }
 }
 
+/**
+ * Un cronómetro: cuenta los segundos de juego desde que se crea (o se reinicia).
+ * Se para con el juego (tiempo.pausar) y con cronometro.pausar().
+ */
+export class Cronometro extends Anfitrion {
+  private acumulado = 0;
+  private desde: number | null;
+  constructor(private ahora: () => number) {
+    super();
+    this.desde = ahora();
+  }
+  describir() {
+    return 'un cronómetro';
+  }
+  propiedadesConocidas() {
+    return ['segundos', 'pausado', 'reiniciar', 'pausar', 'seguir'];
+  }
+  tieneMiembro(n: string) {
+    return ['segundos', 'pausado', 'reiniciar', 'pausar', 'seguir'].includes(n);
+  }
+  get segundos(): number {
+    return this.acumulado + (this.desde === null ? 0 : this.ahora() - this.desde);
+  }
+  obtener(p: string, original: string, pos: Posicion): Valor {
+    if (p === 'segundos') return this.segundos;
+    if (p === 'pausado') return this.desde === null;
+    if (p === 'reiniciar') return new FuncionNativa('reiniciar', () => ((this.acumulado = 0), (this.desde = this.ahora()), null));
+    if (p === 'pausar') return new FuncionNativa('pausar', () => ((this.acumulado = this.segundos), (this.desde = null), null));
+    if (p === 'seguir') return new FuncionNativa('seguir', () => (this.desde === null && (this.desde = this.ahora()), null));
+    const s = sugerir(original, this.propiedadesConocidas());
+    throw new ErrorChispa(pos, `un cronómetro no tiene nada llamado '${original}'.`, s ? `¿Querías decir '${s}'?` : `Lo que tiene: ${this.propiedadesConocidas().join(', ')}.`);
+  }
+  asignar(_p: string, _v: Valor, original: string, pos: Posicion): void {
+    throw new ErrorChispa(pos, `'${original}' de un cronómetro no se puede cambiar.`, 'Para empezar de cero: crono.reiniciar()');
+  }
+}
+
+/** El valor de destino de animar() tiene que ser del mismo tipo que lo que se anima. */
+function comprobarAnimable(lugar: Lugar, desde: Valor, hasta: Valor, pos: Posicion): void {
+  const ej = 'animar(yo.x, 300, 1)';
+  const esAnimable = (v: Valor) => typeof v === 'number' || v instanceof Vector2 || typeof v === 'string';
+  if (!esAnimable(desde)) throw new ErrorChispa(pos, `${lugar.describir()} es ${nombreTipo(desde)}, y eso no se puede animar.`, 'Se pueden animar números (x, y, rotacion, tamano, opacidad...), posiciones y colores.');
+  if (hasta === undefined) throw new ErrorChispa(pos, `a 'animar' le falta hasta dónde tiene que llegar ${lugar.describir()}.`, `Ejemplo: ${ej}`);
+  if (typeof desde === 'string' && typeof hasta === 'string' && !esColorValido(hasta)) {
+    throw new ErrorChispa(pos, `no conozco el color "${hasta}".`, 'Ejemplo: animar(yo.color, "rojo", 1)');
+  }
+  if (mezclar(desde as ValorAnimable, hasta as ValorAnimable, 0) === null) {
+    throw new ErrorChispa(pos, `no puedo animar ${lugar.describir()} (que es ${nombreTipo(desde)}) hasta ${nombreTipo(hasta)}.`, typeof desde === 'string' ? 'Los textos solo se animan si son colores con nombre o como "#ff8800".' : `Ejemplo: ${ej}`);
+  }
+}
+
 // ═════════════════════════ Instalar la API ═════════════════════════
 
 const BOTONES: Record<string, BotonRaton> = { izquierdo: 'izquierdo', izquierda: 'izquierdo', derecho: 'derecho', derecha: 'derecho', medio: 'medio', central: 'medio' };
@@ -141,8 +195,16 @@ function argBoton(args: Valor[], funcion: string, pos: Posicion): BotonRaton {
   return b;
 }
 
+/** El tono de un sonido: 1 = normal. Tiene que ser mayor que 0. */
+function tonoValido(tono: number, p: Posicion): number {
+  if (tono <= 0) throw new ErrorChispa(p, 'el tono tiene que ser mayor que 0.', '1 = normal, 2 = más agudo, 0.5 = más grave.');
+  return tono;
+}
+
 /** Añade al intérprete todo lo que depende del motor. */
 export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, datos: DatosJuego): void {
+  /** El lienzo del juego (si hay: en los tests no). */
+  const lienzo = (): HTMLCanvasElement | null => (ctx.motor.renderizador as { canvas?: HTMLCanvasElement }).canvas ?? null;
   const g = interprete.globales;
   // OJO: no tocamos ctx.motor hasta que se USA una función. Así la API se puede
   // instalar sin juego en marcha (el editor la necesita para revisar el código).
@@ -176,14 +238,80 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
     return p1.distancia(p2);
   });
 
+  funcion('contar', (a, p) => ctx.escena.buscarTodos(argTexto(a, 0, 'contar', p, 'contar("Enemigo")')).length);
+  funcion('clonar', (a, p) => {
+    const o = argObjeto(a, 0, 'clonar', p, 'clonar(yo)');
+    if (!ctx.escena.clonador) throw new ErrorChispa(p, 'no se puede clonar fuera del juego.');
+    return referencia(ctx.escena.clonador(o));
+  });
+  funcion('buscarConEtiqueta', (a, p) => {
+    const e = normalizar(argTexto(a, 0, 'buscarConEtiqueta', p, 'buscarConEtiqueta("enemigo")'));
+    return ctx.escena.objetos.filter((o) => !o.destruido && o.etiquetas.has(e)).map(referencia);
+  });
+  funcion('angulo', (a, p) => {
+    // El ángulo (en grados) de la flecha que va de un sitio a otro: 0 = derecha, 90 = arriba
+    const punto = (v: Valor | undefined) => (v instanceof RefObjeto ? v.objeto.posicion : v instanceof Vector2 ? v : null);
+    const p1 = punto(a[0]);
+    const p2 = punto(a[1]);
+    if (!p1 || !p2) throw new ErrorChispa(p, "'angulo' necesita dos objetos o dos posiciones.", 'Ejemplo: angulo(yo, buscar("Jugador"))');
+    return (Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180) / Math.PI;
+  });
+  funcion('cronometro', () => new Cronometro(() => ctx.motor.tiempo.total));
+  // animar(yo.tamano, 2, 0.5, "rebote"): recibe el SITIO (yo.tamano), no su valor
+  g.declarar(
+    'animar',
+    new FuncionNativa(
+      'animar',
+      (a, p) => {
+        const lugar = a[0];
+        if (!(lugar instanceof Lugar)) throw new ErrorChispa(p, "a 'animar' le falta qué tiene que cambiar.", 'Ejemplo: animar(yo.x, 300, 1)');
+        const desde = copiarSiVector(lugar.leer());
+        const hasta = a[1];
+        comprobarAnimable(lugar, desde, hasta, p);
+        const segundos = argNumero(a, 2, 'animar', p, 'animar(yo.x, 300, 1)', 0.5);
+        if (segundos < 0) throw new ErrorChispa(p, 'el tiempo de una animación no puede ser negativo.');
+        const nombreSuave = a[3] === undefined ? 'suave' : normalizar(argTexto(a, 3, 'animar', p, 'animar(yo.x, 300, 1, "rebote")'));
+        const suavizado = SUAVIZADOS[nombreSuave];
+        if (!suavizado) {
+          const s = sugerir(nombreSuave, NOMBRES_SUAVIZADOS);
+          throw new ErrorChispa(p, `no conozco el suavizado "${aTexto(a[3] ?? null)}".`, (s ? `¿Querías decir "${s}"? ` : '') + `Los que hay son: ${NOMBRES_SUAVIZADOS.join(', ')}.`);
+        }
+        const final = copiarSiVector(hasta as Valor);
+        // Se escribe ya una vez: si no se puede cambiar (por ejemplo, un objeto sin dibujo), el error sale aquí, en su línea
+        lugar.escribir(desde);
+        ctx.escena.animaciones.agregar({
+          clave: lugar.clave,
+          dueno: lugar.dueno ?? undefined,
+          duracion: segundos,
+          transcurrido: 0,
+          suavizado,
+          paso: (t) => {
+            try {
+              lugar.escribir(t >= 1 ? copiarSiVector(final) : (mezclar(desde as ValorAnimable, final as ValorAnimable, t) as Valor));
+            } catch {
+              ctx.escena.animaciones.cancelar(lugar.clave); // el objeto ha cambiado (ya no tiene dibujo...): se deja de animar
+            }
+          },
+        });
+        return null;
+      },
+      true,
+    ),
+    'animar',
+  );
+
   // ── teclado ──
   g.declarar(
     'teclado',
-    new Modulo('teclado', {}, {
+    new Modulo('teclado', {
+      ultima: { obtener: () => ctx.motor.entrada.ultimaTecla },
+      pulsadas: { obtener: () => ctx.motor.entrada.teclasPulsadas() },
+    }, {
       pulsada: (a, p) => ctx.motor.entrada.estaPulsada(argTexto(a, 0, 'teclado.pulsada', p, 'teclado.pulsada("izquierda")')),
       sepulso: (a, p) => ctx.motor.entrada.sePulso(argTexto(a, 0, 'teclado.sePulso', p, 'teclado.sePulso("espacio")')),
       sesolto: (a, p) => ctx.motor.entrada.seSolto(argTexto(a, 0, 'teclado.seSolto', p, 'teclado.seSolto("espacio")')),
-    }, ['pulsada', 'sePulso', 'seSolto']),
+      algunasepulso: () => ctx.motor.entrada.algunaSePulso(),
+    }, ['pulsada', 'sePulso', 'seSolto', 'algunaSePulso', 'ultima', 'pulsadas']),
   );
 
   // ── raton (coordenadas del mundo, con la Y hacia arriba) ──
@@ -196,13 +324,26 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
         y: { obtener: () => ctx.escena.ratonEnMundo().y },
         posicion: { obtener: () => ctx.escena.ratonEnMundo() },
         rueda: { obtener: () => ctx.motor.entrada.rueda },
+        objeto: {
+          obtener: () => {
+            const o = ctx.escena.objetoBajoRaton();
+            return o ? referencia(o) : null;
+          },
+        },
+        visible: {
+          obtener: () => lienzo()?.style.cursor !== 'none',
+          asignar: (v, p) => {
+            const l = lienzo();
+            if (l) l.style.cursor = comoLogico(v, 'visible', p) ? '' : 'none';
+          },
+        },
       },
       {
         pulsado: (a, p) => ctx.motor.entrada.ratonPulsado(argBoton(a, 'pulsado', p)),
         sepulso: (a, p) => ctx.motor.entrada.ratonSePulso(argBoton(a, 'sePulso', p)),
         sesolto: (a, p) => ctx.motor.entrada.ratonSeSolto(argBoton(a, 'seSolto', p)),
       },
-      ['x', 'y', 'posicion', 'rueda', 'pulsado', 'sePulso', 'seSolto'],
+      ['x', 'y', 'posicion', 'rueda', 'objeto', 'visible', 'pulsado', 'sePulso', 'seSolto'],
     ),
   );
 
@@ -262,6 +403,14 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
         objetos: { obtener: () => ctx.escena.objetos.filter((o) => !o.destruido).map(referencia) },
         nombre: { obtener: () => ctx.nombreEscena },
         gravedad: { obtener: () => ctx.escena.gravedad, asignar: (v, p) => (ctx.escena.gravedad = comoNumero(v, 'gravedad', p)) },
+        colorfondo: {
+          obtener: () => ctx.motor.colorFondo,
+          asignar: (v, p) => {
+            const c = aTexto(v);
+            if (!esColorValido(c)) throw new ErrorChispa(p, `no conozco el color "${c}".`, 'Ejemplo: escena.colorFondo = "azul"');
+            ctx.motor.colorFondo = c;
+          },
+        },
       },
       {
         reiniciar: () => {
@@ -269,11 +418,12 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
           return null;
         },
         cambiar: (a, p) => {
-          ctx.cambiarEscena(argTexto(a, 0, 'escena.cambiar', p, 'escena.cambiar("Nivel2")'));
+          const ej = 'escena.cambiar("Nivel2", 1)';
+          ctx.cambiarEscena(argTexto(a, 0, 'escena.cambiar', p, ej), Math.max(0, argNumero(a, 1, 'escena.cambiar', p, ej, 0)));
           return null;
         },
       },
-      ['objetos', 'nombre', 'gravedad', 'camara', 'reiniciar', 'cambiar'],
+      ['objetos', 'nombre', 'gravedad', 'colorFondo', 'camara', 'reiniciar', 'cambiar'],
     ).agregarSubmodulo('camara', camara),
   );
 
@@ -285,7 +435,22 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
       { volumen: { obtener: () => ctx.motor.sonido.volumen, asignar: (v, p) => (ctx.motor.sonido.volumen = comoNumero(v, 'volumen', p)) } },
       {
         reproducir: (a, p) => {
-          ctx.motor.sonido.reproducir(argTexto(a, 0, 'sonido.reproducir', p, 'sonido.reproducir("salto")'));
+          const ej = 'sonido.reproducir("salto", 0.5, 1.2)';
+          ctx.motor.sonido.reproducir(argTexto(a, 0, 'sonido.reproducir', p, ej), { volumen: argNumero(a, 1, 'sonido.reproducir', p, ej, 1), tono: tonoValido(argNumero(a, 2, 'sonido.reproducir', p, ej, 1), p) });
+          return null;
+        },
+        bucle: (a, p) => {
+          const ej = 'sonido.bucle("motor", 0.5)';
+          ctx.motor.sonido.reproducir(argTexto(a, 0, 'sonido.bucle', p, ej), { volumen: argNumero(a, 1, 'sonido.bucle', p, ej, 1), tono: tonoValido(argNumero(a, 2, 'sonido.bucle', p, ej, 1), p), bucle: true });
+          return null;
+        },
+        sonando: (a, p) => ctx.motor.sonido.estaSonando(argTexto(a, 0, 'sonido.sonando', p, 'si no sonido.sonando("motor"):')),
+        pausar: () => {
+          ctx.motor.sonido.pausar();
+          return null;
+        },
+        seguir: () => {
+          ctx.motor.sonido.reanudar();
           return null;
         },
         parar: (a, p) => {
@@ -301,7 +466,7 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
           return null;
         },
       },
-      ['volumen', 'reproducir', 'parar', 'tono'],
+      ['volumen', 'reproducir', 'bucle', 'parar', 'sonando', 'pausar', 'seguir', 'tono'],
     ),
   );
 
@@ -316,15 +481,24 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
       },
       {
         reproducir: (a, p) => {
-          ctx.motor.sonido.musica(argTexto(a, 0, 'musica.reproducir', p, 'musica.reproducir("tema")'));
+          const ej = 'musica.reproducir("tema", 2)';
+          ctx.motor.sonido.musica(argTexto(a, 0, 'musica.reproducir', p, ej), Math.max(0, argNumero(a, 1, 'musica.reproducir', p, ej, 0)));
           return null;
         },
-        parar: () => {
-          ctx.motor.sonido.pararMusica();
+        parar: (a, p) => {
+          ctx.motor.sonido.pararMusica(Math.max(0, argNumero(a, 0, 'musica.parar', p, 'musica.parar(2)', 0)));
+          return null;
+        },
+        pausar: () => {
+          ctx.motor.sonido.pausarMusica();
+          return null;
+        },
+        seguir: () => {
+          ctx.motor.sonido.seguirMusica();
           return null;
         },
       },
-      ['volumen', 'actual', 'reproducir', 'parar'],
+      ['volumen', 'actual', 'reproducir', 'parar', 'pausar', 'seguir'],
     ),
   );
 
@@ -361,20 +535,151 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
   });
 
   // ── tiempo, pantalla, juego, delta ──
+  // Pausa y cámara lenta: se recuerda la velocidad de antes para volver a ella
+  let escalaAntesDePausa = 1;
+  let lentaQueda = 0;
+  let vigilandoLenta = false;
+  const t = () => ctx.motor.tiempo;
   g.declarar(
     'tiempo',
-    new Modulo('tiempo', {
-      total: { obtener: () => ctx.motor.tiempo.total },
-      delta: { obtener: () => ctx.motor.tiempo.delta },
-      escala: { obtener: () => ctx.motor.tiempo.escala, asignar: (v, p) => (ctx.motor.tiempo.escala = Math.max(0, comoNumero(v, 'escala', p))) },
-    }),
+    new Modulo(
+      'tiempo',
+      {
+        total: { obtener: () => t().total },
+        delta: { obtener: () => t().delta },
+        escala: { obtener: () => t().escala, asignar: (v, p) => (t().escala = Math.max(0, comoNumero(v, 'escala', p))) },
+        pausado: { obtener: () => t().escala === 0 },
+        fps: { obtener: () => t().fps },
+      },
+      {
+        pausar: () => {
+          if (t().escala !== 0) escalaAntesDePausa = t().escala;
+          t().escala = 0;
+          return null;
+        },
+        seguir: () => {
+          if (t().escala === 0) t().escala = escalaAntesDePausa || 1;
+          return null;
+        },
+        camaralenta: (a, p) => {
+          // tiempo.camaraLenta(0.3, 2): durante 2 segundos (de verdad) todo va a 0,3 de su velocidad
+          const ej = 'tiempo.camaraLenta(0.3, 2)';
+          const escala = argNumero(a, 0, 'tiempo.camaraLenta', p, ej, 0.3);
+          const segundos = argNumero(a, 1, 'tiempo.camaraLenta', p, ej, 1);
+          if (escala <= 0) throw new ErrorChispa(p, 'la velocidad de la cámara lenta tiene que ser mayor que 0.', 'Para parar del todo usa tiempo.pausar()');
+          t().escala = escala;
+          lentaQueda = segundos;
+          if (!vigilandoLenta) {
+            vigilandoLenta = true;
+            ctx.motor.alActualizar(() => {
+              if (lentaQueda <= 0) return;
+              lentaQueda -= t().deltaReal;
+              if (lentaQueda <= 0) t().escala = 1;
+            });
+          }
+          return null;
+        },
+      },
+      ['total', 'delta', 'escala', 'pausado', 'fps', 'pausar', 'seguir', 'camaraLenta'],
+    ),
   );
   g.declarar(
     'pantalla',
-    new Modulo('pantalla', {
-      ancho: { obtener: () => ctx.motor.renderizador.ancho },
-      alto: { obtener: () => ctx.motor.renderizador.alto },
-    }),
+    new Modulo(
+      'pantalla',
+      {
+        ancho: { obtener: () => ctx.motor.renderizador.ancho },
+        alto: { obtener: () => ctx.motor.renderizador.alto },
+        completa: {
+          obtener: () => typeof document !== 'undefined' && !!document.fullscreenElement,
+          asignar: (v, p) => {
+            const quiere = comoLogico(v, 'completa', p);
+            const l = lienzo();
+            if (!l || typeof document === 'undefined') return;
+            // El navegador solo lo deja hacer justo después de pulsar una tecla o hacer clic
+            if (quiere && !document.fullscreenElement) void (l.parentElement ?? l).requestFullscreen?.().catch(() => {});
+            else if (!quiere && document.fullscreenElement) void document.exitFullscreen?.().catch(() => {});
+          },
+        },
+      },
+      {
+        oscurecer: (a, p) => {
+          const ej = 'pantalla.oscurecer(1, "negro")';
+          const segundos = Math.max(0, argNumero(a, 0, 'pantalla.oscurecer', p, ej, 1));
+          const color = a[1] === undefined ? undefined : argTexto(a, 1, 'pantalla.oscurecer', p, ej);
+          if (color !== undefined && !esColorValido(color)) throw new ErrorChispa(p, `no conozco el color "${color}".`, `Ejemplo: ${ej}`);
+          ctx.escena.fundir(1, segundos, color);
+          return null;
+        },
+        aclarar: (a, p) => {
+          ctx.escena.fundir(0, Math.max(0, argNumero(a, 0, 'pantalla.aclarar', p, 'pantalla.aclarar(1)', 1)));
+          return null;
+        },
+      },
+      ['ancho', 'alto', 'completa', 'oscurecer', 'aclarar'],
+    ),
+  );
+
+  // ── dibujar (para ver cosas mientras programas: líneas, círculos...). Coordenadas del mundo; duran un fotograma. ──
+  const dibujo = (d: DibujoDepuracion) => {
+    ctx.escena.dibujos.push(d);
+    return null;
+  };
+  const colorDe = (a: Valor[], i: number, funcion: string, p: Posicion, ej: string) => {
+    if (a[i] === undefined) return 'rojo';
+    const c = argTexto(a, i, funcion, p, ej);
+    if (!esColorValido(c)) throw new ErrorChispa(p, `no conozco el color "${c}".`, `Ejemplo: ${ej}`);
+    return c;
+  };
+  g.declarar(
+    'dibujar',
+    new Modulo(
+      'dibujar',
+      {},
+      {
+        linea: (a, p) => {
+          const ej = 'dibujar.linea(yo.x, yo.y, raton.x, raton.y, "rojo")';
+          const n = (i: number) => argNumero(a, i, 'dibujar.linea', p, ej);
+          return dibujo({ tipo: 'linea', x1: n(0), y1: n(1), x2: n(2), y2: n(3), color: colorDe(a, 4, 'dibujar.linea', p, ej), grosor: argNumero(a, 5, 'dibujar.linea', p, ej, 2) });
+        },
+        circulo: (a, p) => {
+          const ej = 'dibujar.circulo(yo.x, yo.y, 100, "verde")';
+          const n = (i: number) => argNumero(a, i, 'dibujar.circulo', p, ej);
+          return dibujo({ tipo: 'circulo', x: n(0), y: n(1), radio: n(2), color: colorDe(a, 3, 'dibujar.circulo', p, ej), relleno: a[4] === true });
+        },
+        rectangulo: (a, p) => {
+          const ej = 'dibujar.rectangulo(yo.x, yo.y, 64, 64, "azul")';
+          const n = (i: number) => argNumero(a, i, 'dibujar.rectangulo', p, ej);
+          return dibujo({ tipo: 'rectangulo', x: n(0), y: n(1), ancho: n(2), alto: n(3), color: colorDe(a, 4, 'dibujar.rectangulo', p, ej), relleno: a[5] === true });
+        },
+        texto: (a, p) => {
+          const ej = 'dibujar.texto("aqui", yo.x, yo.y + 40, "blanco")';
+          const n = (i: number) => argNumero(a, i, 'dibujar.texto', p, ej);
+          return dibujo({ tipo: 'texto', texto: aTexto(a[0] ?? null), x: n(1), y: n(2), color: colorDe(a, 3, 'dibujar.texto', p, ej), tamano: argNumero(a, 4, 'dibujar.texto', p, ej, 16) });
+        },
+      },
+      ['linea', 'circulo', 'rectangulo', 'texto'],
+    ),
+  );
+
+  // ── sistema ──
+  g.declarar(
+    'sistema',
+    new Modulo(
+      'sistema',
+      {
+        movil: { obtener: () => typeof navigator !== 'undefined' && (navigator.maxTouchPoints > 0 || /Android|iPhone|iPad/i.test(navigator.userAgent)) },
+      },
+      {
+        abrirweb: (a, p) => {
+          const url = argTexto(a, 0, 'sistema.abrirWeb', p, 'sistema.abrirWeb("https://itch.io")');
+          if (!/^https?:\/\//i.test(url)) throw new ErrorChispa(p, 'la dirección tiene que empezar por https:// (o http://).', 'Ejemplo: sistema.abrirWeb("https://itch.io")');
+          if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener');
+          return null;
+        },
+      },
+      ['movil', 'abrirWeb'],
+    ),
   );
   g.declarar('juego', datos);
   g.declarar('delta', 0);

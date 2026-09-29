@@ -29,6 +29,19 @@ export class ObjetoJuego {
    * Es parecido a los Attributes de Roblox.
    */
   readonly propiedades = new Map<string, unknown>();
+  /** Etiquetas (yo.ponerEtiqueta("enemigo")): normalizada → como se escribió. */
+  readonly etiquetas = new Map<string, string>();
+  /**
+   * PADRE: si tiene uno, se mueve con él (una espada que va con el jugador).
+   * Guardamos dónde estaba el padre el fotograma anterior: el hijo se mueve lo
+   * mismo que él, y así puede moverse también por su cuenta.
+   */
+  padre: ObjetoJuego | null = null;
+  posicionPadre: Vector2 | null = null;
+  /** Se puede coger y mover con el ratón (yo.arrastrable = verdadero). */
+  arrastrable = false;
+  /** La definición de la que salió (para clonar()). */
+  definicion: unknown = null;
 
   private componentes: Componente[] = [];
   /** Recuerda qué componente es de cada clase: obtener() se usa miles de veces por fotograma. */
@@ -75,5 +88,18 @@ export class ObjetoJuego {
 
   destruir(): void {
     this.escena?.destruir(this);
+  }
+
+  /** Se pega a otro objeto: a partir de ahora se mueve con él. null = se suelta. */
+  pegarA(padre: ObjetoJuego | null): void {
+    // Un objeto no puede ser padre de sí mismo, ni de su propio padre (daría vueltas sin fin)
+    for (let p = padre; p; p = p.padre) if (p === this) throw new Error('bucle de padres');
+    this.padre = padre;
+    this.posicionPadre = padre ? padre.posicion.copiar() : null;
+  }
+
+  /** Los objetos pegados a este (que siguen existiendo). */
+  get hijos(): ObjetoJuego[] {
+    return this.escena ? this.escena.objetos.filter((o) => o.padre === this && !o.destruido) : [];
   }
 }

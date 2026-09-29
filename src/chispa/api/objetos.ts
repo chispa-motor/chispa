@@ -21,6 +21,7 @@ import { Sprite } from '../../objetos/componentes/Sprite';
 import { Animador } from '../../objetos/componentes/Animador';
 import { MapaCasillas } from '../../objetos/componentes/MapaCasillas';
 import { Recorrido } from '../../objetos/componentes/Recorrido';
+import { SUAVIZADOS } from '../../objetos/AnimadorDeValores';
 import { argTexto } from './argumentos';
 import { enumerar } from '../errores/sugerencias';
 import { normalizar } from '../../utilidades/texto';
@@ -82,6 +83,36 @@ function destino(v: Valor | undefined, funcion: string, pos: Posicion): Vector2 
   if (v instanceof RefObjeto) return v.objeto.posicion;
   if (v instanceof Vector2) return v;
   throw new ErrorChispa(pos, `'${funcion}' necesita un objeto o una posición (vector), pero le das ${v === undefined ? 'nada' : nombreTipo(v)}.`, `Ejemplo: yo.${funcion}(buscar("Jugador"), 100)`);
+}
+
+/**
+ * Un destino escrito de cualquiera de las dos formas: (otro) / (vector(x, y)) o (x, y).
+ * Devuelve el punto y cuántos valores ha usado (para leer los que vienen detrás).
+ */
+function destinoOPunto(a: Valor[], funcion: string, pos: Posicion, ejemplo: string): { punto: Vector2; usados: number } {
+  if (typeof a[0] === 'number') return { punto: new Vector2(a[0], argNumero(a, 1, funcion, pos, ejemplo)), usados: 2 };
+  if (a[0] instanceof RefObjeto || a[0] instanceof Vector2) return { punto: destino(a[0], funcion, pos).copiar(), usados: 1 };
+  throw new ErrorChispa(pos, `'${funcion}' necesita un sitio: un objeto, una posición (vector) o dos números (x, y).`, `Ejemplo: ${ejemplo}`);
+}
+
+/** Los objetos (menos este) que ocupan algo de sitio y se llaman o son del tipo `nombre` (o todos si es null). */
+function candidatos(o: ObjetoJuego, nombre: string | null): ObjetoJuego[] {
+  const escena = o.escena;
+  if (!escena) return [];
+  const n = nombre === null ? null : normalizar(nombre);
+  return escena.objetos.filter((x) => x !== o && !x.destruido && (n === null || normalizar(x.nombre) === n || normalizar(x.tipo) === n || x.etiquetas.has(n)));
+}
+
+/** ¿Es un objeto de texto? (entonces yo.tamano es el tamaño de la letra) */
+function esTexto(o: ObjetoJuego): boolean {
+  return o.obtener(Sprite)?.forma === 'texto';
+}
+
+/** La etiqueta que se pasa a ponerEtiqueta, tieneEtiqueta...: un texto sin espacios de más. */
+function argEtiqueta(a: Valor[], funcion: string, pos: Posicion): string {
+  const e = argTexto(a, 0, funcion, pos, `yo.${funcion}("enemigo")`).trim();
+  if (!e) throw new ErrorChispa(pos, 'la etiqueta está vacía.', `Ejemplo: yo.${funcion}("enemigo")`);
+  return e;
 }
 
 function necesitaAnimador(o: ObjetoJuego, nombre: string, pos: Posicion): Animador {
@@ -164,10 +195,32 @@ const PROPIEDADES: Record<string, PropiedadObjeto> = {
       s.texto = aTexto(v);
     },
   },
+  // yo.tamano: en un TEXTO, el tamaño de la letra; en todo lo demás, lo grande que es (1 = normal, 2 = el doble)
   tamaño: {
-    obtener: (o, p) => necesitaSprite(o, 'tamaño', p).tamano,
-    asignar: (o, v, p) => (necesitaSprite(o, 'tamaño', p).tamano = comoNumero(v, 'tamaño', p)),
+    obtener: (o, p) => (esTexto(o) ? necesitaSprite(o, 'tamaño', p).tamano : o.transformacion.escala.x),
+    asignar: (o, v, p) => {
+      const n = comoNumero(v, 'tamaño', p);
+      if (esTexto(o)) necesitaSprite(o, 'tamaño', p).tamano = n;
+      else o.transformacion.escala.x = o.transformacion.escala.y = n;
+    },
   },
+  tamanoletra: {
+    obtener: (o, p) => necesitaSprite(o, 'tamanoLetra', p).tamano,
+    asignar: (o, v, p) => (necesitaSprite(o, 'tamanoLetra', p).tamano = comoNumero(v, 'tamanoLetra', p)),
+  },
+  transparencia: {
+    obtener: (o, p) => 1 - necesitaSprite(o, 'transparencia', p).opacidad,
+    asignar: (o, v, p) => (necesitaSprite(o, 'transparencia', p).opacidad = 1 - Math.min(1, Math.max(0, comoNumero(v, 'transparencia', p)))),
+  },
+  voltearvertical: {
+    obtener: (o, p) => necesitaSprite(o, 'voltearVertical', p).voltearY,
+    asignar: (o, v, p) => (necesitaSprite(o, 'voltearVertical', p).voltearY = comoLogico(v, 'voltearVertical', p)),
+  },
+  etiquetas: { obtener: (o) => [...o.etiquetas.values()] },
+  padre: { obtener: (o) => (o.padre && !o.padre.destruido ? referencia(o.padre) : null) },
+  hijos: { obtener: (o) => o.hijos.map(referencia) },
+  arrastrable: { obtener: (o) => o.arrastrable, asignar: (o, v, p) => (o.arrastrable = comoLogico(v, 'arrastrable', p)) },
+  arrastrando: { obtener: (o) => o.escena?.arrastrando(o) ?? false },
   imagen: {
     obtener: (o, p) => necesitaSprite(o, 'imagen', p).imagen,
     asignar: (o, v, p) => {
@@ -273,7 +326,180 @@ const METODOS: Record<string, (o: ObjetoJuego, args: Valor[], pos: Posicion) => 
     o.destruir();
     return null;
   },
-  distanciaa: (o, a, p) => o.posicion.distancia(argObjeto(a, 0, 'distanciaA', p, 'yo.distanciaA(otro)').posicion),
+  distanciaa: (o, a, p) => o.posicion.distancia(destinoOPunto(a, 'distanciaA', p, 'yo.distanciaA(otro)').punto),
+  teletransportar: (o, a, p) => {
+    // De golpe a otro sitio (y sin la velocidad que llevaba, para que no salga disparado)
+    const { punto } = destinoOPunto(a, 'teletransportar', p, 'yo.teletransportar(100, 200)');
+    o.escena?.animaciones.cancelar(`${o.id}.ira`);
+    o.posicion.x = punto.x;
+    o.posicion.y = punto.y;
+    const f = o.obtener(Fisica);
+    if (f) f.velocidad.x = f.velocidad.y = 0;
+    return null;
+  },
+  ira: (o, a, p) => {
+    // Va hasta el sitio en esos segundos, suavemente: yo.irA(400, 300, 2)  ·  yo.irA(buscar("Meta"), 1)
+    const ej = 'yo.irA(400, 300, 2)';
+    const { punto, usados } = destinoOPunto(a, 'irA', p, ej);
+    const segundos = argNumero(a, usados, 'irA', p, ej, 1);
+    if (segundos < 0) throw new ErrorChispa(p, 'el tiempo no puede ser negativo.', `Ejemplo: ${ej}`);
+    const desde = o.posicion.copiar();
+    const escena = o.escena;
+    if (!escena) return null;
+    escena.animaciones.agregar({
+      clave: `${o.id}.ira`,
+      dueno: o,
+      duracion: segundos,
+      transcurrido: 0,
+      suavizado: SUAVIZADOS.suave,
+      paso: (t) => {
+        o.posicion.x = desde.x + (punto.x - desde.x) * t;
+        o.posicion.y = desde.y + (punto.y - desde.y) * t;
+        const f = o.obtener(Fisica);
+        if (f) f.velocidad.x = f.velocidad.y = 0;
+      },
+    });
+    return null;
+  },
+  anguloa: (o, a, p) => {
+    const d = destinoOPunto(a, 'anguloA', p, 'yo.anguloA(buscar("Jugador"))').punto.restar(o.posicion);
+    return (Math.atan2(d.y, d.x) * 180) / Math.PI;
+  },
+  rotarhacia: (o, a, p) => {
+    // Gira poco a poco hasta mirar hacia el destino. Devuelve verdadero cuando ya lo mira.
+    const ej = 'yo.rotarHacia(raton.posicion, 180)';
+    const { punto, usados } = destinoOPunto(a, 'rotarHacia', p, ej);
+    const velocidad = argNumero(a, usados, 'rotarHacia', p, ej, 180);
+    const d = punto.restar(o.posicion);
+    if (d.longitud() === 0) return true;
+    const objetivo = (Math.atan2(d.y, d.x) * 180) / Math.PI;
+    const actual = o.transformacion.rotacion;
+    const diferencia = ((((objetivo - actual) % 360) + 540) % 360) - 180; // el camino más corto, entre -180 y 180
+    const paso = velocidad * (o.escena?.motor.tiempo.delta ?? 0);
+    if (Math.abs(diferencia) <= paso) {
+      o.transformacion.rotacion = actual + diferencia;
+      return true;
+    }
+    o.transformacion.rotacion = actual + Math.sign(diferencia) * paso;
+    return false;
+  },
+  avanzar: (o, a, p) => {
+    // Hacia donde mira (su rotación), como "mover 10 pasos" de Scratch
+    const pasos = argNumero(a, 0, 'avanzar', p, 'yo.avanzar(10)');
+    const r = (o.transformacion.rotacion * Math.PI) / 180;
+    o.posicion.x += Math.cos(r) * pasos;
+    o.posicion.y += Math.sin(r) * pasos;
+    return null;
+  },
+  ocultar: (o, _a, p) => {
+    necesitaSprite(o, 'ocultar', p).visible = false;
+    return null;
+  },
+  aparecer: (o, _a, p) => {
+    necesitaSprite(o, 'aparecer', p).visible = true;
+    return null;
+  },
+  parpadear: (o, a, p) => {
+    // Se enciende y se apaga durante un rato (por ejemplo, al recibir un golpe) y al final se queda visible
+    const ej = 'yo.parpadear(1)';
+    const s = necesitaSprite(o, 'parpadear', p);
+    const segundos = argNumero(a, 0, 'parpadear', p, ej, 1);
+    const porSegundo = argNumero(a, 1, 'parpadear', p, 'yo.parpadear(1, 10)', 8);
+    o.escena?.animaciones.agregar({
+      clave: `${o.id}.parpadeo`,
+      dueno: o,
+      duracion: segundos,
+      transcurrido: 0,
+      suavizado: (t) => t,
+      paso: (t) => (s.visible = t >= 1 || Math.floor(t * segundos * porSegundo * 2) % 2 === 0),
+      alTerminar: () => (s.visible = true),
+    });
+    return null;
+  },
+  ponerdelante: (o, _a, p) => {
+    const s = necesitaSprite(o, 'ponerDelante', p);
+    const capas = candidatos(o, null).map((x) => x.obtener(Sprite)?.capa ?? 0);
+    s.capa = Math.max(s.capa, ...capas.map((c) => c + 1));
+    return null;
+  },
+  ponerdetras: (o, _a, p) => {
+    const s = necesitaSprite(o, 'ponerDetras', p);
+    const capas = candidatos(o, null).map((x) => x.obtener(Sprite)?.capa ?? 0);
+    s.capa = Math.min(s.capa, ...capas.map((c) => c - 1));
+    return null;
+  },
+  tocando: (o, a, p) => {
+    // ¿Está tocando AHORA algo (o algo con ese nombre, tipo, etiqueta o tipo de casilla)?
+    const nombre = a[0] === undefined ? null : argTexto(a, 0, 'tocando', p, 'si yo.tocando("Lava"):');
+    const escena = o.escena;
+    const caja = escena?.cajaDe(o);
+    if (!escena || !caja) return false;
+    const toca = (b: { izquierda: number; derecha: number; abajo: number; arriba: number }) =>
+      caja.izquierda <= b.derecha + 1 && caja.derecha >= b.izquierda - 1 && caja.abajo <= b.arriba + 1 && caja.arriba >= b.abajo - 1;
+    for (const x of candidatos(o, null)) {
+      const m = x.obtener(MapaCasillas);
+      if (m) {
+        const n = nombre === null ? null : normalizar(nombre);
+        if (m.casillasEn(caja, 1).some((c) => toca(c.caja) && (n === null || normalizar(c.tipo) === n || normalizar(x.nombre) === n))) return true;
+        continue;
+      }
+      if (nombre !== null && !candidatos(o, nombre).includes(x)) continue;
+      const b = escena.cajaDe(x);
+      if (b && x.obtener(Colision) && toca(b)) return true;
+    }
+    return false;
+  },
+  cercanos: (o, a, p) => {
+    // Los objetos a menos de `radio` píxeles, del más cercano al más lejano
+    const ej = 'yo.cercanos(200, "Enemigo")';
+    const radio = argNumero(a, 0, 'cercanos', p, ej);
+    const nombre = a[1] === undefined ? null : argTexto(a, 1, 'cercanos', p, ej);
+    return candidatos(o, nombre)
+      .filter((x) => !x.obtener(MapaCasillas) && x.posicion.distancia(o.posicion) <= radio)
+      .sort((x, y) => x.posicion.distancia(o.posicion) - y.posicion.distancia(o.posicion))
+      .map(referencia);
+  },
+  mascercano: (o, a, p) => {
+    // El objeto más cercano (de ese tipo). nulo si no hay ninguno (o ninguno a menos de `radio`)
+    const ej = 'yo.masCercano("Enemigo")';
+    const nombre = a[0] === undefined || a[0] === null ? null : argTexto(a, 0, 'masCercano', p, ej);
+    const radio = argNumero(a, 1, 'masCercano', p, 'yo.masCercano("Enemigo", 300)', Infinity);
+    let mejor: ObjetoJuego | null = null;
+    for (const x of candidatos(o, nombre)) {
+      if (x.obtener(MapaCasillas)) continue;
+      const d = x.posicion.distancia(o.posicion);
+      if (d <= radio && (!mejor || d < mejor.posicion.distancia(o.posicion))) mejor = x;
+    }
+    return mejor ? referencia(mejor) : null;
+  },
+  clonar: (o, _a, p) => {
+    if (!o.escena?.clonador) throw new ErrorChispa(p, 'no se puede clonar fuera del juego.');
+    return referencia(o.escena.clonador(o));
+  },
+  poneretiqueta: (o, a, p) => {
+    const e = argEtiqueta(a, 'ponerEtiqueta', p);
+    o.etiquetas.set(normalizar(e), e);
+    return null;
+  },
+  quitaretiqueta: (o, a, p) => {
+    o.etiquetas.delete(normalizar(argEtiqueta(a, 'quitarEtiqueta', p)));
+    return null;
+  },
+  tieneetiqueta: (o, a, p) => o.etiquetas.has(normalizar(argEtiqueta(a, 'tieneEtiqueta', p))),
+  pegara: (o, a, p) => {
+    const padre = argObjeto(a, 0, 'pegarA', p, 'espada.pegarA(buscar("Jugador"))');
+    if (padre === o) throw new ErrorChispa(p, 'un objeto no se puede pegar a sí mismo.');
+    try {
+      o.pegarA(padre);
+    } catch {
+      throw new ErrorChispa(p, `'${o.nombre}' no se puede pegar a '${padre.nombre}', porque '${padre.nombre}' ya va pegado a '${o.nombre}'.`, 'Suelta antes uno de los dos con .soltar()');
+    }
+    return null;
+  },
+  soltar: (o) => {
+    o.pegarA(null);
+    return null;
+  },
   empujar: (o, a, p) => {
     // Un golpe: los objetos con más masa se mueven menos
     necesitaFisica(o, 'empujar', p).empujar(argNumero(a, 0, 'empujar', p, 'yo.empujar(300, 0)'), argNumero(a, 1, 'empujar', p, 'yo.empujar(300, 0)', 0));
@@ -390,6 +616,9 @@ const NOMBRES_BONITOS = [
   'solido', 'fantasma', 'rozamiento', 'rebote', 'masa', 'estatico', 'moviendo', 'animacion', 'ratonEncima', 'destruido',
   'saltar', 'mover', 'rotar', 'destruir', 'distanciaA', 'empujar', 'animar', 'pararAnimacion', 'moverHacia', 'mirarA', 'direccionA',
   'moverConFlechas', 'casilla', 'ponerCasilla', 'quitarCasilla', 'casillaEn', 'columnaEn', 'filaEn', 'centroDeCasilla',
+  'tamanoLetra', 'transparencia', 'voltearVertical', 'etiquetas', 'padre', 'hijos', 'arrastrable', 'arrastrando',
+  'teletransportar', 'irA', 'anguloA', 'rotarHacia', 'avanzar', 'ocultar', 'aparecer', 'parpadear', 'ponerDelante', 'ponerDetras',
+  'tocando', 'cercanos', 'masCercano', 'clonar', 'ponerEtiqueta', 'quitarEtiqueta', 'tieneEtiqueta', 'pegarA', 'soltar',
 ];
 
 interface PropiedadPropia {
@@ -410,6 +639,10 @@ export class RefObjeto extends Anfitrion {
 
   describir() {
     return `el objeto '${this.objeto.nombre}'`;
+  }
+
+  objetoDelJuego() {
+    return this.objeto;
   }
 
   private propias(): Map<string, PropiedadPropia> {

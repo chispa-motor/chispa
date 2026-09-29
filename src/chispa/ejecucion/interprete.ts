@@ -32,6 +32,7 @@ import {
   Anfitrion,
   FuncionChispa,
   FuncionNativa,
+  Lugar,
   PeticionEspera,
   Tabla,
   aTexto,
@@ -203,15 +204,10 @@ export class Interprete {
       // En el orden en que se añadieron las claves (lo garantiza Tabla)
       pasos = coleccion.pares().map(([k, v]) => (dos ? [k, v] : [k]));
     } else if (Array.isArray(coleccion) || typeof coleccion === 'string') {
-      if (dos) {
-        throw new ErrorChispa(
-          s.variables[1].pos,
-          `con dos nombres ('${s.variables[0].original}, ${s.variables[1].original}') solo se pueden recorrer tablas, y ${this.describir(s.coleccion)} es ${nombreTipo(coleccion)}.`,
-          `Para una lista usa un solo nombre: para cada ${s.variables[0].original} en ${this.describir(s.coleccion)}:`,
-        );
-      }
       // Copia: si la lista cambia dentro del bucle, el recorrido no se lía. Los textos van letra a letra.
-      pasos = (Array.isArray(coleccion) ? [...coleccion] : Array.from(coleccion)).map((v) => [v]);
+      // Con dos nombres, el primero es la posición (empieza en 1): para cada i, enemigo en enemigos:
+      const elementos = Array.isArray(coleccion) ? [...coleccion] : Array.from(coleccion);
+      pasos = elementos.map((v, i) => (dos ? [i + 1, v] : [v]));
     } else {
       throw new ErrorChispa(
         s.coleccion.pos,
@@ -393,11 +389,62 @@ export class Interprete {
       case 'Llamada': {
         const funcion = yield* this.evaluar(e.funcion, ent);
         const args: Valor[] = [];
-        for (const a of e.argumentos) args.push(yield* this.evaluar(a, ent));
+        const conLugar = funcion instanceof FuncionNativa && funcion.recibeLugar && e.argumentos.length > 0;
+        if (conLugar) args.push(yield* this.lugar(e.argumentos[0], ent, this.describir(e.funcion)));
+        for (const a of e.argumentos.slice(conLugar ? 1 : 0)) args.push(yield* this.evaluar(a, ent));
         return yield* this.llamar(funcion, args, e.pos, this.describir(e.funcion));
       }
     }
   }
+
+  /**
+   * El SITIO al que apunta una expresión (yo.x, escena.camara.zoom, una variable),
+   * para las funciones que necesitan ir cambiándolo (animar).
+   */
+  private *lugar(e: Expresion, ent: Entorno, funcion: string): Ejecucion<Lugar> {
+    const idDe = (o: object) => {
+      let id = this.idsDeLugares.get(o);
+      if (id === undefined) this.idsDeLugares.set(o, (id = ++this.ultimoIdDeLugar));
+      return id;
+    };
+    const ejemplo = `Ejemplo: ${funcion}(yo.x, 300, 1)`;
+    if (e.tipo === 'Identificador') {
+      const c = ent.buscar(e.nombre);
+      if (!c) throw new ErrorChispa(e.pos, `'${e.original}' no existe.`, this.pistaNombre(e.original, ent));
+      return new Lugar(e.original, `v${idDe(c)}`, () => c.valor, (v) => (c.valor = v));
+    }
+    if (e.tipo === 'Miembro') {
+      const obj = yield* this.evaluarContenedor(e.objeto, ent, `usar '${e.original}'`);
+      const nombre = `${this.describir(e.objeto)}.${e.original}`;
+      if (obj instanceof Anfitrion) {
+        const pos = e.pos;
+        return new Lugar(
+          nombre,
+          `${idDe(obj)}.${e.propiedad}`,
+          () => this.conErroresDelMotor(pos, () => obj.obtener(e.propiedad, e.original, pos)),
+          (v) => this.conErroresDelMotor(pos, () => obj.asignar(e.propiedad, v, e.original, pos)),
+          obj.objetoDelJuego?.() ?? null,
+        );
+      }
+      if (obj instanceof Tabla) {
+        return new Lugar(nombre, `${idDe(obj)}.${e.propiedad}`, () => this.leerClave(obj, e.original, e.objeto, e.pos), (v) => obj.poner(e.original, v));
+      }
+      if (obj instanceof Vector2 && (e.propiedad === 'x' || e.propiedad === 'y')) {
+        const eje = e.propiedad;
+        return new Lugar(nombre, `${idDe(obj)}.${eje}`, () => obj[eje], (v) => {
+          if (typeof v === 'number') obj[eje] = v;
+        });
+      }
+      throw new ErrorChispa(e.pos, `'${nombre}' no se puede cambiar poco a poco.`, ejemplo);
+    }
+    throw new ErrorChispa(
+      e.pos,
+      `'${funcion}' necesita saber QUÉ tiene que cambiar: un sitio como yo.x o yo.tamano, no un valor suelto.`,
+      ejemplo,
+    );
+  }
+  private idsDeLugares = new WeakMap<object, number>();
+  private ultimoIdDeLugar = 0;
 
   /** Llama a una función (de Chispa o del motor). */
   *llamar(funcion: Valor, args: Valor[], pos: Posicion, descripcion = 'esa función'): Ejecucion<Valor> {
@@ -585,6 +632,8 @@ export class Interprete {
     }
     if (Array.isArray(obj)) {
       if (p === 'longitud') return obj.length;
+      if (p === 'primero') return obj[0] ?? null;
+      if (p === 'ultimo') return obj[obj.length - 1] ?? null;
       const metodo = METODOS_LISTA[p];
       if (metodo) return new FuncionNativa(e.original, (args, pos) => metodo(obj, args, pos));
     }
@@ -592,12 +641,14 @@ export class Interprete {
       if (p === 'longitud') return Array.from(obj).length;
       if (p === 'mayusculas') return obj.toUpperCase();
       if (p === 'minusculas') return obj.toLowerCase();
+      const metodo = METODOS_TEXTO[p];
+      if (metodo) return new FuncionNativa(e.original, (args, pos) => metodo(obj, args, pos));
     }
 
     const opciones: Record<string, string> = {
       vector: 'x, y, longitud, normalizado',
-      lista: 'longitud, añadir(valor), quitar(posicion)',
-      texto: 'longitud, mayusculas, minusculas',
+      lista: 'longitud, primero, ultimo, añadir, quitar, insertar, ordenar, mezclar, invertir, posicion, contiene, sublista, unir, vaciar',
+      texto: 'longitud, mayusculas, minusculas, dividir, reemplazar, contiene, empiezaPor, terminaPor, recortar, trozo, posicion',
     };
     const clave = obj instanceof Vector2 ? 'vector' : Array.isArray(obj) ? 'lista' : typeof obj === 'string' ? 'texto' : null;
     throw new ErrorChispa(
@@ -699,6 +750,64 @@ export class Interprete {
   }
 }
 
+/** Una posición de lista o texto (empiezan en 1) que tiene que estar entre 1 y `maximo`. */
+function argPosicion(a: Valor[], i: number, maximo: number, metodo: string, pos: Posicion, ejemplo: string): number {
+  const v = a[i];
+  if (typeof v !== 'number' || !Number.isInteger(v)) {
+    throw new ErrorChispa(pos, v === undefined ? `a '${metodo}' le falta una posición (un número entero).` : `en '${metodo}', la posición tiene que ser un número entero, pero es ${nombreTipo(v)}.`, `Ejemplo: ${ejemplo}`);
+  }
+  if (v < 1 || v > maximo) {
+    throw new ErrorChispa(pos, `en '${metodo}', la posición ${v} no existe: van de 1 a ${maximo}.`, v === 0 ? 'En Chispa las posiciones empiezan en 1.' : `Ejemplo: ${ejemplo}`);
+  }
+  return v;
+}
+
+function argTextoMetodo(a: Valor[], i: number, metodo: string, pos: Posicion, ejemplo: string): string {
+  const v = a[i];
+  if (typeof v !== 'string') {
+    throw new ErrorChispa(pos, v === undefined ? `a '${metodo}' le falta un texto entre comillas.` : `'${metodo}' necesita un texto entre comillas, pero le das ${nombreTipo(v)}.`, `Ejemplo: ${ejemplo}`);
+  }
+  return v;
+}
+
+/** Métodos de los textos: nombre.dividir(" "), frase.reemplazar("a", "e")... Los textos no cambian: devuelven uno nuevo. */
+export const METODOS_TEXTO: Record<string, (t: string, args: Valor[], pos: Posicion) => Valor> = {
+  dividir: (t, a, pos) => {
+    const sep = a[0] === undefined ? ' ' : argTextoMetodo(a, 0, 'dividir', pos, 'frase.dividir(" ")');
+    return sep === '' ? Array.from(t) : t.split(sep);
+  },
+  reemplazar: (t, a, pos) => {
+    const ej = 'frase.reemplazar("gato", "perro")';
+    const buscar = argTextoMetodo(a, 0, 'reemplazar', pos, ej);
+    if (a[1] === undefined) throw new ErrorChispa(pos, "a 'reemplazar' le falta por qué cambiarlo.", `Ejemplo: ${ej}`);
+    return buscar === '' ? t : t.split(buscar).join(aTexto(a[1]));
+  },
+  contiene: (t, a, pos) => t.includes(argTextoMetodo(a, 0, 'contiene', pos, 'si frase.contiene("hola"):')),
+  empiezapor: (t, a, pos) => t.startsWith(argTextoMetodo(a, 0, 'empiezaPor', pos, 'si nombre.empiezaPor("Dr"):')),
+  terminapor: (t, a, pos) => t.endsWith(argTextoMetodo(a, 0, 'terminaPor', pos, 'si archivo.terminaPor(".png"):')),
+  recortar: (t) => t.trim(),
+  trozo: (t, a, pos) => {
+    // Posiciones de letras (empiezan en 1), las dos incluidas
+    const letras = Array.from(t);
+    if (!letras.length) return '';
+    const ej = 'nombre.trozo(1, 3)';
+    const desde = argPosicion(a, 0, letras.length, 'trozo', pos, ej);
+    const hasta = a[1] === undefined ? letras.length : argPosicion(a, 1, letras.length, 'trozo', pos, ej);
+    return letras.slice(desde - 1, Math.max(desde - 1, hasta)).join('');
+  },
+  posicion: (t, a, pos) => {
+    const i = t.indexOf(argTextoMetodo(a, 0, 'posicion', pos, 'frase.posicion("hola")'));
+    return i < 0 ? 0 : Array.from(t.slice(0, i)).length + 1;
+  },
+};
+
+/** Ordena números o textos (sin mezclar). Los textos, sin importar mayúsculas ni tildes. */
+function comparar(a: Valor, b: Valor, pos: Posicion): number {
+  if (typeof a === 'number' && typeof b === 'number') return a - b;
+  if (typeof a === 'string' && typeof b === 'string') return a.localeCompare(b, 'es', { sensitivity: 'base' });
+  throw new ErrorChispa(pos, `no puedo ordenar esta lista: mezcla ${nombreTipo(a)} y ${nombreTipo(b)}.`, 'Solo se pueden ordenar listas de números o listas de textos.');
+}
+
 /** Métodos de las listas: lista.añadir(x), lista.quitar(1) */
 export const METODOS_LISTA: Record<string, (lista: Valor[], args: Valor[], pos: Posicion) => Valor> = {
   añadir: (l, a) => (l.push(copiarSiVector(a[0] ?? null)), null),
@@ -710,5 +819,34 @@ export const METODOS_LISTA: Record<string, (lista: Valor[], args: Valor[], pos: 
       throw new ErrorChispa(pos, `no puedo quitar la posición ${aTexto(i ?? null)}: la lista tiene ${l.length} elementos.`, 'Las posiciones empiezan en 1.');
     }
     return l.splice(i - 1, 1)[0];
+  },
+  insertar: (l, a, pos) => {
+    // Se puede insertar en cualquier sitio, también justo después del último
+    const i = argPosicion(a, 0, l.length + 1, 'insertar', pos, 'lista.insertar(1, "primero")');
+    l.splice(i - 1, 0, copiarSiVector(a[1] ?? null));
+    return null;
+  },
+  ordenar: (l, _a, pos) => (l.sort((x, y) => comparar(x, y, pos)), l),
+  mezclar: (l) => {
+    for (let i = l.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [l[i], l[j]] = [l[j], l[i]];
+    }
+    return l;
+  },
+  invertir: (l) => l.reverse(),
+  posicion: (l, a) => l.findIndex((x) => sonIguales(x, a[0] ?? null)) + 1,
+  contiene: (l, a) => l.some((x) => sonIguales(x, a[0] ?? null)),
+  sublista: (l, a, pos) => {
+    if (!l.length) return [];
+    const ej = 'lista.sublista(2, 4)';
+    const desde = argPosicion(a, 0, l.length, 'sublista', pos, ej);
+    const hasta = a[1] === undefined ? l.length : argPosicion(a, 1, l.length, 'sublista', pos, ej);
+    return l.slice(desde - 1, Math.max(desde - 1, hasta));
+  },
+  unir: (l, a, pos) => l.map((x) => aTexto(x)).join(a[0] === undefined ? ', ' : argTextoMetodo(a, 0, 'unir', pos, 'lista.unir(", ")')),
+  vaciar: (l) => {
+    l.length = 0;
+    return null;
   },
 };

@@ -90,6 +90,9 @@ const RECURSOS_EN_LLAMADAS: Record<string, { lista: keyof ContextoAnalisis; que:
   'escena.cambiar': { lista: 'escenas', que: 'escena' },
   'sonido.reproducir': { lista: 'sonidos', que: 'sonido' },
   'musica.reproducir': { lista: 'sonidos', que: 'sonido' },
+  'sonido.bucle': { lista: 'sonidos', que: 'sonido' },
+  'sonido.sonando': { lista: 'sonidos', que: 'sonido' },
+  'sonido.parar': { lista: 'sonidos', que: 'sonido' },
   'yo.animar': { lista: 'animaciones', que: 'animación' },
 };
 
@@ -386,6 +389,11 @@ class Analizador {
   /** crear("Bal"), escena.cambiar("Nivl2")... si el nombre va escrito tal cual, ¿existe? */
   private comprobarLlamada(e: Extract<Expresion, { tipo: 'Llamada' }>, amb: Ambito): void {
     const primero = e.argumentos[0];
+    // animar(5, 10): lo primero tiene que ser un SITIO que se pueda ir cambiando (yo.x, una variable...)
+    if (primero && primero.tipo !== 'Identificador' && primero.tipo !== 'Miembro' && this.nombreDeLlamada(e.funcion, amb) === 'animar') {
+      this.error(primero.pos, "'animar' necesita saber QUÉ tiene que cambiar: un sitio como yo.x o yo.tamano, no un valor suelto.", 'Ejemplo: animar(yo.x, 300, 1)');
+      return;
+    }
     if (!primero || primero.tipo !== 'Texto') return;
     const nombre = this.nombreDeLlamada(e.funcion, amb);
     if (!nombre) return;

@@ -36,6 +36,11 @@ export class Sonido {
   private fuenteMusica: AudioBufferSourceNode | null = null;
   /** Nombre de la música que suena ahora (o null). */
   musicaActual: string | null = null;
+  /** Música en pausa: por dónde iba (segundos). null = no está en pausa. */
+  private musicaPausadaEn: number | null = null;
+  private musicaEmpezoEn = 0;
+  /** Una ganancia propia de la música que suena, para los fundidos (sin tocar el volumen general de la música). */
+  private gananciaMusica: GainNode | null = null;
 
   get volumenMusica(): number {
     return this._volumenMusica;
@@ -45,11 +50,13 @@ export class Sonido {
     if (this.salidaMusica) this.salidaMusica.gain.value = this._volumenMusica;
   }
 
-  /** Pone una música en bucle. Si ya sonaba esa misma, no la reinicia. */
-  musica(nombre: string): void {
-    this.historial.push(`musica ${nombre}`);
-    if (this.musicaActual === nombre) return;
-    const buffer = this.buffers.get(nombre);
+  /**
+   * Pone una música en bucle. Si ya sonaba esa misma, no la reinicia.
+   * `fundido`: segundos en los que sube desde silencio (0 = de golpe).
+   */
+  musica(nombre: string, fundido = 0): void {
+    this.historial.push(`musica ${nombre}${fundido ? ` fundido ${fundido}` : ''}`);
+    if (this.musicaActual === nombre && this.musicaPausadaEn === null) return;
     if (!this.registrados.has(nombre)) {
       const hay = [...this.registrados];
       throw new ErrorMotor(
@@ -59,21 +66,67 @@ export class Sonido {
     }
     this.pararMusica();
     this.musicaActual = nombre;
+    this.empezarMusica(0, fundido);
+  }
+
+  /** Arranca la fuente de la música actual desde `desde` segundos. */
+  private empezarMusica(desde: number, fundido: number): void {
     const ctx = this.obtenerContexto();
+    const buffer = this.musicaActual ? this.buffers.get(this.musicaActual) : undefined;
     if (!ctx || !this.salidaMusica || !buffer) return;
+    const ganancia = ctx.createGain();
+    const t = ctx.currentTime;
+    ganancia.gain.setValueAtTime(fundido > 0 ? 0 : 1, t);
+    if (fundido > 0) ganancia.gain.linearRampToValueAtTime(1, t + fundido);
+    ganancia.connect(this.salidaMusica);
     const fuente = ctx.createBufferSource();
     fuente.buffer = buffer;
     fuente.loop = true;
-    fuente.connect(this.salidaMusica);
-    fuente.start();
+    fuente.connect(ganancia);
+    fuente.start(0, desde % buffer.duration);
     this.fuenteMusica = fuente;
+    this.gananciaMusica = ganancia;
+    this.musicaEmpezoEn = t - desde;
   }
 
-  pararMusica(): void {
-    if (this.musicaActual) this.historial.push('parar musica');
+  /** Para la música. `fundido`: segundos en los que baja hasta el silencio. */
+  pararMusica(fundido = 0): void {
+    if (this.musicaActual) this.historial.push(`parar musica${fundido ? ` fundido ${fundido}` : ''}`);
+    const fuente = this.fuenteMusica;
+    const ganancia = this.gananciaMusica;
+    const ctx = this.contexto;
+    if (fuente && ganancia && ctx && fundido > 0) {
+      const t = ctx.currentTime;
+      ganancia.gain.setValueAtTime(ganancia.gain.value, t);
+      ganancia.gain.linearRampToValueAtTime(0, t + fundido);
+      fuente.stop(t + fundido);
+    } else fuente?.stop();
+    this.fuenteMusica = null;
+    this.gananciaMusica = null;
+    this.musicaActual = null;
+    this.musicaPausadaEn = null;
+  }
+
+  /** Pone la música en pausa (recuerda por dónde iba). */
+  pausarMusica(): void {
+    if (!this.musicaActual || this.musicaPausadaEn !== null) return;
+    this.historial.push('pausar musica');
+    this.musicaPausadaEn = this.contexto ? this.contexto.currentTime - this.musicaEmpezoEn : 0;
     this.fuenteMusica?.stop();
     this.fuenteMusica = null;
-    this.musicaActual = null;
+  }
+
+  /** Sigue la música por donde iba. */
+  seguirMusica(): void {
+    if (this.musicaPausadaEn === null) return;
+    this.historial.push('seguir musica');
+    const desde = this.musicaPausadaEn;
+    this.musicaPausadaEn = null;
+    this.empezarMusica(desde, 0);
+  }
+
+  get musicaEnPausa(): boolean {
+    return this.musicaPausadaEn !== null;
   }
 
   /** Congela todo el audio (al pulsar Pausa en el editor) sin perder por dónde iba. */
@@ -132,9 +185,14 @@ export class Sonido {
     osc.stop(t + segundos + 0.02);
   }
 
-  /** Reproduce un sonido cargado con cargar(). */
-  reproducir(nombre: string): void {
-    this.historial.push(`reproducir ${nombre}`);
+  /**
+   * Reproduce un sonido cargado con cargar().
+   * volumen: de 0 a 1 (sobre el general).  tono: 1 = normal, 2 = más agudo (y rápido), 0.5 = más grave.
+   * bucle: se repite hasta pararlo.
+   */
+  reproducir(nombre: string, opciones: { volumen?: number; tono?: number; bucle?: boolean } = {}): void {
+    const { volumen = 1, tono = 1, bucle = false } = opciones;
+    this.historial.push(`${bucle ? 'bucle' : 'reproducir'} ${nombre}${volumen !== 1 ? ` volumen ${volumen}` : ''}${tono !== 1 ? ` tono ${tono}` : ''}`);
     const buffer = this.buffers.get(nombre);
     if (!this.registrados.has(nombre)) {
       const hay = [...this.registrados];
@@ -143,11 +201,19 @@ export class Sonido {
         hay.length ? `Los sonidos cargados son: ${hay.join(', ')}.` : 'Todavía no se ha cargado ningún sonido. Para probar sin archivos usa sonido.tono(440, 0.2).',
       );
     }
+    // Se apunta antes de mirar si hay audio: así sonando() dice lo mismo aunque el navegador no tenga sonido
+    if (bucle) this.enBucle.add(nombre);
     const ctx = this.obtenerContexto();
     if (!ctx || !this.salida || !buffer) return;
     const fuente = ctx.createBufferSource();
     fuente.buffer = buffer;
-    fuente.connect(this.salida);
+    fuente.loop = bucle;
+    fuente.playbackRate.value = Math.max(0.05, tono);
+    if (volumen !== 1) {
+      const g = ctx.createGain();
+      g.gain.value = Math.max(0, volumen);
+      fuente.connect(g).connect(this.salida);
+    } else fuente.connect(this.salida);
     const grupo = this.sonando.get(nombre) ?? new Set();
     grupo.add(fuente);
     this.sonando.set(nombre, grupo);
@@ -163,7 +229,16 @@ export class Sonido {
       g?.forEach((f) => f.stop());
       g?.clear();
     }
+    if (nombre) this.enBucle.delete(nombre);
+    else this.enBucle.clear();
   }
+
+  /** ¿Está sonando ahora este sonido? (sin audio en el navegador: si se ha puesto en bucle) */
+  estaSonando(nombre: string): boolean {
+    return (this.sonando.get(nombre)?.size ?? 0) > 0 || this.enBucle.has(nombre);
+  }
+  /** Sonidos puestos en bucle (se recuerdan aunque no haya audio, para que los tests y estaSonando funcionen). */
+  private enBucle = new Set<string>();
 
   /** Carga un archivo de sonido y lo guarda con un nombre corto. */
   async cargar(nombre: string, ruta: string): Promise<void> {

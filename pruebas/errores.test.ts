@@ -3,7 +3,7 @@
  * y cómo arreglarlo. (La 3C mejorará todavía más estos mensajes.)
  */
 import { describe, expect, it } from 'vitest';
-import { errorDe } from './ayudantes';
+import { errorDe, mostrado } from './ayudantes';
 
 describe('Errores de escritura (al compilar)', () => {
   it("falta ':' al final de un si", () => {
@@ -107,7 +107,7 @@ describe('Errores de ejecución', () => {
     expect(errorDe('funcion f(a, b):\n    devolver a\nmostrar(f(1))').message).toMatch(/necesita 2 valores \(a, b\), pero le das 1/);
   });
 
-  it('para cada con dos nombres solo vale para tablas', () => {
-    expect(errorDe('para cada a, b en [1, 2]:\n    mostrar(a)').message).toMatch(/solo se pueden recorrer tablas/);
+  it('para cada con dos nombres en una lista: la posición y el valor (antes era un error)', () => {
+    expect(mostrado('para cada i, v en ["a", "b"]:\n    mostrar(i, v)')).toBe('1 a | 2 b');
   });
 });

@@ -26,6 +26,16 @@ import { Colision, type Caja } from './componentes/Colision';
 import { GRAVEDAD_MUNDO } from './componentes/Fisica';
 import { MapaCasillas } from './componentes/MapaCasillas';
 import { Sprite } from './componentes/Sprite';
+import { Fisica } from './componentes/Fisica';
+import { AnimadorDeValores } from './AnimadorDeValores';
+import { resolverColor } from '../motor/Color';
+
+/** Algo dibujado con dibujar.linea(), dibujar.circulo()... Dura un fotograma. Coordenadas del mundo. */
+export type DibujoDepuracion =
+  | { tipo: 'linea'; x1: number; y1: number; x2: number; y2: number; color: string; grosor: number }
+  | { tipo: 'circulo'; x: number; y: number; radio: number; color: string; relleno: boolean }
+  | { tipo: 'rectangulo'; x: number; y: number; ancho: number; alto: number; color: string; relleno: boolean }
+  | { tipo: 'texto'; texto: string; x: number; y: number; color: string; tamano: number };
 
 export class Escena implements EscenaActiva {
   objetos: ObjetoJuego[] = [];
@@ -36,6 +46,16 @@ export class Escena implements EscenaActiva {
   iniciada = false;
   private porDestruir: ObjetoJuego[] = [];
   private fisica = new SistemaFisico();
+  /** Valores que cambian poco a poco (animar(), yo.irA(), yo.parpadear()...). */
+  readonly animaciones = new AnimadorDeValores();
+  /** Lo que se dibuja con dibujar.xxx() en este fotograma. */
+  dibujos: DibujoDepuracion[] = [];
+  /** Oscurecer la pantalla (fundido): de 0 (nada) a 1 (todo del color). Sigue igual al cambiar de escena. */
+  readonly fundido = { alfa: 0, objetivo: 0, velocidad: 0, color: 'negro' };
+  /** Quien sabe hacer copias de objetos con sus scripts (el juego en marcha). Sin él, clonar() no funciona. */
+  clonador: ((o: ObjetoJuego) => ObjetoJuego) | null = null;
+  /** El objeto que se está arrastrando con el ratón (y dónde se cogió). */
+  private arrastre: { objeto: ObjetoJuego; dx: number; dy: number } | null = null;
 
   constructor(readonly motor: Motor) {
     this.camara = new Camara(motor.renderizador.ancho, motor.renderizador.alto);
@@ -116,14 +136,113 @@ export class Escena implements EscenaActiva {
 
   actualizar(dt: number): void {
     this.repartirClic();
+    this.empezarArrastre();
     for (const o of [...this.objetos]) {
       if (o.destruido) continue;
       for (const c of o.todosLosComponentes) if (c.activo && !o.destruido) c.actualizar?.(dt);
     }
     this.fisica.actualizar(this, dt);
+    this.animaciones.actualizar(dt);
+    this.moverHijos();
+    this.seguirArrastre();
     this.particulas.actualizar(dt);
     this.camara.actualizar(dt);
+    this.actualizarFundido(this.motor.tiempo.deltaReal);
     this.quitarDestruidos();
+  }
+
+  // ───────────────────────── Padres e hijos ─────────────────────────
+
+  /** Cada hijo se mueve lo mismo que se ha movido su padre (primero los padres, luego sus hijos). */
+  private moverHijos(): void {
+    const conPadre = this.objetos.filter((o) => o.padre && !o.destruido);
+    if (!conPadre.length) return;
+    const profundidad = (o: ObjetoJuego) => {
+      let n = 0;
+      for (let p = o.padre; p; p = p.padre) n++;
+      return n;
+    };
+    conPadre.sort((a, b) => profundidad(a) - profundidad(b));
+    for (const o of conPadre) {
+      const padre = o.padre!;
+      // Si se destruye el padre, sus hijos también (como en Roblox y en Godot)
+      if (padre.destruido) {
+        this.destruir(o);
+        continue;
+      }
+      const antes = o.posicionPadre ?? padre.posicion.copiar();
+      o.posicion.x += padre.posicion.x - antes.x;
+      o.posicion.y += padre.posicion.y - antes.y;
+      o.posicionPadre = padre.posicion.copiar();
+    }
+  }
+
+  // ───────────────────────── Arrastrar con el ratón ─────────────────────────
+
+  /** El objeto de más arriba que hay bajo el ratón (o null). La interfaz va por encima del mundo. */
+  objetoBajoRaton(filtro: (o: ObjetoJuego) => boolean = () => true): ObjetoJuego | null {
+    let elegido: ObjetoJuego | null = null;
+    let mejor = -Infinity;
+    for (const o of this.objetos) {
+      if (o.destruido || o.obtener(MapaCasillas) || !filtro(o)) continue;
+      const s = o.obtener(Sprite);
+      if (s && !s.visible) continue;
+      if (!this.ratonEncima(o)) continue;
+      const orden = (s?.fijo ? 1_000_000 : 0) + (s?.capa ?? 0);
+      if (orden >= mejor) {
+        mejor = orden;
+        elegido = o;
+      }
+    }
+    return elegido;
+  }
+
+  private empezarArrastre(): void {
+    const e = this.motor.entrada;
+    if (this.arrastre && (!e.ratonPulsado('izquierdo') || this.arrastre.objeto.destruido)) this.arrastre = null;
+    if (!e.ratonSePulso('izquierdo')) return;
+    const o = this.objetoBajoRaton((x) => x.arrastrable);
+    if (!o) return;
+    const r = o.obtener(Sprite)?.fijo ? this.ratonEnPantalla() : this.ratonEnMundo();
+    this.arrastre = { objeto: o, dx: o.posicion.x - r.x, dy: o.posicion.y - r.y };
+  }
+
+  private seguirArrastre(): void {
+    const a = this.arrastre;
+    if (!a) return;
+    if (!a.objeto.arrastrable || a.objeto.destruido) {
+      this.arrastre = null;
+      return;
+    }
+    const r = a.objeto.obtener(Sprite)?.fijo ? this.ratonEnPantalla() : this.ratonEnMundo();
+    a.objeto.posicion.x = r.x + a.dx;
+    a.objeto.posicion.y = r.y + a.dy;
+    // Mientras lo llevas en la mano, no cae
+    const f = a.objeto.obtener(Fisica);
+    if (f) f.velocidad.x = f.velocidad.y = 0;
+  }
+
+  /** ¿Se está arrastrando este objeto ahora mismo? */
+  arrastrando(o: ObjetoJuego): boolean {
+    return this.arrastre?.objeto === o;
+  }
+
+  // ───────────────────────── Fundidos ─────────────────────────
+
+  /** Oscurece (hasta = 1) o aclara (hasta = 0) la pantalla en esos segundos. */
+  fundir(hasta: number, segundos: number, color?: string): void {
+    const f = this.fundido;
+    if (color) f.color = color;
+    f.objetivo = hasta;
+    if (segundos <= 0) f.alfa = hasta;
+    f.velocidad = segundos <= 0 ? 0 : Math.abs(hasta - f.alfa) / segundos;
+  }
+
+  private actualizarFundido(dt: number): void {
+    const f = this.fundido;
+    if (f.alfa === f.objetivo) return;
+    const paso = f.velocidad * dt;
+    f.alfa = f.alfa < f.objetivo ? Math.min(f.objetivo, f.alfa + paso) : Math.max(f.objetivo, f.alfa - paso);
   }
 
   /**
@@ -183,11 +302,44 @@ export class Escena implements EscenaActiva {
     ctx.scale(cam.zoom, cam.zoom);
     for (const m of mundo) m.dibujar();
     this.particulas.dibujar(r, aLocal);
+    this.dibujarDepuracion(r, aLocal);
     ctx.restore();
 
     // 2. La interfaz, pegada a la pantalla: (0,0) es la esquina inferior izquierda
     interfaz.sort((a, b) => a.capa - b.capa);
     for (const s of interfaz) s.dibujarEn(r, s.objeto.posicion.x, r.alto - s.objeto.posicion.y);
+
+    // 3. El fundido, encima de todo
+    if (this.fundido.alfa > 0) {
+      ctx.save();
+      ctx.globalAlpha = this.fundido.alfa;
+      ctx.fillStyle = resolverColor(this.fundido.color);
+      ctx.fillRect(0, 0, r.ancho, r.alto);
+      ctx.restore();
+    }
+  }
+
+  /** Líneas, círculos y rectángulos de dibujar.xxx(): se dibujan una vez y se borran. */
+  private dibujarDepuracion(r: Renderizador, aLocal: (x: number, y: number) => { x: number; y: number }): void {
+    if (!this.dibujos.length) return;
+    for (const d of this.dibujos) {
+      if (d.tipo === 'linea') {
+        const a = aLocal(d.x1, d.y1);
+        const b = aLocal(d.x2, d.y2);
+        r.linea(a.x, a.y, b.x, b.y, d.color, d.grosor);
+      } else if (d.tipo === 'circulo') {
+        const c = aLocal(d.x, d.y);
+        r.circulo(c.x, c.y, d.radio, d.color, { relleno: d.relleno });
+      } else if (d.tipo === 'rectangulo') {
+        // (x, y) es el centro, como en los objetos
+        const c = aLocal(d.x, d.y);
+        r.rectangulo(c.x - d.ancho / 2, c.y - d.alto / 2, d.ancho, d.alto, d.color, { relleno: d.relleno });
+      } else {
+        const c = aLocal(d.x, d.y);
+        r.texto(d.texto, c.x, c.y, { color: d.color, tamano: d.tamano });
+      }
+    }
+    this.dibujos = [];
   }
 
   /** La zona que ocupan todos los mapas de casillas (para que la cámara no salga de ellos). */
@@ -209,6 +361,9 @@ export class Escena implements EscenaActiva {
     this.quitarDestruidos();
     this.fisica.reiniciar();
     this.particulas.vaciar();
+    this.animaciones.vaciar();
+    this.dibujos = [];
+    this.arrastre = null;
     this.camara.objetivo = null;
     this.camara.limites = null;
     this.camara.zoom = 1;

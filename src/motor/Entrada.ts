@@ -158,6 +158,7 @@ export class Entrada {
         const nombre = nombreDesdeEvento(e);
         this.teclasAbajo.set(e.code, nombre);
         this.pulsadasEsteFotograma.add(nombre);
+        this.ultimaTecla = nombre;
       },
       { signal },
     );
@@ -216,6 +217,14 @@ export class Entrada {
   }
 
   // ───────────────────────── Teclado ─────────────────────────
+
+  /** La última tecla que se ha pulsado (su nombre en español), o null si todavía ninguna. */
+  ultimaTecla: string | null = null;
+
+  /** ¿Se ha pulsado alguna tecla en este fotograma? */
+  algunaSePulso(): boolean {
+    return this.pulsadasEsteFotograma.size > 0;
+  }
 
   estaPulsada(tecla: string): boolean {
     const n = this.comprobarTecla(tecla);

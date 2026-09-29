@@ -91,6 +91,12 @@ export class FuncionNativa {
   constructor(
     readonly nombre: string,
     readonly ejecutar: (argumentos: Valor[], pos: Posicion) => Valor | PeticionEspera,
+    /**
+     * Si es verdadero, su PRIMER valor no se calcula: se le pasa el SITIO
+     * (un Lugar), para poder cambiarlo. Es lo que necesita animar(yo.x, 300, 1):
+     * no le sirve el número que vale yo.x ahora, sino poder ir cambiándolo.
+     */
+    readonly recibeLugar = false,
   ) {}
 }
 
@@ -120,6 +126,36 @@ export abstract class Anfitrion {
   /** Si el miembro es otro módulo (escena.camara), lo devuelve para seguir comprobando. */
   submodulo(_nombre: string): Anfitrion | null {
     return null;
+  }
+  /** Si representa un objeto del juego, el objeto (para saber si se ha destruido). */
+  objetoDelJuego?(): { destruido: boolean } | null;
+}
+
+/**
+ * Un SITIO donde hay un valor y que se puede cambiar: yo.x, escena.camara.zoom,
+ * una variable... Solo lo reciben las funciones con `recibeLugar` (animar).
+ */
+export class Lugar extends Anfitrion {
+  constructor(
+    /** Cómo se escribe: "yo.tamano". */
+    readonly descripcion: string,
+    /** Identifica el sitio (dos animaciones del mismo sitio no se pelean: la nueva sustituye a la vieja). */
+    readonly clave: string,
+    readonly leer: () => Valor,
+    readonly escribir: (v: Valor) => void,
+    /** El objeto del juego al que pertenece, si es de uno (si se destruye, la animación se acaba). */
+    readonly dueno: { destruido: boolean } | null = null,
+  ) {
+    super();
+  }
+  describir() {
+    return `'${this.descripcion}'`;
+  }
+  obtener(): Valor {
+    return this.leer();
+  }
+  asignar(_p: string, v: Valor): void {
+    this.escribir(v);
   }
 }
 

@@ -77,6 +77,44 @@ export function instalarBasicas(interprete: Interprete): void {
   // Ángulos en grados, como en todo el motor
   funcion('seno', (a, p) => Math.sin((argNumero(a, 0, 'seno', p, 'seno(90)') * Math.PI) / 180));
   funcion('coseno', (a, p) => Math.cos((argNumero(a, 0, 'coseno', p, 'coseno(0)') * Math.PI) / 180));
+  funcion('tangente', (a, p) => Math.tan((argNumero(a, 0, 'tangente', p, 'tangente(45)') * Math.PI) / 180));
+  funcion('aleatorioDecimal', (a, p) => {
+    // Un número con decimales entre min y max: aleatorioDecimal(0.5, 1.5)
+    const ej = 'aleatorioDecimal(0.5, 1.5)';
+    const min = argNumero(a, 0, 'aleatorioDecimal', p, ej, 0);
+    const max = argNumero(a, 1, 'aleatorioDecimal', p, ej, 1);
+    if (max < min) throw new ErrorChispa(p, `en aleatorioDecimal(${min}, ${max}) el primer número es mayor que el segundo.`, `Ejemplo: ${ej}`);
+    return min + Math.random() * (max - min);
+  });
+  funcion('limitar', (a, p) => {
+    // limitar(vida, 0, 100): si se pasa de 100 da 100; si baja de 0 da 0
+    const ej = 'yo.vida = limitar(yo.vida, 0, 100)';
+    const v = argNumero(a, 0, 'limitar', p, ej);
+    const min = argNumero(a, 1, 'limitar', p, ej);
+    const max = argNumero(a, 2, 'limitar', p, ej);
+    if (max < min) throw new ErrorChispa(p, `en 'limitar' el mínimo (${min}) es mayor que el máximo (${max}).`, `Ejemplo: ${ej}`);
+    return Math.min(max, Math.max(min, v));
+  });
+  funcion('interpolar', (a, p) => {
+    // A mitad de camino entre dos valores: interpolar(0, 100, 0.5) = 50. También con vectores.
+    const ej = 'interpolar(0, 100, 0.25)';
+    const t = argNumero(a, 2, 'interpolar', p, ej);
+    const [x, y] = a;
+    if (typeof x === 'number' && typeof y === 'number') return x + (y - x) * t;
+    if (x instanceof Vector2 && y instanceof Vector2) return new Vector2(x.x + (y.x - x.x) * t, x.y + (y.y - x.y) * t);
+    throw new ErrorChispa(p, "'interpolar' necesita dos números (o dos vectores) y cuánto avanzar de uno a otro (de 0 a 1).", `Ejemplo: ${ej}`);
+  });
+  funcion('redondearAbajo', (a, p) => Math.floor(argNumero(a, 0, 'redondearAbajo', p, 'redondearAbajo(3.9)')));
+  funcion('redondearArriba', (a, p) => Math.ceil(argNumero(a, 0, 'redondearArriba', p, 'redondearArriba(3.1)')));
+  funcion('signo', (a, p) => Math.sign(argNumero(a, 0, 'signo', p, 'signo(-5)')));
+  funcion('potencia', (a, p) => argNumero(a, 0, 'potencia', p, 'potencia(2, 3)') ** argNumero(a, 1, 'potencia', p, 'potencia(2, 3)'));
+  funcion('ruido', (a, p) => {
+    // Números al azar pero "suaves": ruido(x) cambia poco a poco al cambiar x (nubes, terreno, temblores)
+    const x = argNumero(a, 0, 'ruido', p, 'ruido(tiempo.total)');
+    const y = argNumero(a, 1, 'ruido', p, 'ruido(x, y)', 0);
+    return ruido(x, y);
+  });
+  g.declarar('pi', Math.PI, 'pi');
   funcion('vector', (a, p) => {
     sinDemasiados(a, 2, 'vector', p, 'vector(10, 20)');
     return new Vector2(argNumero(a, 0, 'vector', p, 'vector(10, 20)', 0), argNumero(a, 1, 'vector', p, 'vector(10, 20)', 0));
@@ -90,7 +128,19 @@ export function instalarBasicas(interprete: Interprete): void {
     if (v instanceof Tabla) return v.tamano;
     throw new ErrorChispa(p, `'longitud' funciona con textos, listas y tablas, pero le das ${v === undefined ? 'nada' : nombreTipo(v)}.`, 'Ejemplo: longitud("hola") da 4');
   });
-  funcion('texto', (a) => aTexto(a[0] ?? null));
+  funcion('texto', (a, p) => {
+    // texto(3.14159, 2) → "3.14" (con esos decimales, siempre, aunque sean ceros: "2.50")
+    if (a[1] === undefined) return aTexto(a[0] ?? null);
+    const n = argNumero(a, 0, 'texto', p, 'texto(3.14159, 2)');
+    const decimales = argNumero(a, 1, 'texto', p, 'texto(3.14159, 2)');
+    return n.toFixed(Math.max(0, Math.min(10, Math.round(decimales))));
+  });
+  funcion('unir', (a, p) => {
+    const lista = a[0];
+    if (!Array.isArray(lista)) throw new ErrorChispa(p, `'unir' necesita una lista, pero le das ${lista === undefined ? 'nada' : nombreTipo(lista)}.`, 'Ejemplo: unir(["a", "b", "c"], ", ")');
+    const sep = a[1] === undefined ? ', ' : aTexto(a[1]);
+    return lista.map((x) => aTexto(x)).join(sep);
+  });
   funcion('numero', (a, p) => {
     const v = a[0];
     if (typeof v === 'number') return v;
@@ -98,4 +148,30 @@ export function instalarBasicas(interprete: Interprete): void {
     if (Number.isNaN(n)) throw new ErrorChispa(p, `no puedo convertir ${v === undefined ? 'nada' : `"${aTexto(v)}"`} en un número.`);
     return n;
   });
+}
+
+// ── Ruido suave (el que usa ruido(x, y)): "ruido de gradiente", como el Perlin de LÖVE ──
+
+/** Un número "al azar" pero siempre el mismo para la misma esquina de la rejilla. */
+function azarFijo(x: number, y: number): number {
+  let h = (x * 374761393 + y * 668265263) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
+/** De 0 a 1, y cambia poco a poco: ruido(1.0) y ruido(1.1) se parecen. */
+export function ruido(x: number, y: number): number {
+  const x0 = Math.floor(x);
+  const y0 = Math.floor(y);
+  const suave = (t: number) => t * t * t * (t * (t * 6 - 15) + 10);
+  const gradiente = (cx: number, cy: number) => {
+    const angulo = azarFijo(cx, cy) * Math.PI * 2;
+    return (x - cx) * Math.cos(angulo) + (y - cy) * Math.sin(angulo);
+  };
+  const u = suave(x - x0);
+  const v = suave(y - y0);
+  const a = gradiente(x0, y0) + (gradiente(x0 + 1, y0) - gradiente(x0, y0)) * u;
+  const b = gradiente(x0, y0 + 1) + (gradiente(x0 + 1, y0 + 1) - gradiente(x0, y0 + 1)) * u;
+  // El gradiente da entre -0,71 y 0,71: lo pasamos a 0..1
+  return Math.min(1, Math.max(0, (a + (b - a) * v) / 1.42 + 0.5));
 }

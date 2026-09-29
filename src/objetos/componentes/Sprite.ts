@@ -23,6 +23,8 @@ export class Sprite extends Componente {
   visible = true;
   opacidad = 1;
   voltearX = false;
+  /** Boca abajo (como en un espejo, pero de arriba abajo). */
+  voltearY = false;
   /** Orden de dibujo: capas más altas se dibujan encima. */
   capa = 0;
   /** Pegado a la pantalla (interfaz): no se mueve con la cámara ni con el zoom. */
@@ -73,7 +75,7 @@ export class Sprite extends Componente {
 
     if (this.imagen) {
       const img = this.objeto.escena!.motor.recursos.imagen(this.imagen);
-      r.imagen(img, x, y, { ancho: w, alto: h, rotacion, opacidad: this.opacidad, voltearX: this.voltearX });
+      r.imagen(img, x, y, { ancho: w, alto: h, rotacion, opacidad: this.opacidad, voltearX: this.voltearX, voltearY: this.voltearY });
     } else if (this.forma !== 'texto') {
       r.ctx.globalAlpha = this.opacidad;
       if (this.forma === 'circulo') r.circulo(x, y, w / 2, this.color);

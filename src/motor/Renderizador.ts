@@ -52,6 +52,8 @@ export interface EstiloImagen {
   opacidad?: number;
   /** Voltear la imagen (útil para personajes que miran a izquierda/derecha). */
   voltearX?: boolean;
+  /** Voltear de arriba abajo. */
+  voltearY?: boolean;
 }
 
 const GRADOS_A_RADIANES = Math.PI / 180;
@@ -197,7 +199,7 @@ export class Renderizador {
     ctx.globalAlpha = estilo.opacidad ?? 1;
     ctx.translate(x, y);
     if (estilo.rotacion) ctx.rotate(estilo.rotacion * GRADOS_A_RADIANES);
-    if (estilo.voltearX) ctx.scale(-1, 1);
+    if (estilo.voltearX || estilo.voltearY) ctx.scale(estilo.voltearX ? -1 : 1, estilo.voltearY ? -1 : 1);
     ctx.drawImage(img, -ancho / 2, -alto / 2, ancho, alto);
     ctx.restore();
   }

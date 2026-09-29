@@ -50,7 +50,8 @@ export interface OpcionesJuego {
   almacen?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 }
 
-type Pendiente = { tipo: 'reiniciar' } | { tipo: 'cambiar'; escena: string } | null;
+/** Lo que hay que hacer al empezar el siguiente fotograma. `espera`: segundos que faltan (mientras se oscurece la pantalla). */
+type Pendiente = { tipo: 'reiniciar' } | { tipo: 'cambiar'; escena: string; espera?: number; fundido?: number } | null;
 
 export class JuegoEnMarcha implements ContextoJuego {
   readonly escena: Escena;
@@ -75,6 +76,7 @@ export class JuegoEnMarcha implements ContextoJuego {
     this.proyecto = proyecto;
     this.nombreEscena = proyecto.escenaInicial;
     this.escena = new Escena(motor);
+    this.escena.clonador = (o) => this.clonar(o);
     this.interprete.alMostrar = opciones.alMostrar ?? ((t) => escribirEnConsola(t));
     this.interprete.nombresDeObjetos = () => [...new Set(this.escena.objetos.map((o) => o.nombre))];
     instalarAPIMotor(this.interprete, this, this.datos);
@@ -153,8 +155,14 @@ export class JuegoEnMarcha implements ContextoJuego {
     this.interprete.globales.declarar('delta', dt);
     const p = this.pendiente;
     if (!p) return;
+    // Cambio con fundido: primero se oscurece la pantalla (en tiempo real, aunque el juego esté en pausa)
+    if (p.tipo === 'cambiar' && p.espera !== undefined && p.espera > 0) {
+      p.espera -= this.motor.tiempo.deltaReal;
+      if (p.espera > 0) return;
+    }
     this.pendiente = null;
     this.construir(p.tipo === 'cambiar' ? p.escena : this.nombreEscena);
+    if (p.tipo === 'cambiar' && p.fundido) this.escena.fundir(0, p.fundido / 2);
   }
 
   pedirReinicio(): void {
@@ -162,7 +170,8 @@ export class JuegoEnMarcha implements ContextoJuego {
     this.pendiente = { tipo: 'reiniciar' };
   }
 
-  cambiarEscena(nombre: string): void {
+  /** Cambia de escena. Con `fundido` (segundos), la pantalla se oscurece, cambia y se vuelve a aclarar. */
+  cambiarEscena(nombre: string, fundido = 0): void {
     const n = normalizar(nombre);
     const clave = Object.keys(this.proyecto.escenas).find((k) => normalizar(k) === n);
     if (!clave) {
@@ -170,7 +179,34 @@ export class JuegoEnMarcha implements ContextoJuego {
       const parecida = sugerir(nombre, hay);
       throw new ErrorMotor(`No existe ninguna escena llamada "${nombre}".`, parecida ? `¿Querías decir "${parecida}"?` : `Las escenas que hay son: ${hay.join(', ')}.`);
     }
-    this.pendiente = { tipo: 'cambiar', escena: clave };
+    if (fundido > 0) {
+      this.escena.fundir(1, fundido / 2);
+      this.pendiente = { tipo: 'cambiar', escena: clave, espera: fundido / 2, fundido };
+    } else this.pendiente = { tipo: 'cambiar', escena: clave };
+  }
+
+  /**
+   * Una copia de un objeto, con su script (que empieza de nuevo con "cuando empieza").
+   * Se copia como está AHORA: sitio, giro, tamaño, color, propiedades propias...
+   */
+  clonar(o: ObjetoJuego): ObjetoJuego {
+    const def = o.definicion as DefObjeto | null;
+    if (!def) throw new ErrorMotor(`No se puede clonar '${o.nombre}'.`, 'Solo se pueden clonar los objetos del juego (los de la escena y los creados con crear).');
+    const copia = crearObjetoDesdeDefinicion({ ...def, nombre: o.nombre, tipo: o.tipo, x: o.posicion.x, y: o.posicion.y }, o.nombre, this.proyecto);
+    copia.transformacion.rotacion = o.transformacion.rotacion;
+    copia.transformacion.escala.x = o.transformacion.escala.x;
+    copia.transformacion.escala.y = o.transformacion.escala.y;
+    const s = o.obtener(Sprite);
+    const sc = copia.obtener(Sprite);
+    if (s && sc) {
+      for (const k of ['imagen', 'forma', 'color', 'ancho', 'alto', 'visible', 'opacidad', 'voltearX', 'voltearY', 'capa', 'tamano', 'colorTexto', 'alinear'] as const) (sc as unknown as Record<string, unknown>)[k] = s[k];
+      if (!s.textoVivo) sc.texto = s.texto;
+    }
+    for (const [k, v] of o.propiedades) copia.propiedades.set(k, typeof v === 'object' && v ? { ...(v as object) } : v);
+    for (const [k, v] of o.etiquetas) copia.etiquetas.set(k, v);
+    copia.arrastrable = o.arrastrable;
+    copia.definicion = def;
+    return this.agregarConScript(copia, def);
   }
 
   animaciones(): Record<string, DefAnimacion> {
@@ -229,6 +265,12 @@ export class JuegoEnMarcha implements ContextoJuego {
   /** Convierte una definición JSON en un ObjetoJuego con sus componentes. */
   private instanciar(def: DefObjeto, nombrePorDefecto: string): ObjetoJuego {
     const o = crearObjetoDesdeDefinicion(def, nombrePorDefecto, this.proyecto);
+    o.definicion = def;
+    return this.agregarConScript(o, def);
+  }
+
+  /** Le pone su script (si tiene) y su texto con huecos, y lo mete en la escena. */
+  private agregarConScript(o: ObjetoJuego, def: DefObjeto): ObjetoJuego {
     if (def.script) {
       const programa = this.programas.get(def.script);
       if (!programa) {

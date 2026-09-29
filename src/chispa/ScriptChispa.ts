@@ -231,7 +231,8 @@ export class ScriptChispa extends Componente {
       for (const ev of this.eventos) {
         const e = ev.evento;
         if (e.tipo !== 'toco' || e.dejar !== dejar) continue;
-        if (e.con !== null && normalizar(otro.nombre) !== e.con && normalizar(otro.tipo) !== e.con && (casilla === undefined || normalizar(casilla) !== e.con)) continue;
+        // "cuando toco X": X puede ser su nombre, su tipo, una de sus etiquetas o un tipo de casilla
+        if (e.con !== null && normalizar(otro.nombre) !== e.con && normalizar(otro.tipo) !== e.con && !otro.etiquetas.has(e.con) && (casilla === undefined || normalizar(casilla) !== e.con)) continue;
         if (this.objeto.destruido) return;
         this.lanzarEvento(ev, otro, null, casilla ?? null);
       }
