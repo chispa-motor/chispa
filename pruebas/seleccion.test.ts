@@ -272,6 +272,9 @@ describe('Deshacer y rehacer: TODO lo que cambia el proyecto', () => {
     pintarRectangulo: (e) => e.pintarRectangulo(obj(1), 0, 0, 3, 3, 'suelo'),
     ponerTipoCasilla: (e) => e.ponerTipoCasilla(obj(1), 'lava', { color: 'azul', solida: true }),
     borrarTipoCasilla: (e) => e.borrarTipoCasilla(obj(1), 'hielo'),
+    cambiarImagen: (e) => e.cambiarImagen('foto', 'data:image/png;base64,CCCC'),
+    renombrarRecurso: (e) => e.renombrarRecurso('imagen', 'foto', 'retrato'),
+    guardarDibujo: (e) => e.guardarDibujo('Gato', ['a', 'b']),
   };
 
   for (const [nombre, cambio] of Object.entries(cambios)) {
@@ -295,13 +298,13 @@ describe('Deshacer y rehacer: TODO lo que cambia el proyecto', () => {
       'abrir', 'aJSON', 'marcarGuardado', 'seleccionar', 'seleccionarIndice', 'seleccionarVarios', 'seleccionarTodo',
       'alternarSeleccion', 'indicesSeleccionados', 'estaSeleccionado', 'definicion', 'nombreLibre', 'copiarSeleccionado',
       'cambiarCodigo', 'abrirScript', 'cerrarPestana', 'activarPestana', 'todosLosObjetos', 'cambiarEscenaActual',
-      'copiasDe', 'plantillaDe',
+      'copiasDe', 'plantillaDe', 'usosDe',
     ]);
     const metodos = Object.getOwnPropertyNames(EstadoEditor.prototype).filter((m) => {
       const d = Object.getOwnPropertyDescriptor(EstadoEditor.prototype, m);
       return typeof d?.value === 'function';
     });
-    const privados = new Set(['avisar', 'apuntar', 'restaurar', 'cambiarObjeto', 'propagar']);
+    const privados = new Set(['avisar', 'apuntar', 'restaurar', 'cambiarObjeto', 'propagar', 'objetosConSitio']);
     const sinProbar = metodos.filter((m) => !sinDeshacer.has(m) && !privados.has(m) && !(m in cambios));
     expect(sinProbar).toEqual([]);
   });

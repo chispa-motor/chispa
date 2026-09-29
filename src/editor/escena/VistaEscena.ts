@@ -27,6 +27,7 @@ import type { DefObjeto } from '../../proyecto/formato';
 import type { EstadoEditor, TipoNuevoObjeto } from '../estado/EstadoEditor';
 import { botonIcono, h, icono } from '../interfaz/dom';
 import { notificar } from '../interfaz/dialogos';
+import { importarArchivos, resumenImportar, tipoDeArchivo } from '../recursos/importar';
 import {
   ajustar,
   CamaraEditor,
@@ -895,6 +896,14 @@ export class VistaEscena {
       if (plantilla) this.estado.colocarPlantilla(plantilla, m.x, m.y);
       else if (imagen) this.estado.crearObjeto('imagen', m.x, m.y, imagen);
       else {
+        // Los sonidos soltados en la escena se importan (no se pueden «colocar»)
+        const sonidos = [...dt.files].filter((f) => tipoDeArchivo(f) === 'sonido');
+        if (sonidos.length) {
+          void importarArchivos(this.estado, sonidos).then((r) => {
+            const m = resumenImportar(r);
+            if (m) notificar(m.texto, m.tipo);
+          });
+        }
         for (const archivo of [...dt.files].filter((f) => f.type.startsWith('image/'))) {
           leerComoDataURL(archivo).then((datos) => {
             const nombre = this.estado.agregarImagen(archivo.name, datos);

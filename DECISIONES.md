@@ -240,3 +240,17 @@ Ver PROBLEMAS_PRINCIPIANTE.md para la lista completa de lo que se encontró.
 | El panel **Depurar** enseña las variables agrupadas: las de aquí, las de los bloques de fuera, las del script y lo más útil de **yo** (dónde está, su velocidad y sus propiedades propias). Las funciones y las cosas del motor (teclado, crear…) no salen. | Lo que se quiere mirar es lo del propio código; cien cosas del motor lo taparían. |
 | Los puntos de parada **no se guardan en el proyecto**. Duran mientras el editor está abierto. | Son una herramienta para mirar, no parte del juego; y así un juego exportado nunca se para. |
 | El botón **Pausa / Seguir** de arriba, estando parado en una línea, hace lo mismo que Continuar. | Es el botón que tiene más a mano quien no sabe que existe el panel. |
+
+### Recursos (noche, bloque 2)
+
+| Decisión | Por qué |
+|---|---|
+| **Soltar archivos encima del editor** los importa: las imágenes y los sonidos, en cualquier sitio de la ventana (se ve un aviso «Suelta aquí…»). En la escena, las imágenes además se colocan como objeto. Lo que no es imagen ni sonido se explica en un mensaje. | Arrastrar es lo primero que se prueba. Antes solo funcionaba con imágenes y solo encima de la escena. |
+| **Doble clic en el nombre** cambia el nombre de una imagen, un sonido o una animación, y lo cambia **en todos los sitios**: objetos, plantillas, casillas del mapa, animaciones y el **código** (los textos entre comillas con ese nombre). Se deshace de una vez. | Si al renombrar hubiera que buscar el nombre a mano por todo el código, nadie renombraría nada. Solo se cambian los textos exactos entre comillas, nunca trozos de otras palabras. |
+| Antes de **borrar**, se avisa de **dónde se usa** (objetos, casillas, animaciones y líneas de código). | Borrar una imagen que usan cinco sitios sin saberlo es la forma más rápida de romper un juego. |
+| Borrar una imagen la quita también de los **tipos de casilla** del mapa. | Antes se quedaba el nombre de una imagen que ya no existía. |
+| **Editor de pixel art** dentro de Chispa: lápiz, goma, cubo y coger color; paleta de 16 colores y cualquier otro; zoom; voltear; deshacer. Dibujos de 8 × 8 a 64 × 64. | Para muchos, dibujar sus propios personajes es la mitad de la gracia de hacer un juego, y no hace falta instalar otro programa. |
+| **Fotogramas** en el mismo editor. El botón principal crea el siguiente como **copia** del actual, y el anterior se ve en transparente («papel cebolla»). Con varios fotogramas se guarda una **animación** (Nombre) y una imagen por fotograma (Nombre1, Nombre2…). | Así es como se anima de verdad: se copia el dibujo y se cambia un poco. |
+| Un dibujo **nuevo nunca pisa** uno que ya existe (se le pone otro nombre: Dibujo2). Solo se sobrescribe al **editar**. | No perder nunca un dibujo por repetir el nombre. |
+| Las imágenes pequeñas (hasta 64 × 64) se dibujan **nítidas** al agrandarlas, con sus píxeles cuadrados, en el juego y en las miniaturas. | Un sprite de 16 × 16 puesto a 64 × 64 se veía borroso. Las fotos grandes se siguen suavizando. |
+| El editor de **animaciones** tiene una **vista previa** que se mueve a la velocidad elegida, y los fotogramas se pueden cambiar de orden. Desde él se puede pasar a **dibujar** los fotogramas. | Ver la animación antes de jugar ahorra ir y volver al juego a cada cambio. |

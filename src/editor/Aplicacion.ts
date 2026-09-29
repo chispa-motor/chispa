@@ -31,6 +31,7 @@ import { PanelInferior } from './paneles/PanelInferior';
 import { PanelIzquierdo } from './paneles/PanelIzquierdo';
 import { Tutorial, conNegritas, marcarTutorialVisto, tutorialVisto } from './tutorial/Tutorial';
 import { Depurador } from '../chispa/ejecucion/depurador';
+import { importarArchivos, resumenImportar } from './recursos/importar';
 import { PanelDepurador } from './paneles/PanelDepurador';
 import { revisarProyecto } from '../proyecto/Revision';
 
@@ -70,6 +71,7 @@ export class Aplicacion {
     this.zonaEscena.append(this.vistaEscena.elemento);
 
     this.montar();
+    this.soltarArchivos();
     this.dibujarBarra();
     this.dibujarPestanas();
 
@@ -106,6 +108,28 @@ export class Aplicacion {
     } catch {
       notificar('No he podido recuperar el último proyecto. Empezamos con el ejemplo.', 'error');
     }
+  }
+
+  /** Soltar imágenes o sonidos encima del editor los importa al proyecto (en la escena, las imágenes se colocan). */
+  private soltarArchivos(): void {
+    const r = this.raiz;
+    const conArchivos = (ev: DragEvent) => !!ev.dataTransfer?.types.includes('Files');
+    r.addEventListener('dragover', (ev) => {
+      if (!conArchivos(ev)) return;
+      ev.preventDefault();
+      r.classList.add('soltando-archivos');
+    });
+    r.addEventListener('dragleave', (ev) => {
+      if (!ev.relatedTarget || !r.contains(ev.relatedTarget as Node)) r.classList.remove('soltando-archivos');
+    });
+    r.addEventListener('drop', async (ev) => {
+      r.classList.remove('soltando-archivos');
+      if (ev.defaultPrevented || !conArchivos(ev)) return; // la escena ya los ha cogido
+      ev.preventDefault();
+      const m = resumenImportar(await importarArchivos(this.estado, ev.dataTransfer?.files ?? []));
+      if (m) notificar(m.texto, m.tipo);
+      if (m?.tipo === 'ok') this.izquierdo.mostrarProyecto();
+    });
   }
 
   // ═════════════════════════ Tutorial ═════════════════════════

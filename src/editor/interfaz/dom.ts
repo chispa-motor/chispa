@@ -81,6 +81,11 @@ const TRAZOS: Record<string, string> = {
   menu: 'M4 7h16M4 12h16M4 17h16',
   descargar: 'M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14',
   entrar: 'M5 5v6a4 4 0 0 0 4 4h9M14 11l4 4-4 4',
+  cubo: 'M5 9l7-5 7 5-7 7zM19 13c1 2 2 3 2 4.5a2 2 0 0 1-4 0c0-1.5 1-2.5 2-4.5',
+  cuentagotas: 'M14.5 4.5l5 5M12 7l5 5M16 4l4 4-9.5 9.5-4 1 1-4z',
+  espejo: 'M12 3v18M8 7l-4 10h4zM16 7l4 10h-4z',
+  izquierda: 'M19 12H5M11 6l-6 6 6 6',
+  derecha: 'M5 12h14M13 6l6 6-6 6',
   mundo: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.5-3.8-9S9.5 5.5 12 3z',
 };
 

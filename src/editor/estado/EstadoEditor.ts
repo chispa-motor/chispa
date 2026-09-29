@@ -740,9 +740,104 @@ export class EstadoEditor {
   borrarImagen(nombre: string): void {
     this.cambiar('recursos', () => {
       delete this.proyecto.imagenes[nombre];
-      for (const o of this.todosLosObjetos()) if (o.sprite?.imagen === nombre) delete o.sprite.imagen;
+      for (const o of this.todosLosObjetos()) {
+        if (o.sprite?.imagen === nombre) delete o.sprite.imagen;
+        for (const t of Object.values(o.mapa?.tipos ?? {})) if (t.imagen === nombre) delete t.imagen;
+      }
       for (const a of Object.values(this.proyecto.animaciones)) a.fotogramas = a.fotogramas.filter((f) => f !== nombre);
     });
+  }
+
+  /** Cambia el dibujo de una imagen que ya existe (al guardar desde el editor de pixel art). */
+  cambiarImagen(nombre: string, datos: string): void {
+    if (!(nombre in this.proyecto.imagenes)) return;
+    this.cambiar('recursos', () => (this.proyecto.imagenes[nombre] = datos));
+  }
+
+  /**
+   * Dónde se usa una imagen, un sonido o una animación: en qué objetos,
+   * animaciones, tipos de casilla y scripts (donde sale su nombre entre comillas).
+   */
+  usosDe(tipo: TipoRecurso, nombre: string): string[] {
+    const usos: string[] = [];
+    const donde = (o: DefObjeto, clave: string) => (clave.startsWith('plantilla:') ? `la plantilla ${clave.slice(10)}` : `${o.nombre ?? 'un objeto'} (escena ${clave})`);
+    for (const [clave, o] of this.objetosConSitio()) {
+      if (tipo === 'imagen' && o.sprite?.imagen === nombre) usos.push(donde(o, clave));
+      if (tipo === 'imagen') for (const [t, def] of Object.entries(o.mapa?.tipos ?? {})) if (def.imagen === nombre) usos.push(`la casilla «${t}» de ${donde(o, clave)}`);
+      if (tipo === 'animacion' && o.animacion === nombre) usos.push(donde(o, clave));
+    }
+    if (tipo === 'imagen') for (const [n, a] of Object.entries(this.proyecto.animaciones)) if (a.fotogramas.includes(nombre)) usos.push(`la animación «${n}»`);
+    for (const [archivo, codigo] of Object.entries(this.proyecto.scripts)) {
+      const lineas = codigo.split('\n').flatMap((l, i) => (textosDe(l).some((t) => normalizar(t) === normalizar(nombre)) ? [i + 1] : []));
+      if (lineas.length) usos.push(`${archivo} (línea ${lineas.join(', ')})`);
+    }
+    return usos;
+  }
+
+  /** Todos los objetos con dónde están: "Principal", "plantilla:Bala"... */
+  private objetosConSitio(): [string, DefObjeto][] {
+    return [
+      ...Object.entries(this.proyecto.escenas).flatMap(([n, e]) => e.objetos.map((o): [string, DefObjeto] => [n, o])),
+      ...Object.entries(this.proyecto.plantillas).map(([n, o]): [string, DefObjeto] => [`plantilla:${n}`, o]),
+    ];
+  }
+
+  /**
+   * Renombra una imagen, un sonido o una animación, y la cambia en TODOS los
+   * sitios donde se usa: objetos, animaciones, casillas y el código (el texto
+   * entre comillas). Devuelve el nombre final (sin repetir).
+   */
+  renombrarRecurso(tipo: TipoRecurso, viejo: string, nuevo: string): string {
+    const tabla = tipo === 'imagen' ? this.proyecto.imagenes : tipo === 'sonido' ? this.proyecto.sonidos : this.proyecto.animaciones;
+    if (!(viejo in tabla)) return viejo;
+    const limpio = nombreDeRecurso(nuevo.trim());
+    if (!nuevo.trim() || limpio === viejo) return viejo;
+    const final = this.nombreLibre(limpio, Object.keys(tabla).filter((k) => k !== viejo));
+    this.cambiar('recursos', () => {
+      // El mismo sitio en la lista (Object.entries conserva el orden)
+      const entradas = Object.entries(tabla as Record<string, unknown>).map(([k, v]): [string, unknown] => [k === viejo ? final : k, v]);
+      for (const k of Object.keys(tabla)) delete (tabla as Record<string, unknown>)[k];
+      for (const [k, v] of entradas) (tabla as Record<string, unknown>)[k] = v;
+      for (const [, o] of this.objetosConSitio()) {
+        if (tipo === 'imagen' && o.sprite?.imagen === viejo) o.sprite.imagen = final;
+        if (tipo === 'imagen') for (const t of Object.values(o.mapa?.tipos ?? {})) if (t.imagen === viejo) t.imagen = final;
+        if (tipo === 'animacion' && o.animacion === viejo) o.animacion = final;
+      }
+      if (tipo === 'imagen') for (const a of Object.values(this.proyecto.animaciones)) a.fotogramas = a.fotogramas.map((f) => (f === viejo ? final : f));
+      for (const [archivo, codigo] of Object.entries(this.proyecto.scripts)) {
+        this.proyecto.scripts[archivo] = codigo.replace(/"([^"\n]*)"/g, (entero, dentro: string) => (normalizar(dentro) === normalizar(viejo) ? `"${final}"` : entero));
+      }
+    });
+    this.avisar('scripts');
+    return final;
+  }
+
+  /**
+   * Guarda un dibujo del editor de pixel art. Con un fotograma es una imagen;
+   * con varios, una imagen por fotograma (Nombre1, Nombre2...) y una animación
+   * con ese nombre. Devuelve el nombre de la imagen (o de la animación).
+   */
+  guardarDibujo(nombre: string, fotogramas: string[], velocidad = 8, opciones: { sobrescribir?: boolean; animacion?: boolean } = {}): string {
+    const comoAnimacion = opciones.animacion || fotogramas.length > 1;
+    // Un dibujo nuevo nunca pisa uno que ya existe: se le busca un nombre libre (Dibujo2...)
+    const pedido = nombreDeRecurso(nombre.trim() || 'Dibujo');
+    const ocupados = comoAnimacion ? Object.keys(this.proyecto.animaciones) : Object.keys(this.proyecto.imagenes);
+    const base = opciones.sobrescribir ? pedido : this.nombreLibre(pedido, ocupados);
+    if (!comoAnimacion) {
+      if (base in this.proyecto.imagenes) {
+        this.cambiarImagen(base, fotogramas[0] ?? '');
+        return base;
+      }
+      return this.agregarImagen(base, fotogramas[0] ?? '');
+    }
+    const nombres = fotogramas.map((_, i) => `${base}${i + 1}`);
+    this.cambiar('recursos', () => {
+      nombres.forEach((n, i) => (this.proyecto.imagenes[n] = fotogramas[i]));
+      const a = this.proyecto.animaciones[base];
+      if (a) Object.assign(a, { fotogramas: nombres, velocidad });
+      else this.proyecto.animaciones[base] = { fotogramas: nombres, velocidad, repetir: true };
+    });
+    return base;
   }
 
   agregarSonido(nombre: string, datos: string): string {
@@ -821,6 +916,14 @@ export class EstadoEditor {
       for (const [k, v] of Object.entries(mapa.celdas)) if (v === nombre) delete mapa.celdas[k];
     });
   }
+}
+
+export type TipoRecurso = 'imagen' | 'sonido' | 'animacion';
+
+/** Los textos entre comillas de una línea de código (sin los comentarios). */
+function textosDe(linea: string): string[] {
+  const sinComentario = linea.replace(/#.*$/, (c) => (c.split('"').length % 2 === 1 ? '' : c));
+  return [...sinComentario.matchAll(/"([^"]*)"/g)].map((m) => m[1]);
 }
 
 /** "Mi Imagen (1).png" → "MiImagen1" (un nombre fácil de escribir en el código). */

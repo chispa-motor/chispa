@@ -311,6 +311,49 @@ await prueba('depurar: clic en el número de línea, el juego se para, se ven la
   comprobar(!(await p.$('.cm-linea-parada')), 'sigue resaltada la línea');
 });
 
+await prueba('recursos: dibujar un sprite de dos fotogramas, soltar un sonido encima y borrar avisando de dónde se usa', async (p) => {
+  await p.click('.pestana-panel:has-text("Proyecto")');
+  await p.click('.grupo-proyecto:has(summary:has-text("Imágenes")) button[title^="Dibujar"]');
+  await p.waitForSelector('.lienzo-pixel');
+  const lienzo = await p.locator('.lienzo-pixel').boundingBox();
+  const casilla = (x, y) => ({ x: lienzo.x + (x + 0.5) * (lienzo.width / 16), y: lienzo.y + (y + 0.5) * (lienzo.height / 16) });
+  // Un trazo con el lápiz, de (2, 2) a (12, 2)
+  let a = casilla(2, 2);
+  const b = casilla(12, 2);
+  await p.mouse.move(a.x, a.y);
+  await p.mouse.down();
+  await p.mouse.move(b.x, b.y, { steps: 4 });
+  await p.mouse.up();
+  // Segundo fotograma (copia) y un punto más
+  await p.click('.botones-fotogramas button[title^="Nuevo fotograma: una copia"]');
+  a = casilla(7, 9);
+  await p.mouse.click(a.x, a.y);
+  await p.fill('.columna-opciones input.campo', 'Bicho');
+  await p.click('.dialogo button:has-text("Guardar")');
+  const r = await estado(p, async () => {
+    const pr = window.chispa.estado.proyecto;
+    const carga = (url) => new Promise((ok) => { const i = new Image(); i.onload = () => { const c = document.createElement('canvas'); c.width = i.width; c.height = i.height; const x = c.getContext('2d'); x.drawImage(i, 0, 0); ok({ w: i.width, h: i.height, fila2: [...Array(16).keys()].filter((k) => x.getImageData(k, 2, 1, 1).data[3] > 0).length, punto: x.getImageData(7, 9, 1, 1).data[3] }); }; i.src = url; });
+    return { anim: pr.animaciones.Bicho, f1: await carga(pr.imagenes.Bicho1), f2: await carga(pr.imagenes.Bicho2) };
+  });
+  comprobar(r.anim?.fotogramas.join() === 'Bicho1,Bicho2', 'no se ha creado la animación: ' + JSON.stringify(r.anim));
+  comprobar(r.f1.w === 16 && r.f1.fila2 === 11 && r.f1.punto === 0, 'el primer fotograma no es el trazo dibujado: ' + JSON.stringify(r.f1));
+  comprobar(r.f2.fila2 === 11 && r.f2.punto > 0, 'el segundo fotograma no tiene el trazo más el punto: ' + JSON.stringify(r.f2));
+  // Soltar un archivo de sonido encima del editor
+  await p.evaluate(() => {
+    const dt = new DataTransfer();
+    dt.items.add(new File([new Uint8Array([82, 73, 70, 70])], 'Salto Alto.wav', { type: 'audio/wav' }));
+    const raiz = document.getElementById('editor');
+    raiz.dispatchEvent(new DragEvent('dragover', { dataTransfer: dt, bubbles: true, cancelable: true }));
+    raiz.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
+  });
+  await p.waitForFunction(() => 'SaltoAlto' in window.chispa.estado.proyecto.sonidos);
+  // Borrar una imagen usada: el aviso dice dónde se usa
+  await p.hover('.imagen-recurso:has(span:text-is("Bicho1"))');
+  await p.click('.imagen-recurso:has(span:text-is("Bicho1")) button[title^="Borrar"]');
+  comprobar((await textoDe(p, '.dialogo')).includes('la animación «Bicho»'), 'el aviso de borrar no dice que la usa la animación');
+  await p.click('.dialogo button:has-text("Cancelar")');
+});
+
 await prueba('los errores se subrayan mientras escribes y bloquean Ejecutar', async (p) => {
   await p.click('.nodo.hijo');
   await p.click('.cm-content');

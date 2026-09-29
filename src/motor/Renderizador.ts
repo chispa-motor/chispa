@@ -197,6 +197,8 @@ export class Renderizador {
     const alto = estilo.alto ?? img.height;
     ctx.save();
     ctx.globalAlpha = estilo.opacidad ?? 1;
+    // Un dibujo pequeño (pixel art) agrandado se ve nítido, con sus píxeles cuadrados, en vez de borroso
+    if (img.width <= 64 && img.height <= 64 && ancho >= img.width * 2) ctx.imageSmoothingEnabled = false;
     ctx.translate(x, y);
     if (estilo.rotacion) ctx.rotate(estilo.rotacion * GRADOS_A_RADIANES);
     if (estilo.voltearX || estilo.voltearY) ctx.scale(estilo.voltearX ? -1 : 1, estilo.voltearY ? -1 : 1);

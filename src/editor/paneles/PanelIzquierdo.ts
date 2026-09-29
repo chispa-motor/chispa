@@ -6,11 +6,14 @@
  *   - PROYECTO: todo lo demás: escenas, scripts, plantillas, imágenes,
  *     sonidos y animaciones.
  */
-import type { EstadoEditor } from '../estado/EstadoEditor';
+import type { EstadoEditor, TipoRecurso } from '../estado/EstadoEditor';
+import { abrirEditorPixelArt } from '../recursos/EditorPixelArt';
+import { abrirEditorAnimacion } from '../recursos/EditorAnimaciones';
+import { importarArchivos, resumenImportar } from '../recursos/importar';
 import type { DefObjeto } from '../../proyecto/formato';
-import { OBJETOS_NUEVOS, leerComoDataURL, type VistaEscena } from '../escena/VistaEscena';
+import { OBJETOS_NUEVOS, type VistaEscena } from '../escena/VistaEscena';
 import { botonIcono, h, icono, rellenar } from '../interfaz/dom';
-import { abrirDialogo, confirmar, notificar, pedirTexto } from '../interfaz/dialogos';
+import { confirmar, notificar, pedirTexto } from '../interfaz/dialogos';
 
 type Pestana = 'escena' | 'proyecto';
 
@@ -63,6 +66,12 @@ export class PanelIzquierdo {
       return JSON.stringify([comun, Object.keys(p.escenas), p.escenaInicial, e.escena.objetos.map((o) => [o.nombre, o.script, o.script && o.script in p.scripts, iconoDe(o), o.sprite?.fijo, o.plantilla])]);
     }
     return JSON.stringify([comun, Object.keys(p.escenas), p.escenaInicial, Object.keys(p.scripts), Object.keys(p.plantillas), Object.keys(p.imagenes), Object.keys(p.sonidos), Object.entries(p.animaciones).map(([n, a]) => [n, a.fotogramas.length]), e.todosLosObjetos().map((o) => o.script)]);
+  }
+
+  /** Enseña la pestaña Proyecto (por ejemplo, después de importar algo, para verlo). */
+  mostrarProyecto(): void {
+    this.pestana = 'proyecto';
+    this.dibujar();
   }
 
   dibujar(): void {
@@ -234,12 +243,13 @@ export class PanelIzquierdo {
     // Imágenes
     const imagenes = h('div', { class: 'rejilla-imagenes' },
       Object.entries(p.imagenes).map(([n, url]) =>
-        h('div', { class: 'imagen-recurso', draggable: 'true', title: `${n}\nArrástrala a la escena · En el código: yo.imagen = "${n}"`, ondragstart: (ev: DragEvent) => ev.dataTransfer?.setData('chispa/imagen', n) },
-          h('img', { src: url, alt: n, draggable: 'false' }),
+        h('div', { class: 'imagen-recurso', draggable: 'true', title: `${n}\nArrástrala a la escena · Doble clic: cambiar el nombre · En el código: yo.imagen = "${n}"`, ondragstart: (ev: DragEvent) => ev.dataTransfer?.setData('chispa/imagen', n), ondblclick: () => this.renombrarRecurso('imagen', n) },
+          h('img', { src: url, alt: n, draggable: 'false', onload: marcarPixelado }),
           h('span', {}, n),
-          botonIcono('cerrar', `Borrar la imagen "${n}"`, async () => {
-            if (await confirmar('Borrar imagen', `¿Borrar la imagen "${n}"? Los objetos que la usan se quedarán sin imagen.`, 'Borrar', true)) e.borrarImagen(n);
-          }, undefined, 'borrar-imagen'),
+          h('div', { class: 'acciones-imagen' },
+            botonIcono('pincel', `Editar "${n}" en el editor de píxeles`, () => void abrirEditorPixelArt(e, { imagen: n }), undefined, 'pequeno'),
+            botonIcono('cerrar', `Borrar la imagen "${n}"`, () => this.borrarRecurso('imagen', n), undefined, 'pequeno'),
+          ),
         ),
       ),
     );
@@ -248,20 +258,16 @@ export class PanelIzquierdo {
     const sonidos = Object.entries(p.sonidos).map(([n, url]) =>
       this.fila('sonido', n, [
         botonIcono('reproducir', 'Escuchar', () => this.escuchar(url), undefined, 'pequeno'),
-        botonIcono('basura', 'Borrar el sonido', async () => {
-          if (await confirmar('Borrar sonido', `¿Borrar el sonido "${n}"?`, 'Borrar', true)) e.borrarSonido(n);
-        }, undefined, 'pequeno'),
-      ], { title: `En el código: sonido.reproducir("${n}")` }),
+        botonIcono('basura', 'Borrar el sonido', () => this.borrarRecurso('sonido', n), undefined, 'pequeno'),
+      ], { title: `Doble clic: cambiar el nombre · En el código: sonido.reproducir("${n}")`, ondblclick: () => this.renombrarRecurso('sonido', n) }),
     );
 
     // Animaciones
     const animaciones = Object.entries(p.animaciones).map(([n, a]) =>
       this.fila('animacion', n, [
         h('span', { class: 'etiqueta' }, `${a.fotogramas.length}`),
-        botonIcono('basura', 'Borrar la animación', async () => {
-          if (await confirmar('Borrar animación', `¿Borrar la animación "${n}"?`, 'Borrar', true)) e.borrarAnimacion(n);
-        }, undefined, 'pequeno'),
-      ], { title: `Clic: editar · En el código: yo.animar("${n}")`, onclick: () => this.editarAnimacion(n) }),
+        botonIcono('basura', 'Borrar la animación', () => this.borrarRecurso('animacion', n), undefined, 'pequeno'),
+      ], { title: `Clic: editar · Doble clic: cambiar el nombre · En el código: yo.animar("${n}")`, onclick: () => abrirEditorAnimacion(e, n), ondblclick: () => this.renombrarRecurso('animacion', n) }),
     );
 
     return [
@@ -274,15 +280,16 @@ export class PanelIzquierdo {
         const n = await pedirTexto('Nueva plantilla', 'Nombre (lo usarás en crear("…")):', 'Bala');
         if (n) e.crearPlantillaVacia(n.replace(/\s+/g, ''));
       }, undefined, 'pequeno')], plantillas, 'Objetos para crear desde el código con crear("…"). Selecciona un objeto y pulsa «Plantilla».'),
-      this.grupo('Imágenes', 'imagen', [botonIcono('abrir', 'Importar imágenes (.png, .jpg, .svg, .gif)', () => this.importar('image/*', (n, d) => e.agregarImagen(n, d)), undefined, 'pequeno')],
-        Object.keys(p.imagenes).length ? imagenes : [], 'Importa imágenes o arrástralas desde tu ordenador a la escena.'),
-      this.grupo('Sonidos', 'sonido', [botonIcono('abrir', 'Importar sonidos (.mp3, .ogg, .wav)', () => this.importar('audio/*', (n, d) => e.agregarSonido(n, d)), undefined, 'pequeno')],
-        sonidos, 'Sin sonidos. También puedes usar sonido.tono(440, 0.2) sin importar nada.'),
+      this.grupo('Imágenes', 'imagen', [
+        botonIcono('pincel', 'Dibujar un sprite nuevo, píxel a píxel', () => void abrirEditorPixelArt(e), undefined, 'pequeno'),
+        botonIcono('abrir', 'Importar imágenes (.png, .jpg, .svg, .gif)', () => this.importar('image/*'), undefined, 'pequeno'),
+      ], Object.keys(p.imagenes).length ? imagenes : [], 'Dibuja una con el pincel, impórtala, o arrastra imágenes desde tu ordenador hasta el editor.'),
+      this.grupo('Sonidos', 'sonido', [botonIcono('abrir', 'Importar sonidos (.mp3, .ogg, .wav)', () => this.importar('audio/*'), undefined, 'pequeno')],
+        sonidos, 'Sin sonidos. Arrastra archivos de sonido hasta el editor para importarlos. También puedes usar sonido.tono(440, 0.2) sin importar nada.'),
       this.grupo('Animaciones', 'animacion', [botonIcono('mas', 'Nueva animación (con imágenes del proyecto)', async () => {
-        if (!Object.keys(p.imagenes).length) return notificar('Primero importa las imágenes de los fotogramas.', 'error');
         const n = await pedirTexto('Nueva animación', 'Nombre (por ejemplo: andar, saltar):', 'andar');
-        if (n) this.editarAnimacion(e.crearAnimacion(n));
-      }, undefined, 'pequeno')], animaciones, 'Una animación es una lista de imágenes que se van cambiando.'),
+        if (n) abrirEditorAnimacion(e, e.crearAnimacion(n));
+      }, undefined, 'pequeno')], animaciones, 'Una animación es una lista de imágenes que se van cambiando. También se pueden dibujar con varios fotogramas en el editor de píxeles.'),
     ];
   }
 
@@ -297,59 +304,37 @@ export class PanelIzquierdo {
     this.sonando.play().catch(() => notificar('No he podido reproducir este sonido.', 'error'));
   }
 
-  /** Abre el selector de archivos y añade cada archivo elegido. */
-  private importar(tipos: string, agregar: (nombre: string, datos: string) => string): void {
+  /** Abre el selector de archivos e importa los elegidos. */
+  private importar(tipos: string): void {
     const entrada = h('input', { type: 'file', accept: tipos, multiple: true });
     entrada.addEventListener('change', async () => {
-      const nombres: string[] = [];
-      for (const archivo of entrada.files ?? []) {
-        if (archivo.size > 15 * 1024 * 1024) {
-          notificar(`"${archivo.name}" es demasiado grande (más de 15 MB).`, 'error');
-          continue;
-        }
-        nombres.push(agregar(archivo.name, await leerComoDataURL(archivo)));
-      }
-      if (nombres.length) notificar(`Importado: ${nombres.join(', ')}`, 'ok');
+      const m = resumenImportar(await importarArchivos(this.estado, entrada.files ?? []));
+      if (m) notificar(m.texto, m.tipo);
     });
     entrada.click();
   }
 
-  /** Diálogo para elegir los fotogramas, la velocidad y si se repite. */
-  editarAnimacion(nombre: string): void {
+  /** Cambia el nombre de un recurso (y en todos los sitios donde se usa, también en el código). */
+  private async renombrarRecurso(tipo: TipoRecurso, n: string): Promise<void> {
+    const que = { imagen: 'la imagen', sonido: 'el sonido', animacion: 'la animación' }[tipo];
+    const nuevo = await pedirTexto('Cambiar el nombre', `Nombre nuevo para ${que} "${n}". Se cambiará también donde se use, incluido el código.`, n);
+    if (!nuevo) return;
+    const final = this.estado.renombrarRecurso(tipo, n, nuevo);
+    if (final !== n) notificar(`Ahora se llama "${final}".`, 'ok');
+  }
+
+  /** Borra un recurso, avisando antes de dónde se usa. */
+  private async borrarRecurso(tipo: TipoRecurso, n: string): Promise<void> {
     const e = this.estado;
-    const anim = e.proyecto.animaciones[nombre];
-    if (!anim) return;
-    const fotogramas = [...anim.fotogramas];
-    const tira = h('div', { class: 'tira-fotogramas' });
-    const pintarTira = () =>
-      rellenar(tira, fotogramas.length
-        ? fotogramas.map((f, i) => h('button', { class: 'fotograma', title: 'Clic para quitarlo', onclick: () => {
-            fotogramas.splice(i, 1);
-            pintarTira();
-          } }, h('img', { src: e.proyecto.imagenes[f] ?? '', alt: f }), h('span', {}, String(i + 1))))
-        : h('p', { class: 'nota' }, 'Haz clic en las imágenes de abajo, en orden, para añadir fotogramas.'));
-    pintarTira();
-    const disponibles = h('div', { class: 'rejilla-imagenes pequena' },
-      Object.entries(e.proyecto.imagenes).map(([n, url]) => h('button', { class: 'imagen-recurso', title: `Añadir "${n}"`, onclick: () => {
-        fotogramas.push(n);
-        pintarTira();
-      } }, h('img', { src: url, alt: n }), h('span', {}, n))),
-    );
-    const velocidad = h('input', { type: 'number', class: 'campo', min: '1', max: '60', value: String(anim.velocidad) });
-    const repetir = h('input', { type: 'checkbox', checked: anim.repetir });
-    const contenido = h('div', { class: 'editor-animacion' },
-      h('h3', {}, 'Fotogramas'), tira,
-      h('h3', {}, 'Imágenes del proyecto'), disponibles,
-      h('div', { class: 'dos-columnas' },
-        h('label', { class: 'campo-fila' }, h('span', { class: 'campo-etiqueta' }, 'fotogramas por segundo'), velocidad),
-        h('label', { class: 'campo-fila casilla' }, h('span', { class: 'campo-etiqueta' }, 'repetir'), repetir),
-      ),
-      h('p', { class: 'nota' }, 'En el código: ', h('code', {}, `yo.animar("${nombre}")`), '. Si no se repite, al acabar avisa con "cuando termina la animacion".'),
-    );
-    abrirDialogo(`Animación: ${nombre}`, contenido, [
-      { texto: 'Cancelar' },
-      { texto: 'Guardar', clase: 'principal', alPulsar: () => e.cambiarAnimacion(nombre, { fotogramas, velocidad: Math.max(1, Number(velocidad.value) || 8), repetir: repetir.checked }) },
-    ], 'dialogo-ancho');
+    const que = { imagen: 'la imagen', sonido: 'el sonido', animacion: 'la animación' }[tipo];
+    const usos = e.usosDe(tipo, n);
+    const aviso = usos.length
+      ? `Se usa en: ${usos.slice(0, 6).join('; ')}${usos.length > 6 ? ` y ${usos.length - 6} sitios más` : ''}. ${tipo === 'sonido' ? 'El código que lo usa dará un error.' : 'Esos sitios se quedarán sin ella (y el código que la nombra dará un error).'}`
+      : 'No se usa en ningún sitio.';
+    if (!(await confirmar(`Borrar ${que}`, `¿Borrar ${que} "${n}"? ${aviso}`, 'Borrar', true))) return;
+    if (tipo === 'imagen') e.borrarImagen(n);
+    else if (tipo === 'sonido') e.borrarSonido(n);
+    else e.borrarAnimacion(n);
   }
 }
 
@@ -357,4 +342,10 @@ export class PanelIzquierdo {
 function textoPortapapeles(lista: DefObjeto[] | null): string {
   if (!lista?.length) return '';
   return lista.length === 1 ? `"${lista[0].nombre ?? 'objeto'}"` : `${lista.length} objetos`;
+}
+
+/** Las imágenes pequeñas (pixel art) se enseñan con sus píxeles cuadrados, sin emborronar. */
+function marcarPixelado(ev: Event): void {
+  const img = ev.target as HTMLImageElement;
+  if (img.naturalWidth <= 64 && img.naturalHeight <= 64) img.classList.add('pixelado');
 }
