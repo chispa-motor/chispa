@@ -352,7 +352,7 @@ describe('Partículas', () => {
   });
 
   it('tipos y opciones mal escritos dan error con sugerencia', () => {
-    expect(unObjeto('cuando empieza:\n    particulas("explocion", 0, 0)').errores[0].error.pista).toBe('¿Querías decir "explosion"?');
+    expect(errorAlPreparar(() => unObjeto('cuando empieza:\n    particulas("explocion", 0, 0)')).pista).toBe('¿Querías decir "explosion"?');
     expect(unObjeto('cuando empieza:\n    particulas({cantidat: 5}, 0, 0)').errores[0].error.pista).toBe("¿Querías decir 'cantidad'?");
   });
 });

@@ -37,6 +37,7 @@ import { comprobarNombreTecla } from '../../motor/Entrada';
 import { ErrorMotor } from '../../motor/Errores';
 import { NOMBRES_COLORES, esColorValido } from '../../motor/Color';
 import { normalizar } from '../../utilidades/texto';
+import { TIPOS_PARTICULAS } from '../../objetos/Particulas';
 
 /** Lo que el análisis necesita saber del proyecto. Todo es opcional salvo las globales. */
 export interface ContextoAnalisis {
@@ -371,6 +372,14 @@ class Analizador {
 
     if (nombre === 'teclado.pulsada' || nombre === 'teclado.sepulso' || nombre === 'teclado.sesolto') {
       this.comprobarTecla(primero.valor, primero.pos);
+      return;
+    }
+    if (nombre === 'particulas') {
+      const tipos = Object.keys(TIPOS_PARTICULAS);
+      if (!tipos.includes(normalizar(primero.valor))) {
+        const parecido = sugerir(primero.valor, tipos);
+        this.error(primero.pos, `no hay ningún tipo de partículas llamado "${primero.valor}".`, parecido ? `¿Querías decir "${parecido}"?` : `Los tipos son: ${enumerar(tipos)}.`);
+      }
       return;
     }
     const recurso = RECURSOS_EN_LLAMADAS[nombre];
