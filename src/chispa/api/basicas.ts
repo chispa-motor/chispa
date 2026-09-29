@@ -43,6 +43,18 @@ export function instalarBasicas(interprete: Interprete): void {
     if (max < min) throw new ErrorChispa(p, `en aleatorio(${min}, ${max}) el primer número es mayor que el segundo.`, 'Ejemplo: aleatorio(1, 6)');
     return Math.floor(Math.random() * (max - min + 1)) + min;
   });
+  funcion('elegir', (a, p) => {
+    // elegir(["rojo", "verde", "azul"]) → uno al azar
+    const lista = a[0];
+    if (!Array.isArray(lista)) throw new ErrorChispa(p, `'elegir' necesita una lista, pero le das ${lista === undefined ? 'nada' : nombreTipo(lista)}.`, 'Ejemplo: elegir(["rojo", "verde", "azul"])');
+    if (lista.length === 0) throw new ErrorChispa(p, "no se puede elegir nada de una lista vacía.");
+    return lista[Math.floor(Math.random() * lista.length)];
+  });
+  funcion('probabilidad', (a, p) => {
+    // probabilidad(30) → verdadero 30 de cada 100 veces
+    const porcentaje = argNumero(a, 0, 'probabilidad', p, 'si probabilidad(30):');
+    return Math.random() * 100 < porcentaje;
+  });
   funcion('redondear', (a, p) => {
     const decimales = argNumero(a, 1, 'redondear', p, 'redondear(3.14159, 2)', 0);
     const f = 10 ** decimales;

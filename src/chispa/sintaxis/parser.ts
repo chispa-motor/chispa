@@ -483,7 +483,7 @@ class Parser {
       'Los eventos que existen son:\n' +
       '    cuando empieza:\n    cuando cada fotograma:\n    cuando cada 2 segundos:\n    cuando pasen 3 segundos:\n' +
       '    cuando se pulsa "espacio":   (también "se mantiene" y "se suelta")\n' +
-      '    cuando toco Enemigo:\n    cuando dejo de tocar Enemigo:\n    cuando hago clic:';
+      '    cuando toco Enemigo:\n    cuando dejo de tocar Enemigo:\n    cuando hago clic:\n    cuando hago clic encima:\n    cuando termina la animacion:';
 
     if (this.esPalabra('empieza') || this.esPalabra('empiece') || this.esPalabra('comienza')) {
       this.avanzar();
@@ -527,9 +527,20 @@ class Parser {
     }
     if (this.esPalabra('hago')) {
       this.avanzar();
-      if (!this.esPalabra('clic') && !this.esPalabra('click')) this.error("esperaba 'cuando hago clic:'.");
+      if (!this.esPalabra('clic') && !this.esPalabra('click')) this.error("esperaba 'cuando hago clic:' o 'cuando hago clic encima:'.");
       this.avanzar();
-      return { tipo: 'clic' };
+      if (this.esPalabra('encima')) {
+        this.avanzar();
+        return { tipo: 'clic', encima: true };
+      }
+      return { tipo: 'clic', encima: false };
+    }
+    if (this.esPalabra('termina')) {
+      this.avanzar();
+      if (this.esPalabra('la')) this.avanzar();
+      if (!this.esPalabra('animacion')) this.error("esperaba 'cuando termina la animacion:'.");
+      this.avanzar();
+      return { tipo: 'animacion' };
     }
     let dejar = false;
     if (this.esPalabra('dejo')) {

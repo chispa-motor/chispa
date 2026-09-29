@@ -174,19 +174,36 @@ export class ScriptChispa extends Componente {
             break;
           }
           case 'clic':
-            if (entrada.ratonSePulso('izquierdo')) this.lanzarEvento(ev);
+            // "cuando hago clic encima" lo reparte la Escena (alHacerClic): aquí solo el clic en cualquier sitio
+            if (!e.encima && entrada.ratonSePulso('izquierdo')) this.lanzarEvento(ev);
             break;
         }
       }
     });
   }
 
-  alTocar(otro: ObjetoJuego): void {
-    this.avisarContacto(otro, false);
+  alTocar(otro: ObjetoJuego, casilla?: string): void {
+    this.avisarContacto(otro, false, casilla);
   }
 
-  alDejarDeTocar(otro: ObjetoJuego): void {
-    this.avisarContacto(otro, true);
+  alDejarDeTocar(otro: ObjetoJuego, casilla?: string): void {
+    this.avisarContacto(otro, true, casilla);
+  }
+
+  recibeClics(): boolean {
+    return !this.detenido && this.eventos.some((ev) => ev.evento.tipo === 'clic' && ev.evento.encima);
+  }
+
+  alHacerClic(): void {
+    this.conArchivo(() => {
+      for (const ev of this.eventos) if (ev.evento.tipo === 'clic' && ev.evento.encima) this.lanzarEvento(ev);
+    });
+  }
+
+  alTerminarAnimacion(): void {
+    this.conArchivo(() => {
+      for (const ev of this.eventos) if (ev.evento.tipo === 'animacion') this.lanzarEvento(ev);
+    });
   }
 
   alDestruir(): void {
@@ -195,24 +212,31 @@ export class ScriptChispa extends Componente {
 
   // ───────────────────────── Interno ─────────────────────────
 
-  private avisarContacto(otro: ObjetoJuego, dejar: boolean): void {
+  /**
+   * "cuando toco X": X puede ser el nombre del otro objeto, su tipo o, si es
+   * una casilla de un mapa, el tipo de casilla ("cuando toco pinchos:").
+   */
+  private avisarContacto(otro: ObjetoJuego, dejar: boolean, casilla?: string): void {
     this.conArchivo(() => {
       for (const ev of this.eventos) {
         const e = ev.evento;
         if (e.tipo !== 'toco' || e.dejar !== dejar) continue;
-        if (e.con !== null && normalizar(otro.nombre) !== e.con && normalizar(otro.tipo) !== e.con) continue;
+        if (e.con !== null && normalizar(otro.nombre) !== e.con && normalizar(otro.tipo) !== e.con && (casilla === undefined || normalizar(casilla) !== e.con)) continue;
         if (this.objeto.destruido) return;
-        this.lanzarEvento(ev, otro);
+        this.lanzarEvento(ev, otro, null, casilla ?? null);
       }
     });
   }
 
-  private lanzarEvento(ev: EventoRegistrado, otro?: ObjetoJuego, clave: string | null = null): void {
+  private lanzarEvento(ev: EventoRegistrado, otro?: ObjetoJuego, clave: string | null = null, casilla: string | null = null): void {
     const interprete = this.interprete;
     const entorno = this.entorno;
     function* cuerpo(): Ejecucion<void> {
       const local = new Entorno(entorno);
-      if (otro) local.declarar('otro', referencia(otro));
+      if (otro) {
+        local.declarar('otro', referencia(otro));
+        local.declarar('casilla', casilla);
+      }
       yield* interprete.ejecutarBloque(ev.cuerpo, local);
     }
     this.lanzar(cuerpo(), clave);

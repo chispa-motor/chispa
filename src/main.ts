@@ -12,7 +12,7 @@ import { escribirEnConsola } from './motor/Consola';
 import { ErrorCompilacion, formatearError } from './chispa/errores/ErrorChispa';
 import { demoFase1 } from './demos/demoFase1';
 import { demoFase2 } from './demos/demoFase2';
-import { JuegoEnMarcha } from './proyecto/Proyecto';
+import { JuegoEnMarcha } from './proyecto/JuegoEnMarcha';
 import { proyectoMinimo } from './ejemplos/minimo/proyecto';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#lienzo')!;

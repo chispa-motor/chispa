@@ -56,7 +56,10 @@ export type Evento =
   | { tipo: 'tecla'; modo: 'pulsa' | 'mantiene' | 'suelta'; teclas: Expresion[] }
   /** con = null → cualquier objeto. dejar = verdadero → "cuando dejo de tocar" */
   | { tipo: 'toco'; con: string | null; original: string | null; dejar: boolean }
-  | { tipo: 'clic' };
+  /** encima = verdadero → "cuando hago clic encima:" (solo si el clic es sobre este objeto) */
+  | { tipo: 'clic'; encima: boolean }
+  /** "cuando termina la animacion:" (solo las que no se repiten) */
+  | { tipo: 'animacion' };
 
 // ───────────────────────── Sentencias (órdenes) ─────────────────────────
 

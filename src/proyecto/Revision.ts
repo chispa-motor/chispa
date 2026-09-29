@@ -12,7 +12,7 @@ import type { Entorno } from '../chispa/ejecucion/entorno';
 import { Interprete } from '../chispa/ejecucion/interprete';
 import type { Programa } from '../chispa/sintaxis/ast';
 import { analizarSintaxis } from '../chispa/sintaxis/parser';
-import type { DefProyecto } from './Proyecto';
+import { nombresDeObjetos, type DefProyecto } from './formato';
 
 export interface ResultadoRevision {
   /** Árbol de cada script que se ha podido leer (aunque tenga errores de análisis). */
@@ -40,11 +40,6 @@ export function globalesDelMotor(): Entorno {
   return globalesCacheadas;
 }
 
-/** Nombres de todos los objetos que pueden existir: los de la escena y las plantillas. */
-function nombresDeObjetos(p: DefProyecto): string[] {
-  return [...p.escena.map((o) => o.nombre ?? o.tipo ?? ''), ...Object.keys(p.plantillas)].filter(Boolean);
-}
-
 export function revisarProyecto(proyecto: DefProyecto, globales: Entorno = globalesDelMotor()): ResultadoRevision {
   const r: ResultadoRevision = { programas: new Map(), porArchivo: new Map(), errores: [], avisos: [] };
   const contexto = {
@@ -53,6 +48,8 @@ export function revisarProyecto(proyecto: DefProyecto, globales: Entorno = globa
     plantillas: Object.keys(proyecto.plantillas),
     imagenes: Object.keys(proyecto.imagenes),
     sonidos: Object.keys(proyecto.sonidos ?? {}),
+    escenas: Object.keys(proyecto.escenas),
+    animaciones: Object.keys(proyecto.animaciones),
     objetosEscena: nombresDeObjetos(proyecto),
   };
 

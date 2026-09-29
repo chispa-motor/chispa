@@ -16,7 +16,9 @@ import { Recursos } from '../src/motor/Recursos';
 import { Sonido } from '../src/motor/Sonido';
 import { Vector2 } from '../src/motor/Vector2';
 import type { EscenaActiva, Motor } from '../src/motor/Motor';
-import { JuegoEnMarcha, type DefObjeto, type DefProyecto } from '../src/proyecto/Proyecto';
+import { JuegoEnMarcha } from '../src/proyecto/JuegoEnMarcha';
+import type { DefEscena, DefObjeto, DefProyecto } from '../src/proyecto/formato';
+import type { DefAnimacion } from '../src/objetos/componentes/Animador';
 
 // ───────────────────────── Lenguaje sin motor ─────────────────────────
 
@@ -118,13 +120,31 @@ function motorDePrueba() {
     window.dispatchEvent(new KeyboardEvent('keyup', { code: codigo, key: tecla }));
   }
 
-  return { motor: motor as unknown as Motor, avanzar, pulsar, soltar, entrada };
+  /**
+   * Simula un clic en la pantalla. (x, y) en coordenadas de PANTALLA del juego con la
+   * Y hacia ARRIBA, como en Chispa: (0, 0) es la esquina inferior izquierda.
+   */
+  function clic(x: number, y: number) {
+    const opciones = { button: 0, clientX: x, clientY: 540 - y, bubbles: true };
+    canvas.dispatchEvent(new MouseEvent('pointermove', opciones));
+    canvas.dispatchEvent(new MouseEvent('pointerdown', opciones));
+    window.dispatchEvent(new MouseEvent('pointerup', opciones));
+  }
+
+  return { motor: motor as unknown as Motor, avanzar, pulsar, soltar, clic, entrada };
 }
 
 export interface OpcionesJuegoPrueba {
   scripts?: Record<string, string>;
+  /** Objetos de la escena "Principal". */
   escena?: DefObjeto[];
+  /** Otras escenas (además de "Principal"). */
+  escenas?: Record<string, DefEscena>;
   plantillas?: Record<string, DefObjeto>;
+  animaciones?: Record<string, DefAnimacion>;
+  sonidos?: Record<string, string>;
+  imagenes?: Record<string, string>;
+  gravedad?: number;
 }
 
 export function juegoDePrueba(opciones: OpcionesJuegoPrueba) {
@@ -134,17 +154,25 @@ export function juegoDePrueba(opciones: OpcionesJuegoPrueba) {
   const avisos: Diagnostico[] = [];
   const proyecto: DefProyecto = {
     formato: 'chispa-proyecto',
-    version: 1,
+    version: 2,
     nombre: 'prueba',
     ancho: 960,
     alto: 540,
-    colorFondo: 'negro',
-    imagenes: {},
+    imagenes: opciones.imagenes ?? {},
+    sonidos: opciones.sonidos ?? {},
+    animaciones: opciones.animaciones ?? {},
     scripts: opciones.scripts ?? {},
     plantillas: opciones.plantillas ?? {},
-    escena: opciones.escena ?? [],
+    escenas: { Principal: { colorFondo: 'negro', gravedad: opciones.gravedad, objetos: opciones.escena ?? [] }, ...opciones.escenas },
+    escenaInicial: 'Principal',
   };
+  // Los sonidos "se cargan" (sin audio de verdad en los tests)
+  for (const nombre of Object.keys(proyecto.sonidos)) void m.motor.sonido.cargar(nombre, 'no-hay-audio');
+  // Imágenes de mentira (1×1) para que existan
+  for (const nombre of Object.keys(proyecto.imagenes)) m.motor.recursos.registrar(nombre, document.createElement('img'));
+  const almacen = new Map<string, string>();
   const juego = JuegoEnMarcha.preparar(m.motor, proyecto, {
+    almacen: { getItem: (k) => almacen.get(k) ?? null, setItem: (k, v) => void almacen.set(k, v), removeItem: (k) => void almacen.delete(k) },
     alMostrar: (t) => salida.push(t),
     alError: (error, veces) => {
       const ya = errores.find((x) => x.error.mensajeCorto === error.mensajeCorto && x.error.linea === error.linea);
@@ -158,7 +186,7 @@ export function juegoDePrueba(opciones: OpcionesJuegoPrueba) {
     if (!o) throw new Error(`No hay ningún objeto "${nombre}" en la escena`);
     return o;
   };
-  return { ...m, juego, salida, errores, avisos, buscar };
+  return { ...m, juego, salida, errores, avisos, buscar, almacen };
 }
 
 /** Atajo: un único objeto "Prueba" con este script. */

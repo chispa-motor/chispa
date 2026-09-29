@@ -1,10 +1,12 @@
 /**
  * Sonido: reproduce sonidos con la Web Audio API del navegador.
  *
- * Dos formas de hacer ruido:
+ * Tres formas de hacer ruido:
  *   - tono(frecuencia, segundos): un pitido GENERADO al momento. No necesita
  *     archivos, así que sirve para probar cosas rápido.
- *   - reproducir(nombre): un sonido cargado antes desde un archivo (.mp3, .ogg, .wav).
+ *   - reproducir(nombre): un efecto de sonido cargado antes desde un archivo (.mp3, .ogg, .wav).
+ *   - musica(nombre): una canción que suena EN BUCLE, con su propio volumen.
+ *     Solo suena una música a la vez: poner otra para la anterior.
  *
  * DECISIÓN: el AudioContext se crea la PRIMERA vez que suena algo.
  * Los navegadores no dejan sonar nada hasta que la persona interactúa con la
@@ -21,11 +23,69 @@ export class Sonido {
   private contexto: AudioContext | null = null;
   private salida: GainNode | null = null;
   private buffers = new Map<string, AudioBuffer>();
+  /** Nombres cargados (aunque no haya audio en este navegador, para que los errores sean los mismos). */
+  private registrados = new Set<string>();
   /** Sonidos que están sonando ahora, para poder pararlos. */
   private sonando = new Map<string, Set<AudioBufferSourceNode>>();
 
   /** Registro de lo que se ha pedido (útil para los tests y para depurar). */
   readonly historial: string[] = [];
+
+  private _volumenMusica = 0.6;
+  private salidaMusica: GainNode | null = null;
+  private fuenteMusica: AudioBufferSourceNode | null = null;
+  /** Nombre de la música que suena ahora (o null). */
+  musicaActual: string | null = null;
+
+  get volumenMusica(): number {
+    return this._volumenMusica;
+  }
+  set volumenMusica(v: number) {
+    this._volumenMusica = Math.min(1, Math.max(0, v));
+    if (this.salidaMusica) this.salidaMusica.gain.value = this._volumenMusica;
+  }
+
+  /** Pone una música en bucle. Si ya sonaba esa misma, no la reinicia. */
+  musica(nombre: string): void {
+    this.historial.push(`musica ${nombre}`);
+    if (this.musicaActual === nombre) return;
+    const buffer = this.buffers.get(nombre);
+    if (!this.registrados.has(nombre)) {
+      const hay = [...this.registrados];
+      throw new ErrorMotor(
+        `Intentas poner la música "${nombre}", pero no está cargada.`,
+        hay.length ? `Los sonidos cargados son: ${hay.join(', ')}.` : 'Todavía no se ha cargado ningún sonido.',
+      );
+    }
+    this.pararMusica();
+    this.musicaActual = nombre;
+    const ctx = this.obtenerContexto();
+    if (!ctx || !this.salidaMusica || !buffer) return;
+    const fuente = ctx.createBufferSource();
+    fuente.buffer = buffer;
+    fuente.loop = true;
+    fuente.connect(this.salidaMusica);
+    fuente.start();
+    this.fuenteMusica = fuente;
+  }
+
+  pararMusica(): void {
+    if (this.musicaActual) this.historial.push('parar musica');
+    this.fuenteMusica?.stop();
+    this.fuenteMusica = null;
+    this.musicaActual = null;
+  }
+
+  /** Para todo (al pulsar Parar en el editor). */
+  pararTodo(): void {
+    this.parar();
+    this.pararMusica();
+  }
+
+  /** ¿Hay un sonido cargado con este nombre? */
+  tieneSonido(nombre: string): boolean {
+    return this.buffers.has(nombre);
+  }
 
   get volumen(): number {
     return this._volumen;
@@ -58,15 +118,15 @@ export class Sonido {
   reproducir(nombre: string): void {
     this.historial.push(`reproducir ${nombre}`);
     const buffer = this.buffers.get(nombre);
-    if (!buffer) {
-      const hay = [...this.buffers.keys()];
+    if (!this.registrados.has(nombre)) {
+      const hay = [...this.registrados];
       throw new ErrorMotor(
         `Intentas reproducir el sonido "${nombre}", pero no está cargado.`,
         hay.length ? `Los sonidos cargados son: ${hay.join(', ')}.` : 'Todavía no se ha cargado ningún sonido. Para probar sin archivos usa sonido.tono(440, 0.2).',
       );
     }
     const ctx = this.obtenerContexto();
-    if (!ctx || !this.salida) return;
+    if (!ctx || !this.salida || !buffer) return;
     const fuente = ctx.createBufferSource();
     fuente.buffer = buffer;
     fuente.connect(this.salida);
@@ -89,6 +149,7 @@ export class Sonido {
 
   /** Carga un archivo de sonido y lo guarda con un nombre corto. */
   async cargar(nombre: string, ruta: string): Promise<void> {
+    this.registrados.add(nombre);
     const ctx = this.obtenerContexto();
     if (!ctx) return;
     try {
@@ -103,12 +164,19 @@ export class Sonido {
   }
 
   private obtenerContexto(): AudioContext | null {
-    if (this.contexto) return this.contexto;
+    if (this.contexto) {
+      // El navegador deja el audio en pausa hasta que la persona pulsa algo: lo reactivamos
+      if (this.contexto.state === 'suspended') void this.contexto.resume();
+      return this.contexto;
+    }
     if (typeof AudioContext === 'undefined') return null; // sin audio (tests)
     this.contexto = new AudioContext();
     this.salida = this.contexto.createGain();
     this.salida.gain.value = this._volumen;
     this.salida.connect(this.contexto.destination);
+    this.salidaMusica = this.contexto.createGain();
+    this.salidaMusica.gain.value = this._volumenMusica;
+    this.salidaMusica.connect(this.contexto.destination);
     return this.contexto;
   }
 }

@@ -37,6 +37,21 @@ export class Recursos {
     await Promise.all(Object.entries(lista).map(([n, r]) => this.cargarImagen(n, r)));
   }
 
+  /** Guarda una imagen que ya está cargada (la usa el editor al importar imágenes). */
+  registrar(nombre: string, img: HTMLImageElement): void {
+    this.imagenes.set(nombre, img);
+  }
+
+  /** ¿Hay una imagen cargada con este nombre? */
+  tiene(nombre: string): boolean {
+    return this.imagenes.has(nombre);
+  }
+
+  /** Olvida una imagen (al borrarla del proyecto en el editor). */
+  quitar(nombre: string): void {
+    this.imagenes.delete(nombre);
+  }
+
   /** Devuelve una imagen ya cargada. Si no existe, da un error claro. */
   imagen(nombre: string): HTMLImageElement {
     const img = this.imagenes.get(nombre);

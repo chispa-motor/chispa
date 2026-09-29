@@ -211,7 +211,10 @@ class Analizador {
         if (ev.tipo === 'intervalo' || ev.tipo === 'pasen') this.expr(ev.segundos, amb);
         pendientes.push(() => {
           const a = new Ambito(amb);
-          if (ev.tipo === 'toco') a.simbolos.set('otro', { original: 'otro', pos: s.pos, tipo: 'especial', usado: true });
+          if (ev.tipo === 'toco') {
+            a.simbolos.set('otro', { original: 'otro', pos: s.pos, tipo: 'especial', usado: true });
+            a.simbolos.set('casilla', { original: 'casilla', pos: s.pos, tipo: 'especial', usado: true });
+          }
           this.bloque(s.cuerpo, a);
         });
         return;

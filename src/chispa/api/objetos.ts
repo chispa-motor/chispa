@@ -18,6 +18,11 @@ import type { ObjetoJuego } from '../../objetos/ObjetoJuego';
 import { Colision } from '../../objetos/componentes/Colision';
 import { Fisica } from '../../objetos/componentes/Fisica';
 import { Sprite } from '../../objetos/componentes/Sprite';
+import { Animador } from '../../objetos/componentes/Animador';
+import { MapaCasillas } from '../../objetos/componentes/MapaCasillas';
+import { argTexto } from './argumentos';
+import { enumerar } from '../errores/sugerencias';
+import { normalizar } from '../../utilidades/texto';
 
 /** Una sola RefObjeto por objeto: así `otro == jugador` funciona (mismo objeto = misma referencia). */
 const referencias = new WeakMap<ObjetoJuego, RefObjeto>();
@@ -48,6 +53,43 @@ function necesitaFisica(o: ObjetoJuego, prop: string, pos: Posicion): Fisica {
     throw new ErrorChispa(pos, `el objeto '${o.nombre}' no tiene física, así que no tiene '${prop}'.`, 'Activa la física de este objeto para que pueda moverse con velocidad y gravedad.');
   }
   return f;
+}
+
+function necesitaColision(o: ObjetoJuego, prop: string, pos: Posicion): Colision {
+  const c = o.obtener(Colision);
+  if (!c) throw new ErrorChispa(pos, `el objeto '${o.nombre}' no tiene colisión, así que no tiene '${prop}'.`, 'Activa la colisión de este objeto en el editor.');
+  return c;
+}
+
+function necesitaMapa(o: ObjetoJuego, accion: string, pos: Posicion): MapaCasillas {
+  const m = o.obtener(MapaCasillas);
+  if (!m) throw new ErrorChispa(pos, `'${accion}' solo funciona con mapas de casillas, y '${o.nombre}' no es un mapa.`, 'Busca el mapa primero, por ejemplo: variable mapa = buscar("Mapa")');
+  return m;
+}
+
+/** Comprueba que un tipo de casilla existe en el mapa (con sugerencia si no). */
+function tipoDeCasilla(m: MapaCasillas, tipo: string, pos: Posicion): string {
+  const t = m.tipoExistente(tipo);
+  if (t) return t;
+  const hay = Object.keys(m.tipos);
+  const parecido = sugerir(tipo, hay);
+  throw new ErrorChispa(pos, `el mapa no tiene ningún tipo de casilla llamado "${tipo}".`, parecido ? `¿Querías decir "${parecido}"?` : `Los tipos de casilla son: ${enumerar(hay) || '(ninguno)'}.`);
+}
+
+/** Un destino puede ser otro objeto o un vector (una posición). */
+function destino(v: Valor | undefined, funcion: string, pos: Posicion): Vector2 {
+  if (v instanceof RefObjeto) return v.objeto.posicion;
+  if (v instanceof Vector2) return v;
+  throw new ErrorChispa(pos, `'${funcion}' necesita un objeto o una posición (vector), pero le das ${v === undefined ? 'nada' : nombreTipo(v)}.`, `Ejemplo: yo.${funcion}(buscar("Jugador"), 100)`);
+}
+
+function necesitaAnimador(o: ObjetoJuego, nombre: string, pos: Posicion): Animador {
+  const a = o.obtener(Animador);
+  const hay = a ? Object.keys(a.animaciones) : [];
+  if (!a || !hay.length) {
+    throw new ErrorChispa(pos, `no existe ninguna animación llamada "${nombre}".`, 'Este proyecto todavía no tiene animaciones. Créalas en el panel "Animaciones" del editor.');
+  }
+  return a;
 }
 
 function necesitaSprite(o: ObjetoJuego, prop: string, pos: Posicion): Sprite {
@@ -138,12 +180,49 @@ const PROPIEDADES: Record<string, PropiedadObjeto> = {
   capa: { obtener: (o, p) => necesitaSprite(o, 'capa', p).capa, asignar: (o, v, p) => (necesitaSprite(o, 'capa', p).capa = comoNumero(v, 'capa', p)) },
   solido: {
     obtener: (o) => o.obtener(Colision)?.solido ?? false,
+    asignar: (o, v, p) => (necesitaColision(o, 'solido', p).solido = comoLogico(v, 'solido', p)),
+  },
+  // fantasma = lo contrario de sólido: se atraviesa, pero avisa con "cuando toco"
+  fantasma: {
+    obtener: (o) => !(o.obtener(Colision)?.solido ?? true),
+    asignar: (o, v, p) => (necesitaColision(o, 'fantasma', p).solido = !comoLogico(v, 'fantasma', p)),
+  },
+  rozamiento: {
+    obtener: (o, p) => necesitaFisica(o, 'rozamiento', p).rozamiento,
+    asignar: (o, v, p) => (necesitaFisica(o, 'rozamiento', p).rozamiento = Math.min(1, Math.max(0, comoNumero(v, 'rozamiento', p)))),
+  },
+  rebote: {
+    obtener: (o, p) => necesitaFisica(o, 'rebote', p).rebote,
+    asignar: (o, v, p) => (necesitaFisica(o, 'rebote', p).rebote = Math.min(1, Math.max(0, comoNumero(v, 'rebote', p)))),
+  },
+  masa: {
+    obtener: (o, p) => necesitaFisica(o, 'masa', p).masa,
     asignar: (o, v, p) => {
-      const c = o.obtener(Colision);
-      if (!c) throw new ErrorChispa(p, `el objeto '${o.nombre}' no tiene colisión.`);
-      c.solido = comoLogico(v, 'solido', p);
+      const m = comoNumero(v, 'masa', p);
+      if (m <= 0) throw new ErrorChispa(p, 'la masa tiene que ser mayor que 0.', 'Para un objeto que no se mueve nunca usa: yo.estatico = verdadero');
+      necesitaFisica(o, 'masa', p).masa = m;
     },
   },
+  estatico: {
+    obtener: (o, p) => necesitaFisica(o, 'estatico', p).estatico,
+    asignar: (o, v, p) => (necesitaFisica(o, 'estatico', p).estatico = comoLogico(v, 'estatico', p)),
+  },
+  fijo: {
+    obtener: (o, p) => necesitaSprite(o, 'fijo', p).fijo,
+    asignar: (o, v, p) => (necesitaSprite(o, 'fijo', p).fijo = comoLogico(v, 'fijo', p)),
+  },
+  colortexto: {
+    obtener: (o, p) => necesitaSprite(o, 'colorTexto', p).colorTexto,
+    asignar: (o, v, p) => (necesitaSprite(o, 'colorTexto', p).colorTexto = aTexto(v)),
+  },
+  animacion: {
+    obtener: (o) => o.obtener(Animador)?.actual ?? null,
+    asignar: (o, v, p) => {
+      if (v === null) o.obtener(Animador)?.parar();
+      else METODOS.animar(o, [v], p);
+    },
+  },
+  ratonencima: { obtener: (o) => o.escena?.ratonEncima(o) ?? false },
   destruido: { obtener: (o) => o.destruido },
 };
 
@@ -172,12 +251,89 @@ const METODOS: Record<string, (o: ObjetoJuego, args: Valor[], pos: Posicion) => 
     return null;
   },
   distanciaa: (o, a, p) => o.posicion.distancia(argObjeto(a, 0, 'distanciaA', p, 'yo.distanciaA(otro)').posicion),
+  empujar: (o, a, p) => {
+    // Un golpe: los objetos con más masa se mueven menos
+    necesitaFisica(o, 'empujar', p).empujar(argNumero(a, 0, 'empujar', p, 'yo.empujar(300, 0)'), argNumero(a, 1, 'empujar', p, 'yo.empujar(300, 0)', 0));
+    return null;
+  },
+  animar: (o, a, p) => {
+    const nombre = argTexto(a, 0, 'animar', p, 'yo.animar("correr")');
+    const anim = necesitaAnimador(o, nombre, p);
+    const real = Object.keys(anim.animaciones).find((k) => normalizar(k) === normalizar(nombre));
+    if (!real) {
+      const hay = Object.keys(anim.animaciones);
+      const parecida = sugerir(nombre, hay);
+      throw new ErrorChispa(p, `no existe ninguna animación llamada "${nombre}".`, parecida ? `¿Querías decir "${parecida}"?` : `Las animaciones son: ${enumerar(hay)}.`);
+    }
+    anim.reproducir(real);
+    return null;
+  },
+  pararanimacion: (o) => {
+    o.obtener(Animador)?.parar();
+    return null;
+  },
+  moverhacia: (o, a, p) => {
+    // Avanza hacia el destino a esa rapidez (píxeles/segundo) sin pasarse. Devuelve verdadero al llegar.
+    const d = destino(a[0], 'moverHacia', p);
+    const rapidez = argNumero(a, 1, 'moverHacia', p, 'yo.moverHacia(jugador, 100)');
+    const paso = rapidez * (o.escena?.motor.tiempo.delta ?? 0);
+    const falta = d.restar(o.posicion);
+    if (falta.longitud() <= paso) {
+      o.posicion.x = d.x;
+      o.posicion.y = d.y;
+      return true;
+    }
+    const mover = falta.normalizado().multiplicar(paso);
+    o.posicion.x += mover.x;
+    o.posicion.y += mover.y;
+    return false;
+  },
+  mirara: (o, a, p) => {
+    // Gira el objeto para que "mire" (su lado derecho) hacia el destino
+    const falta = destino(a[0], 'mirarA', p).restar(o.posicion);
+    if (falta.longitud() > 0) o.transformacion.rotacion = (Math.atan2(falta.y, falta.x) * 180) / Math.PI;
+    return null;
+  },
+  direcciona: (o, a, p) => destino(a[0], 'direccionA', p).restar(o.posicion).normalizado(),
+
+  // ── Mapas de casillas ──
+  casilla: (o, a, p) => {
+    const ej = 'mapa.casilla(3, 0)';
+    return necesitaMapa(o, 'casilla', p).obtener(argNumero(a, 0, 'casilla', p, ej), argNumero(a, 1, 'casilla', p, ej));
+  },
+  ponercasilla: (o, a, p) => {
+    const ej = 'mapa.ponerCasilla(3, 0, "suelo")';
+    const m = necesitaMapa(o, 'ponerCasilla', p);
+    m.poner(argNumero(a, 0, 'ponerCasilla', p, ej), argNumero(a, 1, 'ponerCasilla', p, ej), tipoDeCasilla(m, argTexto(a, 2, 'ponerCasilla', p, ej), p));
+    return null;
+  },
+  quitarcasilla: (o, a, p) => {
+    const ej = 'mapa.quitarCasilla(3, 0)';
+    necesitaMapa(o, 'quitarCasilla', p).quitar(argNumero(a, 0, 'quitarCasilla', p, ej), argNumero(a, 1, 'quitarCasilla', p, ej));
+    return null;
+  },
+  casillaen: (o, a, p) => {
+    const ej = 'mapa.casillaEn(yo.x, yo.y)';
+    const m = necesitaMapa(o, 'casillaEn', p);
+    const x = argNumero(a, 0, 'casillaEn', p, ej);
+    const y = argNumero(a, 1, 'casillaEn', p, ej);
+    return m.obtener(m.columnaEn(x), m.filaEn(y));
+  },
+  columnaen: (o, a, p) => necesitaMapa(o, 'columnaEn', p).columnaEn(argNumero(a, 0, 'columnaEn', p, 'mapa.columnaEn(yo.x)')),
+  filaen: (o, a, p) => necesitaMapa(o, 'filaEn', p).filaEn(argNumero(a, 0, 'filaEn', p, 'mapa.filaEn(yo.y)')),
+  centrodecasilla: (o, a, p) => {
+    const ej = 'mapa.centroDeCasilla(3, 0)';
+    const c = necesitaMapa(o, 'centroDeCasilla', p).centroDe(argNumero(a, 0, 'centroDeCasilla', p, ej), argNumero(a, 1, 'centroDeCasilla', p, ej));
+    return new Vector2(c.x, c.y);
+  },
 };
 
 const NOMBRES_BONITOS = [
   'nombre', 'tipo', 'x', 'y', 'posicion', 'rotacion', 'escala', 'velocidad', 'gravedad', 'enSuelo', 'tocaPared', 'tocaTecho',
-  'color', 'visible', 'ancho', 'alto', 'texto', 'tamaño', 'imagen', 'opacidad', 'voltear', 'capa', 'solido', 'destruido',
-  'saltar', 'mover', 'rotar', 'destruir', 'distanciaA',
+  'color', 'visible', 'ancho', 'alto', 'texto', 'tamaño', 'colorTexto', 'imagen', 'opacidad', 'voltear', 'capa', 'fijo',
+  'solido', 'fantasma', 'rozamiento', 'rebote', 'masa', 'estatico', 'animacion', 'ratonEncima', 'destruido',
+  'saltar', 'mover', 'rotar', 'destruir', 'distanciaA', 'empujar', 'animar', 'pararAnimacion', 'moverHacia', 'mirarA', 'direccionA',
+  'casilla', 'ponerCasilla', 'quitarCasilla', 'casillaEn', 'columnaEn', 'filaEn', 'centroDeCasilla',
 ];
 
 interface PropiedadPropia {

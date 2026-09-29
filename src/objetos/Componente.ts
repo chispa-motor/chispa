@@ -13,24 +13,30 @@
  * Todos los métodos son opcionales: cada componente implementa solo los que necesita.
  */
 import type { ObjetoJuego } from './ObjetoJuego';
-import type { Renderizador } from '../motor/Renderizador';
 
 export abstract class Componente {
   /** El objeto al que pertenece. Lo rellena ObjetoJuego.agregar(). */
   objeto!: ObjetoJuego;
-  /** Si es falso, el componente no se actualiza ni se dibuja. */
+  /** Si es falso, el componente no se actualiza. */
   activo = true;
 
   /** Se llama una vez, cuando el objeto entra en una escena que ya está en marcha. */
   iniciar?(): void;
   /** Se llama en cada fotograma. */
   actualizar?(dt: number): void;
-  /** Se llama en cada fotograma para dibujar. */
-  dibujar?(r: Renderizador): void;
-  /** Se llama cuando este objeto EMPIEZA a tocar a otro. */
-  alTocar?(otro: ObjetoJuego): void;
+  /**
+   * Se llama cuando este objeto EMPIEZA a tocar a otro. Si lo que toca es una
+   * casilla de un mapa, `otro` es el mapa y `casilla` el tipo de casilla.
+   */
+  alTocar?(otro: ObjetoJuego, casilla?: string): void;
   /** Se llama cuando este objeto DEJA de tocar a otro. */
-  alDejarDeTocar?(otro: ObjetoJuego): void;
+  alDejarDeTocar?(otro: ObjetoJuego, casilla?: string): void;
+  /** ¿Le interesan los clics encima? (así un objeto invisible sin botón no "roba" los clics) */
+  recibeClics?(): boolean;
+  /** Se llama cuando se hace clic encima de este objeto (si recibeClics() dice que sí). */
+  alHacerClic?(): void;
+  /** Se llama cuando termina una animación que no se repite. */
+  alTerminarAnimacion?(nombre: string): void;
   /** Se llama cuando el objeto se destruye. */
   alDestruir?(): void;
 }

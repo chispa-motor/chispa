@@ -1,8 +1,12 @@
 /**
  * Sprite: CÓMO se ve el objeto.
  *
- * Puede ser una imagen, o si no tiene imagen, una forma simple
- * (rectángulo, círculo) o un texto. El texto nos sirve para marcadores y menús.
+ * Puede ser una imagen o, si no tiene imagen, una forma simple (rectángulo,
+ * círculo) o un texto. Las formas y las imágenes también pueden llevar un
+ * texto encima (una "etiqueta"), que sirve para hacer botones.
+ *
+ * fijo = verdadero → se dibuja pegado a la PANTALLA, sin moverse con la
+ * cámara. Es lo que se usa para la interfaz: vida, puntos, botones, menús.
  */
 import { Componente } from '../Componente';
 import type { Renderizador } from '../../motor/Renderizador';
@@ -21,18 +25,18 @@ export class Sprite extends Componente {
   voltearX = false;
   /** Orden de dibujo: capas más altas se dibujan encima. */
   capa = 0;
-  /**
-   * fijo = verdadero → se dibuja en la pantalla, sin moverse con la cámara.
-   * Ideal para marcadores de puntos, vidas, menús...
-   */
+  /** Pegado a la pantalla (interfaz): no se mueve con la cámara ni con el zoom. */
   fijo = false;
 
-  // Solo para forma "texto"
+  /** Texto: el contenido de un objeto de texto, o la etiqueta de un botón (forma o imagen con texto). */
   texto = '';
+  /** Tamaño de la letra. */
   tamano = 24;
-  alinear: 'izquierda' | 'centro' | 'derecha' = 'izquierda';
+  /** Color de la letra de las etiquetas (en los objetos de texto se usa `color`). */
+  colorTexto = 'blanco';
+  alinear: 'izquierda' | 'centro' | 'derecha' = 'centro';
 
-  /** Tamaño real en pantalla (incluyendo la escala de la Transformación). */
+  /** Tamaño real (incluyendo la escala de la Transformación). */
   get anchoFinal(): number {
     return this.ancho * Math.abs(this.objeto.transformacion.escala.x);
   }
@@ -41,7 +45,7 @@ export class Sprite extends Componente {
   }
 
   /**
-   * Dibuja el sprite con su centro en (x, y) de la PANTALLA.
+   * Dibuja el sprite con su centro en (x, y) del sistema de dibujo actual.
    * La Escena ya ha convertido la posición del mundo (Y hacia arriba) a la
    * pantalla (Y hacia abajo). Por el mismo motivo la rotación cambia de
    * signo: en el mundo, positivo = contrario a las agujas del reloj; en el
@@ -56,14 +60,28 @@ export class Sprite extends Componente {
     if (this.imagen) {
       const img = this.objeto.escena!.motor.recursos.imagen(this.imagen);
       r.imagen(img, x, y, { ancho: w, alto: h, rotacion, opacidad: this.opacidad, voltearX: this.voltearX });
-      return;
+    } else if (this.forma !== 'texto') {
+      r.ctx.globalAlpha = this.opacidad;
+      if (this.forma === 'circulo') r.circulo(x, y, w / 2, this.color);
+      else r.rectangulo(x - w / 2, y - h / 2, w, h, this.color, { rotacion });
+      r.ctx.globalAlpha = 1;
     }
 
-    r.ctx.globalAlpha = this.opacidad;
-    if (this.forma === 'circulo') r.circulo(x, y, w / 2, this.color);
-    else if (this.forma === 'texto')
-      r.texto(this.texto, x, y, { color: this.color, tamano: this.tamano, alinear: this.alinear, negrita: true, sombra: true, vertical: 'medio' });
-    else r.rectangulo(x - w / 2, y - h / 2, w, h, this.color, { rotacion });
-    r.ctx.globalAlpha = 1;
+    // Texto: el de los objetos de texto, o la etiqueta de un botón
+    if (this.texto !== '' || this.forma === 'texto') {
+      const esTexto = this.forma === 'texto' && !this.imagen;
+      // En un objeto de texto, la posición es el punto de anclaje: con alinear = "izquierda"
+      // el texto EMPIEZA ahí; con "derecha", TERMINA ahí; con "centro", está centrado.
+      r.ctx.globalAlpha = this.opacidad;
+      r.texto(this.texto, x, y, {
+        color: esTexto ? this.color : this.colorTexto,
+        tamano: this.tamano,
+        alinear: esTexto ? this.alinear : 'centro',
+        negrita: true,
+        sombra: true,
+        vertical: 'medio',
+      });
+      r.ctx.globalAlpha = 1;
+    }
   }
 }

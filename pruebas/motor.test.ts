@@ -154,7 +154,7 @@ describe('Objetos, datos compartidos y sonido', () => {
 describe('Ejemplo mínimo', () => {
   it('compila y funciona 6 segundos sin errores', async () => {
     const { proyectoMinimo } = await import('../src/ejemplos/minimo/proyecto');
-    const j = juegoDePrueba({ scripts: proyectoMinimo.scripts, escena: proyectoMinimo.escena });
+    const j = juegoDePrueba({ scripts: proyectoMinimo.scripts, escena: proyectoMinimo.escenas.Principal.objetos });
     j.pulsar('ArrowUp');
     j.avanzar(60);
     j.soltar('ArrowUp');

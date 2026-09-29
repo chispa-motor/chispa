@@ -21,13 +21,23 @@ import { Vector2 } from '../../motor/Vector2';
 import type { Escena } from '../../objetos/Escena';
 import type { ObjetoJuego } from '../../objetos/ObjetoJuego';
 import { normalizar } from '../../utilidades/texto';
+import { TIPOS_PARTICULAS, type ConfigParticulas } from '../../objetos/Particulas';
+import { deserializar, serializar } from './guardado';
+import { Tabla } from '../ejecucion/valores';
 
 /** Lo que la API necesita del juego en marcha (lo implementa JuegoEnMarcha). */
 export interface ContextoJuego {
   motor: Motor;
   escena: Escena;
+  /** Nombre de la escena que se está jugando. */
+  nombreEscena: string;
   crearDesdePlantilla(nombre: string, x: number | null, y: number | null): ObjetoJuego;
   pedirReinicio(): void;
+  cambiarEscena(nombre: string): void;
+  /** Datos del jugador (texto JSON), guardados en el navegador. */
+  guardarDato(clave: string, texto: string): void;
+  cargarDato(clave: string): string | null;
+  borrarDato(clave: string): void;
 }
 
 // ═════════════════════════ Módulo genérico ═════════════════════════
@@ -194,6 +204,14 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
       x: { obtener: () => cam().posicion.x, asignar: (v, p) => (cam().posicion.x = comoNumero(v, 'x', p)) },
       y: { obtener: () => cam().posicion.y, asignar: (v, p) => (cam().posicion.y = comoNumero(v, 'y', p)) },
       suavizado: { obtener: () => cam().suavizado, asignar: (v, p) => (cam().suavizado = comoNumero(v, 'suavizado', p)) },
+      zoom: {
+        obtener: () => cam().zoom,
+        asignar: (v, p) => {
+          const z = comoNumero(v, 'zoom', p);
+          if (z <= 0) throw new ErrorChispa(p, 'el zoom tiene que ser mayor que 0.', '1 = normal, 2 = más cerca (el doble de grande), 0.5 = más lejos.');
+          cam().zoom = z;
+        },
+      },
     },
     {
       seguir: (a, p) => {
@@ -206,8 +224,13 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
         cam().limites = { izquierda: n(0), abajo: n(1), derecha: n(2), arriba: n(3) };
         return null;
       },
+      temblar: (a, p) => {
+        const ej = 'escena.camara.temblar(8, 0.3)';
+        cam().temblar(argNumero(a, 0, 'escena.camara.temblar', p, ej, 8), argNumero(a, 1, 'escena.camara.temblar', p, ej, 0.3));
+        return null;
+      },
     },
-    ['x', 'y', 'suavizado', 'seguir', 'limites'],
+    ['x', 'y', 'zoom', 'suavizado', 'seguir', 'limites', 'temblar'],
   );
   g.declarar(
     'escena',
@@ -215,14 +238,20 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
       'escena',
       {
         objetos: { obtener: () => ctx.escena.objetos.filter((o) => !o.destruido).map(referencia) },
+        nombre: { obtener: () => ctx.nombreEscena },
+        gravedad: { obtener: () => ctx.escena.gravedad, asignar: (v, p) => (ctx.escena.gravedad = comoNumero(v, 'gravedad', p)) },
       },
       {
         reiniciar: () => {
           ctx.pedirReinicio();
           return null;
         },
+        cambiar: (a, p) => {
+          ctx.cambiarEscena(argTexto(a, 0, 'escena.cambiar', p, 'escena.cambiar("Nivel2")'));
+          return null;
+        },
       },
-      ['objetos', 'camara', 'reiniciar'],
+      ['objetos', 'nombre', 'gravedad', 'camara', 'reiniciar', 'cambiar'],
     ).agregarSubmodulo('camara', camara),
   );
 
@@ -234,17 +263,17 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
       { volumen: { obtener: () => ctx.motor.sonido.volumen, asignar: (v, p) => (ctx.motor.sonido.volumen = comoNumero(v, 'volumen', p)) } },
       {
         reproducir: (a, p) => {
-          ctx.motor.sonido.reproducir(argTexto(a, 0, 'ctx.motor.sonido.reproducir', p, 'ctx.motor.sonido.reproducir("salto")'));
+          ctx.motor.sonido.reproducir(argTexto(a, 0, 'sonido.reproducir', p, 'sonido.reproducir("salto")'));
           return null;
         },
         parar: (a, p) => {
-          ctx.motor.sonido.parar(a[0] === undefined ? undefined : argTexto(a, 0, 'ctx.motor.sonido.parar', p, 'ctx.motor.sonido.parar("musica")'));
+          ctx.motor.sonido.parar(a[0] === undefined ? undefined : argTexto(a, 0, 'sonido.parar', p, 'sonido.parar("salto")'));
           return null;
         },
         tono: (a, p) => {
-          const ej = 'ctx.motor.sonido.tono(440, 0.2)';
-          const f = argNumero(a, 0, 'ctx.motor.sonido.tono', p, ej);
-          const s = argNumero(a, 1, 'ctx.motor.sonido.tono', p, ej, 0.2);
+          const ej = 'sonido.tono(440, 0.2)';
+          const f = argNumero(a, 0, 'sonido.tono', p, ej);
+          const s = argNumero(a, 1, 'sonido.tono', p, ej, 0.2);
           if (f <= 0 || s <= 0) throw new ErrorChispa(p, 'la frecuencia y la duración del tono tienen que ser mayores que 0.', ej);
           ctx.motor.sonido.tono(f, s);
           return null;
@@ -253,6 +282,58 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
       ['volumen', 'reproducir', 'parar', 'tono'],
     ),
   );
+
+  // ── musica (en bucle; solo una a la vez) ──
+  g.declarar(
+    'musica',
+    new Modulo(
+      'musica',
+      {
+        volumen: { obtener: () => ctx.motor.sonido.volumenMusica, asignar: (v, p) => (ctx.motor.sonido.volumenMusica = comoNumero(v, 'volumen', p)) },
+        actual: { obtener: () => ctx.motor.sonido.musicaActual },
+      },
+      {
+        reproducir: (a, p) => {
+          ctx.motor.sonido.musica(argTexto(a, 0, 'musica.reproducir', p, 'musica.reproducir("tema")'));
+          return null;
+        },
+        parar: () => {
+          ctx.motor.sonido.pararMusica();
+          return null;
+        },
+      },
+      ['volumen', 'actual', 'reproducir', 'parar'],
+    ),
+  );
+
+  // ── partículas ──
+  funcion('particulas', (a, p) => {
+    const ej = 'particulas("explosion", yo.x, yo.y)';
+    const config = configParticulas(a[0], p);
+    ctx.escena.particulas.emitir(config, argNumero(a, 1, 'particulas', p, ej), argNumero(a, 2, 'particulas', p, ej));
+    return null;
+  });
+
+  // ── guardar y cargar datos del jugador ──
+  funcion('guardar', (a, p) => {
+    const clave = argTexto(a, 0, 'guardar', p, 'guardar("record", puntos)');
+    if (a.length < 2) throw new ErrorChispa(p, `falta el valor que quieres guardar en "${clave}".`, `Ejemplo: guardar("${clave}", puntos)`);
+    ctx.guardarDato(clave, serializar(a[1], p));
+    return null;
+  });
+  funcion('cargar', (a, p) => {
+    const texto = ctx.cargarDato(argTexto(a, 0, 'cargar', p, 'cargar("record", 0)'));
+    if (texto === null) return a[1] ?? null; // nunca se había guardado: el valor por defecto
+    try {
+      return deserializar(texto);
+    } catch {
+      return a[1] ?? null;
+    }
+  });
+  funcion('borrarGuardado', (a, p) => {
+    ctx.borrarDato(argTexto(a, 0, 'borrarGuardado', p, 'borrarGuardado("record")'));
+    return null;
+  });
 
   // ── tiempo, pantalla, juego, delta ──
   g.declarar(
@@ -272,4 +353,52 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
   );
   g.declarar('juego', datos);
   g.declarar('delta', 0);
+}
+
+/**
+ * Convierte el primer valor de particulas(...) en una configuración:
+ *   - un texto con un tipo preparado: "explosion", "humo", "chispas", "polvo", "confeti", "estrellas"
+ *   - una tabla con lo que quieras cambiar: {tipo: "humo", color: "verde", cantidad: 50}
+ */
+function configParticulas(v: Valor | undefined, p: Posicion): ConfigParticulas {
+  const tipos = Object.keys(TIPOS_PARTICULAS);
+  const porTipo = (nombre: string): ConfigParticulas => {
+    const t = TIPOS_PARTICULAS[normalizar(nombre)];
+    if (t) return { ...t };
+    const parecido = sugerir(nombre, tipos);
+    throw new ErrorChispa(p, `no hay ningún tipo de partículas llamado "${nombre}".`, parecido ? `¿Querías decir "${parecido}"?` : `Los tipos son: ${tipos.join(', ')}.`);
+  };
+  if (typeof v === 'string') return porTipo(v);
+  if (!(v instanceof Tabla)) {
+    throw new ErrorChispa(p, "'particulas' necesita un tipo (un texto) o una tabla con la configuración.", `Ejemplos: particulas("explosion", yo.x, yo.y)   ·   particulas({tipo: "humo", color: "verde"}, yo.x, yo.y)`);
+  }
+  const base = v.tiene('tipo') ? porTipo(String(v.obtener('tipo'))) : { ...TIPOS_PARTICULAS.explosion };
+  const numero = (clave: string, campo: keyof ConfigParticulas) => {
+    if (!v.tiene(clave)) return;
+    const n = v.obtener(clave);
+    if (typeof n !== 'number') throw new ErrorChispa(p, `en las partículas, '${clave}' tiene que ser un número.`);
+    (base[campo] as number) = n;
+  };
+  numero('cantidad', 'cantidad');
+  numero('velocidad', 'velocidad');
+  numero('vida', 'vida');
+  numero('tamaño', 'tamano');
+  numero('tamano', 'tamano');
+  numero('gravedad', 'gravedad');
+  numero('dispersion', 'dispersion');
+  numero('direccion', 'direccion');
+  if (v.tiene('color')) base.colores = [aTexto(v.obtener('color') ?? null)];
+  if (v.tiene('colores')) {
+    const c = v.obtener('colores');
+    base.colores = Array.isArray(c) ? c.map((x) => aTexto(x)) : [aTexto(c ?? null)];
+  }
+  if (v.tiene('encoger')) base.encoger = v.obtener('encoger') === true;
+  const validas = ['tipo', 'cantidad', 'velocidad', 'vida', 'tamaño', 'tamano', 'gravedad', 'dispersion', 'direccion', 'color', 'colores', 'encoger'];
+  for (const k of v.claves()) {
+    if (!validas.includes(normalizar(k))) {
+      const parecida = sugerir(k, validas);
+      throw new ErrorChispa(p, `las partículas no tienen ninguna opción llamada '${k}'.`, parecida ? `¿Querías decir '${parecida}'?` : `Las opciones son: ${validas.join(', ')}.`);
+    }
+  }
+  return base;
 }

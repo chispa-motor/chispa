@@ -1,20 +1,21 @@
 /**
- * Cámara: decide QUÉ parte del mundo se ve, y convierte coordenadas del
- * MUNDO a coordenadas de la PANTALLA.
+ * Cámara: decide QUÉ parte del mundo se ve, con cuánto ZOOM, y convierte
+ * coordenadas del MUNDO a coordenadas de la PANTALLA.
  *
  * ── Dos sistemas de coordenadas ──
  *   Mundo (lo que ve Chispa):  la Y crece hacia ARRIBA, como en Unity o en matemáticas.
  *   Pantalla (Canvas):         la Y crece hacia ABAJO, y (0,0) es la esquina de arriba.
- * La conversión se hace SOLO aquí, justo al dibujar. El resto del motor
- * (física, scripts, editor) trabaja siempre con la Y hacia arriba.
+ * La conversión se hace SOLO aquí. El resto del motor (física, scripts,
+ * editor) trabaja siempre con la Y hacia arriba.
  *
- *     pantallaX = mundoX - izquierda
- *     pantallaY = altoPantalla - (mundoY - abajo)      ← aquí se "da la vuelta" al eje
+ *     pantallaX = anchoPantalla/2 + (mundoX - camaraX) · zoom
+ *     pantallaY = altoPantalla/2 - (mundoY - camaraY) · zoom   ← aquí se "da la vuelta" al eje
  *
  * Al empezar, la cámara enseña de (0,0) a (960,540): (0,0) es la esquina
  * INFERIOR izquierda de la pantalla.
  */
 import type { ObjetoJuego } from './ObjetoJuego';
+import type { Caja } from './componentes/Colision';
 import { Vector2 } from '../motor/Vector2';
 
 export interface Limites {
@@ -31,12 +32,26 @@ export class Camara {
   /** Cuanto más alto, más rápido alcanza al objetivo. */
   suavizado = 8;
   limites: Limites | null = null;
+  /** 1 = normal, 2 = todo el doble de grande (más cerca), 0.5 = más lejos. */
+  private _zoom = 1;
+  /** Temblor: cuánto (píxeles) y cuánto tiempo le queda (segundos). */
+  private temblor = { intensidad: 0, restante: 0, duracion: 0 };
+  /** Desplazamiento de este fotograma por el temblor. */
+  private sacudida = new Vector2(0, 0);
 
   constructor(
     readonly anchoPantalla: number,
     readonly altoPantalla: number,
   ) {
     this.posicion = new Vector2(anchoPantalla / 2, altoPantalla / 2);
+  }
+
+  get zoom(): number {
+    return this._zoom;
+  }
+  set zoom(z: number) {
+    this._zoom = Math.min(10, Math.max(0.1, z));
+    this.aplicarLimites();
   }
 
   seguir(objeto: ObjetoJuego | null): void {
@@ -46,6 +61,11 @@ export class Camara {
       this.posicion = objeto.posicion.copiar();
       this.aplicarLimites();
     }
+  }
+
+  /** Hace temblar la cámara (explosiones, golpes...). */
+  temblar(intensidad: number, segundos: number): void {
+    this.temblor = { intensidad, restante: segundos, duracion: segundos };
   }
 
   actualizar(dt: number): void {
@@ -58,40 +78,60 @@ export class Camara {
       this.posicion.y += (destino.y - this.posicion.y) * f;
     }
     this.aplicarLimites();
+
+    if (this.temblor.restante > 0) {
+      this.temblor.restante = Math.max(0, this.temblor.restante - dt);
+      const fuerza = this.temblor.intensidad * (this.temblor.restante / this.temblor.duracion);
+      this.sacudida = new Vector2((Math.random() * 2 - 1) * fuerza, (Math.random() * 2 - 1) * fuerza);
+    } else {
+      this.sacudida = new Vector2(0, 0);
+    }
   }
 
-  /** Borde izquierdo de lo que se ve (redondeado para que los dibujos no tiemblen). */
-  get izquierda(): number {
-    return Math.round(this.posicion.x - this.anchoPantalla / 2);
-  }
-  /** Borde inferior de lo que se ve. */
-  get abajo(): number {
-    return Math.round(this.posicion.y - this.altoPantalla / 2);
+  /**
+   * Centro de la cámara para dibujar: con el temblor y redondeado a un píxel
+   * de pantalla (si no, los dibujos "tiemblan" medio píxel al moverse).
+   */
+  centroDibujo(): Vector2 {
+    const z = this._zoom;
+    return new Vector2(Math.round((this.posicion.x + this.sacudida.x) * z) / z, Math.round((this.posicion.y + this.sacudida.y) * z) / z);
   }
 
-  /** Mundo → pantalla (para dibujar). */
+  /** Mundo → pantalla. */
   mundoAPantalla(x: number, y: number): Vector2 {
-    return new Vector2(x - this.izquierda, this.altoPantalla - (y - this.abajo));
+    const c = this.centroDibujo();
+    return new Vector2(this.anchoPantalla / 2 + (x - c.x) * this._zoom, this.altoPantalla / 2 - (y - c.y) * this._zoom);
   }
 
   /** Pantalla → mundo (para el ratón). */
   pantallaAMundo(p: Vector2): Vector2 {
-    return new Vector2(p.x + this.izquierda, this.altoPantalla - p.y + this.abajo);
+    const c = this.centroDibujo();
+    return new Vector2((p.x - this.anchoPantalla / 2) / this._zoom + c.x, (this.altoPantalla / 2 - p.y) / this._zoom + c.y);
+  }
+
+  /** La zona del mundo que se ve ahora mismo. */
+  zonaVisible(): Caja {
+    const c = this.centroDibujo();
+    const mw = this.anchoPantalla / 2 / this._zoom;
+    const mh = this.altoPantalla / 2 / this._zoom;
+    return { izquierda: c.x - mw, derecha: c.x + mw, abajo: c.y - mh, arriba: c.y + mh };
+  }
+
+  /** Borde izquierdo e inferior de lo que se ve (útil para dibujar fondos). */
+  get izquierda(): number {
+    return this.zonaVisible().izquierda;
+  }
+  get abajo(): number {
+    return this.zonaVisible().abajo;
   }
 
   private aplicarLimites(): void {
     const l = this.limites;
     if (!l) return;
-    const mitadW = this.anchoPantalla / 2;
-    const mitadH = this.altoPantalla / 2;
-    // Si la zona es más pequeña que la pantalla, la centramos.
-    this.posicion.x =
-      l.derecha - l.izquierda <= this.anchoPantalla
-        ? (l.izquierda + l.derecha) / 2
-        : Math.min(Math.max(this.posicion.x, l.izquierda + mitadW), l.derecha - mitadW);
-    this.posicion.y =
-      l.arriba - l.abajo <= this.altoPantalla
-        ? (l.abajo + l.arriba) / 2
-        : Math.min(Math.max(this.posicion.y, l.abajo + mitadH), l.arriba - mitadH);
+    const mw = this.anchoPantalla / 2 / this._zoom;
+    const mh = this.altoPantalla / 2 / this._zoom;
+    // Si la zona es más pequeña que lo que se ve, la centramos.
+    this.posicion.x = l.derecha - l.izquierda <= mw * 2 ? (l.izquierda + l.derecha) / 2 : Math.min(Math.max(this.posicion.x, l.izquierda + mw), l.derecha - mw);
+    this.posicion.y = l.arriba - l.abajo <= mh * 2 ? (l.abajo + l.arriba) / 2 : Math.min(Math.max(this.posicion.y, l.abajo + mh), l.arriba - mh);
   }
 }
