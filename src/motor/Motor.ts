@@ -28,6 +28,7 @@ import { Entrada } from './Entrada';
 import { mostrarError } from './Errores';
 import { Recursos } from './Recursos';
 import { Renderizador } from './Renderizador';
+import { Sonido } from './Sonido';
 
 export interface OpcionesMotor {
   canvas: HTMLCanvasElement;
@@ -67,6 +68,7 @@ export class Motor {
   readonly renderizador: Renderizador;
   readonly entrada: Entrada;
   readonly recursos = new Recursos();
+  readonly sonido = new Sonido();
   readonly tiempo: Tiempo = { delta: 0, deltaReal: 0, total: 0, fotogramas: 0, fps: 0, escala: 1 };
   colorFondo: string;
   /** Escena que se actualiza y dibuja en cada fotograma (Fase 2). */

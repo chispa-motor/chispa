@@ -10,6 +10,10 @@
 export interface Ubicacion {
   archivo?: string;
   linea?: number;
+  /** Columna donde empieza el trozo con el error (empieza en 1). */
+  columna?: number;
+  /** Cuántos caracteres subrayar. */
+  longitud?: number;
   /** El texto de la línea donde está el error, para enseñarlo. */
   codigo?: string;
 }

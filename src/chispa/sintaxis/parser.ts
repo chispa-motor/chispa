@@ -1,18 +1,22 @@
 /**
- * PARSER (analizador sintáctico): lista de tokens → árbol (AST).
+ * ════════════════════════════════════════════════════════════════════
+ *  ETAPA 2 de 3 · SINTAXIS — El parser: lista de tokens → árbol (AST)
+ * ════════════════════════════════════════════════════════════════════
  *
- * Usamos la técnica "descenso recursivo": una función por cada regla del
- * lenguaje, que se llaman unas a otras. Es la forma más fácil de escribir
- * un parser a mano y la que da mejores mensajes de error.
+ * Técnica: DESCENSO RECURSIVO. Hay una función por cada regla del lenguaje
+ * y se llaman unas a otras. Por ejemplo, sentenciaSi() lee "si", luego llama
+ * a expresion() para la condición y a bloque() para el cuerpo. Es la forma
+ * más fácil de escribir un parser a mano y la que da mejores errores.
  *
  * ── Precedencia de operadores (de menos a más fuerte) ──
- *     o  →  y  →  no  →  == != < > <= >=  →  + -  →  * / %  →  -x  →  llamadas . []
- * Por eso "2 + 3 * 4" es 14: la multiplicación está "más abajo" y se agrupa antes.
+ *     o  →  y  →  no  →  == != < > <= >= en  →  + -  →  * / %  →  -x  →  llamadas . [ ]
+ * Cada nivel llama al siguiente para leer sus "trozos". Por eso en
+ * "2 + 3 * 4" la multiplicación se agrupa antes y el resultado es 14.
  */
-import type { Bloque, Evento, Expresion, Programa, Sentencia } from './ast';
-import { ErrorChispa } from './errores';
-import { analizarLexico } from './lexer';
-import { SIGNIFICADO_PALABRA, type Token } from './tokens';
+import type { Bloque, EntradaTabla, Evento, Expresion, Nombre, Programa, Sentencia } from './ast';
+import { ErrorChispa } from '../errores/ErrorChispa';
+import { analizarLexico } from '../lexico/lexer';
+import { SIGNIFICADO_PALABRA, posicionDe, type Posicion, type Token } from '../lexico/tokens';
 
 const OPERADORES_ASIGNACION = ['=', '+=', '-=', '*=', '/='];
 const COMPARACIONES = ['==', '!=', '<', '>', '<=', '>='];
@@ -22,7 +26,7 @@ export function compilar(codigo: string, archivo: string): Programa {
   const lineas = codigo.replace(/\r\n?/g, '\n').split('\n');
   try {
     const tokens = analizarLexico(codigo);
-    const sentencias = new Parser(tokens).programa();
+    const sentencias = new Parser(tokens, lineas).programa();
     return { sentencias, archivo, lineas };
   } catch (e) {
     if (e instanceof ErrorChispa) e.conArchivo(archivo, lineas);
@@ -32,12 +36,15 @@ export function compilar(codigo: string, archivo: string): Programa {
 
 class Parser {
   private pos = 0;
-  /** ¿Cuántos bucles hay abiertos? (para saber si 'salir' está bien usado) */
+  /** ¿Cuántos bucles hay abiertos? (para saber si 'romper' y 'continuar' están bien usados) */
   private bucles = 0;
-  /** ¿Estamos dentro de un bloque? (para exigir que 'cuando' vaya al nivel principal) */
+  /** ¿Estamos dentro de un bloque? (los 'cuando' tienen que ir en el nivel principal) */
   private profundidad = 0;
 
-  constructor(private tokens: Token[]) {}
+  constructor(
+    private tokens: Token[],
+    private lineas: string[],
+  ) {}
 
   // ───────────────────────── Utilidades ─────────────────────────
 
@@ -52,18 +59,27 @@ class Parser {
   private es(tipo: Token['tipo'], valor?: string, t = this.actual): boolean {
     return t.tipo === tipo && (valor === undefined || t.valor === valor);
   }
-  private esSimbolo(v: string) {
-    return this.es('simbolo', v);
+  private esSimbolo(v: string, t = this.actual) {
+    return this.es('simbolo', v, t);
   }
-  private esClave(v: string) {
-    return this.es('palabraClave', v);
+  private esClave(v: string, t = this.actual) {
+    return this.es('palabraClave', v, t);
   }
-  /** Palabras contextuales ("cada", "veces", "empieza"...) son identificadores normales. */
+  /** Palabras contextuales ("veces", "empieza", "toco"...) son identificadores normales. */
   private esPalabra(v: string, t = this.actual) {
     return this.es('identificador', v, t);
   }
-  private error(mensaje: string, pista?: string, t = this.actual): never {
-    throw new ErrorChispa(t.linea, mensaje, pista);
+  private error(mensaje: string, pista?: string, t: Token | Posicion = this.actual): never {
+    const p = 'tipo' in t ? this.posicionToken(t) : t;
+    throw new ErrorChispa(p, mensaje, pista);
+  }
+  /** Posición de un token; para "fin de línea" subrayamos el último carácter de la línea. */
+  private posicionToken(t: Token): Posicion {
+    if (t.tipo === 'nuevaLinea' || t.tipo === 'fin') {
+      const texto = this.lineas[t.linea - 1] ?? '';
+      return { linea: t.linea, columna: Math.max(1, texto.trimEnd().length), longitud: 1 };
+    }
+    return posicionDe(t);
   }
   /** Describe un token para los mensajes: "el final de la línea", "'mientras'"... */
   private describir(t: Token): string {
@@ -86,13 +102,13 @@ class Parser {
     if (this.esSimbolo('=')) {
       this.error(
         "para comparar si dos cosas son iguales hay que usar '==' (dos iguales).",
-        "Un solo '=' sirve para GUARDAR un valor. Ejemplo: si vida == 0:",
+        'Un solo = sirve para GUARDAR un valor. Ejemplo: si vida == 0:',
       );
     }
     if (!this.esSimbolo(':')) {
       this.error(
-        `falta ':' al final de la línea (${que}). En su lugar he encontrado ${this.describir(this.actual)}.`,
-        `Las líneas que abren un bloque terminan con dos puntos. Ejemplo:\n    ${que}:`,
+        `esperaba ':' al final de la línea (${que}), pero he encontrado ${this.describir(this.actual)}.`,
+        "En Chispa, las líneas que abren un bloque (si, mientras, repetir, para cada, funcion, cuando) terminan en dos puntos ':'.",
       );
     }
     this.avanzar();
@@ -157,53 +173,47 @@ class Parser {
           return this.sentenciaParaCada();
         case 'funcion':
           return this.sentenciaFuncion();
+        case 'cuando':
+          return this.sentenciaCuando();
         case 'devolver': {
           this.avanzar();
           const valor = this.es('nuevaLinea') || this.es('fin') ? null : this.expresion();
           this.finDeLinea();
-          return { tipo: 'Devolver', valor, linea: t.linea };
+          return { tipo: 'Devolver', valor, pos: posicionDe(t) };
         }
-        case 'salir':
+        case 'romper':
+        case 'continuar': {
           this.avanzar();
-          if (this.bucles === 0)
-            this.error("'salir' solo se puede usar dentro de un bucle (mientras, repetir o para cada).", undefined, t);
-          this.finDeLinea();
-          return { tipo: 'Salir', linea: t.linea };
-        case 'mostrar': {
-          this.avanzar();
-          const valores = [this.expresion()];
-          while (this.esSimbolo(',')) {
-            this.avanzar();
-            valores.push(this.expresion());
+          if (this.bucles === 0) {
+            this.error(`'${t.original}' solo se puede usar dentro de un bucle (mientras, repetir o para cada).`, undefined, t);
           }
           this.finDeLinea();
-          return { tipo: 'Mostrar', valores, linea: t.linea };
+          return { tipo: t.valor === 'romper' ? 'Romper' : 'Continuar', pos: posicionDe(t) };
         }
-        case 'cuando':
-          return this.sentenciaCuando();
       }
     }
 
     // Si no empieza por palabra clave: es una asignación (x = 5) o una llamada (yo.saltar())
     const expr = this.expresion();
     if (this.es('simbolo') && OPERADORES_ASIGNACION.includes(this.actual.valor)) {
-      const operador = this.avanzar().valor;
+      const op = this.avanzar();
       if (expr.tipo !== 'Identificador' && expr.tipo !== 'Miembro' && expr.tipo !== 'Indice') {
         this.error(
           'lo que hay a la izquierda del = no es algo donde se pueda guardar un valor.',
-          'A la izquierda del = tiene que ir una variable (puntos = 5) o una propiedad (yo.vida = 5).',
-          t,
+          'A la izquierda del = tiene que ir una variable (puntos = 5), una propiedad (yo.vida = 5) o una posición (lista[1] = 5).',
+          expr.pos,
         );
       }
       const valor = this.expresion();
       this.finDeLinea();
-      return { tipo: 'Asignacion', objetivo: expr, operador, valor, linea: t.linea };
+      return { tipo: 'Asignacion', objetivo: expr, operador: op.valor, valor, pos: posicionDe(op) };
     }
     this.finDeLinea();
-    return { tipo: 'ExpresionSuelta', expresion: expr, linea: t.linea };
+    return { tipo: 'ExpresionSuelta', expresion: expr, pos: expr.pos };
   }
 
-  private nombreNuevo(para: string): Token {
+  /** Lee un nombre nuevo (variable, parámetro, función) y da un buen error si es una palabra reservada. */
+  private nombreNuevo(para: string): Nombre {
     const t = this.actual;
     if (t.tipo === 'palabraClave') {
       const significado = SIGNIFICADO_PALABRA[t.valor];
@@ -218,22 +228,20 @@ class Parser {
         'Los nombres empiezan por una letra y pueden llevar letras, números y _. Ejemplo: vidaMaxima',
       );
     }
-    return this.avanzar();
+    this.avanzar();
+    return { nombre: t.valor, original: t.original, pos: posicionDe(t) };
   }
 
   private sentenciaVariable(): Sentencia {
     const inicio = this.avanzar();
-    const nombre = this.nombreNuevo('variable');
+    const n = this.nombreNuevo('variable');
     if (!this.esSimbolo('=')) {
-      this.error(
-        `falta el '=' y el valor inicial de la variable '${nombre.original}'.`,
-        `Ejemplo: variable ${nombre.original} = 0`,
-      );
+      this.error(`falta el '=' y el valor inicial de la variable '${n.original}'.`, `Ejemplo: variable ${n.original} = 0`);
     }
     this.avanzar();
     const valor = this.expresion();
     this.finDeLinea();
-    return { tipo: 'Variable', nombre: nombre.valor, original: nombre.original, valor, linea: inicio.linea };
+    return { tipo: 'Variable', nombre: n.nombre, original: n.original, valor, pos: posicionDe(inicio) };
   }
 
   private sentenciaSi(): Sentencia {
@@ -250,68 +258,69 @@ class Parser {
         break;
       }
     }
-    return { tipo: 'Si', ramas, sino, linea: inicio.linea };
+    return { tipo: 'Si', ramas, sino, pos: posicionDe(inicio) };
+  }
+
+  private cuerpoDeBucle(que: string): Bloque {
+    this.bucles++;
+    const cuerpo = this.bloque(que);
+    this.bucles--;
+    return cuerpo;
   }
 
   private sentenciaMientras(): Sentencia {
     const inicio = this.avanzar();
     const condicion = this.expresion();
-    this.bucles++;
-    const cuerpo = this.bloque('mientras ...');
-    this.bucles--;
-    return { tipo: 'Mientras', condicion, cuerpo, linea: inicio.linea };
+    return { tipo: 'Mientras', condicion, cuerpo: this.cuerpoDeBucle('mientras ...'), pos: posicionDe(inicio) };
   }
 
   private sentenciaRepetir(): Sentencia {
     const inicio = this.avanzar();
-    if (this.esSimbolo(':')) {
-      this.error('falta decir cuántas veces hay que repetir.', 'Ejemplo: repetir 3 veces:');
-    }
+    if (this.esSimbolo(':')) this.error('falta decir cuántas veces hay que repetir.', 'Ejemplo: repetir 3 veces:');
     const veces = this.expresion();
     if (this.esPalabra('veces') || this.esPalabra('vez')) this.avanzar();
-    this.bucles++;
-    const cuerpo = this.bloque('repetir N veces');
-    this.bucles--;
-    return { tipo: 'Repetir', veces, cuerpo, linea: inicio.linea };
+    return { tipo: 'Repetir', veces, cuerpo: this.cuerpoDeBucle('repetir N veces'), pos: posicionDe(inicio) };
   }
 
   private sentenciaParaCada(): Sentencia {
     const inicio = this.avanzar();
-    if (!this.esPalabra('cada')) this.error("después de 'para' tiene que ir 'cada'.", 'Ejemplo: para cada enemigo en enemigos:');
+    if (!this.esClave('cada')) this.error("después de 'para' tiene que ir 'cada'.", 'Ejemplo: para cada enemigo en enemigos:');
     this.avanzar();
-    const nombre = this.nombreNuevo('variable');
+    const variables = [this.nombreNuevo('variable')];
+    if (this.esSimbolo(',')) {
+      this.avanzar();
+      variables.push(this.nombreNuevo('variable'));
+    }
     if (!this.esClave('en')) {
-      this.error(`falta la palabra 'en' después de '${nombre.original}'.`, `Ejemplo: para cada ${nombre.original} en lista:`);
+      const nombres = variables.map((v) => v.original).join(', ');
+      this.error(`falta la palabra 'en' después de '${nombres}'.`, `Ejemplo: para cada ${nombres} en lista:`);
     }
     this.avanzar();
-    const lista = this.expresion();
-    this.bucles++;
-    const cuerpo = this.bloque(`para cada ${nombre.original} en ...`);
-    this.bucles--;
-    return { tipo: 'ParaCada', variable: nombre.valor, original: nombre.original, lista, cuerpo, linea: inicio.linea };
+    const coleccion = this.expresion();
+    const cuerpo = this.cuerpoDeBucle(`para cada ... en ...`);
+    return { tipo: 'ParaCada', variables, coleccion, cuerpo, pos: posicionDe(inicio) };
   }
 
   private sentenciaFuncion(): Sentencia {
     const inicio = this.avanzar();
-    const nombre = this.nombreNuevo('función');
-    const parametros: { nombre: string; original: string }[] = [];
-    if (this.esSimbolo('(')) {
-      this.avanzar();
-      while (!this.esSimbolo(')')) {
-        const p = this.nombreNuevo('parámetro');
-        parametros.push({ nombre: p.valor, original: p.original });
-        if (this.esSimbolo(',')) this.avanzar();
-        else if (!this.esSimbolo(')'))
-          this.error('los parámetros de una función se separan con comas.', `Ejemplo: funcion ${nombre.original}(a, b):`);
-      }
-      this.avanzar();
+    const n = this.nombreNuevo('función');
+    const parametros: Nombre[] = [];
+    if (!this.esSimbolo('(')) {
+      this.error(`después del nombre de la función van los paréntesis, aunque estén vacíos.`, `Ejemplo: funcion ${n.original}():`);
     }
-    // Los bucles de fuera no cuentan dentro de la función
+    this.avanzar();
+    while (!this.esSimbolo(')')) {
+      parametros.push(this.nombreNuevo('parámetro'));
+      if (this.esSimbolo(',')) this.avanzar();
+      else if (!this.esSimbolo(')')) this.error('los parámetros de una función se separan con comas.', `Ejemplo: funcion ${n.original}(a, b):`);
+    }
+    this.avanzar();
+    // Los bucles de fuera no cuentan dentro de la función ('romper' no puede salir de ella)
     const buclesFuera = this.bucles;
     this.bucles = 0;
-    const cuerpo = this.bloque(`funcion ${nombre.original}(...)`);
+    const cuerpo = this.bloque(`funcion ${n.original}(...)`);
     this.bucles = buclesFuera;
-    return { tipo: 'Funcion', nombre: nombre.valor, original: nombre.original, parametros, cuerpo, linea: inicio.linea };
+    return { tipo: 'Funcion', nombre: n.nombre, original: n.original, parametros, cuerpo, pos: posicionDe(inicio) };
   }
 
   private sentenciaCuando(): Sentencia {
@@ -324,48 +333,54 @@ class Parser {
       );
     }
     const evento = this.evento();
-    const cuerpo = this.bloque('cuando ...');
-    return { tipo: 'Cuando', evento, cuerpo, linea: inicio.linea };
+    return { tipo: 'Cuando', evento, cuerpo: this.bloque('cuando ...'), pos: posicionDe(inicio) };
   }
 
   /** Reconoce el evento que va después de "cuando". */
   private evento(): Evento {
     const t = this.actual;
+    const ayuda =
+      'Los eventos que existen son:\n' +
+      '    cuando empieza:\n    cuando cada fotograma:\n    cuando cada 2 segundos:\n' +
+      '    cuando se pulsa "espacio":   (también "se mantiene" y "se suelta")\n' +
+      '    cuando toco Enemigo:\n    cuando dejo de tocar Enemigo:\n    cuando hago clic:';
+
     if (this.esPalabra('empieza') || this.esPalabra('empiece') || this.esPalabra('comienza')) {
       this.avanzar();
       return { tipo: 'empieza' };
     }
-    if (this.esPalabra('cada')) {
+    if (this.esClave('cada')) {
       this.avanzar();
       if (this.esPalabra('fotograma')) {
         this.avanzar();
         return { tipo: 'fotograma' };
       }
-      const segundos = this.expresion();
+      const segundos = this.suma();
       if (this.esPalabra('segundos') || this.esPalabra('segundo')) {
         this.avanzar();
         return { tipo: 'intervalo', segundos };
       }
-      this.error(
-        "después de 'cuando cada' esperaba 'fotograma' o 'N segundos'.",
-        'Ejemplos:\n    cuando cada fotograma:\n    cuando cada 2 segundos:',
-      );
+      this.error("después de 'cuando cada' esperaba 'fotograma' o 'N segundos'.", 'Ejemplos:\n    cuando cada fotograma:\n    cuando cada 2 segundos:');
     }
     if (this.esPalabra('se')) {
       this.avanzar();
       const modos: Record<string, 'pulsa' | 'mantiene' | 'suelta'> = { pulsa: 'pulsa', mantiene: 'mantiene', suelta: 'suelta' };
-      const modo = modos[this.actual.valor];
-      if (this.actual.tipo !== 'identificador' || !modo) {
-        this.error("después de 'cuando se' esperaba 'pulsa', 'mantiene' o 'suelta'.", 'Ejemplo: cuando se pulsa "espacio":');
-      }
+      const modo = this.actual.tipo === 'identificador' ? modos[this.actual.valor] : undefined;
+      if (!modo) this.error("después de 'cuando se' esperaba 'pulsa', 'mantiene' o 'suelta'.", 'Ejemplo: cuando se pulsa "espacio":');
       this.avanzar();
-      // Usamos suma() y no expresion() para que la 'o' de "espacio" o "arriba" no se lea como 'o' lógico.
+      // suma() y no expresion(): así la 'o' de   "espacio" o "arriba"   no se lee como 'o' lógico.
       const teclas = [this.suma()];
       while (this.esSimbolo(',') || this.esClave('o')) {
         this.avanzar();
         teclas.push(this.suma());
       }
       return { tipo: 'tecla', modo, teclas };
+    }
+    if (this.esPalabra('hago')) {
+      this.avanzar();
+      if (!this.esPalabra('clic') && !this.esPalabra('click')) this.error("esperaba 'cuando hago clic:'.");
+      this.avanzar();
+      return { tipo: 'clic' };
     }
     let dejar = false;
     if (this.esPalabra('dejo')) {
@@ -375,34 +390,18 @@ class Parser {
       if (!this.esPalabra('tocar')) this.error("esperaba 'cuando dejo de tocar ...'.");
       dejar = true;
     } else if (!this.esPalabra('toco')) {
-      if (this.esPalabra('hago')) {
-        this.avanzar();
-        if (!this.esPalabra('clic') && !this.esPalabra('click')) this.error("esperaba 'cuando hago clic:'.");
-        this.avanzar();
-        return { tipo: 'clic' };
-      }
-      this.error(
-        `no conozco el evento 'cuando ${t.original}'.`,
-        'Los eventos que existen son:\n' +
-          '    cuando empieza:\n    cuando cada fotograma:\n    cuando cada 2 segundos:\n' +
-          '    cuando se pulsa "espacio":   (también "se mantiene" y "se suelta")\n' +
-          '    cuando toco Enemigo:\n    cuando dejo de tocar Enemigo:\n    cuando hago clic:',
-      );
+      this.error(`no conozco el evento 'cuando ${t.original}'.`, ayuda);
     }
     this.avanzar(); // "toco" o "tocar"
-    // "cuando toco:" sin nombre = cualquier objeto
-    if (this.esSimbolo(':')) return { tipo: 'toco', con: null, original: null, dejar };
+    if (this.esSimbolo(':')) return { tipo: 'toco', con: null, original: null, dejar }; // cualquier objeto
     const n = this.actual;
     if (n.tipo !== 'identificador' && n.tipo !== 'texto') {
       this.error('después de "toco" va el nombre o el tipo del objeto.', 'Ejemplo: cuando toco Moneda:');
     }
     this.avanzar();
-    return {
-      tipo: 'toco',
-      con: n.tipo === 'texto' ? n.valor.toLowerCase() : n.valor,
-      original: n.tipo === 'texto' ? n.valor : n.original,
-      dejar,
-    };
+    return n.tipo === 'texto'
+      ? { tipo: 'toco', con: n.valor.toLowerCase(), original: n.valor, dejar }
+      : { tipo: 'toco', con: n.valor, original: n.original, dejar };
   }
 
   // ───────────────────────── Expresiones ─────────────────────────
@@ -415,7 +414,7 @@ class Parser {
     let izq = this.y();
     while (this.esClave('o')) {
       const t = this.avanzar();
-      izq = { tipo: 'Logica', operador: 'o', izquierda: izq, derecha: this.y(), linea: t.linea };
+      izq = { tipo: 'Logica', operador: 'o', izquierda: izq, derecha: this.y(), pos: posicionDe(t) };
     }
     return izq;
   }
@@ -424,7 +423,7 @@ class Parser {
     let izq = this.no();
     while (this.esClave('y')) {
       const t = this.avanzar();
-      izq = { tipo: 'Logica', operador: 'y', izquierda: izq, derecha: this.no(), linea: t.linea };
+      izq = { tipo: 'Logica', operador: 'y', izquierda: izq, derecha: this.no(), pos: posicionDe(t) };
     }
     return izq;
   }
@@ -432,16 +431,16 @@ class Parser {
   private no(): Expresion {
     if (this.esClave('no')) {
       const t = this.avanzar();
-      return { tipo: 'Unaria', operador: 'no', operando: this.no(), linea: t.linea };
+      return { tipo: 'Unaria', operador: 'no', operando: this.no(), pos: posicionDe(t) };
     }
     return this.comparacion();
   }
 
   private comparacion(): Expresion {
     let izq = this.suma();
-    while (this.es('simbolo') && COMPARACIONES.includes(this.actual.valor)) {
+    while ((this.es('simbolo') && COMPARACIONES.includes(this.actual.valor)) || this.esClave('en')) {
       const t = this.avanzar();
-      izq = { tipo: 'Binaria', operador: t.valor, izquierda: izq, derecha: this.suma(), linea: t.linea };
+      izq = { tipo: 'Binaria', operador: t.valor, izquierda: izq, derecha: this.suma(), pos: posicionDe(t) };
     }
     return izq;
   }
@@ -450,7 +449,7 @@ class Parser {
     let izq = this.multiplicacion();
     while (this.esSimbolo('+') || this.esSimbolo('-')) {
       const t = this.avanzar();
-      izq = { tipo: 'Binaria', operador: t.valor, izquierda: izq, derecha: this.multiplicacion(), linea: t.linea };
+      izq = { tipo: 'Binaria', operador: t.valor, izquierda: izq, derecha: this.multiplicacion(), pos: posicionDe(t) };
     }
     return izq;
   }
@@ -459,7 +458,7 @@ class Parser {
     let izq = this.unaria();
     while (this.esSimbolo('*') || this.esSimbolo('/') || this.esSimbolo('%')) {
       const t = this.avanzar();
-      izq = { tipo: 'Binaria', operador: t.valor, izquierda: izq, derecha: this.unaria(), linea: t.linea };
+      izq = { tipo: 'Binaria', operador: t.valor, izquierda: izq, derecha: this.unaria(), pos: posicionDe(t) };
     }
     return izq;
   }
@@ -467,17 +466,17 @@ class Parser {
   private unaria(): Expresion {
     if (this.esSimbolo('-')) {
       const t = this.avanzar();
-      return { tipo: 'Unaria', operador: '-', operando: this.unaria(), linea: t.linea };
+      return { tipo: 'Unaria', operador: '-', operando: this.unaria(), pos: posicionDe(t) };
     }
     return this.postfijo();
   }
 
-  /** Llamadas f(x), propiedades a.b e índices a[1], que se pueden encadenar: a.b(1)[2] */
+  /** Llamadas f(x), propiedades a.b e índices a[1]. Se pueden encadenar: a.b(1)[2] */
   private postfijo(): Expresion {
     let expr = this.primario();
     for (;;) {
       if (this.esSimbolo('(')) {
-        const t = this.avanzar();
+        this.avanzar();
         const argumentos: Expresion[] = [];
         while (!this.esSimbolo(')')) {
           argumentos.push(this.expresion());
@@ -489,22 +488,22 @@ class Parser {
             );
         }
         this.avanzar();
-        expr = { tipo: 'Llamada', funcion: expr, argumentos, linea: t.linea };
+        expr = { tipo: 'Llamada', funcion: expr, argumentos, pos: expr.pos };
       } else if (this.esSimbolo('.')) {
-        const t = this.avanzar();
+        this.avanzar();
         const p = this.actual;
-        // Después de un punto se permiten también palabras reservadas: posicion.y, yo.no...
+        // Después de un punto se permiten también palabras reservadas: posicion.y, tabla.en...
         if (p.tipo !== 'identificador' && p.tipo !== 'palabraClave') {
           this.error('después de un punto tiene que ir el nombre de una propiedad.', 'Ejemplo: yo.vida');
         }
         this.avanzar();
-        expr = { tipo: 'Miembro', objeto: expr, propiedad: p.valor, original: p.original, linea: t.linea };
+        expr = { tipo: 'Miembro', objeto: expr, propiedad: p.valor, original: p.original, pos: posicionDe(p) };
       } else if (this.esSimbolo('[')) {
         const t = this.avanzar();
         const indice = this.expresion();
         if (!this.esSimbolo(']')) this.error("falta cerrar el corchete con ']'.");
         this.avanzar();
-        expr = { tipo: 'Indice', objeto: expr, indice, linea: t.linea };
+        expr = { tipo: 'Indice', objeto: expr, indice, pos: posicionDe(t) };
       } else {
         return expr;
       }
@@ -513,25 +512,27 @@ class Parser {
 
   private primario(): Expresion {
     const t = this.actual;
+    const pos = posicionDe(t);
     switch (t.tipo) {
       case 'numero':
         this.avanzar();
-        return { tipo: 'Numero', valor: t.numero!, linea: t.linea };
+        return { tipo: 'Numero', valor: t.numero!, pos };
       case 'texto':
         this.avanzar();
-        return { tipo: 'Texto', valor: t.valor, linea: t.linea };
+        return { tipo: 'Texto', valor: t.valor, pos };
       case 'identificador':
         this.avanzar();
-        return { tipo: 'Identificador', nombre: t.valor, original: t.original, linea: t.linea };
+        return { tipo: 'Identificador', nombre: t.valor, original: t.original, pos };
       case 'palabraClave':
         if (t.valor === 'verdadero' || t.valor === 'falso') {
           this.avanzar();
-          return { tipo: 'Logico', valor: t.valor === 'verdadero', linea: t.linea };
+          return { tipo: 'Logico', valor: t.valor === 'verdadero', pos };
         }
         if (t.valor === 'nulo') {
           this.avanzar();
-          return { tipo: 'Nulo', linea: t.linea };
+          return { tipo: 'Nulo', pos };
         }
+        if (t.valor === 'mostrar') return this.mostrar();
         break;
       case 'simbolo':
         if (t.valor === '(') {
@@ -541,17 +542,8 @@ class Parser {
           this.avanzar();
           return e;
         }
-        if (t.valor === '[') {
-          this.avanzar();
-          const elementos: Expresion[] = [];
-          while (!this.esSimbolo(']')) {
-            elementos.push(this.expresion());
-            if (this.esSimbolo(',')) this.avanzar();
-            else if (!this.esSimbolo(']')) this.error('los elementos de una lista se separan con comas.', 'Ejemplo: [1, 2, 3]');
-          }
-          this.avanzar();
-          return { tipo: 'Lista', elementos, linea: t.linea };
-        }
+        if (t.valor === '[') return this.lista();
+        if (t.valor === '{') return this.tabla();
         break;
     }
 
@@ -564,14 +556,69 @@ class Parser {
       );
     }
     if (t.tipo === 'nuevaLinea' || t.tipo === 'fin') {
-      this.error(
-        'la línea se ha acabado antes de tiempo: falta un valor al final.',
-        'Revisa si has dejado un operador (+, -, =, y, o...) sin nada detrás.',
-      );
+      this.error('la línea se ha acabado antes de tiempo: falta un valor al final.', 'Revisa si has dejado un operador (+, -, =, y, o...) sin nada detrás.');
     }
     this.error(
       `aquí esperaba un valor (un número, un texto, una variable...) pero he encontrado ${this.describir(t)}.`,
       t.valor === '=' ? "Parece que sobra un '='. Para comparar usa '==' y para guardar un valor, un solo '='." : undefined,
     );
+  }
+
+  /**
+   * `mostrar` es una función normal, pero su nombre está reservado para poder
+   * dar este error tan concreto cuando alguien se olvida de los paréntesis.
+   */
+  private mostrar(): Expresion {
+    const t = this.avanzar();
+    if (!this.esSimbolo('(')) {
+      const linea = this.lineas[t.linea - 1] ?? '';
+      const resto = linea
+        .slice(t.columna - 1 + t.original.length)
+        .replace(/\s+#.*$/, '')
+        .trim();
+      this.error(
+        "'mostrar' es una función, y las funciones siempre llevan paréntesis.",
+        `Escribe: mostrar(${resto || '"hola"'})`,
+        t,
+      );
+    }
+    return { tipo: 'Identificador', nombre: 'mostrar', original: t.original, pos: posicionDe(t) };
+  }
+
+  private lista(): Expresion {
+    const inicio = this.avanzar();
+    const elementos: Expresion[] = [];
+    while (!this.esSimbolo(']')) {
+      elementos.push(this.expresion());
+      if (this.esSimbolo(',')) this.avanzar();
+      else if (!this.esSimbolo(']')) this.error('los elementos de una lista se separan con comas.', 'Ejemplo: [1, 2, 3]');
+    }
+    this.avanzar();
+    return { tipo: 'Lista', elementos, pos: posicionDe(inicio) };
+  }
+
+  /** Tabla: {nombre: "Ana", "vida": 3} — las claves pueden ser nombres o textos. */
+  private tabla(): Expresion {
+    const inicio = this.avanzar();
+    const entradas: EntradaTabla[] = [];
+    const vistas = new Set<string>();
+    const ejemplo = 'Ejemplo: {nombre: "Ana", vida: 3}';
+    while (!this.esSimbolo('}')) {
+      const k = this.actual;
+      if (k.tipo !== 'identificador' && k.tipo !== 'palabraClave' && k.tipo !== 'texto') {
+        this.error(`la clave de una tabla tiene que ser un nombre o un texto, pero he encontrado ${this.describir(k)}.`, ejemplo);
+      }
+      this.avanzar();
+      const clave = k.tipo === 'texto' ? k.valor : k.original;
+      if (vistas.has(clave.toLowerCase())) this.error(`la clave '${clave}' está repetida en esta tabla.`, 'Cada clave solo puede aparecer una vez.', k);
+      vistas.add(clave.toLowerCase());
+      if (!this.esSimbolo(':')) this.error(`después de la clave '${clave}' van dos puntos ':' y su valor.`, ejemplo);
+      this.avanzar();
+      entradas.push({ clave, original: clave, valor: this.expresion(), pos: posicionDe(k) });
+      if (this.esSimbolo(',')) this.avanzar();
+      else if (!this.esSimbolo('}')) this.error('las entradas de una tabla se separan con comas.', ejemplo);
+    }
+    this.avanzar();
+    return { tipo: 'Tabla', entradas, pos: posicionDe(inicio) };
   }
 }

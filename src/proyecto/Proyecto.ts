@@ -10,11 +10,11 @@
  * en Roblox: objetos que no están en la escena pero que se pueden clonar con
  * crear("Nombre").
  */
-import { compilar } from '../chispa/parser';
-import { DatosJuego, instalarAPI, type ContextoJuego } from '../chispa/api';
-import { Interprete } from '../chispa/interprete';
+import { compilar } from '../chispa/sintaxis/parser';
+import { DatosJuego, instalarAPIMotor, type ContextoJuego } from '../chispa/api/motor';
+import { Interprete } from '../chispa/ejecucion/interprete';
 import { ScriptChispa } from '../chispa/ScriptChispa';
-import type { Programa } from '../chispa/ast';
+import type { Programa } from '../chispa/sintaxis/ast';
 import { ErrorMotor } from '../motor/Errores';
 import { escribirEnConsola, limpiarConsola } from '../motor/Consola';
 import type { Motor } from '../motor/Motor';
@@ -79,6 +79,8 @@ export interface DefProyecto {
   pixelArt?: boolean;
   /** nombre corto → ruta del archivo */
   imagenes: Record<string, string>;
+  /** nombre corto → ruta del archivo de sonido (.mp3, .ogg, .wav) */
+  sonidos?: Record<string, string>;
   /** nombre del archivo (.chs) → código */
   scripts: Record<string, string>;
   plantillas: Record<string, DefObjeto>;
@@ -87,6 +89,11 @@ export interface DefProyecto {
 }
 
 // ───────────────────────── Juego en marcha ─────────────────────────
+
+export interface OpcionesJuego {
+  /** Qué hacer con mostrar(). Por defecto, la consola de la página. */
+  alMostrar?: (texto: string) => void;
+}
 
 export class JuegoEnMarcha implements ContextoJuego {
   readonly escena: Escena;
@@ -98,25 +105,36 @@ export class JuegoEnMarcha implements ContextoJuego {
   private constructor(
     readonly motor: Motor,
     readonly proyecto: DefProyecto,
+    opciones: OpcionesJuego = {},
   ) {
     this.escena = new Escena(motor);
-    this.interprete.alMostrar = escribirEnConsola;
+    this.interprete.alMostrar = opciones.alMostrar ?? escribirEnConsola;
     this.interprete.nombresDeObjetos = () => [...new Set(this.escena.objetos.map((o) => o.nombre))];
-    instalarAPI(this.interprete, this, this.datos);
+    instalarAPIMotor(this.interprete, this, this.datos);
   }
 
   /** Carga imágenes, comprueba TODOS los scripts, monta la escena y arranca. */
   static async arrancar(motor: Motor, proyecto: DefProyecto): Promise<JuegoEnMarcha> {
     await motor.recursos.cargarImagenes(proyecto.imagenes);
-    const juego = new JuegoEnMarcha(motor, proyecto);
+    for (const [nombre, ruta] of Object.entries(proyecto.sonidos ?? {})) await motor.sonido.cargar(nombre, ruta);
+    const juego = JuegoEnMarcha.preparar(motor, proyecto);
+    motor.iniciar();
+    return juego;
+  }
+
+  /**
+   * Monta el juego SIN cargar archivos ni arrancar el bucle.
+   * Lo usan los tests (que avanzan los fotogramas a mano) y lo usará el editor.
+   */
+  static preparar(motor: Motor, proyecto: DefProyecto, opciones: OpcionesJuego = {}): JuegoEnMarcha {
+    const juego = new JuegoEnMarcha(motor, proyecto, opciones);
     // Compilamos todos los scripts al principio: así un error de escritura
-    // sale nada más pulsar Jugar, y no a los 5 minutos de partida.
+    // sale nada más pulsar Ejecutar, y no a los 5 minutos de partida.
     for (const [archivo, codigo] of Object.entries(proyecto.scripts)) juego.programas.set(archivo, compilar(codigo, archivo));
     motor.colorFondo = proyecto.colorFondo;
     motor.escena = juego.escena;
     motor.alActualizar((dt) => juego.antesDelFotograma(dt));
     juego.construir();
-    motor.iniciar();
     return juego;
   }
 

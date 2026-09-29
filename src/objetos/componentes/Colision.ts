@@ -14,11 +14,15 @@ import { Componente } from '../Componente';
 import { Vector2 } from '../../motor/Vector2';
 import { Sprite } from './Sprite';
 
+/**
+ * Caja en coordenadas del MUNDO, donde la Y crece hacia ARRIBA:
+ * `abajo` es la Y más pequeña y `arriba` la más grande.
+ */
 export interface Caja {
   izquierda: number;
   derecha: number;
-  arriba: number;
   abajo: number;
+  arriba: number;
 }
 
 export class Colision extends Componente {
@@ -37,7 +41,7 @@ export class Colision extends Componente {
     const alto = (this.alto ?? sprite?.alto ?? 32) * Math.abs(t.escala.y);
     const cx = t.posicion.x + this.desplazamiento.x;
     const cy = t.posicion.y + this.desplazamiento.y;
-    return { izquierda: cx - ancho / 2, derecha: cx + ancho / 2, arriba: cy - alto / 2, abajo: cy + alto / 2 };
+    return { izquierda: cx - ancho / 2, derecha: cx + ancho / 2, abajo: cy - alto / 2, arriba: cy + alto / 2 };
   }
 }
 
@@ -49,7 +53,7 @@ export function seSolapan(a: Caja, b: Caja, margen = 0): boolean {
   return (
     a.izquierda < b.derecha + margen &&
     a.derecha > b.izquierda - margen &&
-    a.arriba < b.abajo + margen &&
-    a.abajo > b.arriba - margen
+    a.abajo < b.arriba + margen &&
+    a.arriba > b.abajo - margen
   );
 }

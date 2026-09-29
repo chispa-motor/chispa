@@ -1,6 +1,9 @@
 /**
  * DEMO DE LA FASE 2: objetos y componentes (todavía en TypeScript).
  *
+ * Coordenadas del MUNDO: la Y crece hacia ARRIBA y (0,0) es la esquina
+ * inferior izquierda. Por eso el suelo está en y = 20 y saltar es sumar.
+ *
  * Fíjate en que ya no hay que mover ni dibujar nada a mano: creamos objetos,
  * les ponemos componentes y la Escena se encarga de todo. El jugador usa un
  * componente Script escrito en TypeScript; en la Fase 3 esto mismo se
@@ -27,15 +30,15 @@ export async function demoFase2(motor: Motor): Promise<void> {
     Object.assign(o.agregar(new Sprite()), { ancho, alto, color });
     o.agregar(new Colision());
   }
-  bloque(480, 520, 960, 40, 'verde');
+  bloque(480, 20, 960, 40, 'verde'); // suelo (abajo del todo)
   bloque(10, 270, 20, 540, 'gris');
   bloque(950, 270, 20, 540, 'gris');
-  bloque(250, 400, 220, 24, 'marron');
-  bloque(700, 310, 220, 24, 'marron');
-  bloque(470, 200, 140, 24, 'marron');
+  bloque(250, 140, 220, 24, 'marron');
+  bloque(700, 230, 220, 24, 'marron');
+  bloque(470, 340, 140, 24, 'marron');
 
   // ── Jugador: Sprite + Colisión + Física + Script ──
-  const jugador = escena.crear('Jugador').en(100, 440);
+  const jugador = escena.crear('Jugador').en(100, 100);
   Object.assign(jugador.agregar(new Sprite()), { imagen: 'estrella', ancho: 48, alto: 48, capa: 2 });
   Object.assign(jugador.agregar(new Colision()), { ancho: 40, alto: 44 });
   const fisica = jugador.agregar(new Fisica());
@@ -48,7 +51,7 @@ export async function demoFase2(motor: Motor): Promise<void> {
         fisica.velocidad.x = dir * 280;
         if (dir !== 0) yo.transformacion.rotacion += dir * 6; // rueda al andar
         // Saltar solo si está en el suelo (lo calcula la física)
-        if ((entrada.sePulso('espacio') || entrada.sePulso('arriba')) && fisica.enSuelo) fisica.velocidad.y = -640;
+        if ((entrada.sePulso('espacio') || entrada.sePulso('arriba')) && fisica.enSuelo) fisica.velocidad.y = 640; // positivo = hacia arriba
       },
       alTocar(_yo, otro) {
         if (otro.tipo === 'Moneda') {
@@ -78,7 +81,9 @@ export async function demoFase2(motor: Motor): Promise<void> {
         const c = o.obtener(Colision);
         if (!c) continue;
         const k = c.caja();
-        r.rectangulo(k.izquierda, k.arriba, k.derecha - k.izquierda, k.abajo - k.arriba, c.solido ? 'cian' : 'amarillo', {
+        // La caja está en el mundo (Y arriba): su esquina superior izquierda en pantalla es (izquierda, arriba)
+        const esquina = escena.camara.mundoAPantalla(k.izquierda, k.arriba);
+        r.rectangulo(esquina.x, esquina.y, k.derecha - k.izquierda, k.arriba - k.abajo, c.solido ? 'cian' : 'amarillo', {
           relleno: false,
           grosor: 2,
         });

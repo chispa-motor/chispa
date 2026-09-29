@@ -1,12 +1,28 @@
 /**
- * Cámara: decide QUÉ parte del mundo se ve.
+ * Cámara: decide QUÉ parte del mundo se ve, y convierte coordenadas del
+ * MUNDO a coordenadas de la PANTALLA.
  *
- * El mundo puede ser mucho más grande que la pantalla (un nivel de
- * plataformas de 3000 píxeles). La cámara tiene una posición (el centro de
- * lo que se ve) y todo se dibuja desplazado respecto a ella.
+ * ── Dos sistemas de coordenadas ──
+ *   Mundo (lo que ve Chispa):  la Y crece hacia ARRIBA, como en Unity o en matemáticas.
+ *   Pantalla (Canvas):         la Y crece hacia ABAJO, y (0,0) es la esquina de arriba.
+ * La conversión se hace SOLO aquí, justo al dibujar. El resto del motor
+ * (física, scripts, editor) trabaja siempre con la Y hacia arriba.
+ *
+ *     pantallaX = mundoX - izquierda
+ *     pantallaY = altoPantalla - (mundoY - abajo)      ← aquí se "da la vuelta" al eje
+ *
+ * Al empezar, la cámara enseña de (0,0) a (960,540): (0,0) es la esquina
+ * INFERIOR izquierda de la pantalla.
  */
 import type { ObjetoJuego } from './ObjetoJuego';
 import { Vector2 } from '../motor/Vector2';
+
+export interface Limites {
+  izquierda: number;
+  abajo: number;
+  derecha: number;
+  arriba: number;
+}
 
 export class Camara {
   /** Centro de lo que se ve, en coordenadas del mundo. */
@@ -14,11 +30,11 @@ export class Camara {
   objetivo: ObjetoJuego | null = null;
   /** Cuanto más alto, más rápido alcanza al objetivo. */
   suavizado = 8;
-  limites: { izquierda: number; arriba: number; derecha: number; abajo: number } | null = null;
+  limites: Limites | null = null;
 
   constructor(
-    private anchoPantalla: number,
-    private altoPantalla: number,
+    readonly anchoPantalla: number,
+    readonly altoPantalla: number,
   ) {
     this.posicion = new Vector2(anchoPantalla / 2, altoPantalla / 2);
   }
@@ -44,17 +60,23 @@ export class Camara {
     this.aplicarLimites();
   }
 
-  /** Convierte coordenadas de pantalla (ratón) a coordenadas del mundo. */
-  pantallaAMundo(p: Vector2): Vector2 {
-    return new Vector2(p.x + this.esquinaX, p.y + this.esquinaY);
-  }
-
-  /** Esquina superior izquierda de lo que se ve (redondeada para que no tiemble). */
-  get esquinaX(): number {
+  /** Borde izquierdo de lo que se ve (redondeado para que los dibujos no tiemblen). */
+  get izquierda(): number {
     return Math.round(this.posicion.x - this.anchoPantalla / 2);
   }
-  get esquinaY(): number {
+  /** Borde inferior de lo que se ve. */
+  get abajo(): number {
     return Math.round(this.posicion.y - this.altoPantalla / 2);
+  }
+
+  /** Mundo → pantalla (para dibujar). */
+  mundoAPantalla(x: number, y: number): Vector2 {
+    return new Vector2(x - this.izquierda, this.altoPantalla - (y - this.abajo));
+  }
+
+  /** Pantalla → mundo (para el ratón). */
+  pantallaAMundo(p: Vector2): Vector2 {
+    return new Vector2(p.x + this.izquierda, this.altoPantalla - p.y + this.abajo);
   }
 
   private aplicarLimites(): void {
@@ -62,14 +84,14 @@ export class Camara {
     if (!l) return;
     const mitadW = this.anchoPantalla / 2;
     const mitadH = this.altoPantalla / 2;
-    // Si el nivel es más pequeño que la pantalla, lo centramos.
+    // Si la zona es más pequeña que la pantalla, la centramos.
     this.posicion.x =
       l.derecha - l.izquierda <= this.anchoPantalla
         ? (l.izquierda + l.derecha) / 2
         : Math.min(Math.max(this.posicion.x, l.izquierda + mitadW), l.derecha - mitadW);
     this.posicion.y =
-      l.abajo - l.arriba <= this.altoPantalla
-        ? (l.arriba + l.abajo) / 2
-        : Math.min(Math.max(this.posicion.y, l.arriba + mitadH), l.abajo - mitadH);
+      l.arriba - l.abajo <= this.altoPantalla
+        ? (l.abajo + l.arriba) / 2
+        : Math.min(Math.max(this.posicion.y, l.abajo + mitadH), l.arriba - mitadH);
   }
 }

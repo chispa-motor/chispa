@@ -40,24 +40,30 @@ export class Sprite extends Componente {
     return this.alto * Math.abs(this.objeto.transformacion.escala.y);
   }
 
-  dibujar(r: Renderizador): void {
+  /**
+   * Dibuja el sprite con su centro en (x, y) de la PANTALLA.
+   * La Escena ya ha convertido la posición del mundo (Y hacia arriba) a la
+   * pantalla (Y hacia abajo). Por el mismo motivo la rotación cambia de
+   * signo: en el mundo, positivo = contrario a las agujas del reloj; en el
+   * Canvas, positivo = a favor.
+   */
+  dibujarEn(r: Renderizador, x: number, y: number): void {
     if (!this.visible || this.opacidad <= 0) return;
-    const t = this.objeto.transformacion;
-    const { x, y } = t.posicion;
+    const rotacion = -this.objeto.transformacion.rotacion;
     const w = this.anchoFinal;
     const h = this.altoFinal;
 
     if (this.imagen) {
       const img = this.objeto.escena!.motor.recursos.imagen(this.imagen);
-      r.imagen(img, x, y, { ancho: w, alto: h, rotacion: t.rotacion, opacidad: this.opacidad, voltearX: this.voltearX });
+      r.imagen(img, x, y, { ancho: w, alto: h, rotacion, opacidad: this.opacidad, voltearX: this.voltearX });
       return;
     }
 
     r.ctx.globalAlpha = this.opacidad;
     if (this.forma === 'circulo') r.circulo(x, y, w / 2, this.color);
     else if (this.forma === 'texto')
-      r.texto(this.texto, x, y, { color: this.color, tamano: this.tamano, alinear: this.alinear, negrita: true, sombra: true });
-    else r.rectangulo(x - w / 2, y - h / 2, w, h, this.color, { rotacion: t.rotacion });
+      r.texto(this.texto, x, y, { color: this.color, tamano: this.tamano, alinear: this.alinear, negrita: true, sombra: true, vertical: 'medio' });
+    else r.rectangulo(x - w / 2, y - h / 2, w, h, this.color, { rotacion });
     r.ctx.globalAlpha = 1;
   }
 }

@@ -1,31 +1,42 @@
 /**
- * LEXER (analizador léxico): texto → lista de tokens.
+ * ════════════════════════════════════════════════════════════════════
+ *  ETAPA 1 de 3 · LÉXICO — El lexer: texto → lista de tokens
+ * ════════════════════════════════════════════════════════════════════
  *
- * Lo más interesante es la SANGRÍA (indentación), como en Python.
- * Guardamos una pila con los niveles de sangría abiertos, por ejemplo [0, 4]:
- *   - Si una línea tiene más espacios que el último nivel → token INDENTAR
- *   - Si tiene menos → uno o varios DESINDENTAR (cerramos bloques)
+ * Recorre cada línea carácter a carácter y decide qué es cada trozo:
+ * un número, un texto entre comillas, una palabra, un símbolo...
+ *
+ * Lo más interesante es la SANGRÍA, como en Python. Guardamos una pila con
+ * los niveles de sangría abiertos, por ejemplo [0, 4, 8]:
+ *   - Si una línea tiene MÁS espacios que el último nivel → token INDENTAR
+ *   - Si tiene MENOS → uno o varios DESINDENTAR (se cierran bloques)
  *   - Si no coincide con ningún nivel anterior → error amable
- * Dentro de paréntesis o corchetes ignoramos los saltos de línea, para
- * poder escribir listas largas en varias líneas.
+ *
+ * Dentro de ( ), [ ] o { } ignoramos los saltos de línea, para poder
+ * escribir listas y tablas largas en varias líneas.
  */
-import { ErrorChispa } from './errores';
+import { ErrorChispa } from '../errores/ErrorChispa';
 import { PALABRAS_CLAVE, SIMBOLOS_DOBLES, SIMBOLOS_SIMPLES, type Token } from './tokens';
-import { normalizar } from '../utilidades/texto';
+import { normalizar } from '../../utilidades/texto';
 
 const ESPACIOS_POR_TABULADOR = 4;
-/** Comillas aceptadas: normales y las "tipográficas" que ponen Word o el móvil. */
+/** Comillas aceptadas: las normales y las "tipográficas" que ponen Word o el móvil. */
 const COMILLAS_CIERRE: Record<string, string> = { '"': '"', "'": "'", '“': '”', '«': '»', '‘': '’' };
+const CIERRE_DE: Record<string, string> = { '(': ')', '[': ']', '{': '}' };
 
 export function analizarLexico(codigo: string): Token[] {
   const tokens: Token[] = [];
   const pilaSangria = [0];
-  /** Paréntesis y corchetes abiertos (con su línea, para avisar si alguno no se cierra). */
-  const abiertos: { simbolo: string; linea: number }[] = [];
+  /** Paréntesis, corchetes y llaves abiertos (con su posición, para avisar si alguno no se cierra). */
+  const abiertos: { simbolo: string; linea: number; columna: number }[] = [];
   const lineas = codigo.replace(/\r\n?/g, '\n').split('\n');
 
-  const agregar = (tipo: Token['tipo'], valor: string, linea: number, original = valor, numero?: number) =>
-    tokens.push({ tipo, valor, original, linea, numero });
+  const agregar = (tipo: Token['tipo'], valor: string, linea: number, columna: number, original = valor, numero?: number) =>
+    tokens.push({ tipo, valor, original, linea, columna, numero });
+  /** Error en la columna `col` (índice que empieza en 0) de la línea `linea`. */
+  const error = (linea: number, col: number, longitud: number, mensaje: string, pista?: string): never => {
+    throw new ErrorChispa({ linea, columna: col + 1, longitud }, mensaje, pista);
+  };
 
   for (let i = 0; i < lineas.length; i++) {
     const texto = lineas[i];
@@ -45,15 +56,17 @@ export function analizarLexico(codigo: string): Token[] {
       const actual = pilaSangria[pilaSangria.length - 1];
       if (ancho > actual) {
         pilaSangria.push(ancho);
-        agregar('indentar', '', nLinea);
+        agregar('indentar', '', nLinea, 1);
       } else if (ancho < actual) {
         while (ancho < pilaSangria[pilaSangria.length - 1]) {
           pilaSangria.pop();
-          agregar('desindentar', '', nLinea);
+          agregar('desindentar', '', nLinea, 1);
         }
         if (ancho !== pilaSangria[pilaSangria.length - 1]) {
-          throw new ErrorChispa(
+          error(
             nLinea,
+            0,
+            Math.max(1, col),
             'la sangría (los espacios del principio) de esta línea no coincide con la de ninguna línea anterior.',
             'Las líneas de un mismo bloque deben empezar exactamente en la misma columna. Usa siempre 4 espacios por nivel.',
           );
@@ -80,7 +93,7 @@ export function analizarLexico(codigo: string): Token[] {
           while (fin < texto.length && /[0-9]/.test(texto[fin])) fin++;
         }
         const t = texto.slice(col, fin);
-        agregar('numero', t, nLinea, t, parseFloat(t));
+        agregar('numero', t, nLinea, col + 1, t, parseFloat(t));
         col = fin;
         continue;
       }
@@ -107,13 +120,15 @@ export function analizarLexico(codigo: string): Token[] {
           j++;
         }
         if (!cerrado) {
-          throw new ErrorChispa(
+          error(
             nLinea,
+            col,
+            texto.length - col,
             'hay un texto que empieza con comillas pero nunca se cierra.',
-            `Añade ${cierre} al final del texto. Por ejemplo: mostrar "Hola"`,
+            `Añade ${cierre} al final del texto. Por ejemplo: mostrar("Hola")`,
           );
         }
-        agregar('texto', valor, nLinea, texto.slice(col, j + 1));
+        agregar('texto', valor, nLinea, col + 1, texto.slice(col, j + 1));
         col = j + 1;
         continue;
       }
@@ -124,7 +139,7 @@ export function analizarLexico(codigo: string): Token[] {
         while (fin < texto.length && /[\p{L}\p{N}_]/u.test(texto[fin])) fin++;
         const original = texto.slice(col, fin);
         const valor = normalizar(original); // "Función" → "funcion"
-        agregar(PALABRAS_CLAVE.has(valor) ? 'palabraClave' : 'identificador', valor, nLinea, original);
+        agregar(PALABRAS_CLAVE.has(valor) ? 'palabraClave' : 'identificador', valor, nLinea, col + 1, original);
         col = fin;
         continue;
       }
@@ -132,64 +147,62 @@ export function analizarLexico(codigo: string): Token[] {
       // Símbolos de dos caracteres: ==, <=, +=...
       const dos = texto.slice(col, col + 2);
       if (SIMBOLOS_DOBLES.includes(dos)) {
-        agregar('simbolo', dos, nLinea);
+        agregar('simbolo', dos, nLinea, col + 1);
         col += 2;
         continue;
       }
 
       // Símbolos de un carácter
       if (SIMBOLOS_SIMPLES.includes(c)) {
-        if (c === '(' || c === '[') abiertos.push({ simbolo: c, linea: nLinea });
-        if (c === ')' || c === ']') {
-          const esperado = c === ')' ? '(' : '[';
+        if (c in CIERRE_DE) abiertos.push({ simbolo: c, linea: nLinea, columna: col });
+        if (c === ')' || c === ']' || c === '}') {
           const ultimo = abiertos.pop();
-          if (!ultimo || ultimo.simbolo !== esperado) {
-            throw new ErrorChispa(
+          if (!ultimo || CIERRE_DE[ultimo.simbolo] !== c) {
+            error(
               nLinea,
+              col,
+              1,
               `hay un '${c}' que cierra algo que no se había abierto.`,
               ultimo
-                ? `Antes se abrió un '${ultimo.simbolo}' en la línea ${ultimo.linea}; ciérralo con '${ultimo.simbolo === '(' ? ')' : ']'}'.`
-                : `Borra este '${c}' o añade el '${esperado}' que le falta.`,
+                ? `Antes se abrió un '${ultimo.simbolo}' en la línea ${ultimo.linea}; ciérralo con '${CIERRE_DE[ultimo.simbolo]}'.`
+                : `Borra este '${c}' o añade el símbolo de apertura que le falta.`,
             );
           }
         }
-        agregar('simbolo', c, nLinea);
+        agregar('simbolo', c, nLinea, col + 1);
         col++;
         continue;
       }
 
       // Cualquier otra cosa: error amable
-      throw new ErrorChispa(nLinea, `no entiendo el símbolo '${c}'.`, pistaSimbolo(c));
+      error(nLinea, col, 1, `no entiendo el símbolo '${c}'.`, pistaSimbolo(c, texto.slice(col, col + 2)));
     }
 
-    if (abiertos.length === 0) agregar('nuevaLinea', '', nLinea);
+    if (abiertos.length === 0) agregar('nuevaLinea', '', nLinea, texto.length + 1);
   }
 
   if (abiertos.length > 0) {
     const a = abiertos[abiertos.length - 1];
-    throw new ErrorChispa(
-      a.linea,
-      `abriste un '${a.simbolo}' que nunca se cierra.`,
-      `Añade '${a.simbolo === '(' ? ')' : ']'}' donde termine.`,
-    );
+    error(a.linea, a.columna, 1, `abriste un '${a.simbolo}' que nunca se cierra.`, `Añade '${CIERRE_DE[a.simbolo]}' donde termine.`);
   }
 
   const ultima = lineas.length;
-  if (tokens.length && tokens[tokens.length - 1].tipo !== 'nuevaLinea') agregar('nuevaLinea', '', ultima);
+  if (tokens.length && tokens[tokens.length - 1].tipo !== 'nuevaLinea') agregar('nuevaLinea', '', ultima, 1);
   while (pilaSangria.length > 1) {
     pilaSangria.pop();
-    agregar('desindentar', '', ultima);
+    agregar('desindentar', '', ultima, 1);
   }
-  agregar('fin', '', ultima);
+  agregar('fin', '', ultima, 1);
   return tokens;
 }
 
-function pistaSimbolo(c: string): string {
+function pistaSimbolo(c: string, dos: string): string {
+  if (dos === '&&') return "Para decir 'y' en una condición escribe la palabra y. Ejemplo: si vida > 0 y puntos > 10:";
+  if (dos === '||') return "Para decir 'o' en una condición escribe la palabra o. Ejemplo: si x < 0 o x > 100:";
   if (c === '¿' || c === '¡' || c === '?' || c === '!')
-    return `Los signos como '${c}' solo pueden ir dentro de un texto entre comillas, por ejemplo: mostrar "¡Hola!". Para "distinto de" usa !=`;
+    return `Los signos como '${c}' solo pueden ir dentro de un texto entre comillas, por ejemplo: mostrar("¡Hola!"). Para "distinto de" usa !=`;
   if (c === ';') return 'En Chispa no hace falta poner ; al final de las líneas. Bórralo.';
-  if (c === '{' || c === '}')
-    return 'Chispa no usa llaves { }. Los bloques se marcan con ":" al final de la línea y sangría (4 espacios) en las de dentro.';
   if (c === '&' || c === '|') return "Para combinar condiciones usa las palabras 'y' / 'o'. Ejemplo: si vida > 0 y puntos > 10:";
+  if (c === '^') return 'Chispa no tiene el símbolo ^. Para multiplicar un número por sí mismo usa *, por ejemplo: x * x';
   return 'Revisa si se ha colado un carácter raro o si falta poner comillas a un texto.';
 }

@@ -7,11 +7,13 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "pruebas": "tsx pruebas/lenguaje.ts"
+    "pruebas": "vitest run",
+    "pruebas:vigilar": "vitest"
   },
   "devDependencies": {
-    "tsx": "^4.23.15",
+    "happy-dom": "^20.14.5",
     "typescript": "^5.9.0",
-    "vite": "^7.1.0"
+    "vite": "^7.1.0",
+    "vitest": "^5.0.2"
   }
 }

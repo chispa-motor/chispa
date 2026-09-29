@@ -15,6 +15,8 @@
  * una pared o con el suelo. Moviendo un eje cada vez, la respuesta es obvia:
  * si al mover en X chocamos → pared. Si al mover en Y hacia abajo → suelo.
  *
+ * Recuerda: en el mundo la Y crece hacia ARRIBA. Caer = velocidad.y negativa.
+ *
  * ── DECISIÓN 3: los objetos con física no se empujan entre sí ──
  * Solo chocan con los sólidos SIN física (suelos, paredes). Entre ellos
  * (jugador y enemigo) solo se avisan con "tocar". Mucho más simple y es lo
@@ -86,7 +88,8 @@ export class SistemaFisico {
     f.enSuelo = f.tocaTecho = f.tocaPared = false;
 
     // Gravedad: cambia la velocidad (aceleración), no la posición directamente.
-    f.velocidad.y = Math.min(f.velocidad.y + GRAVEDAD_MUNDO * f.gravedad * PASO, f.velocidadMaximaCaida);
+    // La gravedad tira hacia abajo: RESTA a la velocidad vertical (la Y crece hacia arriba).
+    f.velocidad.y = Math.max(f.velocidad.y - GRAVEDAD_MUNDO * f.gravedad * PASO, -f.velocidadMaximaCaida);
 
     const choca = c.colision?.solido;
 
@@ -112,7 +115,7 @@ export class SistemaFisico {
         const a = c.colision!.caja();
         const b = s.colision.caja();
         if (!solapanDeVerdad(a, b)) continue;
-        const haciaAbajo = f.velocidad.y > 0 || (f.velocidad.y === 0 && centroY(a) < centroY(b));
+        const haciaAbajo = f.velocidad.y < 0 || (f.velocidad.y === 0 && centroY(a) > centroY(b));
         if (haciaAbajo) {
           pos.y += b.arriba - a.abajo;
           f.enSuelo = true;
@@ -173,8 +176,8 @@ function solapanDeVerdad(a: Caja, b: Caja): boolean {
   return (
     a.izquierda < b.derecha - EPSILON &&
     a.derecha > b.izquierda + EPSILON &&
-    a.arriba < b.abajo - EPSILON &&
-    a.abajo > b.arriba + EPSILON
+    a.abajo < b.arriba - EPSILON &&
+    a.arriba > b.abajo + EPSILON
   );
 }
 

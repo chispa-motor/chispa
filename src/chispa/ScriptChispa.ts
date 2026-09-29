@@ -18,12 +18,13 @@
  * Si no, un `esperar(1)` dentro de `cuando cada fotograma` crearía 60 hilos
  * por segundo y el juego acabaría muy lento.
  */
-import type { Bloque, Evento, Programa } from './ast';
-import { Entorno } from './entorno';
-import { ErrorChispa } from './errores';
-import type { Ejecucion, Interprete } from './interprete';
-import { referencia } from './api';
-import { nombreTipo } from './valores';
+import type { Bloque, Evento, Expresion, Programa } from './sintaxis/ast';
+import type { Posicion } from './lexico/tokens';
+import { Entorno } from './ejecucion/entorno';
+import { ErrorChispa } from './errores/ErrorChispa';
+import type { Ejecucion, Interprete } from './ejecucion/interprete';
+import { referencia } from './api/objetos';
+import { nombreTipo } from './ejecucion/valores';
 import { ErrorMotor } from '../motor/Errores';
 import { Componente } from '../objetos/Componente';
 import type { ObjetoJuego } from '../objetos/ObjetoJuego';
@@ -39,7 +40,7 @@ interface Hilo {
 interface EventoRegistrado {
   evento: Evento;
   cuerpo: Bloque;
-  linea: number;
+  pos: Posicion;
   clave: string;
   /** Para eventos de teclado: nombres de tecla ya comprobados. */
   teclas: string[];
@@ -81,7 +82,7 @@ export class ScriptChispa extends Componente {
         const reg: EventoRegistrado = {
           evento: s.evento,
           cuerpo: s.cuerpo,
-          linea: s.linea,
+          pos: s.pos,
           clave: `evento${i}`,
           teclas: [],
           segundos: 0,
@@ -89,10 +90,10 @@ export class ScriptChispa extends Componente {
         };
         if (s.evento.tipo === 'tecla') {
           reg.teclas = s.evento.teclas.map((expr) => {
-            const v = this.evaluarYa(expr, s.linea);
+            const v = this.evaluarYa(expr);
             if (typeof v !== 'string')
               throw new ErrorChispa(
-                s.linea,
+                expr.pos,
                 `el nombre de la tecla tiene que ir entre comillas, pero es ${nombreTipo(v)}.`,
                 'Ejemplo: cuando se pulsa "espacio":',
               );
@@ -100,16 +101,17 @@ export class ScriptChispa extends Componente {
               return this.motor.entrada.validarTecla(v);
             } catch (e) {
               if (e instanceof ErrorMotor)
-                throw new ErrorChispa(s.linea, e.message.charAt(0).toLowerCase() + e.message.slice(1), e.pista);
+                throw new ErrorChispa(expr.pos, e.message.charAt(0).toLowerCase() + e.message.slice(1), e.pista);
               throw e;
             }
           });
         }
         if (s.evento.tipo === 'intervalo') {
-          const v = this.evaluarYa(s.evento.segundos, s.linea);
+          const segundos = s.evento.segundos;
+          const v = this.evaluarYa(segundos);
           if (typeof v !== 'number' || v <= 0)
             throw new ErrorChispa(
-              s.linea,
+              segundos.pos,
               "en 'cuando cada N segundos', N tiene que ser un número mayor que 0.",
               'Ejemplo: cuando cada 2 segundos:',
             );
@@ -226,9 +228,9 @@ export class ScriptChispa extends Componente {
   }
 
   /** Evalúa una expresión al momento (sin permitir esperar). */
-  private evaluarYa(expr: Parameters<Interprete['evaluar']>[0], linea: number) {
+  private evaluarYa(expr: Expresion) {
     const r = this.interprete.evaluar(expr, this.entorno).next();
-    if (!r.done) throw new ErrorChispa(linea, 'aquí no se puede usar esperar().');
+    if (!r.done) throw new ErrorChispa(expr.pos, 'aquí no se puede usar esperar().');
     return r.value;
   }
 

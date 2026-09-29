@@ -12,9 +12,12 @@
  *   tenemos en cuenta, todo se ve borroso. Por eso el lienzo interno es más
  *   grande que su tamaño en pantalla.
  *
- * DECISIÓN 3 — Ejes: (0,0) arriba a la izquierda, la Y crece HACIA ABAJO.
- *   Es lo normal en Canvas, Godot o Phaser. Unity y Roblox usan Y hacia
- *   arriba, así que ojo: en nuestro motor "subir" es restar a la Y.
+ * DECISIÓN 3 — Este archivo trabaja en coordenadas de PANTALLA:
+ *   (0,0) arriba a la izquierda y la Y crece HACIA ABAJO, que es como
+ *   funciona el Canvas del navegador.
+ *   ¡Pero el MUNDO del juego tiene la Y hacia ARRIBA! (como Unity y las
+ *   matemáticas). La Cámara convierte de mundo a pantalla justo antes de
+ *   llamar a estas funciones, así que desde Chispa nunca se ve este eje.
  *
  * Rotaciones en GRADOS (más intuitivo que radianes para principiantes).
  */
@@ -37,6 +40,8 @@ export interface EstiloTexto {
   negrita?: boolean;
   /** Sombra oscura debajo del texto, para que se lea sobre cualquier fondo. */
   sombra?: boolean;
+  /** Qué representa la Y: la parte de arriba del texto (por defecto) o su centro. */
+  vertical?: 'arriba' | 'medio';
 }
 
 export interface EstiloImagen {
@@ -160,7 +165,7 @@ export class Renderizador {
     ctx.font = `${estilo.negrita ? 'bold ' : ''}${tamano}px system-ui, "Segoe UI", sans-serif`;
     ctx.fillStyle = resolverColor(estilo.color ?? 'blanco');
     ctx.textAlign = ALINEACIONES[estilo.alinear ?? 'izquierda'];
-    ctx.textBaseline = 'top';
+    ctx.textBaseline = estilo.vertical === 'medio' ? 'middle' : 'top';
     if (estilo.sombra) {
       ctx.save();
       ctx.fillStyle = 'rgba(0,0,0,0.55)';

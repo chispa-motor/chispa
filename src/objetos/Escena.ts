@@ -103,25 +103,24 @@ export class Escena implements EscenaActiva {
     sprites.sort((a, b) => a.capa - b.capa);
 
     // Zona visible del mundo, para no dibujar lo que está fuera de la pantalla.
-    const vx = cam.esquinaX;
-    const vy = cam.esquinaY;
+    const izq = cam.izquierda;
+    const abajo = cam.abajo;
     const margen = 64;
 
     for (const s of sprites) {
+      const p = s.objeto.posicion;
       if (s.fijo) {
-        s.dibujar(r);
+        // Fijo = pegado a la pantalla. También con la Y hacia arriba: (0,0) es la esquina inferior izquierda.
+        s.dibujarEn(r, p.x, r.alto - p.y);
         continue;
       }
-      const p = s.objeto.posicion;
       const radio = Math.max(s.anchoFinal, s.altoFinal);
-      if (p.x + radio < vx - margen || p.x - radio > vx + r.ancho + margen) continue;
-      if (p.y + radio < vy - margen || p.y - radio > vy + r.alto + margen) continue;
+      if (p.x + radio < izq - margen || p.x - radio > izq + r.ancho + margen) continue;
+      if (p.y + radio < abajo - margen || p.y - radio > abajo + r.alto + margen) continue;
 
-      // Movemos "el papel" en dirección contraria a la cámara y dibujamos.
-      r.ctx.save();
-      r.ctx.translate(-vx, -vy);
-      s.dibujar(r);
-      r.ctx.restore();
+      // Mundo (Y arriba) → pantalla (Y abajo). La conversión vive en la cámara.
+      const enPantalla = cam.mundoAPantalla(p.x, p.y);
+      s.dibujarEn(r, enPantalla.x, enPantalla.y);
     }
   }
 
