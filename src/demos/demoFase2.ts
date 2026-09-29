@@ -14,7 +14,7 @@ import { Script } from '../objetos/componentes/Script';
 import { Sprite } from '../objetos/componentes/Sprite';
 
 export async function demoFase2(motor: Motor): Promise<void> {
-  await motor.recursos.cargarImagenes({ estrella: 'imagenes/estrella.svg', moneda: 'imagenes/moneda.svg' });
+  await motor.recursos.cargarImagenes({ estrella: 'imagenes/estrella.svg' });
   motor.colorFondo = '#20243a';
   const escena = new Escena(motor);
   const { entrada } = motor;
@@ -65,7 +65,7 @@ export async function demoFase2(motor: Motor): Promise<void> {
     if (entrada.ratonSePulso('izquierdo')) {
       const p = escena.ratonEnMundo();
       const m = escena.crear('Moneda').en(p.x, p.y);
-      Object.assign(m.agregar(new Sprite()), { imagen: 'moneda', ancho: 28, alto: 28, capa: 1 });
+      Object.assign(m.agregar(new Sprite()), { forma: 'circulo', color: 'amarillo', ancho: 26, alto: 26, capa: 1 });
       m.agregar(new Colision());
       m.agregar(new Fisica()).gravedad = 0.6;
     }
@@ -89,13 +89,13 @@ export async function demoFase2(motor: Motor): Promise<void> {
         sombra: true,
       });
     }
-    r.texto(`Chispa · Fase 2   Monedas: ${puntos}   Objetos: ${escena.objetos.length}`, 30, 26, {
+    r.texto(`Chispa · Fase 2   Bolas: ${puntos}   Objetos: ${escena.objetos.length}`, 30, 26, {
       tamano: 20,
       negrita: true,
       color: 'amarillo',
       sombra: true,
     });
-    r.texto('Flechas/WASD mover · Espacio saltar · Clic: soltar moneda · C: ver cajas de colisión', 930, 490, {
+    r.texto('Flechas/WASD mover · Espacio saltar · Clic: soltar bola · C: ver cajas de colisión', 930, 490, {
       tamano: 15,
       alinear: 'derecha',
       color: 'blanco',
