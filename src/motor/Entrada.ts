@@ -68,6 +68,13 @@ const TECLAS_CONOCIDAS = new Set([
 /** Teclas que el navegador usa para hacer scroll: se lo impedimos durante el juego. */
 const EVITAR_SCROLL = new Set(['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab']);
 
+/** ¿El evento viene de un sitio donde se escribe (input, textarea, editor de código)? */
+function esCampoDeTexto(objetivo: EventTarget | null): boolean {
+  const el = objetivo as HTMLElement | null;
+  if (!el || typeof el.tagName !== 'string') return false;
+  return el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable;
+}
+
 /** Nombres de las teclas especiales (para el autocompletado y las sugerencias). */
 export const NOMBRES_TECLAS = [...TECLAS_CONOCIDAS];
 
@@ -108,6 +115,11 @@ function nombreDesdeEvento(e: KeyboardEvent): string {
 
 export class Entrada {
   /**
+   * ¿Es esta tecla para el juego? Por defecto, sí. El editor lo cambia para
+   * que las teclas que pulsas en la vista de la escena no muevan al jugador.
+   */
+  aceptarTecla: (e: KeyboardEvent) => boolean = () => true;
+  /**
    * Teclas abajo ahora mismo: código físico → nombre.
    * Guardamos el código porque al soltar la tecla el navegador podría darnos
    * otro "key" (si pulsaste Mayús entre medias) y la tecla se quedaría pegada.
@@ -139,6 +151,8 @@ export class Entrada {
     window.addEventListener(
       'keydown',
       (e) => {
+        // Si se está escribiendo en un campo de texto o en el editor de código, la tecla no es para el juego
+        if (esCampoDeTexto(e.target) || !this.aceptarTecla(e)) return;
         if (EVITAR_SCROLL.has(e.code)) e.preventDefault();
         if (e.repeat) return; // Mantener pulsada una tecla repite el evento: lo ignoramos.
         const nombre = nombreDesdeEvento(e);

@@ -1,33 +1,34 @@
 /**
  * Punto de entrada. Elige qué arrancar según la dirección:
- *   http://localhost:5173/           → ejemplo mínimo en Chispa
+ *   http://localhost:5173/           → el EDITOR de Chispa
  *   http://localhost:5173/?demo=1    → demo de la Fase 1 (núcleo)
  *   http://localhost:5173/?demo=2    → demo de la Fase 2 (objetos y componentes)
- * En la Fase 3D esto se sustituirá por la Zona de Programación.
+ *   http://localhost:5173/?demo=0    → el ejemplo mínimo, a pantalla completa
+ *
+ * DECISIÓN: el editor se carga con import() ("carga diferida"). Así las demos
+ * no descargan el editor de código, que es la parte más pesada.
  */
-import './estilos.css';
-import { Motor } from './motor/Motor';
-import { mostrarError } from './motor/Errores';
-import { escribirEnConsola } from './motor/Consola';
-import { ErrorCompilacion, formatearError } from './chispa/errores/ErrorChispa';
-import { demoFase1 } from './demos/demoFase1';
-import { demoFase2 } from './demos/demoFase2';
-import { JuegoEnMarcha } from './proyecto/JuegoEnMarcha';
-import { proyectoMinimo } from './ejemplos/minimo/proyecto';
-
-const canvas = document.querySelector<HTMLCanvasElement>('#lienzo')!;
 const demo = new URLSearchParams(location.search).get('demo');
 
-// Marcar en el menú la opción activa
-document.querySelectorAll<HTMLAnchorElement>('#menu-demos a').forEach((a) => {
-  if ((a.dataset.demo ?? '') === (demo ?? '')) a.classList.add('activo');
-});
-
-async function arrancar(): Promise<void> {
+async function arrancarDemo(): Promise<void> {
+  await import('./estilos.css');
+  const { Motor } = await import('./motor/Motor');
+  const { mostrarError } = await import('./motor/Errores');
+  const { escribirEnConsola } = await import('./motor/Consola');
+  const { ErrorCompilacion, formatearError } = await import('./chispa/errores/ErrorChispa');
+  const canvas = document.querySelector<HTMLCanvasElement>('#lienzo')!;
+  document.getElementById('pagina-demo')!.hidden = false;
+  document.querySelectorAll<HTMLAnchorElement>('#menu-demos a').forEach((a) => {
+    if ((a.dataset.demo ?? '') === demo) a.classList.add('activo');
+  });
   try {
-    if (demo === '1') await demoFase1(new Motor({ canvas }));
-    else if (demo === '2') await demoFase2(new Motor({ canvas }));
-    else await JuegoEnMarcha.arrancar(new Motor({ canvas }), proyectoMinimo);
+    if (demo === '1') await (await import('./demos/demoFase1')).demoFase1(new Motor({ canvas }));
+    else if (demo === '2') await (await import('./demos/demoFase2')).demoFase2(new Motor({ canvas }));
+    else {
+      const { JuegoEnMarcha } = await import('./proyecto/JuegoEnMarcha');
+      const { proyectoMinimo } = await import('./ejemplos/minimo/proyecto');
+      await JuegoEnMarcha.arrancar(new Motor({ canvas }), proyectoMinimo);
+    }
   } catch (error) {
     // Errores de escritura: se enseñan TODOS en la consola
     if (error instanceof ErrorCompilacion) for (const e of error.errores) escribirEnConsola(formatearError(e), 'error');
@@ -35,4 +36,17 @@ async function arrancar(): Promise<void> {
   }
 }
 
-arrancar();
+async function arrancarEditor(): Promise<void> {
+  await import('./editor/editor.css');
+  const { Aplicacion } = await import('./editor/Aplicacion');
+  document.getElementById('pagina-demo')?.remove();
+  const raiz = document.getElementById('editor')!;
+  raiz.hidden = false;
+  const app = new Aplicacion(raiz);
+  await app.recuperar();
+  // Para poder inspeccionarlo desde la consola del navegador (F12) y en las pruebas
+  (window as unknown as { chispa: unknown }).chispa = app;
+}
+
+if (demo !== null) void arrancarDemo();
+else void arrancarEditor();

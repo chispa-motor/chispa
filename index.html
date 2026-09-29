@@ -7,20 +7,25 @@
     <link rel="icon" href="imagenes/estrella.svg" />
   </head>
   <body>
-    <!-- El contenedor ocupa toda la ventana; el lienzo se escala dentro manteniendo la proporción -->
-    <div id="contenedor-juego">
-      <canvas id="lienzo"></canvas>
+    <!-- El editor (la página normal) -->
+    <div id="editor" hidden></div>
+
+    <!-- Las demos (?demo=1, ?demo=2, ?demo=0) -->
+    <div id="pagina-demo" hidden>
+      <div id="contenedor-juego">
+        <canvas id="lienzo"></canvas>
+      </div>
+      <nav id="menu-demos">
+        <a href="./">Editor</a>
+        <a href="?demo=0" data-demo="0">Ejemplo</a>
+        <a href="?demo=1" data-demo="1">Fase 1</a>
+        <a href="?demo=2" data-demo="2">Fase 2</a>
+      </nav>
+      <!-- Lo que escribe "mostrar" en Chispa -->
+      <div id="consola" hidden></div>
+      <!-- Los errores del motor, en español -->
+      <div id="panel-error" hidden></div>
     </div>
-    <!-- Menú para cambiar de demo -->
-    <nav id="menu-demos">
-      <a href="./" data-demo="">Ejemplo Chispa</a>
-      <a href="?demo=1" data-demo="1">Fase 1</a>
-      <a href="?demo=2" data-demo="2">Fase 2</a>
-    </nav>
-    <!-- Lo que escribe "mostrar" en Chispa -->
-    <div id="consola" hidden></div>
-    <!-- Aquí aparecerán los errores del motor, en español -->
-    <div id="panel-error" hidden></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

@@ -1,4 +1,4 @@
-# Ejemplo mínimo de Chispa: eventos, teclado, ratón, sonido, listas, tablas.
+# Ejemplo minimo de Chispa: eventos, teclado, raton, sonido, listas, tablas.
 # Recuerda: la Y crece hacia ARRIBA (subir = sumar a la Y).
 
 variable rapidez = 250

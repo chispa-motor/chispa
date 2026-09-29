@@ -40,9 +40,8 @@ export function globalesDelMotor(): Entorno {
   return globalesCacheadas;
 }
 
-export function revisarProyecto(proyecto: DefProyecto, globales: Entorno = globalesDelMotor()): ResultadoRevision {
-  const r: ResultadoRevision = { programas: new Map(), porArchivo: new Map(), errores: [], avisos: [] };
-  const contexto = {
+function contextoDe(proyecto: DefProyecto, globales: Entorno) {
+  return {
     globales,
     esScript: true,
     plantillas: Object.keys(proyecto.plantillas),
@@ -52,6 +51,18 @@ export function revisarProyecto(proyecto: DefProyecto, globales: Entorno = globa
     animaciones: Object.keys(proyecto.animaciones),
     objetosEscena: nombresDeObjetos(proyecto),
   };
+}
+
+/** Revisa UN script (lo usa el editor mientras escribes). */
+export function revisarScript(archivo: string, codigo: string, proyecto: DefProyecto, globales: Entorno = globalesDelMotor()): Diagnostico[] {
+  const { programa, errores } = analizarSintaxis(codigo, archivo);
+  if (errores.length) return errores.map((e) => e.diagnostico());
+  return analizar(programa, contextoDe(proyecto, globales));
+}
+
+export function revisarProyecto(proyecto: DefProyecto, globales: Entorno = globalesDelMotor()): ResultadoRevision {
+  const r: ResultadoRevision = { programas: new Map(), porArchivo: new Map(), errores: [], avisos: [] };
+  const contexto = contextoDe(proyecto, globales);
 
   for (const [archivo, codigo] of Object.entries(proyecto.scripts)) {
     const { programa, errores } = analizarSintaxis(codigo, archivo);

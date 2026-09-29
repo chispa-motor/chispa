@@ -76,6 +76,24 @@ export class Sonido {
     this.musicaActual = null;
   }
 
+  /** Congela todo el audio (al pulsar Pausa en el editor) sin perder por dónde iba. */
+  pausar(): void {
+    if (this.contexto?.state === 'running') void this.contexto.suspend();
+  }
+
+  reanudar(): void {
+    if (this.contexto?.state === 'suspended') void this.contexto.resume();
+  }
+
+  /** Suelta el audio del navegador (al destruir el motor). */
+  cerrar(): void {
+    this.pararTodo();
+    void this.contexto?.close().catch(() => {});
+    this.contexto = null;
+    this.salida = null;
+    this.salidaMusica = null;
+  }
+
   /** Para todo (al pulsar Parar en el editor). */
   pararTodo(): void {
     this.parar();

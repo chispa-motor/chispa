@@ -64,11 +64,16 @@ export class Renderizador {
   constructor(
     readonly canvas: HTMLCanvasElement,
     /** Ancho lógico del juego. */
-    readonly ancho: number,
+    public ancho: number,
     /** Alto lógico del juego. */
-    readonly alto: number,
+    public alto: number,
     /** true = píxeles nítidos (pixel art), false = imágenes suavizadas. */
     private pixelArt = false,
+    /**
+     * Modo libre (lo usa el editor): el lienzo ocupa TODO su contenedor y el
+     * tamaño lógico es el del contenedor (sin bandas negras ni proporción fija).
+     */
+    private libre = false,
   ) {
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Este navegador no permite dibujar en Canvas 2D.');
@@ -85,6 +90,10 @@ export class Renderizador {
     const contenedor = this.canvas.parentElement ?? document.body;
     const { width, height } = contenedor.getBoundingClientRect();
 
+    if (this.libre) {
+      this.ancho = Math.max(1, Math.floor(width));
+      this.alto = Math.max(1, Math.floor(height));
+    }
     // Escala que hace caber el juego sin deformarlo.
     const escalaCss = Math.max(0.01, Math.min(width / this.ancho, height / this.alto));
     const anchoCss = this.ancho * escalaCss;

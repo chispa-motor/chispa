@@ -73,6 +73,12 @@ export class Motor {
   colorFondo: string;
   /** Escena que se actualiza y dibuja en cada fotograma (Fase 2). */
   escena: EscenaActiva | null = null;
+  /**
+   * Qué hacer si algo falla DENTRO del motor (no en un script: esos los recoge
+   * cada script). Por defecto, el panel de error de la página; el editor lo
+   * cambia para enseñarlo en su consola.
+   */
+  alFallar: (error: unknown) => void = mostrarError;
 
   private actualizadores: FuncionActualizar[] = [];
   private dibujadores: FuncionDibujar[] = [];
@@ -116,6 +122,14 @@ export class Motor {
     cancelAnimationFrame(this.idFotograma);
   }
 
+  /** Para el motor y suelta todo lo que usa (eventos del teclado, sonidos...). No se puede volver a usar. */
+  destruir(): void {
+    this.detener();
+    this.sonido.cerrar();
+    this.entrada.destruir();
+    this.renderizador.destruir();
+  }
+
   /** Quita todas las funciones registradas y la escena (al parar un juego en el editor). */
   limpiarFunciones(): void {
     this.actualizadores = [];
@@ -156,7 +170,7 @@ export class Motor {
     } catch (error) {
       // Si algo falla, paramos el juego y lo explicamos, en vez de repetir el error 60 veces por segundo.
       this.detener();
-      mostrarError(error);
+      this.alFallar(error);
       return;
     } finally {
       // 4. Borrar la entrada de "solo este fotograma"
