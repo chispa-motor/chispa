@@ -117,6 +117,17 @@ export class VistaJuego {
     }
   }
 
+  /** Las variables globales del juego en marcha (para el depurador). */
+  get globales() {
+    return this.juego?.interprete.globales ?? null;
+  }
+
+  /** Pausa (si está jugando) o sigue (si está en pausa), sin alternar: lo usa el depurador. */
+  ponerEnPausa(si: boolean): void {
+    if (si === (this.estadoJuego === 'pausado')) return;
+    if (this.estadoJuego === 'jugando' || this.estadoJuego === 'pausado') this.pausar();
+  }
+
   parar(): void {
     clearInterval(this.intervalo);
     if (this.juego) this.juego.detener();

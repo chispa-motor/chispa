@@ -35,12 +35,17 @@ import { ErrorMotor } from '../motor/Errores';
 import { Componente } from '../objetos/Componente';
 import type { ObjetoJuego } from '../objetos/ObjetoJuego';
 import { normalizar } from '../utilidades/texto';
+import { PeticionParada } from './ejecucion/depurador';
 
 interface Hilo {
   generador: Ejecucion<unknown>;
   /** Si no es null, solo puede haber un hilo vivo con esta clave. */
   clave: string | null;
   despertarEn: number;
+  /** Para el depurador: cuántas funciones hay abiertas (lo lleva el intérprete). */
+  profundidad: number;
+  /** Parado en una línea por el depurador (sigue cuando el depurador lo diga). */
+  enParada: boolean;
 }
 
 interface EventoRegistrado {
@@ -250,22 +255,41 @@ export class ScriptChispa extends Componente {
       }
       yield* interprete.ejecutarBloque(ev.cuerpo, local);
     }
-    this.lanzar(cuerpo(), clave);
+    // Un punto de parada en la línea del «cuando» para en la primera línea de dentro
+    const dep = interprete.depurador;
+    this.lanzar(cuerpo(), clave, !!dep?.tienePunto(this.programa.archivo, ev.pos.linea));
   }
 
   /** Crea un hilo y lo ejecuta YA hasta que termine o se duerma en un esperar(). */
-  private lanzar(generador: Ejecucion<unknown>, clave: string | null): void {
+  private lanzar(generador: Ejecucion<unknown>, clave: string | null, pararAlEmpezar = false): void {
     if (clave && this.hilos.some((h) => h.clave === clave)) return;
-    const hilo: Hilo = { generador, clave, despertarEn: 0 };
+    const hilo: Hilo = { generador, clave, despertarEn: 0, profundidad: 0, enParada: false };
+    if (pararAlEmpezar) this.interprete.depurador?.pararAlEmpezar(hilo);
     if (this.avanzarHilo(hilo)) this.hilos.push(hilo);
   }
 
   /** Avanza un hilo. Devuelve verdadero si se ha quedado dormido (sigue vivo). */
   private avanzarHilo(hilo: Hilo): boolean {
     this.interprete.reiniciarContadorDeVueltas();
-    const r = this.comoObjetoActual(() => hilo.generador.next());
-    if (r.done || this.objeto.destruido) return false;
-    hilo.despertarEn = this.motor.tiempo.total + r.value.segundos;
+    const anterior = this.interprete.hiloActual;
+    this.interprete.hiloActual = hilo;
+    let r: IteratorResult<unknown, unknown>;
+    try {
+      r = this.comoObjetoActual(() => hilo.generador.next());
+    } finally {
+      this.interprete.hiloActual = anterior;
+    }
+    if (r.done || this.objeto.destruido) {
+      this.interprete.depurador?.hiloTerminado(hilo);
+      return false;
+    }
+    if (r.value instanceof PeticionParada) {
+      // El depurador para aquí: el hilo se queda quieto hasta que se pulse Continuar o un paso
+      hilo.enParada = true;
+      this.interprete.depurador?.parar({ archivo: r.value.archivo, linea: r.value.linea, entorno: r.value.entorno, hilo, objeto: this.objeto.nombre });
+      return true;
+    }
+    hilo.despertarEn = this.motor.tiempo.total + (r.value as { segundos: number }).segundos;
     return true;
   }
 
@@ -292,7 +316,10 @@ export class ScriptChispa extends Componente {
     if (this.hilos.length === 0) return;
     const ahora = this.motor.tiempo.total;
     for (const hilo of [...this.hilos]) {
-      if (hilo.despertarEn > ahora || !this.hilos.includes(hilo)) continue;
+      if (hilo.enParada) {
+        if (this.interprete.depurador?.estaParado(hilo)) continue;
+        hilo.enParada = false; // el depurador ya lo ha soltado: sigue ahora mismo
+      } else if (hilo.despertarEn > ahora || !this.hilos.includes(hilo)) continue;
       if (!this.avanzarHilo(hilo)) this.hilos = this.hilos.filter((h) => h !== hilo);
       if (this.objeto.destruido) return;
     }

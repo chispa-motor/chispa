@@ -30,6 +30,8 @@ import { Inspector } from './paneles/Inspector';
 import { PanelInferior } from './paneles/PanelInferior';
 import { PanelIzquierdo } from './paneles/PanelIzquierdo';
 import { Tutorial, conNegritas, marcarTutorialVisto, tutorialVisto } from './tutorial/Tutorial';
+import { Depurador } from '../chispa/ejecucion/depurador';
+import { PanelDepurador } from './paneles/PanelDepurador';
 import { revisarProyecto } from '../proyecto/Revision';
 
 const CLAVE_DISPOSICION = 'chispa-editor:disposicion';
@@ -50,16 +52,21 @@ export class Aplicacion {
   private errores = 0;
   private temporizadorGuardado = 0;
   private guardadoEn: number | null = null;
+  /** Puntos de parada y paso a paso (se guarda aquí: sirve para todas las partidas). */
+  readonly depurador = new Depurador();
+  private panelDepurador: PanelDepurador;
   /** El tutorial guiado, si está abierto. */
   tutorial: Tutorial | null = null;
 
   constructor(private raiz: HTMLElement) {
     const e = this.estado;
     this.vistaEscena = new VistaEscena(e);
-    this.editorCodigo = new EditorCodigo(this.zonaCodigo, e);
+    this.editorCodigo = new EditorCodigo(this.zonaCodigo, e, this.depurador);
+    this.panelDepurador = new PanelDepurador(this.depurador, () => this.vistaJuego.globales, (archivo, linea) => this.irA(archivo, linea, 1));
     this.inspector = new Inspector(e, this.vistaEscena);
     this.izquierdo = new PanelIzquierdo(e, this.vistaEscena);
-    this.inferior = new PanelInferior(e, (archivo, linea, columna) => this.irA(archivo, linea, columna));
+    this.inferior = new PanelInferior(e, (archivo, linea, columna) => this.irA(archivo, linea, columna), this.panelDepurador.elemento);
+    this.conectarDepurador();
     this.zonaEscena.append(this.vistaEscena.elemento);
 
     this.montar();
@@ -227,7 +234,7 @@ export class Aplicacion {
     const j = this.vistaJuego.estadoJuego;
     const enMarcha = j === 'jugando' || j === 'pausado' || j === 'cargando';
     const ejecutar = botonIcono('jugar', this.errores ? `Hay ${this.errores} ${this.errores === 1 ? 'error' : 'errores'} en el código: arréglalos para poder ejecutar (F5)` : enMarcha ? 'Volver a empezar el juego (F5)' : 'Ejecutar el juego (F5)', () => this.ejecutar(), enMarcha ? 'Reiniciar' : 'Ejecutar', `ejecutar ${this.errores ? 'bloqueado' : ''}`);
-    const pausar = botonIcono(j === 'pausado' ? 'reproducir' : 'pausa', j === 'pausado' ? 'Seguir jugando' : 'Pausar el juego', () => this.vistaJuego.pausar(), j === 'pausado' ? 'Seguir' : 'Pausar', 'pausar');
+    const pausar = botonIcono(j === 'pausado' ? 'reproducir' : 'pausa', j === 'pausado' ? 'Seguir jugando' : 'Pausar el juego', () => (this.depurador.parada ? this.depurador.continuar() : this.vistaJuego.pausar()), j === 'pausado' ? 'Seguir' : 'Pausar', 'pausar');
     const parar = botonIcono('parar', 'Parar el juego (Mayús+F5)', () => this.parar(), 'Parar', 'parar');
     pausar.disabled = !(j === 'jugando' || j === 'pausado');
     parar.disabled = !enMarcha;
@@ -297,6 +304,7 @@ export class Aplicacion {
   // ═════════════════════════ Jugar ═════════════════════════
 
   async ejecutar(): Promise<void> {
+    this.olvidarParada();
     const c = this.inferior;
     c.revisar();
     c.limpiar();
@@ -304,6 +312,7 @@ export class Aplicacion {
     try {
       await this.vistaJuego.ejecutar(this.estado.proyecto, {
         alMostrar: (t) => c.mostrar(t),
+        depurador: this.depurador,
         alError: (err, veces) => c.diagnostico(err.diagnostico(), veces),
         alAviso: (avisos) => avisos.forEach((a) => c.diagnostico(a)),
         alFallar: (err) => this.falloDelMotor(err),
@@ -329,7 +338,35 @@ export class Aplicacion {
     this.inferior.mostrarPestana('consola');
   }
 
+  /** Qué hace el editor cuando el juego se para en una línea, y cuando sigue. */
+  private conectarDepurador(): void {
+    const d = this.depurador;
+    d.alParar = (p) => {
+      this.vistaJuego.ponerEnPausa(true);
+      this.irA(p.archivo, p.linea, 1);
+      this.editorCodigo.mostrarParada(p.archivo, p.linea);
+      this.panelDepurador.dibujar();
+      this.inferior.avisarParada(true);
+    };
+    d.alSeguir = () => {
+      this.editorCodigo.mostrarParada(null);
+      this.panelDepurador.dibujar();
+      this.inferior.avisarParada(false);
+      this.vistaJuego.ponerEnPausa(false);
+    };
+  }
+
+  /** Si el juego estaba parado en una línea, se olvida (al parar o volver a empezar). */
+  private olvidarParada(): void {
+    if (!this.depurador.parada) return;
+    this.depurador.olvidar();
+    this.editorCodigo.mostrarParada(null);
+    this.inferior.avisarParada(false);
+    this.panelDepurador.dibujar();
+  }
+
   parar(): void {
+    this.olvidarParada();
     if (this.vistaJuego.estadoJuego === 'parado') return;
     this.vistaJuego.parar();
     this.inferior.info('⏹ Juego parado.');
@@ -463,6 +500,8 @@ export class Aplicacion {
         [
           [[tecla('F5')], 'Ejecutar / reiniciar el juego'],
           [[tecla('Mayús'), '+', tecla('F5')], 'Parar el juego'],
+          [['Clic en el número de una línea'], 'Poner o quitar un punto de parada (el juego se para ahí)'],
+          [[tecla('F8'), ' ', tecla('F10'), ' ', tecla('F11')], 'Depurar: continuar · siguiente línea · entrar en función'],
           [[tecla('Ctrl'), '+', tecla('Z'), ' / ', tecla('Ctrl'), '+', tecla('Y')], 'Deshacer / rehacer (cualquier cambio en la escena o el proyecto)'],
           [[tecla('Ctrl'), '+', tecla('S')], 'Guardar (descargar el proyecto)'],
           [[tecla('Ctrl'), '+', tecla('D')], 'Duplicar lo seleccionado'],
@@ -500,6 +539,14 @@ export class Aplicacion {
       const k = ev.key.toLowerCase();
       if (document.querySelector('.dialogo-fondo')) return;
 
+      // Depurador: F8 continuar, F10 siguiente línea, F11 entrar en función (solo si está parado)
+      if (this.depurador.parada && (ev.key === 'F8' || ev.key === 'F10' || ev.key === 'F11')) {
+        ev.preventDefault();
+        if (ev.key === 'F8') this.depurador.continuar();
+        else if (ev.key === 'F10') this.depurador.siguienteLinea();
+        else this.depurador.entrar();
+        return;
+      }
       if (ev.key === 'F5') {
         ev.preventDefault();
         if (ev.shiftKey) this.parar();

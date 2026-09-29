@@ -129,6 +129,8 @@ export abstract class Anfitrion {
   }
   /** Si representa un objeto del juego, el objeto (para saber si se ha destruido). */
   objetoDelJuego?(): { destruido: boolean } | null;
+  /** Lo que el depurador enseña de este objeto: [nombre, valor]. */
+  resumenParaDepurar?(): [string, Valor][];
 }
 
 /**

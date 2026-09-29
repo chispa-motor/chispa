@@ -17,6 +17,7 @@ import { Sonido } from '../src/motor/Sonido';
 import { Vector2 } from '../src/motor/Vector2';
 import type { EscenaActiva, Motor } from '../src/motor/Motor';
 import { JuegoEnMarcha } from '../src/proyecto/JuegoEnMarcha';
+import type { Depurador } from '../src/chispa/ejecucion/depurador';
 import type { DefEscena, DefObjeto, DefProyecto } from '../src/proyecto/formato';
 import type { DefAnimacion } from '../src/objetos/componentes/Animador';
 
@@ -145,6 +146,7 @@ export interface OpcionesJuegoPrueba {
   sonidos?: Record<string, string>;
   imagenes?: Record<string, string>;
   gravedad?: number;
+  depurador?: Depurador;
 }
 
 export function juegoDePrueba(opciones: OpcionesJuegoPrueba) {
@@ -180,6 +182,7 @@ export function juegoDePrueba(opciones: OpcionesJuegoPrueba) {
       else errores.push({ error, veces });
     },
     alAviso: (a) => avisos.push(...a),
+    depurador: opciones.depurador,
   });
   const buscar = (nombre: string) => {
     const o = juego.escena.buscar(nombre);

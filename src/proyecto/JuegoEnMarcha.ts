@@ -34,6 +34,7 @@ import { comprobarRevision, revisarProyecto } from './Revision';
 import { fuenteDeTexto, plantillaDeTexto, tieneHuecos } from './TextosConHuecos';
 import { Entorno } from '../chispa/ejecucion/entorno';
 import { referencia } from '../chispa/api/objetos';
+import type { Depurador } from '../chispa/ejecucion/depurador';
 
 export interface OpcionesJuego {
   /** Qué hacer con mostrar(). Por defecto, la consola de la página. */
@@ -48,6 +49,8 @@ export interface OpcionesJuego {
   alAviso?: (avisos: Diagnostico[]) => void;
   /** Dónde se guardan los datos del jugador (guardar/cargar). Por defecto, el localStorage del navegador. */
   almacen?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
+  /** El depurador del editor (puntos de parada, paso a paso). Fuera del editor no hay. */
+  depurador?: Depurador;
 }
 
 /** Lo que hay que hacer al empezar el siguiente fotograma. `espera`: segundos que faltan (mientras se oscurece la pantalla). */
@@ -81,6 +84,7 @@ export class JuegoEnMarcha implements ContextoJuego {
     this.interprete.nombresDeObjetos = () => [...new Set(this.escena.objetos.map((o) => o.nombre))];
     instalarAPIMotor(this.interprete, this, this.datos);
     this.interprete.alErrorVivo = (e) => this.informarError(e);
+    this.interprete.depurador = opciones.depurador ?? null;
   }
 
   /** Carga las imágenes y sonidos del proyecto (rutas o "data URL"). */

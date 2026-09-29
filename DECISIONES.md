@@ -225,3 +225,18 @@ Ver PROBLEMAS_PRINCIPIANTE.md para la lista completa de lo que se encontró.
 | `para cada i, x en lista:` da **la posición y el valor**. Antes era un error. | Recorrer con la posición es de lo más pedido («el enemigo número 3»). La forma de dos nombres ya existía para las tablas. |
 | `texto(3.5, 2)` da `"3.50"`: **siempre esos decimales**. | Para marcadores de tiempo que no bailan (3.5, 3.48, 3.5…). |
 | Ángulos siempre en **grados** (también `tangente` y `angulo`), con **0 = derecha y 90 = arriba**. | Es lo que se aprende en el colegio, y ya era así en el resto del motor. |
+
+### Depurador (noche, bloque 1)
+
+| Decisión | Por qué |
+|---|---|
+| Un punto de parada se pone **haciendo clic en el número de la línea** (sale un punto rojo); otro clic lo quita. Si escribes líneas encima, el punto se mueve con su línea. | Es donde lo ponen todos los editores (VS Code, Roblox Studio), y no hay que aprender ningún menú. |
+| El juego se para **justo antes** de la línea del punto. Esa línea (la siguiente que se va a ejecutar) se resalta en amarillo. | Así se ven los valores de ANTES de la línea, que es lo que se quiere mirar para entender por qué algo sale mal. |
+| Un punto en la línea de un **«cuando»** para en su primera línea de dentro. | El «cuando» no se ejecuta como tal; es lo que quiere decir quien lo pone ahí. |
+| Tres botones con nombre en español: **Continuar** (F8), **Siguiente línea** (F10) y **Entrar en función** (F11). Son las teclas de Visual Studio. | «Paso por encima» y «paso a paso» (*step over*, *step into*) son palabras que no dicen nada a quien empieza. |
+| Los pasos van siempre por el **mismo evento**: si mientras tanto ocurren otros eventos, no se para en ellos (salvo que tengan un punto de parada). | Si no, «Siguiente línea» saltaría a otro script y parecería que el depurador se ha vuelto loco. |
+| Por dentro, parar es que el HILO del evento se queda quieto (como en un `esperar()` sin fin) y el juego se pone en pausa. | Los hilos ya sabían pararse a medias: no ha hecho falta cambiar cómo se ejecuta nada. Si no hay puntos de parada, no cuesta nada. |
+| El resto del fotograma en el que se para (la física, otros objetos) **termina** antes de pausar. | Cortar un fotograma a medias podría dejar el juego en un estado imposible. Solo el evento parado se queda quieto. |
+| El panel **Depurar** enseña las variables agrupadas: las de aquí, las de los bloques de fuera, las del script y lo más útil de **yo** (dónde está, su velocidad y sus propiedades propias). Las funciones y las cosas del motor (teclado, crear…) no salen. | Lo que se quiere mirar es lo del propio código; cien cosas del motor lo taparían. |
+| Los puntos de parada **no se guardan en el proyecto**. Duran mientras el editor está abierto. | Son una herramienta para mirar, no parte del juego; y así un juego exportado nunca se para. |
+| El botón **Pausa / Seguir** de arriba, estando parado en una línea, hace lo mismo que Continuar. | Es el botón que tiene más a mano quien no sabe que existe el panel. |

@@ -8,6 +8,7 @@
  *   - PROBLEMAS: los errores y avisos de TODOS los scripts, revisados
  *     mientras escribes (sin tener que pulsar Ejecutar).
  *   - GUÍA: toda la documentación de Chispa, con buscador.
+ *   - DEPURAR: dónde está parado el juego y lo que valen las variables.
  */
 import { DOC_ESPECIALES, DOC_EVENTOS, DOC_FUNCIONES, DOC_MODULOS, DOC_OBJETO, DOC_PALABRAS, DOC_VALORES, RECETAS, type Doc, type Receta } from '../../chispa/api/documentacion';
 import { explicarPila, type Diagnostico } from '../../chispa/errores/ErrorChispa';
@@ -17,7 +18,7 @@ import type { EstadoEditor } from '../estado/EstadoEditor';
 import { botonIcono, h, icono, rellenar } from '../interfaz/dom';
 import { notificar } from '../interfaz/dialogos';
 
-type Pestana = 'consola' | 'problemas' | 'guia';
+type Pestana = 'consola' | 'problemas' | 'guia' | 'depurar';
 type IrA = (archivo: string, linea: number, columna: number) => void;
 
 const MAXIMO_MENSAJES = 500;
@@ -42,11 +43,16 @@ export class PanelInferior {
   /** Se llama cuando cambian los problemas (para desactivar Ejecutar si hay errores). */
   alCambiarProblemas: (errores: number) => void = () => {};
 
+  /** ¿Está el juego parado en un punto de parada? (la pestaña Depurar se marca) */
+  private parado = false;
+
   constructor(
     private estado: EstadoEditor,
     private irA: IrA,
+    /** El contenido de la pestaña Depurar (el PanelDepurador). */
+    private depurar: HTMLElement = h('div'),
   ) {
-    this.elemento = h('div', { class: 'panel-inferior' }, this.pestanas, this.consola, this.problemas, this.guia);
+    this.elemento = h('div', { class: 'panel-inferior' }, this.pestanas, this.consola, this.problemas, this.guia, this.depurar);
     estado.alCambiar((c) => {
       if (c === 'codigo' || c === 'scripts' || c === 'objetos' || c === 'proyecto' || c === 'recursos' || c === 'escena' || c === 'archivos') this.revisarLuego();
     });
@@ -71,12 +77,21 @@ export class PanelInferior {
       pestana('problemas', 'aviso', 'Problemas',
         errores || avisos ? h('span', { class: `contador ${errores ? 'error' : 'aviso'}` }, String(errores || avisos)) : null),
       pestana('guia', 'ayuda', 'Guía'),
+      pestana('depurar', 'pausa', 'Depurar', this.parado ? h('span', { class: 'contador parado', title: 'El juego está parado en un punto de parada' }, '●') : null),
       h('span', { class: 'espacio' }),
       this.pestana === 'consola' ? botonIcono('basura', 'Limpiar la consola', () => this.limpiar(), undefined, 'pequeno') : null,
     );
     this.consola.hidden = this.pestana !== 'consola';
     this.problemas.hidden = this.pestana !== 'problemas';
     this.guia.hidden = this.pestana !== 'guia';
+    this.depurar.hidden = this.pestana !== 'depurar';
+  }
+
+  /** El juego se ha parado en un punto de parada (o ha seguido). */
+  avisarParada(parado: boolean): void {
+    this.parado = parado;
+    if (parado) this.mostrarPestana('depurar');
+    else this.dibujarPestanas();
   }
 
   // ═════════════════════════ Consola ═════════════════════════

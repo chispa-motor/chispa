@@ -645,6 +645,15 @@ export class RefObjeto extends Anfitrion {
     return this.objeto;
   }
 
+  resumenParaDepurar(): [string, Valor][] {
+    const o = this.objeto;
+    const filas: [string, Valor][] = [['nombre', o.nombre], ['x', o.posicion.x], ['y', o.posicion.y]];
+    const f = o.obtener(Fisica);
+    if (f) filas.push(['velocidad', f.velocidad.copiar()]);
+    for (const p of this.propias().values()) filas.push([p.original, p.valor]);
+    return filas;
+  }
+
   private propias(): Map<string, PropiedadPropia> {
     return this.objeto.propiedades as Map<string, PropiedadPropia>;
   }

@@ -278,6 +278,39 @@ await prueba('los comandos nuevos se dibujan en el juego de verdad (animar, fund
   comprobar(r.alfa === 1 && r.escala === 2 && r.color === 'rojo', 'no ha hecho lo que se pedía: ' + JSON.stringify(r));
 });
 
+await prueba('depurar: clic en el número de línea, el juego se para, se ven las variables y se va paso a paso', async (p) => {
+  const codigo = 'variable vueltas = 0\ncuando cada fotograma:\n    vueltas += 1\n    variable doble = vueltas * 2\n    yo.x += 1\n';
+  await estado(p, (c) => {
+    window.chispa.estado.cambiarCodigo('cuadrado.chs', c);
+    window.chispa.estado.abrirScript('cuadrado.chs');
+  }, codigo);
+  await p.waitForTimeout(200);
+  const numero = (n) => p.locator('.zona-codigo .cm-editor:not([style*="none"]) .cm-lineNumbers .cm-gutterElement', { hasText: new RegExp('^' + n + '$') });
+  await numero(4).click();
+  await p.waitForSelector('.cm-gutter-puntos .cm-gutterElement:not([style*="hidden"]) .punto-parada');
+  await p.keyboard.press('F5');
+  await p.waitForSelector('.estado-depuracion.parado', { timeout: 5000 });
+  const variables = async () => estado(p, () => Object.fromEntries([...document.querySelectorAll('.variables-depuracion tr')].map((tr) => [tr.children[0].textContent, tr.children[1].textContent])));
+  let v = await variables();
+  comprobar(v.vueltas === '1' && v.doble === undefined, 'variables al parar en la línea 4: ' + JSON.stringify(v));
+  comprobar(await p.$('.cm-linea-parada'), 'no se resalta la línea donde está parado');
+  comprobar((await textoDe(p, '.estado-juego')).startsWith('En pausa'), 'el juego no se ha puesto en pausa');
+  await p.keyboard.press('F10');
+  await p.waitForFunction(() => document.querySelector('.estado-depuracion')?.textContent.includes('línea 5'));
+  v = await variables();
+  comprobar(v.doble === '2', 'después de un paso, doble debería valer 2: ' + JSON.stringify(v));
+  await p.keyboard.press('F8');
+  await p.waitForFunction(() => document.querySelector('.estado-depuracion')?.textContent.includes('línea 4'));
+  v = await variables();
+  comprobar(v.vueltas === '2', 'al continuar, debería parar otra vez en la 4 con vueltas = 2: ' + JSON.stringify(v));
+  // Quitar el punto y continuar: el juego sigue sin pararse
+  await numero(4).click();
+  await p.click('.botones-depuracion button:has-text("Continuar")');
+  await p.waitForTimeout(400);
+  comprobar((await textoDe(p, '.estado-juego')).startsWith('Jugando'), 'al quitar el punto y continuar, el juego tendría que seguir');
+  comprobar(!(await p.$('.cm-linea-parada')), 'sigue resaltada la línea');
+});
+
 await prueba('los errores se subrayan mientras escribes y bloquean Ejecutar', async (p) => {
   await p.click('.nodo.hijo');
   await p.click('.cm-content');

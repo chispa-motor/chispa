@@ -388,3 +388,21 @@ kbd { display: inline-block; padding: 1px 6px; border-radius: 4px; border: 1px s
 .botones-publicar .espacio { flex: 1; }
 a.boton { text-decoration: none; display: inline-flex; align-items: center; }
 @media (max-width: 700px) { .opciones-publicar { grid-template-columns: 1fr; } }
+
+/* ═════════ Depurador ═════════ */
+.punto-parada { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #ff5f56; box-shadow: 0 0 0 2px #ff5f5640; vertical-align: middle; }
+.cm-gutter-puntos .cm-gutterElement { display: flex; align-items: center; justify-content: center; }
+.panel-depurador { padding: 10px 12px; overflow: auto; height: 100%; box-sizing: border-box; }
+.estado-depuracion { display: flex; gap: 8px; align-items: flex-start; color: var(--texto-suave); line-height: 1.5; }
+.estado-depuracion.parado { color: var(--texto); background: #ffcb6b14; border: 1px solid #ffcb6b55; border-radius: 6px; padding: 8px 10px; }
+.estado-depuracion svg { flex: none; margin-top: 2px; color: var(--aviso); }
+.botones-depuracion { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
+.variables-depuracion { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.variables-depuracion h4, .lista-puntos-parada h4 { margin: 4px 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--texto-tenue); }
+.variables-depuracion table { width: 100%; border-collapse: collapse; font: 13px var(--letra-codigo); }
+.variables-depuracion td { padding: 3px 6px; border-bottom: 1px solid var(--borde); vertical-align: top; }
+.variables-depuracion td.nombre { color: #89ddff; white-space: nowrap; }
+.variables-depuracion td.valor { color: #c3e88d; word-break: break-word; }
+.lista-puntos-parada { margin-top: 12px; }
+.fila-punto { display: flex; align-items: center; gap: 8px; }
+.contador.parado { color: var(--aviso); background: transparent; }

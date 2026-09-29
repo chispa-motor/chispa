@@ -45,13 +45,14 @@ import {
   type Valor,
 } from './valores';
 import { instalarBasicas } from '../api/basicas';
+import { PeticionParada, type Depurador, type HiloDepurable } from './depurador';
 import { ErrorMotor } from '../../motor/Errores';
 import { Vector2 } from '../../motor/Vector2';
 
 /** Lo que devuelve un bloque: nada, o una orden de salir de un bucle o de una función. */
 type Senal = { tipo: 'devolver'; valor: Valor } | { tipo: 'romper' } | { tipo: 'continuar' } | undefined;
-/** Un cálculo que puede pausarse con esperar(). */
-export type Ejecucion<T> = Generator<PeticionEspera, T, void>;
+/** Un cálculo que puede pausarse con esperar() (o pararse en una línea, con el depurador). */
+export type Ejecucion<T> = Generator<PeticionEspera | PeticionParada, T, void>;
 
 /**
  * Máximo de vueltas de bucle sin ninguna pausa. Si un `mientras verdadero:`
@@ -99,6 +100,10 @@ export class Interprete {
   nombresDeObjetos: () => string[] = () => [];
 
   private vueltas = 0;
+  /** El depurador del editor (null al jugar fuera del editor: entonces no cuesta nada). */
+  depurador: Depurador | null = null;
+  /** El hilo que se está ejecutando ahora (lo pone ScriptChispa), para los pasos del depurador. */
+  hiloActual: HiloDepurable | null = null;
 
   constructor() {
     // mostrar, esperar, matemáticas, textos... (las que no necesitan el motor)
@@ -121,6 +126,11 @@ export class Interprete {
   }
 
   private *ejecutar(s: Sentencia, ent: Entorno): Ejecucion<Senal> {
+    // ¿Hay que pararse en esta línea? (punto de parada, o yendo paso a paso)
+    const dep = this.depurador;
+    if (dep?.activo && this.programaActual && s.tipo !== 'Funcion' && s.tipo !== 'Cuando') {
+      if (dep.debeParar(this.programaActual.archivo, s.pos.linea, this.hiloActual)) yield new PeticionParada(this.programaActual.archivo, s.pos.linea, ent);
+    }
     switch (s.tipo) {
       case 'Variable': {
         const valor = yield* this.evaluar(s.valor, ent);
@@ -470,6 +480,9 @@ export class Interprete {
       }
       const local = new Entorno(funcion.entorno);
       def.parametros.forEach((p, i) => local.declarar(p.nombre, copiarSiVector(args[i]), p.original));
+      // Para el depurador: «siguiente línea» no se mete dentro de las funciones
+      const hilo = this.hiloActual;
+      if (hilo) hilo.profundidad++;
       try {
         const senal = yield* this.ejecutarBloque(def.cuerpo, local);
         return senal?.tipo === 'devolver' ? senal.valor : null;
@@ -477,6 +490,8 @@ export class Interprete {
         // El error "atraviesa" esta función: apuntamos desde dónde se la llamó (pila de llamadas)
         if (error instanceof ErrorChispa) error.agregarLlamada(def.original, pos);
         throw error;
+      } finally {
+        if (hilo) hilo.profundidad--;
       }
     }
 

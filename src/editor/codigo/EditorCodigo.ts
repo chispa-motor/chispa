@@ -17,7 +17,6 @@ import {
   highlightActiveLineGutter,
   highlightSpecialChars,
   keymap,
-  lineNumbers,
   rectangularSelection,
 } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
@@ -29,6 +28,8 @@ import type { EstadoEditor } from '../estado/EstadoEditor';
 import { coloresChispa, lenguajeChispa, sangriaChispa, sangriaEscritaAMano } from './lenguajeChispa';
 import { fuenteAutocompletado } from './autocompletado';
 import { ayudaAlPasar, posicionEnDocumento, revisionEnVivo } from './ayudaYErrores';
+import { marcarParada, puntosDeParada } from './puntosDeParada';
+import type { Depurador } from '../../chispa/ejecucion/depurador';
 
 /** Los textos de CodeMirror, en español. */
 const FRASES = EditorState.phrases.of({
@@ -82,6 +83,9 @@ const TEMA = EditorView.theme(
     '.cm-panels': { backgroundColor: '#1b2030', color: '#e6e9f0' },
     '.cm-panels input, .cm-panels button': { fontFamily: 'var(--letra-interfaz)' },
     '.cm-searchMatch': { backgroundColor: '#ffcb6b40' },
+    '.cm-gutter-puntos': { width: '14px', cursor: 'pointer' },
+    '.cm-lineNumbers .cm-gutterElement': { cursor: 'pointer' },
+    '.cm-linea-parada': { backgroundColor: '#ffcb6b33', boxShadow: 'inset 3px 0 0 #ffcb6b' },
   },
   { dark: true },
 );
@@ -99,12 +103,16 @@ export class EditorCodigo {
   constructor(
     private contenedor: HTMLElement,
     private estado: EstadoEditor,
+    /** Donde se guardan los puntos de parada (los usa el juego al ejecutarse). */
+    private depurador: Depurador | null = null,
   ) {}
 
   private extensiones(archivo: { nombre: string }): Extension[] {
     const proyecto = () => this.estado.proyecto;
+    const dep = this.depurador;
     return [
-      lineNumbers(),
+      // Los números de línea (y a su izquierda, los puntos de parada: clic para ponerlos)
+      puntosDeParada(dep?.lineasCon(archivo.nombre) ?? [], (lineas) => dep?.ponerPuntos(archivo.nombre, lineas)),
       highlightActiveLineGutter(),
       highlightSpecialChars(),
       history(),
@@ -140,6 +148,18 @@ export class EditorCodigo {
         this.escribiendo = false;
       }),
     ];
+  }
+
+  /**
+   * Resalta la línea donde está parado el juego (y la enseña). null = ya no está parado:
+   * se quita el resaltado de todos los scripts.
+   */
+  mostrarParada(archivo: string | null, linea = 0): void {
+    for (const [nombre, p] of this.pestanas) {
+      const aqui = nombre === archivo;
+      p.vista.dispatch({ effects: marcarParada.of(aqui ? linea : null) });
+    }
+    if (archivo) this.irA(archivo, linea, 1);
   }
 
   /** Enseña un script (creando su pestaña si hace falta). */
