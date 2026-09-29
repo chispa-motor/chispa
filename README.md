@@ -14,9 +14,12 @@ Se abre el navegador en http://localhost:5173 con el **editor**.
 
 Otros comandos:
 
-- `npm run pruebas` → ejecuta los tests automáticos (lenguaje, errores, motor, editor y exportación).
+- `npm run pruebas` → ejecuta los tests automáticos (lenguaje, errores, motor, editor, manual y exportación).
 - `npm run pruebas:vigilar` → igual, pero los repite cada vez que guardas un archivo.
+- `npm run pruebas:navegador` → abre el editor en un navegador de verdad y lo usa como una persona (ejecutar, pintar, exportar, 500 objetos...). La primera vez: `npx playwright install chromium`.
 - `npm run build` → comprueba los tipos y compila todo en `dist/` (se puede subir a cualquier web).
+- `npm run manual` → vuelve a generar MANUAL_CHISPA.md a partir de la ayuda del editor.
+- `npm run lineas` → cuenta las líneas del proyecto por partes.
 
 Las demos de las primeras fases siguen en `?demo=1`, `?demo=2` y `?demo=0` (el ejemplo mínimo a pantalla completa).
 
@@ -41,7 +44,12 @@ src/
 ├── ejemplos/     Ejemplo mínimo en Chispa
 └── demos/        Demos de las fases 1 y 2
 pruebas/          Tests automáticos (Vitest)
+pruebas-navegador/ Pruebas en un navegador de verdad (Playwright)
+herramientas/     Contar líneas
 ```
 
-- La definición del lenguaje está en **ESPECIFICACION_CHISPA.md**.
-- Las decisiones de diseño (y por qué) están en **DECISIONES.md**.
+- **MANUAL_CHISPA.md**: todo el lenguaje y la API, con un ejemplo de cada cosa.
+- **ESPECIFICACION_CHISPA.md**: la definición del lenguaje (reglas y decisiones).
+- **DECISIONES.md**: las decisiones de diseño y por qué.
+- **PROBLEMAS_PRINCIPIANTE.md**: lo que se encontró (y arregló) haciendo juegos como alguien que empieza.
+- **INFORME_REVISION.md**: el estado de cada parte, con sus tests.

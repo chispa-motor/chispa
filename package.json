@@ -13,7 +13,8 @@
     "pruebas": "vitest run",
     "pruebas:vigilar": "vitest",
     "lineas": "node herramientas/contar-lineas.mjs",
-    "pruebas:navegador": "npm run build && node pruebas-navegador/editor.mjs"
+    "pruebas:navegador": "npm run build && node pruebas-navegador/editor.mjs",
+    "manual": "vitest run pruebas/manual.test.ts -u"
   },
   "devDependencies": {
     "happy-dom": "^20.14.5",

@@ -1,4 +1,4 @@
-# Especificación del lenguaje Chispa · v0.5
+# Especificación del lenguaje Chispa · v0.6
 
 Chispa es un lenguaje de programación en español para crear videojuegos 2D dentro del motor Chispa.
 Los archivos llevan la extensión `.chs`. Cada objeto de la escena puede tener un script.
@@ -191,6 +191,7 @@ cuando toco:                       # con cualquier cosa
 cuando hago clic:                  # clic en cualquier sitio de la pantalla del juego
 cuando hago clic encima:           # clic ENCIMA de este objeto (botones)
 cuando termina la animacion:       # al acabar una animación que no se repite
+cuando salgo de la pantalla:       # al dejar de verse (solo si antes se veía)
 ```
 
 - Dentro de `cuando toco`, **`otro`** es el objeto tocado y **`casilla`** es el tipo de casilla (o `nulo` si no era un mapa).
@@ -210,89 +211,22 @@ cuando termina la animacion:       # al acabar una animación que no se repite
 
 ## 8. API del motor
 
-La forma oficial es **sin tildes**. Con tilde también funciona, pero el motor nunca la sugiere.
-En el editor, todo lo que aparece aquí tiene ayuda al pasar el ratón y está en la pestaña **Guía**.
+La referencia completa de la API (cada función, propiedad, acción y módulo, con su explicación y un ejemplo) está en **MANUAL_CHISPA.md**. Ese manual se genera a partir de las mismas fichas que la ayuda del editor, así que nunca se contradicen. Aquí solo van las reglas generales.
 
-### Variables especiales
-
-| Nombre | Qué es |
-|---|---|
-| `yo` | El objeto al que pertenece el script. |
-| `otro` | Dentro de `cuando toco`: el objeto tocado. |
-| `casilla` | Dentro de `cuando toco`: el tipo de casilla tocada (o `nulo`). |
-| `juego` | Datos compartidos por todos los scripts: `juego.puntos = 0`. **Se conservan** al cambiar de escena y al reiniciar. |
-| `delta` | Segundos desde el fotograma anterior (unos 0,016). Multiplica las velocidades por `delta`. |
-
-### Objetos: `yo`, `otro` y los que devuelven `crear` y `buscar`
-
-| Propiedad | Qué es |
-|---|---|
-| `nombre`, `tipo`, `destruido` | Datos del objeto. El tipo suele ser la plantilla de la que salió. |
-| `x`, `y`, `posicion` | Su centro. **La Y crece hacia arriba.** |
-| `rotacion` (grados), `escala` | Giro (positivo = contrario a las agujas del reloj) y tamaño (1 = normal). |
-| `velocidad`, `gravedad`, `rozamiento`, `rebote`, `masa`, `estatico` | Física. Rozamiento y rebote van de 0 a 1. |
-| `enSuelo`, `tocaPared`, `tocaTecho` | Solo se leen; los calcula la física. |
-| `solido`, `fantasma` | Un fantasma se atraviesa, pero avisa con `cuando toco` (monedas, metas, zonas). |
-| `color`, `visible`, `ancho`, `alto`, `opacidad`, `voltear`, `capa`, `imagen` | Aspecto. |
-| `texto`, `tamaño`, `colorTexto`, `fijo` | Textos y botones. `fijo` = pegado a la pantalla (interfaz). |
-| `animacion`, `ratonEncima` | La animación actual; si el ratón está encima (para resaltar botones). |
-
-**Acciones:**
-
-| Acción | Qué hace |
-|---|---|
-| `yo.saltar(fuerza)` | Salta, solo si está en el suelo. Devuelve si ha saltado. |
-| `yo.mover(x, y)`, `yo.rotar(grados)` | Mueve y gira. |
-| `yo.empujar(x, y)` | Un golpe: cambia la velocidad según la masa. |
-| `yo.moverHacia(destino, rapidez)` | Avanza hacia un objeto o posición sin pasarse. Devuelve `verdadero` al llegar. |
-| `yo.mirarA(destino)`, `yo.direccionA(destino)` | Mirar hacia algo; vector de largo 1 hacia algo (para disparar). |
-| `yo.distanciaA(otro)` | Distancia en píxeles. |
-| `yo.animar("nombre")`, `yo.pararAnimacion()` | Animaciones por fotogramas. |
-| `yo.destruir()` | Quita el objeto del juego. |
-
-**Propiedades propias:** puedes inventarte las tuyas (`yo.vida = 100`) o ponerlas en el editor con un valor inicial.
-
-**Mapas de casillas** (objetos con un mapa, pintado en el editor):
-
-| Acción | Qué hace |
-|---|---|
-| `mapa.casilla(columna, fila)` | El tipo de una casilla, o `nulo`. |
-| `mapa.ponerCasilla(columna, fila, "tipo")`, `mapa.quitarCasilla(columna, fila)` | Cambiar casillas mientras se juega. |
-| `mapa.casillaEn(x, y)`, `mapa.columnaEn(x)`, `mapa.filaEn(y)` | Qué casilla hay en un punto del mundo. |
-| `mapa.centroDeCasilla(columna, fila)` | El centro de una casilla (vector). |
-
-### Funciones
-
-| Función | Qué hace |
-|---|---|
-| `mostrar(a, b, ...)` | Escribe en la consola. Los paréntesis son obligatorios. |
-| `esperar(segundos)` | Pausa el evento actual. Sin número, un fotograma. |
-| `crear("Plantilla", x, y)` | Crea un objeto a partir de una plantilla y lo devuelve. |
-| `destruir(objeto)` | Quita un objeto. |
-| `buscar("Nombre")`, `buscarTodos("Tipo")` | Busca objetos. `buscar` da `nulo` si no encuentra nada. |
-| `distancia(a, b)` | Entre dos objetos o posiciones. |
-| `particulas("tipo", x, y)` | Efectos: `"explosion"`, `"humo"`, `"chispas"`, `"polvo"`, `"confeti"`, `"estrellas"`. También con una tabla: `{tipo: "humo", color: "verde", cantidad: 30}`. |
-| `guardar("clave", valor)`, `cargar("clave", porDefecto)`, `borrarGuardado("clave")` | Datos del jugador que se conservan al cerrar el juego (récords, niveles). Cada proyecto guarda los suyos. |
-| `aleatorio(min, max)`, `elegir(lista)`, `probabilidad(porcentaje)` | Azar. `aleatorio()` sin nada da un decimal entre 0 y 1. |
-| `redondear`, `absoluto`, `raiz`, `minimo`, `maximo`, `seno`, `coseno` | Matemáticas. Los ángulos van en grados. |
-| `vector(x, y)`, `longitud(x)`, `texto(x)`, `numero(x)` | Vectores, tamaño y conversiones. |
-
-### Módulos
-
-| Módulo | Qué tiene |
-|---|---|
-| `teclado` | `.pulsada("a")` (mientras está pulsada), `.sePulso("a")` y `.seSolto("a")` (solo en ese fotograma) |
-| `raton` | `.x`, `.y`, `.posicion` (en el mundo), `.rueda`, `.pulsado("izquierdo")`, `.sePulso("izquierdo")` |
-| `escena` | `.nombre`, `.objetos`, `.gravedad`, `.cambiar("Nivel2")`, `.reiniciar()` |
-| `escena.camara` | `.seguir(objeto)`, `.limites(izquierda, abajo, derecha, arriba)`, `.temblar(intensidad, segundos)`, `.zoom`, `.x`, `.y`, `.suavizado` |
-| `sonido` | `.reproducir("nombre")`, `.parar("nombre")`, `.tono(frecuencia, segundos)`, `.volumen` |
-| `musica` | `.reproducir("nombre")` (en bucle, una sola a la vez), `.parar()`, `.volumen`, `.actual` |
-| `tiempo` | `.total`, `.delta`, `.escala` (0 = pausa, 0,5 = cámara lenta) |
-| `pantalla` | `.ancho`, `.alto` |
-
-### Colores
-
-Un nombre (`"rojo"`, `"verde"`, `"azul"`, `"amarillo"`, `"naranja"`, `"morado"`, `"rosa"`, `"cian"`, `"blanco"`, `"negro"`, `"gris"`, `"marron"`, `"transparente"`) o un código como `"#ff8800"`.
+- La forma oficial es **sin tildes**. Con tilde también funciona, pero el motor nunca la sugiere.
+- **Variables especiales:**
+  - `yo`: el objeto del script.
+  - `otro` y `casilla`: dentro de `cuando toco`.
+  - `juego`: datos compartidos que **se conservan** al cambiar de escena.
+  - `delta`: segundos desde el fotograma anterior.
+- **El tipo de un objeto** es el de su plantilla o, si no viene de una, su nombre sin los números del final. `Moneda2` es del tipo `Moneda`, y `cuando toco Moneda` y `buscarTodos("Moneda")` valen para todas las copias.
+- **Posición por defecto:** `crear("Plantilla")` y `particulas("tipo")` sin posición salen donde está el objeto que las pide.
+- **Módulos:**
+  - `teclado`, `raton`, `escena` (con `escena.camara`), `sonido`, `musica`, `tiempo` y `pantalla`.
+  - Los objetos tienen propiedades como `x`, `y`, `velocidad` o `color`.
+  - También tienen acciones: `saltar`, `moverConFlechas`, `moverHacia`, `animar`, `destruir`…
+  - Los mapas de casillas tienen además `casilla`, `ponerCasilla`…
+- **Colores:** un nombre (`"rojo"`, `"azul"`…) o un código como `"#ff8800"`.
 
 ## 9. Errores
 
