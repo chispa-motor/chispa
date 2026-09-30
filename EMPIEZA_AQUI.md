@@ -236,6 +236,9 @@ quieras de ellos en tus juegos, sin pedir permiso.
 - **Ajustes** (arriba, o **Ctrl+,**): tema claro u oscuro y tamaño de la
   letra del código y del editor. Se quedan guardados en tu navegador.
 - **F1** enseña todos los atajos de teclado.
+- En **Ayuda**, abajo, está la versión de Chispa, **Acerca de Chispa** (quién
+  lo hace, la licencia y los créditos) y **Apoya Chispa**, por si quieres
+  ayudar a que siga creciendo.
 
 Todo el lenguaje, con un ejemplo de cada cosa, está en **MANUAL_CHISPA.md**
 (y en la pestaña **Guía** del editor). Un juego grande hecho solo con Chispa,

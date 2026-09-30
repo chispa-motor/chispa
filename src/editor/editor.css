@@ -570,3 +570,15 @@ a.boton { text-decoration: none; display: inline-flex; align-items: center; }
 .valor-ajuste { width: 52px; text-align: right; color: var(--texto-suave); }
 .grupos-atajos { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 4px 24px; }
 .grupos-atajos h3 { margin: 12px 0 4px; }
+
+/* ── Ayuda: versión, «Acerca de Chispa» y «Apoya Chispa» ── */
+.ayuda-chispa { display: flex; align-items: center; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--borde); flex-wrap: wrap; }
+.ayuda-chispa .version-chispa { color: var(--texto-suave); font-size: 12px; margin-right: auto; }
+.acerca-de .acerca-cabecera { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; color: #f1c40f; }
+.acerca-de .acerca-nombre { font-size: 26px; font-weight: 800; color: var(--texto); }
+.acerca-de .acerca-version { color: var(--texto-suave); }
+.acerca-de .acerca-datos { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 12px 0 0; }
+.acerca-de dt { color: var(--texto-suave); }
+.acerca-de dd { margin: 0; }
+.acerca-de a { color: var(--acento); }
+

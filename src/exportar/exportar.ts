@@ -21,6 +21,7 @@ import type { DefProyecto } from '../proyecto/formato';
 import { ESTILOS_TACTILES } from '../reproductor/ControlesTactiles';
 import { huellaCSP } from '../utilidades/sha256';
 import { CONFIGURACION, LICENCIA } from '../configuracion';
+import { VERSION } from '../version';
 
 /**
  * El aviso que lleva cada juego exportado (como comentario: no se ve al jugar).
@@ -30,7 +31,7 @@ import { CONFIGURACION, LICENCIA } from '../configuracion';
  */
 export function avisoDeLicencia(): string {
   return `<!--
-  Hecho con Chispa, el motor de juegos en español.
+  Hecho con Chispa ${VERSION}, el motor de juegos en español.
   EL JUEGO (su proyecto, sus scripts, sus imágenes y sus sonidos) es de quien lo ha hecho.
   EL MOTOR Chispa que va dentro tiene licencia ${LICENCIA.nombre}: ${LICENCIA.enlace}
   El código de Chispa está en ${CONFIGURACION.repositorio}
@@ -102,7 +103,7 @@ ${avisoDeLicencia()}
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="${escaparHTML(csp)}">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="Chispa">
+<meta name="generator" content="Chispa ${VERSION}">
 <meta name="referrer" content="no-referrer">
 <title>${escaparHTML(proyecto.nombre)}</title>
 <style>${ESTILOS}</style>

@@ -46,6 +46,8 @@ import { revisarProyecto } from '../proyecto/Revision';
 import { ATAJOS, abrirAtajos, tablaAtajos } from './atajos';
 import { abrirAjustes } from './ajustes';
 import { LIMITES_PROYECTO } from '../proyecto/validar';
+import { abrirAcercaDe, abrirApoyo } from './acerca';
+import { VERSION } from '../version';
 
 const CLAVE_DISPOSICION = 'chispa-editor:disposicion';
 /** Milisegundos después de un cambio para guardar solo, y como mucho sin guardar mientras se sigue cambiando. */
@@ -566,7 +568,13 @@ export class Aplicacion {
   }
 
   private ayuda(): void {
-    abrirDialogo('Ayuda de Chispa', h('div', { class: 'ayuda' },
+    // «Acerca de» y «Apoya Chispa» cierran la Ayuda antes de abrirse (una ventana cada vez)
+    let cerrarAyuda = () => {};
+    const yCerrar = (abrir: () => void) => () => {
+      cerrarAyuda();
+      abrir();
+    };
+    cerrarAyuda = abrirDialogo('Ayuda de Chispa', h('div', { class: 'ayuda' },
       h('h3', {}, 'Primeros pasos'),
       h('ol', {},
         h('li', {}, 'Añade un objeto con el botón ', h('strong', {}, '+ Añadir'), ' de la escena.'),
@@ -579,6 +587,11 @@ export class Aplicacion {
       tablaAtajos(ATAJOS.filter((g) => g.grupo === 'General' || g.grupo === 'Jugar')),
       h('p', { class: 'nota' }, 'Todos los atajos: pulsa ', h('kbd', {}, 'F1'), '.'),
       h('p', { class: 'nota' }, 'Toda la documentación del lenguaje está en la pestaña ', h('strong', {}, 'Guía'), ' de abajo, con buscador.'),
+      h('div', { class: 'ayuda-chispa' },
+        h('span', { class: 'version-chispa' }, `Chispa ${VERSION}`),
+        h('button', { class: 'boton boton-acerca', onclick: yCerrar(abrirAcercaDe) }, 'Acerca de Chispa'),
+        h('button', { class: 'boton boton-apoyo', onclick: yCerrar(abrirApoyo) }, '💛 Apoya Chispa'),
+      ),
     ), [
       { texto: 'Tutorial: tu primer juego', alPulsar: () => void this.empezarTutorial() },
       { texto: 'Abrir la Guía', alPulsar: () => this.inferior.mostrarPestana('guia') },
