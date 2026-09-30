@@ -1,3 +1,12 @@
+/*
+ * Chispa — Copyright (c) 2026 Rodrigo y colaboradores de Chispa (ver CREDITOS.md)
+ * SPDX-License-Identifier: MPL-2.0
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 /**
  * ARENA DE HABILIDADES: el juego de ejemplo grande (proyectos/arena-de-habilidades).
  * Se juega solo (un "bot" que se mueve y usa las habilidades) durante un buen

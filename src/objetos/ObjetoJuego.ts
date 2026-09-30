@@ -1,3 +1,12 @@
+/*
+ * Chispa — Copyright (c) 2026 Rodrigo y colaboradores de Chispa (ver CREDITOS.md)
+ * SPDX-License-Identifier: MPL-2.0
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 /**
  * ObjetoJuego: cualquier "cosa" del juego (jugador, moneda, suelo, marcador...).
  * Por sí solo no hace nada: lo que hace depende de sus componentes.

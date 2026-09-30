@@ -1,3 +1,12 @@
+/*
+ * Chispa — Copyright (c) 2026 Rodrigo y colaboradores de Chispa (ver CREDITOS.md)
+ * SPDX-License-Identifier: MPL-2.0
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 /**
  * SEGURIDAD: cada ataque que se probó en la auditoría (AUDITORIA_SEGURIDAD.md)
  * está aquí, para que nunca vuelva a funcionar.

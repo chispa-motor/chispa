@@ -1,56 +1,187 @@
-# Chispa: un motor de videojuegos 2D en español
+<div align="center">
 
-Un editor en el navegador para hacer juegos 2D programándolos en **Chispa**,
-un lenguaje en español pensado para quien empieza.
+# ✨ Chispa
 
-**¿Es la primera vez? Lee [EMPIEZA_AQUI.md](EMPIEZA_AQUI.md).**
+**Haz tus propios videojuegos 2D programando en español.**
 
-## Cómo arrancarlo
+Un editor en el navegador y un lenguaje de programación pensado para quien
+empieza (a partir de unos 12 años): se escribe como se habla, y cuando algo
+sale mal te explica qué pasa y cómo arreglarlo.
+
+[![Licencia: MPL 2.0](https://img.shields.io/badge/licencia-MPL%202.0-brightgreen.svg)](LICENSE)
+![Versión 1.0.0](https://img.shields.io/badge/versi%C3%B3n-1.0.0-blue.svg)
+![Hecho en español](https://img.shields.io/badge/idioma-espa%C3%B1ol-orange.svg)
+
+![Arena de Habilidades, un juego hecho solo con Chispa](docs/imagenes/arena.gif)
+
+*La «Arena de Habilidades», un juego completo hecho solo con Chispa (está en `proyectos/`).*
+
+</div>
+
+---
+
+## Así se programa en Chispa
+
+```
+cuando empieza:
+    juego.puntos = 0
+
+cuando cada fotograma:
+    yo.moverConFlechas(300)
+
+cuando se pulsa "espacio":
+    yo.saltar(700)
+    sonido.efecto("salto")
+
+cuando toco Moneda:
+    destruir(otro)
+    juego.puntos += 1
+```
+
+Sin llaves, sin punto y coma, sin inglés. Las tildes son opcionales:
+`funcion` y `función` valen igual. Y si te equivocas:
+
+```
+Línea 2: has escrito 'yo.moverconflecha', que se parece mucho a 'moverConFlechas', una propiedad del motor.
+   ¿Querías decir 'moverConFlechas'?
+```
+
+## Cómo se ve
+
+| El editor | Código… | …o bloques |
+|---|---|---|
+| ![El editor con la Arena abierta](docs/imagenes/editor.png) | ![El editor de código](docs/imagenes/codigo.png) | ![El mismo tipo de script, en bloques](docs/imagenes/bloques.png) |
+
+## Empezar
+
+Necesitas [Node.js](https://nodejs.org) (la versión 22 o más nueva; la «LTS» de su web vale). En una
+terminal, dentro de la carpeta de Chispa:
+
 ```
 npm install
 npm run dev
 ```
-Se abre el navegador en http://localhost:5173 con el **editor**.
 
-Otros comandos:
+Se abre el editor en el navegador (http://localhost:5173). La primera vez te
+pregunta «¿Hacemos tu primer juego?» y te guía paso a paso.
 
-- `npm run pruebas` → ejecuta los tests automáticos (lenguaje, errores, motor, editor, manual y exportación).
-- `npm run pruebas:vigilar` → igual, pero los repite cada vez que guardas un archivo.
-- `npm run pruebas:navegador` → abre el editor en un navegador de verdad y lo usa como una persona (ejecutar, pintar, exportar, 500 objetos...). La primera vez: `npx playwright install chromium`.
-- `npm run build` → comprueba los tipos y compila todo en `dist/` (se puede subir a cualquier web).
-- `npm run manual` → vuelve a generar MANUAL_CHISPA.md a partir de la ayuda del editor.
-- `npm run lineas` → cuenta las líneas del proyecto por partes.
+> **En Windows**, si PowerShell dice que «la ejecución de scripts está
+> deshabilitada», escribe `npm.cmd install` y `npm.cmd run dev`.
 
-Las demos de las primeras fases siguen en `?demo=1`, `?demo=2` y `?demo=0` (el ejemplo mínimo a pantalla completa).
+**¿Es tu primera vez? Lee [EMPIEZA_AQUI.md](EMPIEZA_AQUI.md).** En 10 minutos
+tienes un personaje que anda, salta y recoge monedas.
 
-## Estado
-- [x] Fase 1: núcleo (bucle, delta time, dibujo, teclado, ratón)
-- [x] Fase 2: objetos y componentes (Transformación, Sprite, Colisión, Física, Script)
-- [x] Fase 3: el lenguaje Chispa (3A especificación · 3B intérprete · 3C errores · 3D Zona de Programación)
-- [x] Motor 2D completo: física, cámara, mapas de casillas, animaciones, interfaz, partículas, sonido y música, escenas, guardar/cargar, temporizadores
-- [x] Fase 4: editor visual
-- [x] Fase 5: exportar el juego como página web
-- [x] Sesión 3: textos con huecos (`"Puntos: {juego.puntos}"`), plataformas que se mueven y que se atraviesan desde abajo, selección múltiple, copias enlazadas de plantillas, deshacer para todo, tutorial guiado y publicar en itch.io / GitHub Pages
+## Qué trae
 
-## Carpetas
+**El editor**
+- Escena visual: arrastrar, cambiar el tamaño, seleccionar varios, copiar y
+  pegar, deshacer para todo.
+- Mapas de casillas para pintar suelos y paredes.
+- Plantillas (como los *prefabs*) y copias enlazadas.
+- Editor de *pixel art* con animaciones.
+- Tutorial guiado y una guía con recetas («¿cómo hago…?») dentro del
+  editor.
+- Tema claro u oscuro, tamaño de letra y atajos de teclado (F1).
+- Se guarda solo en el navegador y lo recupera si se cierra de golpe.
+
+**El lenguaje**
+- En español y sin tildes obligatorias.
+- **Errores que enseñan**: dicen la línea, qué pasa y cómo arreglarlo, y se
+  subrayan mientras escribes.
+- **Modo bloques**, como Scratch: el mismo script se ve como código o como
+  bloques, y puedes cambiar cuando quieras.
+- **Depurador**: puntos de parada, paso a paso y el valor de cada variable.
+- Órdenes en la consola mientras juegas (`juego.vidas = 99`).
+
+**El motor 2D**
+- Física, choques, plataformas que se mueven y plataformas que se
+  atraviesan desde abajo.
+- Cámara que sigue al jugador.
+- Enemigos que te persiguen o huyen **rodeando las paredes**, sin código.
+- Rayos, diálogos con opciones, mensajes entre objetos y datos del juego.
+- Partículas, animaciones, fundidos y dibujo directo en la pantalla.
+- Sonidos que se generan solos (`sonido.efecto("explosion")`) y música.
+- Teclado, ratón, **mando** y botones táctiles automáticos en el móvil.
+- Guardar récords y partidas.
+
+**Compartir tus juegos**
+- **Exportar** el juego como **una sola página web** que funciona sin
+  internet: se abre con doble clic.
+- Pasos guiados para subirlo a **itch.io** o a **GitHub Pages**.
+- No hace falta ninguna cuenta ni ningún servidor.
+
+**Seguro para compartir**
+- Abrir el proyecto de otra persona nunca puede ejecutar código fuera de
+  Chispa, leer tus otros proyectos ni conectarse a internet (ver
+  [AUDITORIA_SEGURIDAD.md](AUDITORIA_SEGURIDAD.md)).
+
+## ¿De quién son mis juegos?
+
+**Tuyos.** La licencia de Chispa (MPL 2.0) es para el *motor*, no para lo que
+haces con él. Puedes vender tus juegos, regalarlos o guardarlos para ti, sin
+enseñar su código si no quieres. Más detalles en
+[EMPIEZA_AQUI.md](EMPIEZA_AQUI.md#de-quién-son-mis-juegos).
+
+## Documentación
+
+| Archivo | Qué hay |
+|---|---|
+| [EMPIEZA_AQUI.md](EMPIEZA_AQUI.md) | Tu primer juego, paso a paso |
+| [MANUAL_CHISPA.md](MANUAL_CHISPA.md) | Todo el lenguaje y los comandos, con un ejemplo de cada cosa, y las recetas |
+| [ESPECIFICACION_CHISPA.md](ESPECIFICACION_CHISPA.md) | Las reglas del lenguaje |
+| [DECISIONES.md](DECISIONES.md) | Por qué Chispa es como es |
+| [AUDITORIA_SEGURIDAD.md](AUDITORIA_SEGURIDAD.md) | Qué se revisó y se arregló para que sea seguro |
+| [LICENCIAS_DEPENDENCIAS.md](LICENCIAS_DEPENDENCIAS.md) | Lo que usa Chispa de otras personas, y sus licencias |
+
+## Colaborar
+
+¡Toda ayuda es bienvenida! Arreglar un error, mejorar un mensaje, traducir una
+receta, probarlo con tu clase… Mira [CONTRIBUIR.md](CONTRIBUIR.md) y las
+[normas de la comunidad](NORMAS_COMUNIDAD.md).
+
+¿Has encontrado un fallo de **seguridad**? No lo publiques: sigue
+[SEGURIDAD.md](SEGURIDAD.md).
+
+Para quien programa en Chispa:
+
+```
+npm run pruebas             tests automáticos (lenguaje, motor, editor, seguridad...)
+npm run pruebas:navegador   el editor en un Chromium de verdad, usado como una persona
+npm run build               compila el editor en dist/ (con su política de seguridad)
+npm run manual              regenera MANUAL_CHISPA.md desde la ayuda del editor
+npm run licencias           revisa las licencias de las dependencias
+npm run cabeceras           pone la cabecera de la licencia a los archivos nuevos
+npm run capturas            hace las capturas y el GIF de este README
+```
+
 ```
 src/
-├── motor/        Núcleo: bucle, renderizador, entrada, recursos, sonido, errores
-├── objetos/      ObjetoJuego, Escena, Cámara, física, partículas, componentes/
-├── chispa/       El lenguaje (lexico/ → sintaxis/ → analisis/ → ejecucion/, + errores/, api/). Ver chispa/LEEME.md
-├── proyecto/     Formato del proyecto (JSON), revisión del código y JuegoEnMarcha (proyecto → juego)
-├── editor/       El editor: estado/ (lógica sin interfaz), codigo/ (CodeMirror), escena/, paneles/, juego/
-├── exportar/     Genera la página .html del juego exportado, el .zip para itch.io y los pasos para publicar
-├── reproductor/  El motor sin el editor (lo que lleva dentro un juego exportado)
-├── ejemplos/     Ejemplo mínimo en Chispa
-└── demos/        Demos de las fases 1 y 2
-pruebas/          Tests automáticos (Vitest)
-pruebas-navegador/ Pruebas en un navegador de verdad (Playwright)
-herramientas/     Contar líneas
+├── motor/        Núcleo: bucle, dibujo, entrada, sonido, errores
+├── objetos/      Objetos, escena, cámara, física, caminos, partículas, componentes
+├── chispa/       El lenguaje: léxico → sintaxis → análisis → ejecución (ver chispa/LEEME.md)
+├── proyecto/     El formato del proyecto, su validación y el juego en marcha
+├── editor/       El editor (estado, código, bloques, escena, paneles, tutorial)
+├── exportar/     La página del juego exportado y la publicación
+├── reproductor/  El motor sin el editor (lo que va dentro de un juego exportado)
+├── ejemplos/     El ejemplo mínimo
+└── configuracion.ts   Los enlaces que se pueden cambiar (donaciones, repositorio)
 ```
 
-- **MANUAL_CHISPA.md**: todo el lenguaje y la API, con un ejemplo de cada cosa.
-- **ESPECIFICACION_CHISPA.md**: la definición del lenguaje (reglas y decisiones).
-- **DECISIONES.md**: las decisiones de diseño y por qué.
-- **PROBLEMAS_PRINCIPIANTE.md**: lo que se encontró (y arregló) haciendo juegos como alguien que empieza.
-- **INFORME_REVISION.md**: el estado de cada parte, con sus tests.
+## Apoya Chispa
+
+Chispa es gratis y lo seguirá siendo. Si te gusta y quieres ayudar a que siga
+creciendo:
+
+<!-- CAMBIA ESTO: pon tu enlace de donaciones aquí y en src/configuracion.ts -->
+**💛 [Apoya Chispa](#apoya-chispa)** *(el enlace llegará pronto)*
+
+## Licencia
+
+El código de Chispa tiene licencia **[Mozilla Public License 2.0](LICENSE)**.
+Si cambias un archivo de Chispa y lo repartes, tienes que compartir esos
+cambios con la misma licencia. **Tus juegos no**: son tuyos. Los juegos de
+ejemplo (`proyectos/` y `src/ejemplos/`) son de dominio público (CC0): úsalos
+como quieras.
+
+Creado por **Rodrigo**. Todas las personas que han ayudado están en
+[CREDITOS.md](CREDITOS.md).

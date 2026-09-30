@@ -2,6 +2,8 @@
 
 Un juego completo hecho **solo con Chispa**, como ejemplo grande (y como prueba de todo el motor).
 
+**Es de dominio público** (ver `../LICENCIA.md`): úsalo, cámbialo y copia lo que quieras para tus juegos.
+
 **Para jugarlo:** en el editor, **Abrir** → `arena-de-habilidades.chispa.json` → **▶ Ejecutar**.
 
 - Moverse: WASD o flechas · Apuntar: ratón · Habilidades: 1 2 3 4 5 · Pausa: Escape o P

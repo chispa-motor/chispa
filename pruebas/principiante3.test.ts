@@ -1,3 +1,12 @@
+/*
+ * Chispa — Copyright (c) 2026 Rodrigo y colaboradores de Chispa (ver CREDITOS.md)
+ * SPDX-License-Identifier: MPL-2.0
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 /**
  * PRUEBA DE PRINCIPIANTE (sesión 3, bloque 6): un test por cada problema que
  * se encontró haciendo el tutorial y dos juegos nuevos («Atrapa la fruta» y

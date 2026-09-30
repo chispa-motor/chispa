@@ -1,3 +1,12 @@
+/*
+ * Chispa — Copyright (c) 2026 Rodrigo y colaboradores de Chispa (ver CREDITOS.md)
+ * SPDX-License-Identifier: MPL-2.0
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 /**
  * EXPORTAR: convierte un proyecto en UNA página web que funciona sola.
  *
@@ -11,6 +20,22 @@
 import type { DefProyecto } from '../proyecto/formato';
 import { ESTILOS_TACTILES } from '../reproductor/ControlesTactiles';
 import { huellaCSP } from '../utilidades/sha256';
+import { CONFIGURACION, LICENCIA } from '../configuracion';
+
+/**
+ * El aviso que lleva cada juego exportado (como comentario: no se ve al jugar).
+ * El juego es de quien lo hace; lo único que la MPL 2.0 pide es decir que el
+ * motor de dentro es Chispa y dónde está su código (ver EMPIEZA_AQUI.md,
+ * «¿De quién son mis juegos?»).
+ */
+export function avisoDeLicencia(): string {
+  return `<!--
+  Hecho con Chispa, el motor de juegos en español.
+  EL JUEGO (su proyecto, sus scripts, sus imágenes y sus sonidos) es de quien lo ha hecho.
+  EL MOTOR Chispa que va dentro tiene licencia ${LICENCIA.nombre}: ${LICENCIA.enlace}
+  El código de Chispa está en ${CONFIGURACION.repositorio}
+-->`;
+}
 
 /** Estilos de la página del juego (pantalla completa, bandas negras, panel de errores). */
 const ESTILOS = `
@@ -71,6 +96,7 @@ export function generarPaginaJuego(proyecto: DefProyecto, reproductor: string): 
   const codigo = reproductor.replace(/<\/script/gi, '<\\/script').replace(/<!--/g, '<\\!--');
   const csp = politicaDeSeguridad(codigo, [ESTILOS, ESTILOS_TACTILES]);
   return `<!doctype html>
+${avisoDeLicencia()}
 <html lang="es">
 <head>
 <meta charset="utf-8">

@@ -6,7 +6,8 @@ puntos en la pantalla.
 
 ## 1. Arrancar el editor
 
-En una terminal, dentro de la carpeta del motor:
+Necesitas [Node.js](https://nodejs.org), la versión 22 o más nueva (la que
+pone «LTS» en su web). En una terminal, dentro de la carpeta del motor:
 
 ```
 npm install
@@ -196,6 +197,39 @@ copiarlo:
     juego en una dirección tuya, gratis.
 
   No hace falta conectar ninguna cuenta al editor: tú subes el archivo.
+
+## ¿De quién son mis juegos?
+
+**Tuyos.** Chispa tiene una licencia de código abierto, la **MPL 2.0**
+(Mozilla Public License), pero esa licencia es para el **motor**: el editor,
+el lenguaje y el código que hace funcionar los juegos. **No es para lo que tú
+haces con él.**
+
+Tu juego es tuyo: su proyecto, tus scripts `.chs`, tus dibujos, tus sonidos,
+tus escenas y tus ideas. Puedes:
+
+- **regalarlo**, subirlo a itch.io o enseñárselo a tus amigos;
+- **venderlo**, si quieres;
+- **no enseñar su código** a nadie. La MPL no te obliga a publicar tus
+  juegos.
+
+Solo hay dos cosas que tener en cuenta:
+
+1. **Cada juego exportado lleva dentro el motor Chispa**, y dentro de la
+   página hay un aviso escondido (no se ve al jugar) que dice que el motor
+   es Chispa, con licencia MPL 2.0, y dónde está su código. Lo pone Chispa
+   solo al exportar. Déjalo ahí: es lo único que la licencia pide.
+2. **Si cambias el propio Chispa** (un archivo de `src/`, por ejemplo, para
+   añadir un comando nuevo) y repartes ese Chispa cambiado, tienes que
+   compartir **esos archivos cambiados** con la misma licencia. Así las
+   mejoras vuelven a todo el mundo. Tus juegos siguen siendo tuyos igual.
+
+¿Y los juegos de ejemplo (la Arena de Habilidades, el ejemplo del
+principio)? Son de **dominio público**: cópialos, cámbialos y usa lo que
+quieras de ellos en tus juegos, sin pedir permiso.
+
+> Esto es una explicación sencilla, no un consejo legal. El texto que vale
+> es el de la licencia, en el archivo `LICENSE`.
 
 ## 7. A tu gusto
 
