@@ -34,19 +34,34 @@ function aJSON(v: Valor, pos: Posicion): unknown {
   );
 }
 
-/** Texto JSON → valor de Chispa. */
+/**
+ * Texto JSON → valor de Chispa. Lo guardado puede estar roto o cambiado a
+ * mano (está en el navegador, y cualquiera lo puede tocar): si algo no encaja,
+ * esa parte vale nulo, pero nunca rompe el juego.
+ */
 export function deserializar(texto: string): Valor {
-  return desdeJSON(JSON.parse(texto));
+  try {
+    return desdeJSON(JSON.parse(texto), 0);
+  } catch {
+    return null;
+  }
 }
 
-function desdeJSON(d: unknown): Valor {
-  if (d === null || typeof d === 'number' || typeof d === 'string' || typeof d === 'boolean') return d;
-  if (Array.isArray(d)) return d.map(desdeJSON);
-  const o = d as { __vector?: [number, number]; __tabla?: [string, unknown][] };
-  if (o.__vector) return new Vector2(o.__vector[0], o.__vector[1]);
-  if (o.__tabla) {
+/** Más hondo que esto no hay nada que guarde un juego de verdad (y así no se llena la pila). */
+const PROFUNDIDAD_MAXIMA = 100;
+
+function desdeJSON(d: unknown, profundidad: number): Valor {
+  if (d === null || typeof d === 'string' || typeof d === 'boolean') return d;
+  if (typeof d === 'number') return Number.isFinite(d) ? d : null;
+  if (profundidad > PROFUNDIDAD_MAXIMA || typeof d !== 'object') return null;
+  if (Array.isArray(d)) return d.map((e) => desdeJSON(e, profundidad + 1));
+  const o = d as { __vector?: unknown; __tabla?: unknown };
+  if (Array.isArray(o.__vector) && typeof o.__vector[0] === 'number' && typeof o.__vector[1] === 'number') return new Vector2(o.__vector[0], o.__vector[1]);
+  if (Array.isArray(o.__tabla)) {
     const t = new Tabla();
-    for (const [k, e] of o.__tabla) t.poner(k, desdeJSON(e));
+    for (const par of o.__tabla) {
+      if (Array.isArray(par) && typeof par[0] === 'string') t.poner(par[0], desdeJSON(par[1], profundidad + 1));
+    }
     return t;
   }
   return null;

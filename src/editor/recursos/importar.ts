@@ -4,9 +4,29 @@
  */
 import type { EstadoEditor } from '../estado/EstadoEditor';
 import { leerComoDataURL } from '../escena/VistaEscena';
+import { TAMANO_MAXIMO_ARCHIVO, formatoReal, tipoRealDeArchivo } from '../../proyecto/archivos';
+import { ErrorMotor } from '../../motor/Errores';
 
 /** Más grande que esto no cabe bien en un proyecto que se guarda en el navegador. */
-export const TAMANO_MAXIMO = 15 * 1024 * 1024;
+export const TAMANO_MAXIMO = TAMANO_MAXIMO_ARCHIVO;
+
+/** El tipo que se escribe en la data URL, según lo que el archivo ES de verdad (no lo que dice su nombre). */
+const MIME: Record<string, string> = { png: 'image/png', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', bmp: 'image/bmp', wav: 'audio/wav', ogg: 'audio/ogg', flac: 'audio/flac', mp3: 'audio/mpeg', webm: 'audio/webm', m4a: 'audio/mp4' };
+
+/** data:application/octet-stream;base64,... → data:image/png;base64,... (con el tipo de verdad). */
+function conTipoReal(datos: string): string {
+  const coma = datos.indexOf(',');
+  if (coma < 0 || !/;base64$/i.test(datos.slice(0, coma))) return datos;
+  let inicio: Uint8Array;
+  try {
+    const bin = atob(datos.slice(coma + 1, coma + 1 + 88));
+    inicio = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+  } catch {
+    return datos;
+  }
+  const real = formatoReal(inicio);
+  return real ? `data:${MIME[real.formato]};base64,${datos.slice(coma + 1)}` : datos;
+}
 
 export interface ResultadoImportar {
   imagenes: string[];
@@ -31,12 +51,22 @@ export async function importarArchivos(estado: EstadoEditor, archivos: Iterable<
       continue;
     }
     if (archivo.size > TAMANO_MAXIMO) {
-      r.rechazados.push(`"${archivo.name}" es demasiado grande (más de 15 MB)`);
+      r.rechazados.push(`"${archivo.name}" es demasiado grande (más de ${TAMANO_MAXIMO / 1024 / 1024} MB)`);
       continue;
     }
-    const datos = await leerComoDataURL(archivo);
-    if (tipo === 'imagen') r.imagenes.push(estado.agregarImagen(archivo.name, datos));
-    else r.sonidos.push(estado.agregarSonido(archivo.name, datos));
+    // No nos fiamos del nombre ni de lo que dice el navegador: miramos los primeros bytes
+    const real = await tipoRealDeArchivo(archivo);
+    if (real !== tipo) {
+      r.rechazados.push(real ? `"${archivo.name}" dice ser ${tipo === 'imagen' ? 'una imagen' : 'un sonido'}, pero por dentro es ${real === 'imagen' ? 'una imagen' : 'un sonido'}` : `"${archivo.name}" no es de verdad ${tipo === 'imagen' ? 'una imagen' : 'un sonido'} (o está dañado)`);
+      continue;
+    }
+    try {
+      const datos = conTipoReal(await leerComoDataURL(archivo));
+      if (tipo === 'imagen') r.imagenes.push(estado.agregarImagen(archivo.name, datos));
+      else r.sonidos.push(estado.agregarSonido(archivo.name, datos));
+    } catch (e) {
+      r.rechazados.push(e instanceof ErrorMotor ? e.message.replace(/^No se puede añadir /, '').replace(/\.$/, '') : `"${archivo.name}" no se ha podido leer`);
+    }
   }
   return r;
 }

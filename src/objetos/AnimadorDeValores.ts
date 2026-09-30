@@ -15,9 +15,10 @@
  */
 import { Vector2 } from '../motor/Vector2';
 import { colorAComponentes, componentesAColor } from '../motor/Color';
+import { sinPrototipo } from '../utilidades/seguro';
 
 /** Cómo avanza la animación: t va de 0 a 1 y devuelve cuánto se ha recorrido. */
-export const SUAVIZADOS: Record<string, (t: number) => number> = {
+export const SUAVIZADOS: Record<string, (t: number) => number> = sinPrototipo({
   lineal: (t) => t,
   suave: (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2),
   entrada: (t) => t * t * t,
@@ -32,7 +33,7 @@ export const SUAVIZADOS: Record<string, (t: number) => number> = {
   },
   elastico: (t) => (t === 0 || t === 1 ? t : 2 ** (-10 * t) * Math.sin(((t * 10 - 0.75) * (2 * Math.PI)) / 3) + 1),
   atras: (t) => 1 + 2.70158 * (t - 1) ** 3 + 1.70158 * (t - 1) ** 2,
-};
+});
 export const NOMBRES_SUAVIZADOS = Object.keys(SUAVIZADOS);
 
 /** Un valor que se puede animar: número, vector (posición, escala) o color (texto). */

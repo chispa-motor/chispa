@@ -12,7 +12,7 @@
  */
 import type { EstadoEditor } from '../estado/EstadoEditor';
 import { abrirDialogo, notificar } from '../interfaz/dialogos';
-import { botonIcono, h, icono, rellenar } from '../interfaz/dom';
+import { botonIcono, fondoDeColor, h, icono, rellenar } from '../interfaz/dom';
 import { PALETA, PixelArt, TAMANOS, pixelesDesdeRGBA, type Pixel } from './PixelArt';
 
 type Herramienta = 'lapiz' | 'goma' | 'cubo' | 'cuentagotas';
@@ -196,9 +196,9 @@ export async function abrirEditorPixelArt(estado: EstadoEditor, opciones: { imag
   };
   const pintarColores = () =>
     rellenar(zonaColores,
-      PALETA.map((c) => h('button', { class: `color-pixel ${c === color ? 'actual' : ''}`, style: `background:${c}`, title: c, 'aria-label': `Color ${c}`, onclick: () => elegirColor(c) })),
+      PALETA.map((c) => fondoDeColor(h('button', { class: `color-pixel ${c === color ? 'actual' : ''}`, title: c, 'aria-label': `Color ${c}`, onclick: () => elegirColor(c) }), c, 'transparent')),
       h('label', { class: 'otro-color' }, selectorColor, 'Otro'),
-      h('div', { class: 'color-actual', style: `background:${color}`, title: 'Color elegido' }),
+      fondoDeColor(h('div', { class: 'color-actual', title: 'Color elegido' }), color, 'transparent'),
     );
 
   const todo = () => {

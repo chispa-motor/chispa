@@ -20,6 +20,7 @@ import { ErrorMotor } from './Errores';
 import { Vector2 } from './Vector2';
 import { normalizar } from '../utilidades/texto';
 import { sugerir } from '../chispa/errores/sugerencias';
+import { sinPrototipo } from '../utilidades/seguro';
 
 export type BotonRaton = 'izquierdo' | 'medio' | 'derecho';
 
@@ -35,16 +36,16 @@ export const BOTONES_MANDO = ['a', 'b', 'x', 'y', 'lb', 'rb', 'lt', 'rt', 'selec
  * select es escape. Así cualquier juego hecho para teclado se juega con mando
  * sin cambiar nada. Para más control está el módulo `mando`.
  */
-const TECLA_DE_BOTON: Record<string, string> = {
+const TECLA_DE_BOTON: Record<string, string> = sinPrototipo({
   a: 'espacio', b: 'x', x: 'z', y: 'c', start: 'enter', select: 'escape',
   arriba: 'arriba', abajo: 'abajo', izquierda: 'izquierda', derecha: 'derecha',
-};
+});
 
 /** Palanca: por debajo de esto se considera que está en el centro (los mandos nunca dan 0 exacto). */
 const ZONA_MUERTA = 0.25;
 
 /** Teclas especiales: código físico del navegador → nombre en español. */
-const NOMBRES_POR_CODIGO: Record<string, string> = {
+const NOMBRES_POR_CODIGO: Record<string, string> = sinPrototipo({
   Space: 'espacio',
   ArrowUp: 'arriba',
   ArrowDown: 'abajo',
@@ -62,10 +63,10 @@ const NOMBRES_POR_CODIGO: Record<string, string> = {
   ControlRight: 'control',
   AltLeft: 'alt',
   AltRight: 'alt',
-};
+});
 
 /** Otras formas de escribir el mismo nombre de tecla. */
-const ALIAS: Record<string, string> = {
+const ALIAS: Record<string, string> = sinPrototipo({
   intro: 'enter',
   mayusculas: 'mayus',
   shift: 'mayus',
@@ -78,7 +79,7 @@ const ALIAS: Record<string, string> = {
   right: 'derecha',
   retroceso: 'borrar',
   supr: 'suprimir',
-};
+});
 
 const TECLAS_CONOCIDAS = new Set([
   ...Object.values(NOMBRES_POR_CODIGO),

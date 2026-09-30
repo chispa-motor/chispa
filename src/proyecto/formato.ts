@@ -20,6 +20,7 @@ import type { TipoCasilla } from '../objetos/componentes/MapaCasillas';
 import type { DefAnimacion } from '../objetos/componentes/Animador';
 import type { Limites } from '../objetos/Camara';
 import { ErrorMotor } from '../motor/Errores';
+import { validarProyecto } from './validar';
 
 export const VERSION_PROYECTO = 2;
 
@@ -139,6 +140,12 @@ export interface DefEscena {
 export interface DefProyecto {
   formato: 'chispa-proyecto';
   version: number;
+  /**
+   * Identificador único del proyecto (se inventa al crearlo). Sirve para que
+   * los datos guardados con guardar() de un juego no los pueda leer otro,
+   * aunque se llame igual (ver AUDITORIA_SEGURIDAD.md).
+   */
+  id?: string;
   nombre: string;
   ancho: number;
   alto: number;
@@ -187,16 +194,17 @@ export function migrarProyecto(datos: unknown): DefProyecto {
     throw new ErrorMotor('Este proyecto se hizo con una versión más nueva de Chispa.', 'Actualiza el motor para poder abrirlo.');
   }
   // v1 → v2: una sola escena ("escena" + "colorFondo") pasa a ser la escena "Principal"
+  let actual: Record<string, unknown> = p;
   if (version === 1) {
-    const v1 = p as unknown as { escena?: DefObjeto[]; colorFondo?: string } & Partial<DefProyecto>;
-    return completar({
-      ...v1,
+    actual = {
+      ...p,
       version: 2,
-      escenas: { Principal: { colorFondo: v1.colorFondo ?? '#1e2233', objetos: v1.escena ?? [] } },
+      escenas: { Principal: { colorFondo: p.colorFondo ?? '#1e2233', objetos: p.escena ?? [] } },
       escenaInicial: 'Principal',
-    } as DefProyecto);
+    };
   }
-  return completar(p as unknown as DefProyecto);
+  // Antes de usar NADA del archivo, se comprueba entero (validar.ts)
+  return completar(validarProyecto(actual) as DefProyecto);
 }
 
 /** Rellena lo que falte con valores por defecto (así nunca hay "undefined" sueltos). */
@@ -205,6 +213,7 @@ function completar(p: DefProyecto): DefProyecto {
   return {
     formato: 'chispa-proyecto',
     version: VERSION_PROYECTO,
+    id: p.id ?? nuevoId(),
     nombre: p.nombre ?? 'Mi juego',
     ancho: p.ancho ?? 960,
     alto: p.alto ?? 540,
@@ -216,9 +225,17 @@ function completar(p: DefProyecto): DefProyecto {
     scripts: p.scripts ?? {},
     plantillas: p.plantillas ?? {},
     escenas,
-    escenaInicial: p.escenaInicial && escenas[p.escenaInicial] ? p.escenaInicial : Object.keys(escenas)[0],
+    escenaInicial: p.escenaInicial && Object.prototype.hasOwnProperty.call(escenas, p.escenaInicial) ? p.escenaInicial : Object.keys(escenas)[0],
+    ...(p.bloques ? { bloques: p.bloques } : {}),
     datos: p.datos ?? {},
   };
+}
+
+/** Un identificador al azar, imposible de adivinar ("3f2a9c1e-..."). */
+export function nuevoId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  const hex = (n: number) => Array.from({ length: n }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+  return `${hex(8)}-${hex(4)}-${hex(4)}-${hex(4)}-${hex(12)}`;
 }
 
 /** Un proyecto nuevo, vacío, listo para empezar. */

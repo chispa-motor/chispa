@@ -71,7 +71,8 @@ export class ErrorChispa extends ErrorMotor {
 
   /** El intérprete lo llama al salir de cada función por la que "atraviesa" el error. */
   agregarLlamada(funcion: string, desde: Posicion): void {
-    this.pila.push({ funcion, desde });
+    // Con una función que se llama a sí misma mil veces, basta con enseñar las primeras
+    if (this.pila.length < MAXIMO_PILA) this.pila.push({ funcion, desde });
   }
 
   diagnostico(): Diagnostico {
@@ -104,12 +105,17 @@ export class ErrorCompilacion extends ErrorChispa {
 /** Frase que explica la pila: "Esto pasó dentro de la función 'dañar', que se llamó desde la línea 4." */
 export function explicarPila(pila: Llamada[] | undefined): string[] {
   if (!pila?.length) return [];
-  return pila.map((l, i) =>
+  const frases = pila.map((l, i) =>
     i === 0
       ? `Esto pasó dentro de la función '${l.funcion}', que se llamó desde la línea ${l.desde.linea}.`
       : `…y '${pila[i - 1].funcion}' se llamó desde la función '${l.funcion}', en la línea ${l.desde.linea}.`,
   );
+  if (pila.length >= MAXIMO_PILA) frases.push('…(y muchas llamadas más).');
+  return frases;
 }
+
+/** Cuántas llamadas se apuntan como mucho en la pila de un error. */
+const MAXIMO_PILA = 12;
 
 /**
  * Convierte un diagnóstico en el texto de la especificación:

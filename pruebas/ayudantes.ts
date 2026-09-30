@@ -21,6 +21,17 @@ import type { Depurador } from '../src/chispa/ejecucion/depurador';
 import type { DefEscena, DefObjeto, DefProyecto } from '../src/proyecto/formato';
 import type { DefAnimacion } from '../src/objetos/componentes/Animador';
 
+/** Una imagen PNG de 1×1 píxel y un sonido WAV vacío, de verdad (pasan validar.ts). */
+export const IMAGEN_PRUEBA = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+export const SONIDO_PRUEBA = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+
+/**
+ * Imágenes y sonidos de prueba DISTINTOS entre sí (para saber cuál se ha guardado):
+ * empiezan con la firma de verdad de un PNG o un WAV y luego llevan la marca.
+ */
+export const imagenPrueba = (marca: string) => 'data:image/png;base64,' + btoa('\x89PNG\r\n\x1a\n' + marca);
+export const sonidoPrueba = (marca: string) => 'data:audio/wav;base64,' + btoa('RIFF\0\0\0\0WAVE' + marca);
+
 // ───────────────────────── Lenguaje sin motor ─────────────────────────
 
 export interface Resultado {
@@ -151,6 +162,10 @@ export interface OpcionesJuegoPrueba {
   datos?: DefProyecto['datos'];
   /** Un proyecto entero (por ejemplo, uno de la carpeta proyectos/): se usa tal cual. */
   proyecto?: DefProyecto;
+  /** El «navegador» donde se guardan los datos (para que dos juegos compartan el mismo). */
+  almacen?: Map<string, string>;
+  /** Qué hacer con sistema.abrirWeb. */
+  abrirWeb?: (url: string) => void;
 }
 
 export function juegoDePrueba(opciones: OpcionesJuegoPrueba) {
@@ -161,11 +176,14 @@ export function juegoDePrueba(opciones: OpcionesJuegoPrueba) {
   const proyecto: DefProyecto = opciones.proyecto ?? {
     formato: 'chispa-proyecto',
     version: 2,
+    id: 'prueba-juego',
     nombre: 'prueba',
     ancho: 960,
     alto: 540,
-    imagenes: opciones.imagenes ?? {},
-    sonidos: opciones.sonidos ?? {},
+    // Los proyectos solo pueden llevar imágenes y sonidos de verdad (validar.ts): en los
+    // tests basta el nombre, y aquí se le pone una imagen o un sonido diminuto
+    imagenes: Object.fromEntries(Object.keys(opciones.imagenes ?? {}).map((n) => [n, IMAGEN_PRUEBA])),
+    sonidos: Object.fromEntries(Object.keys(opciones.sonidos ?? {}).map((n) => [n, SONIDO_PRUEBA])),
     animaciones: opciones.animaciones ?? {},
     scripts: opciones.scripts ?? {},
     plantillas: opciones.plantillas ?? {},
@@ -177,7 +195,7 @@ export function juegoDePrueba(opciones: OpcionesJuegoPrueba) {
   for (const nombre of Object.keys(proyecto.sonidos)) void m.motor.sonido.cargar(nombre, 'no-hay-audio');
   // Imágenes de mentira (1×1) para que existan
   for (const nombre of Object.keys(proyecto.imagenes)) m.motor.recursos.registrar(nombre, document.createElement('img'));
-  const almacen = new Map<string, string>();
+  const almacen = opciones.almacen ?? new Map<string, string>();
   const juego = JuegoEnMarcha.preparar(m.motor, proyecto, {
     almacen: { getItem: (k) => almacen.get(k) ?? null, setItem: (k, v) => void almacen.set(k, v), removeItem: (k) => void almacen.delete(k) },
     alMostrar: (t) => salida.push(t),
@@ -188,6 +206,7 @@ export function juegoDePrueba(opciones: OpcionesJuegoPrueba) {
     },
     alAviso: (a) => avisos.push(...a),
     depurador: opciones.depurador,
+    abrirWeb: opciones.abrirWeb,
   });
   const buscar = (nombre: string) => {
     const o = juego.escena.buscar(nombre);

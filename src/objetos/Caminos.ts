@@ -17,6 +17,7 @@
 import { Vector2 } from '../motor/Vector2';
 import type { Escena } from './Escena';
 import { MapaCasillas } from './componentes/MapaCasillas';
+import { propio } from '../utilidades/seguro';
 
 /** Casillas que se miran como mucho (para que un destino imposible no congele el juego). */
 const MAXIMO_CASILLAS = 20000;
@@ -33,7 +34,7 @@ export function mapaConParedes(escena: Escena): MapaCasillas | null {
 }
 
 function esPared(m: MapaCasillas, tipo: string): boolean {
-  const t = m.tipos[tipo];
+  const t = propio(m.tipos, tipo);
   return (t?.solida ?? true) && !t?.soloDesdeArriba;
 }
 

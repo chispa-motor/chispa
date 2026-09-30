@@ -15,6 +15,7 @@
  * hasta el árbol y hasta los errores, para poder decir "línea 8, columna 5"
  * y subrayar el trozo exacto.
  */
+import { sinPrototipo } from '../../utilidades/seguro';
 
 /** Un sitio en el código fuente. */
 export interface Posicion {
@@ -85,7 +86,7 @@ export const PALABRAS_CLAVE = new Set([
 ]);
 
 /** Explicación corta de cada palabra reservada (para "no puedes llamar 'y' a una variable"). */
-export const SIGNIFICADO_PALABRA: Record<string, string> = {
+export const SIGNIFICADO_PALABRA: Record<string, string> = sinPrototipo({
   y: "'y' lógico: esto y aquello",
   o: "'o' lógico: esto o aquello",
   no: "'no' lógico: lo contrario",
@@ -95,7 +96,7 @@ export const SIGNIFICADO_PALABRA: Record<string, string> = {
   para: "se usa en 'para cada'",
   cada: "se usa en 'para cada' y en 'cuando cada fotograma'",
   mostrar: 'es la función que escribe en la consola',
-};
+});
 
 export const SIMBOLOS_DOBLES = ['==', '!=', '<=', '>=', '+=', '-=', '*=', '/='];
 export const SIMBOLOS_SIMPLES = '+-*/%()[]{},.:=<>';

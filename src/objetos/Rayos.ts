@@ -16,6 +16,7 @@ import type { ObjetoJuego } from './ObjetoJuego';
 import { Colision, type Caja } from './componentes/Colision';
 import { MapaCasillas } from './componentes/MapaCasillas';
 import { Sprite } from './componentes/Sprite';
+import { propio } from '../utilidades/seguro';
 
 export interface Impacto {
   /** El objeto tocado (si es una casilla, el mapa). */
@@ -92,7 +93,7 @@ function rayoContraMapa(m: MapaCasillas, origen: Vector2, dir: Vector2, largo: n
   let recorrido = 0;
   for (let vueltas = 0; recorrido <= largo && vueltas < 100000; vueltas++) {
     const tipo = m.obtener(c, f);
-    if (tipo && m.esSolida(tipo) && !m.tipos[tipo]?.soloDesdeArriba) return { distancia: recorrido, tipo };
+    if (tipo && m.esSolida(tipo) && !propio(m.tipos, tipo)?.soloDesdeArriba) return { distancia: recorrido, tipo };
     if (bordeX < bordeY) {
       recorrido = bordeX;
       bordeX += deltaX;

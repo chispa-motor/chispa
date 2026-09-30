@@ -20,6 +20,7 @@ import type { Caja } from './Colision';
 import type { Renderizador } from '../../motor/Renderizador';
 import { resolverColor } from '../../motor/Color';
 import { normalizar } from '../../utilidades/texto';
+import { propio } from '../../utilidades/seguro';
 
 export interface TipoCasilla {
   imagen?: string;
@@ -116,7 +117,7 @@ export class MapaCasillas extends Componente {
   }
 
   esSolida(tipo: string): boolean {
-    return this.tipos[tipo]?.solida ?? true;
+    return propio(this.tipos, tipo)?.solida ?? true;
   }
 
   /** La caja que rodea todas las casillas (para la cámara y el editor). */
@@ -143,7 +144,7 @@ export class MapaCasillas extends Componente {
     // +1 píxel para que no se vean rayas finas entre casillas al hacer zoom
     const lado = t + 0.75;
     for (const c of this.casillasEn(visible)) {
-      const tipo = this.tipos[c.tipo];
+      const tipo = propio(this.tipos, c.tipo);
       const centro = aPantalla(c.caja.izquierda + t / 2, c.caja.abajo + t / 2);
       if (tipo?.imagen) {
         r.imagen(this.objeto.escena!.motor.recursos.imagen(tipo.imagen), centro.x, centro.y, { ancho: lado, alto: lado });

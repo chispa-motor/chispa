@@ -2322,7 +2322,7 @@ si sistema.movil:
 
 #### `sistema.abrirWeb("direccion")`
 
-Abre una página web en otra pestaña (por ejemplo, la de tu juego en itch.io).
+Abre una página web en otra pestaña (por ejemplo, la de tu juego en itch.io). Tiene que empezar por https://. En el editor, antes de abrirla se pregunta (por si el juego es de otra persona).
 
 ```
 cuando hago clic encima:

@@ -38,6 +38,7 @@ import { ErrorMotor } from '../../motor/Errores';
 import { NOMBRES_COLORES, esColorValido } from '../../motor/Color';
 import { normalizar } from '../../utilidades/texto';
 import { TIPOS_PARTICULAS } from '../../objetos/Particulas';
+import { sinPrototipo } from '../../utilidades/seguro';
 
 /** Lo que el análisis necesita saber del proyecto. Todo es opcional salvo las globales. */
 export interface ContextoAnalisis {
@@ -91,7 +92,7 @@ class Ambito {
  * Llamadas cuyo primer valor es el NOMBRE de un recurso del proyecto.
  * Si el nombre está escrito tal cual (entre comillas), se comprueba que existe.
  */
-const RECURSOS_EN_LLAMADAS: Record<string, { lista: keyof ContextoAnalisis; que: string }> = {
+const RECURSOS_EN_LLAMADAS: Record<string, { lista: keyof ContextoAnalisis; que: string }> = sinPrototipo({
   crear: { lista: 'plantillas', que: 'plantilla' },
   'escena.cambiar': { lista: 'escenas', que: 'escena' },
   'sonido.reproducir': { lista: 'sonidos', que: 'sonido' },
@@ -100,7 +101,7 @@ const RECURSOS_EN_LLAMADAS: Record<string, { lista: keyof ContextoAnalisis; que:
   'sonido.sonando': { lista: 'sonidos', que: 'sonido' },
   'sonido.parar': { lista: 'sonidos', que: 'sonido' },
   'yo.animar': { lista: 'animaciones', que: 'animación' },
-};
+});
 
 export function analizar(programa: Programa, ctx: ContextoAnalisis): Diagnostico[] {
   return new Analizador(ctx, programa.archivo).programa(programa.sentencias);

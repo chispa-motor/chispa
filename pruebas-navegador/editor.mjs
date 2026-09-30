@@ -10,7 +10,7 @@
  */
 import { chromium } from 'playwright';
 import { preview } from 'vite';
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -349,7 +349,8 @@ await prueba('recursos: dibujar un sprite de dos fotogramas, soltar un sonido en
   // Soltar un archivo de sonido encima del editor
   await p.evaluate(() => {
     const dt = new DataTransfer();
-    dt.items.add(new File([new Uint8Array([82, 73, 70, 70])], 'Salto Alto.wav', { type: 'audio/wav' }));
+    // Un WAV de verdad por dentro (RIFF....WAVE): los archivos disfrazados se rechazan
+    dt.items.add(new File([new Uint8Array([82, 73, 70, 70, 0, 0, 0, 0, 87, 65, 86, 69])], 'Salto Alto.wav', { type: 'audio/wav' }));
     const raiz = document.getElementById('editor');
     raiz.dispatchEvent(new DragEvent('dragover', { dataTransfer: dt, bubbles: true, cancelable: true }));
     raiz.dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
@@ -640,6 +641,71 @@ await prueba('exportar el juego y que funcione solo, sin el editor', async (p) =
   await juego.close();
   comprobar(panel, 'el juego exportado enseña un error');
   comprobar(mensajes.some((m) => m.includes('¡Hola!')), 'el juego exportado no ha arrancado: ' + mensajes.join(' | '));
+});
+
+await prueba('seguridad: el juego exportado funciona con su CSP, y un script colado en la página no se ejecuta', async (p) => {
+  await p.click('button:has-text("Exportar")');
+  const [descarga] = await Promise.all([p.waitForEvent('download'), p.click('.destino-archivo')]);
+  const archivo = join(carpeta, 'con-trampa.html');
+  await descarga.saveAs(archivo);
+  const html = readFileSync(archivo, 'utf8');
+  comprobar(html.includes('Content-Security-Policy'), 'el juego exportado no lleva CSP');
+  // Alguien mete su propio código en la página (por ejemplo, al volver a subirla a otra web)
+  writeFileSync(archivo, html.replace('</body>', '<script>window.hackeado = 1; fetch("https://malo.example/")</script><img src="https://malo.example/x.png"></body>'));
+  const juego = await contexto.newPage();
+  const mensajes = [];
+  const salieron = [];
+  juego.on('console', (m) => mensajes.push(m.text()));
+  juego.on('pageerror', (e) => mensajes.push('ERROR ' + e.message));
+  // Una petición bloqueada por la CSP falla con ERR_BLOCKED_BY_CSP; si alguna llega a salir, mal
+  juego.on('requestfailed', (r) => r.url().startsWith('http') && !/csp/i.test(r.failure()?.errorText ?? '') && salieron.push(r.url() + ' ' + r.failure()?.errorText));
+  juego.on('requestfinished', (r) => r.url().startsWith('http') && salieron.push(r.url()));
+  await juego.goto(pathToFileURL(archivo).href);
+  await juego.waitForTimeout(800);
+  const hackeado = await juego.evaluate(() => window.hackeado);
+  const arranco = mensajes.some((m) => m.includes('¡Hola!'));
+  await juego.close();
+  comprobar(arranco, 'el juego no arranca con la CSP: ' + mensajes.join(' | '));
+  comprobar(hackeado === undefined, 'el script colado se ha ejecutado');
+  comprobar(salieron.length === 0, 'la página ha pedido algo a internet: ' + salieron.join(', '));
+  // Lo único que la CSP bloquea es lo que se coló (nada del propio juego)
+  const bloqueados = mensajes.filter((m) => /Content Security Policy/i.test(m));
+  comprobar(bloqueados.length > 0 && bloqueados.every((m) => /inline script|malo\.example/i.test(m)), 'la CSP bloquea algo del juego: ' + bloqueados.join(' | '));
+});
+
+await prueba('seguridad: un proyecto con HTML en los nombres y textos no mete HTML en el editor', async (p) => {
+  const cuantos = () => p.evaluate(() => document.querySelectorAll('script, iframe, object, img[src="x"]').length);
+  const antes = await cuantos();
+  await estado(p, () => {
+    const trampa = '<img src=x onerror="window.hackeado=1"><script>window.hackeado=2</script>';
+    const e = window.chispa.estado;
+    e.abrir({
+      formato: 'chispa-proyecto', version: 2, nombre: trampa,
+      scripts: { 'a.chs': 'cuando empieza:\n    mostrar("' + trampa.replace(/"/g, "'") + '")\n    dialogo("' + trampa.replace(/"/g, "'") + '", "hola")\n' },
+      escenas: { Principal: { colorFondo: 'negro', objetos: [{ nombre: trampa, script: 'a.chs', sprite: { forma: 'texto', texto: trampa } }] } },
+      datos: { [trampa]: trampa },
+    });
+    e.seleccionar({ tipo: 'escena', escena: 'Principal', indice: 0 });
+  });
+  await p.keyboard.press('F5');
+  await p.waitForTimeout(700);
+  // Errores con HTML dentro (por ejemplo, una variable que no existe con un nombre raro)
+  await estado(p, () => window.chispa.ejecutarOrden?.('mostrar("<b>negrita</b>")'));
+  await p.waitForTimeout(200);
+  comprobar(await p.evaluate(() => window.hackeado) === undefined, 'se ha ejecutado código del proyecto');
+  comprobar((await cuantos()) === antes, 'el proyecto ha metido etiquetas HTML en la página');
+  comprobar((await p.evaluate(() => document.body.innerText)).includes('<b>negrita</b>'), 'el texto con HTML no se enseña tal cual en la consola');
+});
+
+await prueba('seguridad: el editor compilado lleva CSP y abrir un proyecto con imágenes de internet da un error claro', async (p) => {
+  comprobar(await p.evaluate(() => !!document.querySelector('meta[http-equiv="Content-Security-Policy"]')), 'el editor no lleva CSP');
+  const [eleccion] = await Promise.all([p.waitForEvent('filechooser'), p.click('button:has-text("Abrir")')]);
+  const archivo = join(carpeta, 'espia.chispa.json');
+  writeFileSync(archivo, JSON.stringify({ formato: 'chispa-proyecto', version: 2, nombre: 'Espía', imagenes: { foto: 'https://malo.example/espia.png' }, escenas: { Principal: { colorFondo: 'negro', objetos: [] } } }));
+  await eleccion.setFiles(archivo);
+  await p.waitForSelector('.dialogo');
+  const texto = await textoDe(p, '.dialogo');
+  comprobar(texto.includes('por seguridad no se abre') && texto.includes('imagenes → foto'), 'el error no explica el problema: ' + texto);
 });
 
 await prueba('rendimiento: 2000 objetos (con física amontonados, y con script)', async (p) => {

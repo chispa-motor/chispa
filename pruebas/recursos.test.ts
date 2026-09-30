@@ -6,12 +6,13 @@ import { describe, expect, it } from 'vitest';
 import { EstadoEditor } from '../src/editor/estado/EstadoEditor';
 import { PixelArt, pixelesDesdeRGBA } from '../src/editor/recursos/PixelArt';
 import { importarArchivos, resumenImportar, tipoDeArchivo } from '../src/editor/recursos/importar';
+import { imagenPrueba, sonidoPrueba } from './ayudantes';
 
 function conRecursos(): EstadoEditor {
   const e = new EstadoEditor();
-  e.agregarImagen('nave.png', 'data:image/png;base64,AAA');
-  e.agregarImagen('roca.png', 'data:image/png;base64,BBB');
-  e.agregarSonido('pum.wav', 'data:audio/wav;base64,CCC');
+  e.agregarImagen('nave.png', imagenPrueba('AAA'));
+  e.agregarImagen('roca.png', imagenPrueba('BBB'));
+  e.agregarSonido('pum.wav', sonidoPrueba('CCC'));
   e.crearAnimacion('volar', ['nave']);
   e.crearObjeto('imagen', 0, 0, 'nave');
   e.crearObjeto('mapa', 0, 0);
@@ -76,20 +77,20 @@ describe('Cambiar el nombre de un recurso', () => {
 describe('Guardar un dibujo', () => {
   it('un fotograma es una imagen; varios, imágenes numeradas y una animación', () => {
     const e = new EstadoEditor();
-    expect(e.guardarDibujo('Gato', ['png1'])).toBe('Gato');
-    expect(e.proyecto.imagenes.Gato).toBe('png1');
+    expect(e.guardarDibujo('Gato', [imagenPrueba('png1')])).toBe('Gato');
+    expect(e.proyecto.imagenes.Gato).toBe(imagenPrueba('png1'));
     // Un dibujo NUEVO con el mismo nombre no pisa el anterior
-    expect(e.guardarDibujo('Gato', ['png2'])).toBe('Gato2');
+    expect(e.guardarDibujo('Gato', [imagenPrueba('png2')])).toBe('Gato2');
     // Editando, sí se sobrescribe
-    e.guardarDibujo('Gato', ['png3'], 8, { sobrescribir: true });
-    expect(e.proyecto.imagenes.Gato).toBe('png3');
-    expect(e.guardarDibujo('Andar', ['a', 'b', 'c'], 12)).toBe('Andar');
+    e.guardarDibujo('Gato', [imagenPrueba('png3')], 8, { sobrescribir: true });
+    expect(e.proyecto.imagenes.Gato).toBe(imagenPrueba('png3'));
+    expect(e.guardarDibujo('Andar', [imagenPrueba('a'), imagenPrueba('b'), imagenPrueba('c')], 12)).toBe('Andar');
     expect(e.proyecto.animaciones.Andar).toEqual({ fotogramas: ['Andar1', 'Andar2', 'Andar3'], velocidad: 12, repetir: true });
-    expect(e.proyecto.imagenes.Andar2).toBe('b');
+    expect(e.proyecto.imagenes.Andar2).toBe(imagenPrueba('b'));
     // Una animación editada sigue siendo una animación aunque tenga un solo fotograma
-    e.guardarDibujo('Andar', ['z'], 5, { sobrescribir: true, animacion: true });
+    e.guardarDibujo('Andar', [imagenPrueba('z')], 5, { sobrescribir: true, animacion: true });
     expect(e.proyecto.animaciones.Andar.fotogramas).toEqual(['Andar1']);
-    expect(e.proyecto.imagenes.Andar1).toBe('z');
+    expect(e.proyecto.imagenes.Andar1).toBe(imagenPrueba('z'));
   });
 });
 
@@ -174,14 +175,18 @@ describe('Importar archivos', () => {
   it('importa varios a la vez y explica lo que no ha podido', async () => {
     const e = new EstadoEditor();
     const r = await importarArchivos(e, [
-      new File(['x'], 'Mi Nave.png', { type: 'image/png' }),
-      new File(['y'], 'pum.wav', { type: 'audio/wav' }),
+      // Por dentro, un PNG y un WAV de verdad (empiezan con su firma), aunque el navegador diga otro tipo
+      new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2])], 'Mi Nave.png', { type: '' }),
+      new File(['RIFF\0\0\0\0WAVEyy'], 'pum.wav', { type: 'audio/wav' }),
       new File(['z'], 'deberes.txt', { type: 'text/plain' }),
+      // Un archivo disfrazado: se llama .png pero es texto
+      new File(['<script>alert(1)</script>'], 'trampa.png', { type: 'image/png' }),
     ]);
     expect(r.imagenes).toEqual(['MiNave']);
     expect(r.sonidos).toEqual(['pum']);
-    expect(r.rechazados).toEqual(['"deberes.txt" no es una imagen ni un sonido']);
-    expect(e.proyecto.imagenes.MiNave).toMatch(/^data:/);
+    expect(r.rechazados).toEqual(['"deberes.txt" no es una imagen ni un sonido', '"trampa.png" no es de verdad una imagen (o está dañado)']);
+    // Se guarda con el tipo de verdad, no con el que decía el navegador
+    expect(e.proyecto.imagenes.MiNave).toMatch(/^data:image\/png;base64,/);
     const m = resumenImportar(r)!;
     expect(m.tipo).toBe('ok');
     expect(m.texto).toContain('Imagen: MiNave');

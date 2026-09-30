@@ -28,6 +28,7 @@ import type { EstadoEditor, TipoNuevoObjeto } from '../estado/EstadoEditor';
 import { botonIcono, h, icono } from '../interfaz/dom';
 import { notificar } from '../interfaz/dialogos';
 import { importarArchivos, resumenImportar, tipoDeArchivo } from '../recursos/importar';
+import { tiene } from '../../utilidades/seguro';
 import {
   ajustar,
   CamaraEditor,
@@ -287,7 +288,7 @@ export class VistaEscena {
       img.src = url;
     }
     for (const nombre of [...this.imagenesCargadas.keys()]) {
-      if (!(nombre in imagenes)) {
+      if (!(tiene(imagenes, nombre))) {
         this.imagenesCargadas.delete(nombre);
         this.recursos.quitar(nombre);
       }
@@ -904,9 +905,16 @@ export class VistaEscena {
             if (m) notificar(m.texto, m.tipo);
           });
         }
-        for (const archivo of [...dt.files].filter((f) => f.type.startsWith('image/'))) {
-          leerComoDataURL(archivo).then((datos) => {
-            const nombre = this.estado.agregarImagen(archivo.name, datos);
+        for (const archivo of [...dt.files].filter((f) => tipoDeArchivo(f) === 'imagen')) {
+          // Se importa como con el botón (comprobando que es de verdad una imagen) y luego se coloca
+          void importarArchivos(this.estado, [archivo]).then((r) => {
+            const nombre = r.imagenes[0];
+            if (!nombre) {
+              const m = resumenImportar(r);
+              if (m) notificar(m.texto, m.tipo);
+              return;
+            }
+            const datos = this.estado.proyecto.imagenes[nombre];
             this.estado.crearObjeto('imagen', m.x, m.y, nombre);
             // Tamaño real de la imagen (si no es enorme)
             const img = new Image();

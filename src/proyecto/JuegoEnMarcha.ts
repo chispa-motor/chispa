@@ -43,6 +43,7 @@ import type { FuncionChispa, FuncionNativa, Valor } from '../chispa/ejecucion/va
 import type { Posicion } from '../chispa/lexico/tokens';
 import { referencia } from '../chispa/api/objetos';
 import type { Depurador } from '../chispa/ejecucion/depurador';
+import { propio } from '../utilidades/seguro';
 
 export interface OpcionesJuego {
   /** Qué hacer con mostrar(). Por defecto, la consola de la página. */
@@ -59,9 +60,17 @@ export interface OpcionesJuego {
   almacen?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
   /** El depurador del editor (puntos de parada, paso a paso). Fuera del editor no hay. */
   depurador?: Depurador;
+  /** Qué hacer con sistema.abrirWeb(url). Por defecto, abrirla en otra pestaña. */
+  abrirWeb?: (url: string) => void;
 }
 
 /** Lo que hay que hacer al empezar el siguiente fotograma. `espera`: segundos que faltan (mientras se oscurece la pantalla). */
+/** Mensajes (enviar) que se pueden mandar en un fotograma. */
+export const LIMITE_MENSAJES = 10_000;
+
+/** Objetos que puede haber a la vez en una escena. */
+export const LIMITE_OBJETOS = 10_000;
+
 type Pendiente = { tipo: 'reiniciar' } | { tipo: 'cambiar'; escena: string; espera?: number; fundido?: number } | null;
 
 export class JuegoEnMarcha implements ContextoJuego {
@@ -176,7 +185,7 @@ export class JuegoEnMarcha implements ContextoJuego {
 
   /** Crea los objetos de una escena desde cero. */
   private construir(nombre: string): void {
-    const def = this.proyecto.escenas[nombre];
+    const def = propio(this.proyecto.escenas, nombre)!;
     this.nombreEscena = nombre;
     this.escena.vaciar();
     this.escena.gravedad = def.gravedad ?? GRAVEDAD_MUNDO;
@@ -264,6 +273,12 @@ export class JuegoEnMarcha implements ContextoJuego {
   }
 
   enviarMensaje(mensaje: string, _original: string, dato: Valor): void {
+    if (this.buzon.length >= LIMITE_MENSAJES) {
+      throw new ErrorMotor(
+        `Se han enviado más de ${LIMITE_MENSAJES.toLocaleString('es')} mensajes en un solo fotograma, y ese es el máximo.`,
+        '¿Hay un bucle que llama a enviar() sin parar? Normalmente basta con enviar un mensaje una vez.',
+      );
+    }
     this.buzon.push({ mensaje, dato });
   }
 
@@ -332,8 +347,15 @@ export class JuegoEnMarcha implements ContextoJuego {
   private get almacen() {
     return this.opciones.almacen ?? (typeof localStorage !== 'undefined' ? localStorage : null);
   }
+  abrirWeb(url: string): void {
+    if (this.opciones.abrirWeb) this.opciones.abrirWeb(url);
+    else if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
   private claveGuardado(clave: string): string {
-    return `chispa:${this.proyecto.nombre}:${normalizar(clave)}`;
+    // Por el identificador del proyecto, no por su nombre: así un juego de otra
+    // persona que se llame igual no puede leer tus récords (AUDITORIA_SEGURIDAD.md)
+    return `chispa:${this.proyecto.id ?? this.proyecto.nombre}:${normalizar(clave)}`;
   }
   guardarDato(clave: string, texto: string): void {
     try {
@@ -360,6 +382,13 @@ export class JuegoEnMarcha implements ContextoJuego {
   // ───────────────────────── Objetos ─────────────────────────
 
   crearDesdePlantilla(nombre: string, x: number | null, y: number | null): ObjetoJuego {
+    // Límite de seguridad: millones de objetos congelarían el navegador (ver AUDITORIA_SEGURIDAD.md)
+    if (this.escena.objetos.length >= LIMITE_OBJETOS) {
+      throw new ErrorMotor(
+        `Ya hay ${LIMITE_OBJETOS.toLocaleString('es')} objetos en la escena: es el máximo, y con más el juego se congelaría.`,
+        '¿Hay algo que crea objetos sin parar? Destruye los que ya no hacen falta (por ejemplo, las balas que salen de la pantalla).',
+      );
+    }
     const n = normalizar(nombre);
     const clave = Object.keys(this.proyecto.plantillas).find((k) => normalizar(k) === n);
     if (!clave) {
@@ -370,7 +399,7 @@ export class JuegoEnMarcha implements ContextoJuego {
         parecida ? `¿Querías decir "${parecida}"?` : hay.length ? `Las plantillas que hay son: ${hay.join(', ')}.` : 'Este proyecto no tiene plantillas todavía.',
       );
     }
-    const def = this.proyecto.plantillas[clave];
+    const def = propio(this.proyecto.plantillas, clave)!;
     // La posición se pasa ANTES de meterlo en la escena, para que su
     // "cuando empieza" ya vea el objeto en su sitio.
     return this.instanciar({ ...def, x: x ?? def.x, y: y ?? def.y }, clave);

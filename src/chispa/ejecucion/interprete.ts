@@ -48,6 +48,7 @@ import { instalarBasicas } from '../api/basicas';
 import { PeticionParada, type Depurador, type HiloDepurable } from './depurador';
 import { ErrorMotor } from '../../motor/Errores';
 import { Vector2 } from '../../motor/Vector2';
+import { sinPrototipo } from '../../utilidades/seguro';
 
 /** Lo que devuelve un bloque: nada, o una orden de salir de un bucle o de una función. */
 type Senal = { tipo: 'devolver'; valor: Valor } | { tipo: 'romper' } | { tipo: 'continuar' } | undefined;
@@ -60,6 +61,54 @@ export type Ejecucion<T> = Generator<PeticionEspera | PeticionParada, T, void>;
  * con un error que explica qué ha pasado.
  */
 export const LIMITE_VUELTAS = 1_000_000;
+
+/**
+ * LÍMITES DE SEGURIDAD (ver AUDITORIA_SEGURIDAD.md): un juego, aunque sea de
+ * otra persona, no puede llenar la memoria ni congelar el navegador. Si se
+ * pasa, sale un error de Chispa que explica qué ha pasado.
+ */
+/** Funciones dentro de funciones (una función que se llama a sí misma sin parar). */
+export const LIMITE_PROFUNDIDAD = 1000;
+/** Letras de un texto. */
+export const LIMITE_LETRAS = 1_000_000;
+/** Elementos de una lista (o claves de una tabla). */
+export const LIMITE_ELEMENTOS = 1_000_000;
+
+/** Error si un texto nuevo sería demasiado largo. */
+export function comprobarLetras(longitud: number, pos: Posicion): void {
+  if (longitud > LIMITE_LETRAS) {
+    throw new ErrorChispa(
+      pos,
+      `este texto tendría ${Math.round(longitud).toLocaleString('es')} letras, y el máximo es un millón: llenaría la memoria del ordenador.`,
+      '¿Hay un bucle que va juntando texto sin parar (t = t + t)? Revisa cuántas veces se repite.',
+    );
+  }
+}
+
+/** Error si una lista nueva sería demasiado larga. */
+export function comprobarElementos(longitud: number, pos: Posicion): void {
+  if (longitud > LIMITE_ELEMENTOS) {
+    throw new ErrorChispa(
+      pos,
+      `esta lista tendría ${Math.round(longitud).toLocaleString('es')} elementos, y el máximo es un millón: llenaría la memoria del ordenador.`,
+      '¿Hay un bucle que va añadiendo sin parar? Revisa cuántas veces se repite.',
+    );
+  }
+}
+
+/** El mensaje cuando una función se llama a sí misma sin parar. */
+function errorProfundidad(nombre: string, pos: Posicion): ErrorChispa {
+  return new ErrorChispa(
+    pos,
+    `la función '${nombre}' se ha metido demasiadas veces una dentro de otra (más de ${LIMITE_PROFUNDIDAD}): parece que se llama a sí misma sin parar.`,
+    'Si una función se llama a sí misma, necesita un caso en el que NO lo haga (por ejemplo: si n <= 0: devolver 0).',
+  );
+}
+
+/** ¿Es el error de JavaScript de "la pila se ha llenado"? (en cada navegador se escribe distinto) */
+function esPilaLlena(error: unknown): boolean {
+  return error instanceof RangeError && /call stack|too much recursion|stack/i.test(error.message);
+}
 
 export class Interprete {
   readonly globales = new Entorno();
@@ -84,8 +133,7 @@ export class Interprete {
   textoVivo(e: Expresion, entorno: () => Entorno, origen: { archivo: string; lineas: string[] } | null = this.programaActual): () => string | null {
     return () => {
       try {
-        this.reiniciarContadorDeVueltas();
-        const r = this.evaluar(e, entorno()).next();
+        const r = this.conContadorPropio(() => this.evaluar(e, entorno()).next());
         if (!r.done) throw new ErrorChispa(e.pos, 'dentro de un texto con huecos no se puede usar esperar().');
         return aTexto(r.value);
       } catch (err) {
@@ -100,6 +148,8 @@ export class Interprete {
   nombresDeObjetos: () => string[] = () => [];
 
   private vueltas = 0;
+  /** Funciones dentro de funciones cuando no hay hilo (tests, órdenes de la consola). */
+  private profundidadSinHilo = 0;
   /** El depurador del editor (null al jugar fuera del editor: entonces no cuesta nada). */
   depurador: Depurador | null = null;
   /** El hilo que se está ejecutando ahora (lo pone ScriptChispa), para los pasos del depurador. */
@@ -110,9 +160,25 @@ export class Interprete {
     instalarBasicas(this);
   }
 
-  /** El planificador lo llama cada vez que reanuda un hilo. */
-  reiniciarContadorDeVueltas(): void {
-    this.vueltas = 0;
+  /** Cuántos hilos se están ejecutando uno dentro de otro ahora mismo. */
+  private anidamiento = 0;
+
+  /**
+   * El planificador ejecuta así cada hilo: el contador de vueltas (contra los
+   * bucles infinitos) empieza de cero... salvo si este hilo empieza DENTRO de
+   * otro (un aLaVez, o el «cuando empieza» de un objeto recién creado, dentro
+   * de un bucle). Entonces sigue sumando en el mismo contador: si no, un
+   * `mientras verdadero: aLaVez(f)` se saltaría la protección y congelaría el
+   * navegador (ver AUDITORIA_SEGURIDAD.md).
+   */
+  conContadorPropio<T>(fn: () => T): T {
+    if (this.anidamiento === 0) this.vueltas = 0;
+    this.anidamiento++;
+    try {
+      return fn();
+    } finally {
+      this.anidamiento--;
+    }
   }
 
   // ═════════════════════════ SENTENCIAS ═════════════════════════
@@ -329,6 +395,7 @@ export class Interprete {
         // "Puntos: {juego.puntos}": cada hueco se calcula ahora y se une al resto
         let r = '';
         for (const p of e.partes) r += typeof p === 'string' ? p : aTexto((sinLlamadas(p) ? this.evaluarDirecto(p, ent) : yield* this.evaluar(p, ent)));
+        comprobarLetras(r.length, e.pos);
         return r;
       }
       case 'Logico':
@@ -417,6 +484,7 @@ export class Interprete {
         if (!e.partes) return e.valor;
         let r = '';
         for (const p of e.partes) r += typeof p === 'string' ? p : aTexto(this.evaluarDirecto(p, ent));
+        comprobarLetras(r.length, e.pos);
         return r;
       }
       case 'Identificador': {
@@ -586,13 +654,16 @@ export class Interprete {
       def.parametros.forEach((p, i) => local.declarar(p.nombre, copiarSiVector(args[i]), p.original));
       // Para el depurador: «siguiente línea» no se mete dentro de las funciones
       const hilo = this.hiloActual;
-      if (hilo) hilo.profundidad++;
+      const profundidad = hilo ? ++hilo.profundidad : ++this.profundidadSinHilo;
       const dueno = funcion.dueno;
       const deOtro = !!dueno && (dueno.programa !== this.programaActual || (dueno.objeto !== undefined && dueno.objeto !== this.objetoActual));
       try {
+        if (profundidad > LIMITE_PROFUNDIDAD) throw errorProfundidad(def.original, pos);
         const senal = deOtro ? yield* this.comoDueno(dueno!, this.ejecutarBloque(def.cuerpo, local)) : yield* this.ejecutarBloque(def.cuerpo, local);
         return senal?.tipo === 'devolver' ? senal.valor : null;
-      } catch (error) {
+      } catch (e) {
+        // La pila de JavaScript se llenó antes de llegar al límite (pasa en algunos navegadores)
+        const error = esPilaLlena(e) ? errorProfundidad(def.original, pos) : e;
         if (error instanceof ErrorChispa) {
           // Un error dentro de la función de otro objeto: es de SU script
           if (deOtro && dueno!.programa) error.conArchivo(dueno!.programa.archivo, dueno!.programa.lineas);
@@ -602,6 +673,7 @@ export class Interprete {
         throw error;
       } finally {
         if (hilo) hilo.profundidad--;
+        else this.profundidadSinHilo--;
       }
     }
 
@@ -624,9 +696,17 @@ export class Interprete {
       case '+':
         if (typeof a === 'number' && typeof b === 'number') return a + b;
         // Si uno de los dos es texto, los unimos: "Puntos: " + 5 → "Puntos: 5"
-        if (typeof a === 'string' || typeof b === 'string') return aTexto(a) + aTexto(b);
+        if (typeof a === 'string' || typeof b === 'string') {
+          const ta = aTexto(a);
+          const tb = aTexto(b);
+          comprobarLetras(ta.length + tb.length, pos);
+          return ta + tb;
+        }
         if (a instanceof Vector2 && b instanceof Vector2) return a.sumar(b);
-        if (Array.isArray(a) && Array.isArray(b)) return [...a, ...b];
+        if (Array.isArray(a) && Array.isArray(b)) {
+          comprobarElementos(a.length + b.length, pos);
+          return [...a, ...b];
+        }
         break;
       case '-':
         if (typeof a === 'number' && typeof b === 'number') return a - b;
@@ -896,7 +976,7 @@ function argTextoMetodo(a: Valor[], i: number, metodo: string, pos: Posicion, ej
 }
 
 /** Métodos de los textos: nombre.dividir(" "), frase.reemplazar("a", "e")... Los textos no cambian: devuelven uno nuevo. */
-export const METODOS_TEXTO: Record<string, (t: string, args: Valor[], pos: Posicion) => Valor> = {
+export const METODOS_TEXTO: Record<string, (t: string, args: Valor[], pos: Posicion) => Valor> = sinPrototipo({
   dividir: (t, a, pos) => {
     const sep = a[0] === undefined ? ' ' : argTextoMetodo(a, 0, 'dividir', pos, 'frase.dividir(" ")');
     return sep === '' ? Array.from(t) : t.split(sep);
@@ -905,7 +985,12 @@ export const METODOS_TEXTO: Record<string, (t: string, args: Valor[], pos: Posic
     const ej = 'frase.reemplazar("gato", "perro")';
     const buscar = argTextoMetodo(a, 0, 'reemplazar', pos, ej);
     if (a[1] === undefined) throw new ErrorChispa(pos, "a 'reemplazar' le falta por qué cambiarlo.", `Ejemplo: ${ej}`);
-    return buscar === '' ? t : t.split(buscar).join(aTexto(a[1]));
+    if (buscar === '') return t;
+    const por = aTexto(a[1]);
+    // Antes de hacerlo, cuánto mediría (si no, un texto enorme llenaría la memoria)
+    const veces = t.split(buscar).length - 1;
+    comprobarLetras(t.length + veces * (por.length - buscar.length), pos);
+    return t.split(buscar).join(por);
   },
   contiene: (t, a, pos) => t.includes(argTextoMetodo(a, 0, 'contiene', pos, 'si frase.contiene("hola"):')),
   empiezapor: (t, a, pos) => t.startsWith(argTextoMetodo(a, 0, 'empiezaPor', pos, 'si nombre.empiezaPor("Dr"):')),
@@ -924,7 +1009,7 @@ export const METODOS_TEXTO: Record<string, (t: string, args: Valor[], pos: Posic
     const i = t.indexOf(argTextoMetodo(a, 0, 'posicion', pos, 'frase.posicion("hola")'));
     return i < 0 ? 0 : Array.from(t.slice(0, i)).length + 1;
   },
-};
+});
 
 /** Ordena números o textos (sin mezclar). Los textos, sin importar mayúsculas ni tildes. */
 function comparar(a: Valor, b: Valor, pos: Posicion): number {
@@ -934,10 +1019,10 @@ function comparar(a: Valor, b: Valor, pos: Posicion): number {
 }
 
 /** Métodos de las listas: lista.añadir(x), lista.quitar(1) */
-export const METODOS_LISTA: Record<string, (lista: Valor[], args: Valor[], pos: Posicion) => Valor> = {
-  añadir: (l, a) => (l.push(copiarSiVector(a[0] ?? null)), null),
-  anadir: (l, a) => (l.push(copiarSiVector(a[0] ?? null)), null),
-  agregar: (l, a) => (l.push(copiarSiVector(a[0] ?? null)), null),
+export const METODOS_LISTA: Record<string, (lista: Valor[], args: Valor[], pos: Posicion) => Valor> = sinPrototipo({
+  añadir: (l, a, pos) => (comprobarElementos(l.length + 1, pos), l.push(copiarSiVector(a[0] ?? null)), null),
+  anadir: (l, a, pos) => (comprobarElementos(l.length + 1, pos), l.push(copiarSiVector(a[0] ?? null)), null),
+  agregar: (l, a, pos) => (comprobarElementos(l.length + 1, pos), l.push(copiarSiVector(a[0] ?? null)), null),
   quitar: (l, a, pos) => {
     const i = a[0];
     if (typeof i !== 'number' || !Number.isInteger(i) || i < 1 || i > l.length) {
@@ -948,6 +1033,7 @@ export const METODOS_LISTA: Record<string, (lista: Valor[], args: Valor[], pos: 
   insertar: (l, a, pos) => {
     // Se puede insertar en cualquier sitio, también justo después del último
     const i = argPosicion(a, 0, l.length + 1, 'insertar', pos, 'lista.insertar(1, "primero")');
+    comprobarElementos(l.length + 1, pos);
     l.splice(i - 1, 0, copiarSiVector(a[1] ?? null));
     return null;
   },
@@ -969,12 +1055,16 @@ export const METODOS_LISTA: Record<string, (lista: Valor[], args: Valor[], pos: 
     const hasta = a[1] === undefined ? l.length : argPosicion(a, 1, l.length, 'sublista', pos, ej);
     return l.slice(desde - 1, Math.max(desde - 1, hasta));
   },
-  unir: (l, a, pos) => l.map((x) => aTexto(x)).join(a[0] === undefined ? ', ' : argTextoMetodo(a, 0, 'unir', pos, 'lista.unir(", ")')),
+  unir: (l, a, pos) => {
+    const r = l.map((x) => aTexto(x)).join(a[0] === undefined ? ', ' : argTextoMetodo(a, 0, 'unir', pos, 'lista.unir(", ")'));
+    comprobarLetras(r.length, pos);
+    return r;
+  },
   vaciar: (l) => {
     l.length = 0;
     return null;
   },
-};
+});
 
 /**
  * ¿Es una expresión sin ninguna llamada dentro? Entonces se puede calcular de

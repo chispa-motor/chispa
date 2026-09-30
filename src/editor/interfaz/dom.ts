@@ -6,6 +6,8 @@
  * crea un <button class="boton">Texto</button> con su evento. Es una forma
  * corta y legible de construir trozos de página desde TypeScript.
  */
+import { esColorValido, resolverColor } from '../../motor/Color';
+
 type Hijo = Node | string | number | null | undefined | false;
 type Props = Record<string, unknown> & { class?: string; style?: string };
 
@@ -23,6 +25,17 @@ export function h<K extends keyof HTMLElementTagNameMap>(etiqueta: K, props: Pro
     if (hijo === null || hijo === undefined || hijo === false) continue;
     el.append(typeof hijo === 'object' ? hijo : String(hijo));
   }
+  return el;
+}
+
+/**
+ * Pinta el fondo de un elemento con un color que puede venir de un proyecto.
+ * Nunca se escribe dentro de style="..." (ahí se podría colar otra cosa de
+ * CSS, como url(...), que cargaría algo de internet): se comprueba que es un
+ * color y se pone con backgroundColor, que solo admite colores.
+ */
+export function fondoDeColor<T extends HTMLElement>(el: T, color: string | undefined, siNoVale = 'gray'): T {
+  el.style.backgroundColor = color && esColorValido(color) ? resolverColor(color) : siNoVale;
   return el;
 }
 

@@ -30,6 +30,7 @@ import { deserializar, serializar } from './guardado';
 import { Tabla } from '../ejecucion/valores';
 import { lanzarRayo } from '../../objetos/Rayos';
 import { CajaDialogo } from '../../objetos/Dialogo';
+import { propio, sinPrototipo } from '../../utilidades/seguro';
 
 /** Lo que la API necesita del juego en marcha (lo implementa JuegoEnMarcha). */
 export interface ContextoJuego {
@@ -48,6 +49,8 @@ export interface ContextoJuego {
   guardarDato(clave: string, texto: string): void;
   cargarDato(clave: string): string | null;
   borrarDato(clave: string): void;
+  /** sistema.abrirWeb(url). En el editor pregunta antes (el juego puede ser de otra persona). */
+  abrirWeb?(url: string): void;
 }
 
 // ═════════════════════════ Módulo genérico ═════════════════════════
@@ -79,10 +82,10 @@ class Modulo extends Anfitrion {
     return this.nombresBonitos.length ? this.nombresBonitos : [...Object.keys(this.props), ...Object.keys(this.metodos)];
   }
   tieneMiembro(nombre: string): boolean {
-    return nombre in this.props || nombre in this.metodos || nombre in this.submodulos;
+    return propio(this.props, nombre) !== undefined || propio(this.metodos, nombre) !== undefined || propio(this.submodulos, nombre) !== undefined;
   }
   submodulo(nombre: string): Anfitrion | null {
-    return this.submodulos[nombre] ?? null;
+    return propio(this.submodulos, nombre) ?? null;
   }
   /** Añade un módulo dentro de este (escena.camara). */
   agregarSubmodulo(nombre: string, modulo: Modulo): this {
@@ -90,9 +93,12 @@ class Modulo extends Anfitrion {
     return this;
   }
   obtener(p: string, original: string, pos: Posicion): Valor {
-    if (this.submodulos[p]) return this.submodulos[p];
-    if (this.props[p]) return this.props[p].obtener();
-    if (this.metodos[p]) return new FuncionNativa(`${this.nombre}.${original}`, this.metodos[p]);
+    const submodulo = propio(this.submodulos, p);
+    if (submodulo) return submodulo;
+    const prop = propio(this.props, p);
+    if (prop) return prop.obtener();
+    const metodo = propio(this.metodos, p);
+    if (metodo) return new FuncionNativa(`${this.nombre}.${original}`, metodo);
     const s = sugerir(original, this.propiedadesConocidas());
     throw new ErrorChispa(
       pos,
@@ -101,7 +107,7 @@ class Modulo extends Anfitrion {
     );
   }
   asignar(p: string, v: Valor, original: string, pos: Posicion): void {
-    const prop = this.props[p];
+    const prop = propio(this.props, p);
     if (prop?.asignar) return prop.asignar(v, pos);
     throw new ErrorChispa(pos, `'${this.nombre}.${original}' no se puede cambiar${prop ? ', solo leer' : ' (no existe)'}.`);
   }
@@ -196,7 +202,7 @@ function comprobarAnimable(lugar: Lugar, desde: Valor, hasta: Valor, pos: Posici
 
 // ═════════════════════════ Instalar la API ═════════════════════════
 
-const BOTONES: Record<string, BotonRaton> = { izquierdo: 'izquierdo', izquierda: 'izquierdo', derecho: 'derecho', derecha: 'derecho', medio: 'medio', central: 'medio' };
+const BOTONES: Record<string, BotonRaton> = sinPrototipo({ izquierdo: 'izquierdo', izquierda: 'izquierdo', derecho: 'derecho', derecha: 'derecho', medio: 'medio', central: 'medio' });
 
 function argBoton(args: Valor[], funcion: string, pos: Posicion): BotonRaton {
   if (args[0] === undefined) return 'izquierdo';
@@ -337,7 +343,7 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
         const segundos = argNumero(a, 2, 'animar', p, 'animar(yo.x, 300, 1)', 0.5);
         if (segundos < 0) throw new ErrorChispa(p, 'el tiempo de una animación no puede ser negativo.');
         const nombreSuave = a[3] === undefined ? 'suave' : normalizar(argTexto(a, 3, 'animar', p, 'animar(yo.x, 300, 1, "rebote")'));
-        const suavizado = SUAVIZADOS[nombreSuave];
+        const suavizado = propio(SUAVIZADOS, nombreSuave);
         if (!suavizado) {
           const s = sugerir(nombreSuave, NOMBRES_SUAVIZADOS);
           throw new ErrorChispa(p, `no conozco el suavizado "${aTexto(a[3] ?? null)}".`, (s ? `¿Querías decir "${s}"? ` : '') + `Los que hay son: ${NOMBRES_SUAVIZADOS.join(', ')}.`);
@@ -785,7 +791,8 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
         abrirweb: (a, p) => {
           const url = argTexto(a, 0, 'sistema.abrirWeb', p, 'sistema.abrirWeb("https://itch.io")');
           if (!/^https?:\/\//i.test(url)) throw new ErrorChispa(p, 'la dirección tiene que empezar por https:// (o http://).', 'Ejemplo: sistema.abrirWeb("https://itch.io")');
-          if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener');
+          if (ctx.abrirWeb) ctx.abrirWeb(url);
+          else if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener,noreferrer');
           return null;
         },
       },

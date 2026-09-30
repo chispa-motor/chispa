@@ -4,6 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { EstadoEditor } from '../src/editor/estado/EstadoEditor';
+import { imagenPrueba, sonidoPrueba } from './ayudantes';
 
 function conTres(): EstadoEditor {
   const e = new EstadoEditor();
@@ -218,8 +219,8 @@ describe('Deshacer y rehacer: TODO lo que cambia el proyecto', () => {
     e.crearObjeto('circulo', 50, 50);
     e.crearPlantillaVacia('Bala');
     e.colocarPlantilla('Bala', 10, 10);
-    e.agregarImagen('foto.png', 'data:image/png;base64,AAAA');
-    e.agregarSonido('pum.wav', 'data:audio/wav;base64,AAAA');
+    e.agregarImagen('foto.png', imagenPrueba('AAAA'));
+    e.agregarSonido('pum.wav', sonidoPrueba('AAAA'));
     e.crearAnimacion('andar', ['foto']);
     e.crearEscena('Nivel2');
     e.cambiarEscenaActual('Principal');
@@ -262,9 +263,9 @@ describe('Deshacer y rehacer: TODO lo que cambia el proyecto', () => {
     colocarPlantilla: (e) => e.colocarPlantilla('Bala', 0, 0),
     crearPlantillaVacia: (e) => e.crearPlantillaVacia('Enemigo'),
     desvincular: (e) => e.desvincular(obj(3)),
-    agregarImagen: (e) => e.agregarImagen('otra.png', 'data:image/png;base64,BBBB'),
+    agregarImagen: (e) => e.agregarImagen('otra.png', imagenPrueba('BBBB')),
     borrarImagen: (e) => e.borrarImagen('foto'),
-    agregarSonido: (e) => e.agregarSonido('otro.wav', 'data:audio/wav;base64,BBBB'),
+    agregarSonido: (e) => e.agregarSonido('otro.wav', sonidoPrueba('BBBB')),
     borrarSonido: (e) => e.borrarSonido('pum'),
     crearAnimacion: (e) => e.crearAnimacion('saltar'),
     cambiarAnimacion: (e) => e.cambiarAnimacion('andar', { velocidad: 3 }),
@@ -273,9 +274,9 @@ describe('Deshacer y rehacer: TODO lo que cambia el proyecto', () => {
     pintarRectangulo: (e) => e.pintarRectangulo(obj(1), 0, 0, 3, 3, 'suelo'),
     ponerTipoCasilla: (e) => e.ponerTipoCasilla(obj(1), 'lava', { color: 'azul', solida: true }),
     borrarTipoCasilla: (e) => e.borrarTipoCasilla(obj(1), 'hielo'),
-    cambiarImagen: (e) => e.cambiarImagen('foto', 'data:image/png;base64,CCCC'),
+    cambiarImagen: (e) => e.cambiarImagen('foto', imagenPrueba('CCCC')),
     renombrarRecurso: (e) => e.renombrarRecurso('imagen', 'foto', 'retrato'),
-    guardarDibujo: (e) => e.guardarDibujo('Gato', ['a', 'b']),
+    guardarDibujo: (e) => e.guardarDibujo('Gato', [imagenPrueba('a'), imagenPrueba('b')]),
   };
 
   for (const [nombre, cambio] of Object.entries(cambios)) {

@@ -5,6 +5,7 @@
  */
 import type { Renderizador } from '../motor/Renderizador';
 import { resolverColor } from '../motor/Color';
+import { sinPrototipo } from '../utilidades/seguro';
 
 export interface ConfigParticulas {
   cantidad: number;
@@ -27,14 +28,14 @@ export interface ConfigParticulas {
 }
 
 /** Tipos ya preparados, para usar con un solo nombre: particulas("explosion", x, y) */
-export const TIPOS_PARTICULAS: Record<string, ConfigParticulas> = {
+export const TIPOS_PARTICULAS: Record<string, ConfigParticulas> = sinPrototipo({
   explosion: { cantidad: 40, colores: ['amarillo', 'naranja', 'rojo'], velocidad: 320, vida: 0.7, tamano: 8, gravedad: 0.3, dispersion: 360, direccion: 90, encoger: true },
   humo: { cantidad: 18, colores: ['gris', '#b0b6bf', '#8a9099'], velocidad: 60, vida: 1.4, tamano: 18, gravedad: -0.08, dispersion: 70, direccion: 90, encoger: false },
   chispas: { cantidad: 25, colores: ['amarillo', 'blanco'], velocidad: 420, vida: 0.4, tamano: 4, gravedad: 0.6, dispersion: 360, direccion: 90, encoger: true },
   polvo: { cantidad: 12, colores: ['#c8b08a', '#a8916d'], velocidad: 90, vida: 0.5, tamano: 7, gravedad: 0.1, dispersion: 160, direccion: 90, encoger: true },
   confeti: { cantidad: 60, colores: ['rojo', 'amarillo', 'verde', 'azul', 'rosa', 'cian'], velocidad: 380, vida: 1.6, tamano: 7, gravedad: 0.5, dispersion: 60, direccion: 90, encoger: false },
   estrellas: { cantidad: 16, colores: ['amarillo', 'blanco'], velocidad: 160, vida: 0.9, tamano: 6, gravedad: 0, dispersion: 360, direccion: 90, encoger: true },
-};
+});
 
 interface Particula {
   x: number;

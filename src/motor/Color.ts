@@ -6,8 +6,9 @@
  * navegador, así que "#ff00ff" o "rgb(10, 20, 30)" también funcionan.
  */
 import { normalizar } from '../utilidades/texto';
+import { sinPrototipo } from '../utilidades/seguro';
 
-const COLORES: Record<string, string> = {
+const COLORES: Record<string, string> = sinPrototipo({
   rojo: '#e74c3c',
   verde: '#2ecc71',
   azul: '#3498db',
@@ -22,7 +23,7 @@ const COLORES: Record<string, string> = {
   gris: '#7f8c8d',
   marron: '#8e5a2b', // también acepta "marrón" gracias a normalizar()
   transparente: 'rgba(0,0,0,0)',
-};
+});
 
 /** Convierte "Rojo", "rojo" o "#ff0000" en un color que entiende el Canvas. */
 export function resolverColor(color: string): string {
@@ -35,7 +36,9 @@ export const NOMBRES_COLORES = Object.keys(COLORES);
 /** ¿Es un color que el motor sabe dibujar? (un nombre en español, "#ff8800", "rgb(...)"...) */
 export function esColorValido(color: string): boolean {
   const c = color.trim();
-  return normalizar(c) in COLORES || /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(c) || /^(rgb|rgba|hsl|hsla)\(.+\)$/i.test(c);
+  // Dentro de rgb() solo números, comas, espacios, %, / y "deg": así nadie puede colar
+  // otra cosa de CSS (como url(...), que cargaría algo de internet) disfrazada de color.
+  return normalizar(c) in COLORES || /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(c) || /^(rgb|rgba|hsl|hsla)\(\s*[-+0-9.,%\s/]*(deg)?[-+0-9.,%\s/]*\)$/i.test(c);
 }
 
 /** "rojo", "#e74c3c" o "#f00" → [r, g, b, a] (0-255, a de 0 a 1). null si no se puede leer (rgb(), hsl()...). */

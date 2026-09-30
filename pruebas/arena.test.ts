@@ -100,7 +100,7 @@ describe('Arena de Habilidades', () => {
     j.juego.ejecutarOrden('buscar("Jugador").recibirDano(9999, nulo, 0)');
     j.avanzar(400);
     expect(j.juego.nombreEscena).toBe('Derrota');
-    expect(j.almacen.get('chispa:Arena de Habilidades:record')).toBe('3');
+    expect(j.almacen.get('chispa:arena-de-habilidades-0001:record')).toBe('3');
     j.juego.ejecutarOrden('escena.cambiar("Menu")');
     j.avanzar(3);
     expect(j.juego.escena.buscar('Record')?.obtener(Sprite)?.texto).toBe('Record: oleada 3');

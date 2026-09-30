@@ -9,6 +9,8 @@
  * mandar por correo o subir tal cual a itch.io, GitHub Pages, Netlify...
  */
 import type { DefProyecto } from '../proyecto/formato';
+import { ESTILOS_TACTILES } from '../reproductor/ControlesTactiles';
+import { huellaCSP } from '../utilidades/sha256';
 
 /** Estilos de la página del juego (pantalla completa, bandas negras, panel de errores). */
 const ESTILOS = `
@@ -37,17 +39,48 @@ export function jsonParaScript(datos: unknown): string {
   return JSON.stringify(datos).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
 }
 
+/**
+ * POLÍTICA DE SEGURIDAD (CSP) de la página del juego. Le dice al navegador:
+ *   - solo se ejecuta EL código de Chispa que va dentro (por su huella sha256);
+ *     cualquier otro script, aunque alguien lo colara, no se ejecuta;
+ *   - solo se usan LOS estilos que van dentro (también por su huella);
+ *   - las imágenes y los sonidos solo pueden salir del propio archivo (data:);
+ *   - la página no puede conectarse a ningún sitio de internet, ni cargar
+ *     fuentes, ni enviar formularios, ni meter otras páginas dentro.
+ */
+export function politicaDeSeguridad(codigo: string, estilos: string[]): string {
+  return [
+    "default-src 'none'",
+    `script-src ${huellaCSP(codigo)}`,
+    `style-src ${estilos.map(huellaCSP).join(' ')}`,
+    'img-src data: blob:',
+    'media-src data: blob:',
+    "connect-src 'none'",
+    "font-src 'none'",
+    "object-src 'none'",
+    "frame-src 'none'",
+    "worker-src 'none'",
+    "manifest-src 'none'",
+    "base-uri 'none'",
+    "form-action 'none'",
+  ].join('; ');
+}
+
 /** Genera la página completa. `reproductor` es el código de public/reproductor.js. */
 export function generarPaginaJuego(proyecto: DefProyecto, reproductor: string): string {
   const codigo = reproductor.replace(/<\/script/gi, '<\\/script').replace(/<!--/g, '<\\!--');
+  const csp = politicaDeSeguridad(codigo, [ESTILOS, ESTILOS_TACTILES]);
   return `<!doctype html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="${escaparHTML(csp)}">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="Chispa">
+<meta name="referrer" content="no-referrer">
 <title>${escaparHTML(proyecto.nombre)}</title>
 <style>${ESTILOS}</style>
+<style data-controles-tactiles>${ESTILOS_TACTILES}</style>
 </head>
 <body>
 <div id="contenedor-juego"><canvas id="lienzo" tabindex="0"></canvas></div>

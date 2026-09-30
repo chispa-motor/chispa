@@ -14,6 +14,7 @@ import type { DefObjeto } from '../../proyecto/formato';
 import { OBJETOS_NUEVOS, type VistaEscena } from '../escena/VistaEscena';
 import { botonIcono, h, icono, rellenar } from '../interfaz/dom';
 import { confirmar, notificar, pedirTexto } from '../interfaz/dialogos';
+import { tiene } from '../../utilidades/seguro';
 
 type Pestana = 'escena' | 'proyecto';
 
@@ -103,7 +104,7 @@ export class PanelIzquierdo {
     const lista = h('ul', { class: 'arbol', role: 'tree', 'aria-label': 'Objetos de la escena' });
     objetos.forEach((def, i) => {
       const seleccionado = e.estaSeleccionado(i);
-      const conScript = def.script && def.script in e.proyecto.scripts;
+      const conScript = def.script && tiene(e.proyecto.scripts, def.script);
       const fila = h('li', {
         class: `nodo ${seleccionado ? 'seleccionado' : ''}`,
         draggable: 'true',

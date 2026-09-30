@@ -14,6 +14,18 @@ import { ErrorMotor } from '../../motor/Errores';
 import { teclasDelJuego } from '../../reproductor/ControlesTactiles';
 import { JuegoEnMarcha, type OpcionesJuego } from '../../proyecto/JuegoEnMarcha';
 import { h, icono } from '../interfaz/dom';
+import { confirmar } from '../interfaz/dialogos';
+
+/**
+ * sistema.abrirWeb en el editor: el juego puede ser de otra persona, así que
+ * antes de abrir nada se pregunta, enseñando la dirección entera. (En un juego
+ * exportado, el navegador ya solo deja abrir ventanas cuando el jugador pulsa algo.)
+ */
+export async function preguntarAntesDeAbrir(url: string): Promise<boolean> {
+  const si = await confirmar('El juego quiere abrir una página web', `Dirección: ${url}\n\n¿La abro en otra pestaña? Si no conoces esta página, di que no.`, 'Abrir');
+  if (si) window.open(url, '_blank', 'noopener,noreferrer');
+  return si;
+}
 
 export type EstadoJuego = 'parado' | 'cargando' | 'jugando' | 'pausado';
 
@@ -80,7 +92,7 @@ export class VistaJuego {
     };
     this.motor = motor;
     try {
-      this.juego = await JuegoEnMarcha.arrancar(motor, copia, { ...opciones, almacen: localStorage });
+      this.juego = await JuegoEnMarcha.arrancar(motor, copia, { ...opciones, almacen: localStorage, abrirWeb: preguntarAntesDeAbrir });
     } catch (error) {
       if (this.motor === motor) {
         this.motor = null;

@@ -26,6 +26,7 @@ import { SUAVIZADOS } from '../../objetos/AnimadorDeValores';
 import { argTexto } from './argumentos';
 import { enumerar } from '../errores/sugerencias';
 import { normalizar } from '../../utilidades/texto';
+import { sinPrototipo } from '../../utilidades/seguro';
 
 /** Lo que RefObjeto necesita del script de un objeto (ScriptChispa lo cumple). */
 interface ScriptDeObjeto {
@@ -144,7 +145,7 @@ interface PropiedadObjeto {
 }
 
 /** Propiedades de cualquier objeto. Clave normalizada → cómo leerla y cómo escribirla. */
-const PROPIEDADES: Record<string, PropiedadObjeto> = {
+const PROPIEDADES: Record<string, PropiedadObjeto> = sinPrototipo({
   nombre: { obtener: (o) => o.nombre, asignar: (o, v) => (o.nombre = aTexto(v)) },
   tipo: { obtener: (o) => o.tipo },
   x: { obtener: (o) => o.posicion.x, asignar: (o, v, p) => (o.posicion.x = comoNumero(v, 'x', p)) },
@@ -302,7 +303,7 @@ const PROPIEDADES: Record<string, PropiedadObjeto> = {
   ratonencima: { obtener: (o) => o.escena?.ratonEncima(o) ?? false },
   destruido: { obtener: (o) => o.destruido },
   yendo: { obtener: (o) => o.obtener(Comportamiento)?.yendo ?? false },
-};
+});
 
 /** yo.moviendo solo existe si el objeto tiene un recorrido (se pone en el editor). */
 function necesitaRecorrido(o: ObjetoJuego, pos: Posicion): Recorrido {
@@ -312,7 +313,7 @@ function necesitaRecorrido(o: ObjetoJuego, pos: Posicion): Recorrido {
 }
 
 /** Acciones de cualquier objeto: yo.saltar(), yo.mover(10, 0)... */
-const METODOS: Record<string, (o: ObjetoJuego, args: Valor[], pos: Posicion) => Valor> = {
+const METODOS: Record<string, (o: ObjetoJuego, args: Valor[], pos: Posicion) => Valor> = sinPrototipo({
   saltar: (o, a, p) => {
     // Solo salta si está en el suelo. Devuelve verdadero si ha saltado.
     const f = necesitaFisica(o, 'saltar', p);
@@ -657,7 +658,7 @@ const METODOS: Record<string, (o: ObjetoJuego, args: Valor[], pos: Posicion) => 
     const c = necesitaMapa(o, 'centroDeCasilla', p).centroDe(argNumero(a, 0, 'centroDeCasilla', p, ej), argNumero(a, 1, 'centroDeCasilla', p, ej));
     return new Vector2(c.x, c.y);
   },
-};
+});
 
 const NOMBRES_BONITOS = [
   'nombre', 'tipo', 'x', 'y', 'posicion', 'rotacion', 'escala', 'velocidad', 'gravedad', 'enSuelo', 'tocaPared', 'tocaTecho',

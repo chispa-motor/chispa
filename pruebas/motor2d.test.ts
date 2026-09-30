@@ -417,7 +417,7 @@ describe('Guardar y cargar datos del jugador', () => {
       ].join('\n'),
     );
     expect(j.salida).toEqual(['0', '1500 {nombre: "Ana", nivel: 3, pos: (1, 2), logros: ["a", "b"]}', 'nada']);
-    expect([...j.almacen.keys()]).toEqual(['chispa:prueba:ficha']);
+    expect([...j.almacen.keys()]).toEqual(['chispa:prueba-juego:ficha']);
   });
 
   it('los objetos del juego no se pueden guardar (error amable)', () => {

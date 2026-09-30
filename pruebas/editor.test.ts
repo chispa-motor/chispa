@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { EstadoEditor, nombreDeRecurso } from '../src/editor/estado/EstadoEditor';
 import { revisarProyecto } from '../src/proyecto/Revision';
+import { imagenPrueba } from './ayudantes';
 
 describe('Objetos', () => {
   it('crear objetos les da nombres sin repetir y los selecciona', () => {
@@ -190,7 +191,7 @@ describe('Plantillas y recursos', () => {
     const e = new EstadoEditor();
     expect(nombreDeRecurso('Mi Nave (1).png')).toBe('MiNave1');
     expect(nombreDeRecurso('3d.png')).toBe('r3d');
-    const n = e.agregarImagen('nave.png', 'data:image/png;base64,AAAA');
+    const n = e.agregarImagen('nave.png', imagenPrueba('AAAA'));
     e.crearObjeto('imagen', 0, 0, n);
     e.crearAnimacion('volar', [n, n]);
     e.borrarImagen(n);

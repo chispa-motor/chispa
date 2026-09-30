@@ -36,6 +36,7 @@ import { PanelDepurador } from './paneles/PanelDepurador';
 import { revisarProyecto } from '../proyecto/Revision';
 import { ATAJOS, abrirAtajos, tablaAtajos } from './atajos';
 import { abrirAjustes } from './ajustes';
+import { LIMITES_PROYECTO } from '../proyecto/validar';
 
 const CLAVE_DISPOSICION = 'chispa-editor:disposicion';
 /** Milisegundos después de un cambio para guardar solo, y como mucho sin guardar mientras se sigue cambiando. */
@@ -482,6 +483,9 @@ export class Aplicacion {
     if (this.estado.modificado && !(await confirmar('Abrir proyecto', 'El proyecto actual se cerrará. Si quieres conservarlo, descárgalo antes con «Guardar». ¿Seguir?', 'Abrir otro'))) return;
     const texto = await elegirArchivo();
     if (!texto) return;
+    if (texto.length > LIMITES_PROYECTO.archivo) {
+      return avisar('No he podido abrir el archivo', `Es demasiado grande (${Math.round(texto.length / 1024 / 1024)} MB). Un proyecto de Chispa puede tener como mucho ${LIMITES_PROYECTO.archivo / 1024 / 1024} MB.`);
+    }
     try {
       const datos = JSON.parse(texto);
       this.parar();

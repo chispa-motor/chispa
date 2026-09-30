@@ -31,6 +31,7 @@ import { Colision, seSolapan, type Caja } from './componentes/Colision';
 import { Fisica } from './componentes/Fisica';
 import { MapaCasillas } from './componentes/MapaCasillas';
 import { Recorrido } from './componentes/Recorrido';
+import { propio } from '../utilidades/seguro';
 
 const PASO = 1 / 120;
 /**
@@ -297,7 +298,7 @@ export class SistemaFisico {
     for (const s of cerca.moviles) meter(s);
     for (const m of cerca.mapas) {
       for (const casilla of m.casillasEn(caja)) {
-        if (m.esSolida(casilla.tipo)) res.push({ caja: casilla.caja, objeto: m.objeto, soloArriba: m.tipos[casilla.tipo]?.soloDesdeArriba ?? false });
+        if (m.esSolida(casilla.tipo)) res.push({ caja: casilla.caja, objeto: m.objeto, soloArriba: propio(m.tipos, casilla.tipo)?.soloDesdeArriba ?? false });
       }
     }
     return res;

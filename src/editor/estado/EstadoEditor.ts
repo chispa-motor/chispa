@@ -16,6 +16,9 @@ import { migrarProyecto, proyectoVacio, tipoPorNombre, type DatoInicial, type De
 import type { DefAnimacion } from '../../objetos/componentes/Animador';
 import type { TipoCasilla } from '../../objetos/componentes/MapaCasillas';
 import { normalizar } from '../../utilidades/texto';
+import { esNombreProhibido, tiene } from '../../utilidades/seguro';
+import { problemaDataURL, type TipoRecurso as TipoRecursoArchivo } from '../../proyecto/archivos';
+import { ErrorMotor } from '../../motor/Errores';
 
 /** A qué objeto se refiere una selección: uno de una escena, o una plantilla. */
 export type RefObjeto = { tipo: 'escena'; escena: string; indice: number } | { tipo: 'plantilla'; nombre: string };
@@ -124,8 +127,8 @@ export class EstadoEditor {
     if (this.seleccion && !this.definicion(this.seleccion)) this.seleccion = null;
     this.seleccionados = this.seleccionados.filter((i) => i < this.escena.objetos.length);
     if (this.seleccion?.tipo !== 'escena') this.seleccionados = [];
-    this.pestanas = this.pestanas.filter((p) => p in this.proyecto.scripts);
-    if (this.pestanaActiva !== 'escena' && !(this.pestanaActiva in this.proyecto.scripts)) this.pestanaActiva = 'escena';
+    this.pestanas = this.pestanas.filter((p) => tiene(this.proyecto.scripts, p));
+    if (this.pestanaActiva !== 'escena' && !(tiene(this.proyecto.scripts, this.pestanaActiva))) this.pestanaActiva = 'escena';
     this.modificado = true;
     this.avisar('proyecto');
   }
@@ -157,7 +160,7 @@ export class EstadoEditor {
 
   renombrarProyecto(nombre: string): void {
     const n = nombre.trim();
-    if (!n) return;
+    if (!n || esNombreProhibido(n)) return;
     this.cambiar('proyecto', () => (this.proyecto.nombre = n));
   }
 
@@ -172,7 +175,7 @@ export class EstadoEditor {
   /** Un dato de «Datos del juego» (con qué empieza juego.puntos...). `undefined` lo quita. */
   cambiarDatoJuego(nombre: string, valor: DatoInicial | undefined): void {
     const n = nombre.trim();
-    if (!n) return;
+    if (!n || esNombreProhibido(n)) return;
     this.cambiar('proyecto', () => {
       const datos = (this.proyecto.datos ??= {});
       if (valor === undefined) delete datos[n];
@@ -247,6 +250,8 @@ export class EstadoEditor {
 
   /** Un nombre que no está en uso en la escena: "Cuadrado", "Cuadrado2", "Cuadrado3"... */
   nombreLibre(base: string, usados: string[] = this.escena.objetos.map((o) => o.nombre ?? '')): string {
+    // "__proto__" no puede ser el nombre de nada (ver utilidades/seguro.ts)
+    base = base.replace(/__proto__/gi, 'proto');
     const ocupados = new Set(usados.map(normalizar));
     if (!ocupados.has(normalizar(base))) return base;
     // "Moneda2" ocupado → "Moneda3" (y no "Moneda22"). Los archivos (.chs) conservan su extensión.
@@ -479,7 +484,7 @@ export class EstadoEditor {
   /** Propiedades propias (vida = 3...). */
   cambiarPropiedadPropia(ref: RefObjeto, nombre: string, valor: number | string | boolean | undefined): void {
     const def = this.definicion(ref);
-    if (!def || !nombre.trim()) return;
+    if (!def || !nombre.trim() || esNombreProhibido(nombre)) return;
     this.cambiarObjeto(ref, 'objetos', () => {
       def.propiedades ??= {};
       if (valor === undefined) delete def.propiedades[nombre];
@@ -494,7 +499,7 @@ export class EstadoEditor {
   crearScriptPara(ref: RefObjeto): string | null {
     const def = this.definicion(ref);
     if (!def) return null;
-    if (def.script && def.script in this.proyecto.scripts) {
+    if (def.script && tiene(this.proyecto.scripts, def.script)) {
       this.abrirScript(def.script);
       return def.script;
     }
@@ -545,7 +550,7 @@ export class EstadoEditor {
   renombrarScript(viejo: string, nuevo: string): string {
     let n = nuevo.trim().replace(/\s+/g, '_');
     if (!n.endsWith('.chs')) n += '.chs';
-    if (n === viejo || !(viejo in this.proyecto.scripts)) return viejo;
+    if (n === viejo || !(tiene(this.proyecto.scripts, viejo))) return viejo;
     const final = this.nombreLibre(n, Object.keys(this.proyecto.scripts));
     this.cambiar('scripts', () => {
       this.proyecto.scripts[final] = this.proyecto.scripts[viejo];
@@ -761,6 +766,7 @@ export class EstadoEditor {
 
   /** Añade una imagen (como "data URL"). Devuelve el nombre final (sin repetir). */
   agregarImagen(nombre: string, datos: string): string {
+    comprobarRecurso(datos, 'imagen', nombre);
     const final = this.nombreLibre(nombreDeRecurso(nombre), Object.keys(this.proyecto.imagenes));
     this.cambiar('recursos', () => (this.proyecto.imagenes[final] = datos));
     return final;
@@ -779,7 +785,8 @@ export class EstadoEditor {
 
   /** Cambia el dibujo de una imagen que ya existe (al guardar desde el editor de pixel art). */
   cambiarImagen(nombre: string, datos: string): void {
-    if (!(nombre in this.proyecto.imagenes)) return;
+    if (!(tiene(this.proyecto.imagenes, nombre))) return;
+    comprobarRecurso(datos, 'imagen', nombre);
     this.cambiar('recursos', () => (this.proyecto.imagenes[nombre] = datos));
   }
 
@@ -818,7 +825,7 @@ export class EstadoEditor {
    */
   renombrarRecurso(tipo: TipoRecurso, viejo: string, nuevo: string): string {
     const tabla = tipo === 'imagen' ? this.proyecto.imagenes : tipo === 'sonido' ? this.proyecto.sonidos : this.proyecto.animaciones;
-    if (!(viejo in tabla)) return viejo;
+    if (!tiene(tabla, viejo)) return viejo;
     const limpio = nombreDeRecurso(nuevo.trim());
     if (!nuevo.trim() || limpio === viejo) return viejo;
     const final = this.nombreLibre(limpio, Object.keys(tabla).filter((k) => k !== viejo));
@@ -853,13 +860,14 @@ export class EstadoEditor {
     const ocupados = comoAnimacion ? Object.keys(this.proyecto.animaciones) : Object.keys(this.proyecto.imagenes);
     const base = opciones.sobrescribir ? pedido : this.nombreLibre(pedido, ocupados);
     if (!comoAnimacion) {
-      if (base in this.proyecto.imagenes) {
+      if (tiene(this.proyecto.imagenes, base)) {
         this.cambiarImagen(base, fotogramas[0] ?? '');
         return base;
       }
       return this.agregarImagen(base, fotogramas[0] ?? '');
     }
     const nombres = fotogramas.map((_, i) => `${base}${i + 1}`);
+    fotogramas.forEach((f, i) => comprobarRecurso(f, 'imagen', nombres[i]));
     this.cambiar('recursos', () => {
       nombres.forEach((n, i) => (this.proyecto.imagenes[n] = fotogramas[i]));
       const a = this.proyecto.animaciones[base];
@@ -870,6 +878,7 @@ export class EstadoEditor {
   }
 
   agregarSonido(nombre: string, datos: string): string {
+    comprobarRecurso(datos, 'sonido', nombre);
     const final = this.nombreLibre(nombreDeRecurso(nombre), Object.keys(this.proyecto.sonidos));
     this.cambiar('recursos', () => (this.proyecto.sonidos[final] = datos));
     return final;
@@ -956,6 +965,12 @@ function textosDe(linea: string): string[] {
 }
 
 /** "Mi Imagen (1).png" → "MiImagen1" (un nombre fácil de escribir en el código). */
+/** Una imagen o un sonido tiene que ser de verdad lo que dice (archivos.ts); si no, error claro. */
+function comprobarRecurso(datos: string, tipo: TipoRecursoArchivo, nombre: string): void {
+  const problema = problemaDataURL(datos, tipo);
+  if (problema) throw new ErrorMotor(`No se puede añadir «${nombre}»: ${problema}.`);
+}
+
 export function nombreDeRecurso(archivo: string): string {
   const sinExtension = archivo.replace(/\.[a-z0-9]+$/i, '');
   const limpio = sinExtension.normalize('NFC').replace(/[^\p{L}\p{N}_]/gu, '');

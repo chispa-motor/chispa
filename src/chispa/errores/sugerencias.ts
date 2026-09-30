@@ -8,6 +8,7 @@
  * Si la palabra más parecida está lo bastante cerca, la sugerimos.
  */
 import { normalizar } from '../../utilidades/texto';
+import { sinPrototipo } from '../../utilidades/seguro';
 
 export function distancia(a: string, b: string): number {
   // Programación dinámica: `fila[j]` = distancia entre a[0..i] y b[0..j]
@@ -49,7 +50,7 @@ export function sugerir(nombre: string, opciones: Iterable<string>): string | nu
  * Palabras de otros lenguajes (Python, JavaScript, Lua...) y cómo se dicen
  * en Chispa. Mucha gente llega habiendo visto algo de programación en inglés.
  */
-export const EQUIVALENCIAS_INGLES: Record<string, string> = {
+export const EQUIVALENCIAS_INGLES: Record<string, string> = sinPrototipo({
   print: 'mostrar(...)',
   console: 'mostrar(...)',
   true: 'verdadero',
@@ -85,7 +86,7 @@ export const EQUIVALENCIAS_INGLES: Record<string, string> = {
   wait: 'esperar(...)',
   when: 'cuando',
   show: 'mostrar(...)',
-};
+});
 
 /** Palabras clave que pueden empezar una línea (para detectar "mientas", "fucnion"...). */
 export const PALABRAS_DE_INICIO = ['si', 'sino', 'mientras', 'repetir', 'para', 'funcion', 'devolver', 'variable', 'cuando', 'romper', 'continuar'];

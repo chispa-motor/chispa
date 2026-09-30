@@ -25,6 +25,7 @@ import { EQUIVALENCIAS_INGLES, PALABRAS_DE_INICIO, sugerir } from '../errores/su
 import { normalizar } from '../../utilidades/texto';
 import { analizarLexico } from '../lexico/lexer';
 import { SIGNIFICADO_PALABRA, posicionDe, type Posicion, type Token } from '../lexico/tokens';
+import { sinPrototipo } from '../../utilidades/seguro';
 
 const OPERADORES_ASIGNACION = ['=', '+=', '-=', '*=', '/='];
 const COMPARACIONES = ['==', '!=', '<', '>', '<=', '>='];
@@ -538,7 +539,7 @@ class Parser {
     }
     if (this.esPalabra('se')) {
       this.avanzar();
-      const modos: Record<string, 'pulsa' | 'mantiene' | 'suelta'> = { pulsa: 'pulsa', mantiene: 'mantiene', suelta: 'suelta' };
+      const modos: Record<string, 'pulsa' | 'mantiene' | 'suelta'> = sinPrototipo({ pulsa: 'pulsa', mantiene: 'mantiene', suelta: 'suelta' });
       const modo = this.actual.tipo === 'identificador' ? modos[this.actual.valor] : undefined;
       if (!modo) this.error("después de 'cuando se' esperaba 'pulsa', 'mantiene' o 'suelta'.", 'Ejemplo: cuando se pulsa "espacio":');
       this.avanzar();
@@ -596,7 +597,7 @@ class Parser {
       dejar = true;
     } else if (!this.esPalabra('toco')) {
       // Formas naturales de decirlo que no son las de Chispa: explicamos cuál es
-      const SINONIMOS: Record<string, string> = {
+      const SINONIMOS: Record<string, string> = sinPrototipo({
         pulso: 'cuando se pulsa "espacio":', pulse: 'cuando se pulsa "espacio":', presiono: 'cuando se pulsa "espacio":', presione: 'cuando se pulsa "espacio":',
         aprieto: 'cuando se pulsa "espacio":', apriete: 'cuando se pulsa "espacio":', pulsa: 'cuando se pulsa "espacio":', presiona: 'cuando se pulsa "espacio":',
         suelto: 'cuando se suelta "espacio":', mantengo: 'cuando se mantiene "espacio":',
@@ -606,7 +607,7 @@ class Parser {
         empiece: 'cuando empieza:', inicia: 'cuando empieza:', comienza: 'cuando empieza:', arranca: 'cuando empieza:',
         salga: 'cuando salgo de la pantalla:', acaba: 'cuando termina la animacion:',
         recibe: 'cuando recibo "mensaje":', reciba: 'cuando recibo "mensaje":', llega: 'cuando recibo "mensaje":', escucho: 'cuando recibo "mensaje":', oigo: 'cuando recibo "mensaje":',
-      };
+      });
       const forma = SINONIMOS[normalizar(t.original)];
       const parecido = sugerir(t.original, ['empieza', 'toco', 'hago', 'dejo', 'se', 'cada', 'pasen', 'termina', 'salgo', 'recibo']);
       this.error(

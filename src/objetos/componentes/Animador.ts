@@ -9,6 +9,7 @@
  */
 import { Componente } from '../Componente';
 import { Sprite } from './Sprite';
+import { propio } from '../../utilidades/seguro';
 
 export interface DefAnimacion {
   /** Nombres de las imágenes, en orden. */
@@ -43,7 +44,7 @@ export class Animador extends Componente {
   }
 
   actualizar(dt: number): void {
-    const anim = this.actual ? this.animaciones[this.actual] : undefined;
+    const anim = this.actual ? propio(this.animaciones, this.actual) : undefined;
     if (!anim || this.terminada || anim.fotogramas.length === 0) return;
     this.tiempo += dt;
     const duracion = 1 / Math.max(0.01, anim.velocidad);
@@ -66,7 +67,7 @@ export class Animador extends Componente {
   }
 
   private ponerImagen(): void {
-    const anim = this.actual ? this.animaciones[this.actual] : undefined;
+    const anim = this.actual ? propio(this.animaciones, this.actual) : undefined;
     const sprite = this.objeto.obtener(Sprite);
     if (anim && sprite && anim.fotogramas.length) sprite.imagen = anim.fotogramas[this.fotograma];
   }

@@ -293,7 +293,7 @@ export const DOC_MODULOS: DocModulo[] = [
     ejemplo: 'si sistema.movil:\n    mostrar("Juegas en un móvil")',
     miembros: [
       d('movil', 'propiedad', 'sistema.movil', 'Verdadero si se está jugando en un móvil o una tableta (con pantalla táctil).', 'si sistema.movil:\n    yo.visible = verdadero'),
-      d('abrirWeb', 'accion', 'sistema.abrirWeb("direccion")', 'Abre una página web en otra pestaña (por ejemplo, la de tu juego en itch.io).', 'cuando hago clic encima:\n    sistema.abrirWeb("https://itch.io")', 'abrirWeb("${1:https://}")'),
+      d('abrirWeb', 'accion', 'sistema.abrirWeb("direccion")', 'Abre una página web en otra pestaña (por ejemplo, la de tu juego en itch.io). Tiene que empezar por https://. En el editor, antes de abrirla se pregunta (por si el juego es de otra persona).', 'cuando hago clic encima:\n    sistema.abrirWeb("https://itch.io")', 'abrirWeb("${1:https://}")'),
     ],
   },
 ];

@@ -11,10 +11,11 @@
 import type { Entrada } from '../motor/Entrada';
 import type { DefProyecto } from '../proyecto/formato';
 import { normalizarNombreTecla } from '../motor/Entrada';
+import { sinPrototipo } from '../utilidades/seguro';
 
-const DIRECCIONES: Record<string, 'arriba' | 'abajo' | 'izquierda' | 'derecha'> = {
+const DIRECCIONES: Record<string, 'arriba' | 'abajo' | 'izquierda' | 'derecha'> = sinPrototipo({
   arriba: 'arriba', abajo: 'abajo', izquierda: 'izquierda', derecha: 'derecha', w: 'arriba', s: 'abajo', a: 'izquierda', d: 'derecha',
-};
+});
 /** Como mucho, estos botones de acción (más no caben en un móvil). */
 const MAXIMO_ACCIONES = 6;
 
@@ -53,6 +54,9 @@ export function esPantallaTactil(): boolean {
   return typeof window !== 'undefined' && (window.matchMedia?.('(pointer: coarse)').matches || 'ontouchstart' in window);
 }
 
+/** Los estilos de los botones táctiles. */
+export const ESTILOS_TACTILES = `.controles-tactiles { position: fixed; inset: auto 0 0 0; height: 0; z-index: 10; user-select: none; -webkit-user-select: none; touch-action: none; } .controles-tactiles button { position: fixed; border: 2px solid rgba(255,255,255,.55); background: rgba(20,24,40,.45); color: #fff; font: bold 20px system-ui, sans-serif; border-radius: 16px; width: 64px; height: 64px; touch-action: none; } .controles-tactiles button.pulsado { background: rgba(255,255,255,.35); } .controles-tactiles button.accion { border-radius: 50%; width: 72px; height: 72px; font-size: 15px; }`;
+
 const FLECHAS = { arriba: '▲', abajo: '▼', izquierda: '◀', derecha: '▶' };
 
 /** Pone los botones en la página. Devuelve el contenedor (o null si el juego no usa teclas). */
@@ -61,13 +65,14 @@ export function ponerControlesTactiles(entrada: Entrada, proyecto: DefProyecto):
   if (!Object.keys(teclas.direcciones).length && !teclas.acciones.length) return null;
   const capa = document.createElement('div');
   capa.className = 'controles-tactiles';
-  capa.innerHTML = `<style>
-    .controles-tactiles { position: fixed; inset: auto 0 0 0; height: 0; z-index: 10; user-select: none; -webkit-user-select: none; touch-action: none; }
-    .controles-tactiles button { position: fixed; border: 2px solid rgba(255,255,255,.55); background: rgba(20,24,40,.45); color: #fff;
-      font: bold 20px system-ui, sans-serif; border-radius: 16px; width: 64px; height: 64px; touch-action: none; }
-    .controles-tactiles button.pulsado { background: rgba(255,255,255,.35); }
-    .controles-tactiles button.accion { border-radius: 50%; width: 72px; height: 72px; font-size: 15px; }
-  </style>`;
+  // Los estilos van en la página del juego exportado (exportar.ts), con la política de
+  // seguridad (CSP). Si no están (en el editor, en los tests), se ponen aquí como texto.
+  if (!document.querySelector('style[data-controles-tactiles]')) {
+    const estilo = document.createElement('style');
+    estilo.dataset.controlesTactiles = '';
+    estilo.textContent = ESTILOS_TACTILES;
+    document.head.appendChild(estilo);
+  }
   const boton = (texto: string, id: string, pulsa: string[], estilo: Partial<CSSStyleDeclaration>, clase = '') => {
     const b = document.createElement('button');
     b.textContent = texto;

@@ -18,6 +18,7 @@
 import { ErrorMotor } from './Errores';
 import { normalizar } from '../utilidades/texto';
 import { sugerir } from '../chispa/errores/sugerencias';
+import { sinPrototipo } from '../utilidades/seguro';
 
 /** Efectos generados: forma de la onda, frecuencia al empezar y al acabar (Hz), duración y volumen. */
 interface Efecto {
@@ -27,7 +28,7 @@ interface Efecto {
   segundos: number;
   volumen: number;
 }
-export const EFECTOS: Record<string, Efecto> = {
+export const EFECTOS: Record<string, Efecto> = sinPrototipo({
   disparo: { onda: 'square', desde: 900, hasta: 200, segundos: 0.15, volumen: 0.25 },
   laser: { onda: 'sawtooth', desde: 1400, hasta: 300, segundos: 0.2, volumen: 0.2 },
   explosion: { onda: 'ruido', desde: 3000, hasta: 60, segundos: 0.6, volumen: 0.6 },
@@ -45,7 +46,7 @@ export const EFECTOS: Record<string, Efecto> = {
   clic: { onda: 'square', desde: 1200, hasta: 1000, segundos: 0.05, volumen: 0.2 },
   alarma: { onda: 'square', desde: 700, hasta: 500, segundos: 0.3, volumen: 0.25 },
   dano: { onda: 'square', desde: 220, hasta: 90, segundos: 0.2, volumen: 0.35 },
-};
+});
 
 export class Sonido {
   /** Volumen general, de 0 a 1. */
@@ -323,7 +324,9 @@ export class Sonido {
     const ctx = this.obtenerContexto();
     if (!ctx) return;
     try {
-      const datos = await (await fetch(ruta)).arrayBuffer();
+      // Los sonidos de un proyecto van dentro (data URL): se leen sin pedir nada a
+      // ninguna red, así el juego exportado funciona con la política de seguridad más estricta
+      const datos = ruta.startsWith('data:') ? bytesDeDataURL(ruta) : await (await fetch(ruta)).arrayBuffer();
       this.buffers.set(nombre, await ctx.decodeAudioData(datos));
     } catch {
       throw ruta.startsWith('data:')
@@ -348,4 +351,13 @@ export class Sonido {
     this.salidaMusica.connect(this.contexto.destination);
     return this.contexto;
   }
+}
+
+/** "data:audio/wav;base64,UklGR..." → los bytes del archivo. */
+export function bytesDeDataURL(url: string): ArrayBuffer {
+  const coma = url.indexOf(',');
+  const binario = atob(url.slice(coma + 1));
+  const bytes = new Uint8Array(binario.length);
+  for (let i = 0; i < binario.length; i++) bytes[i] = binario.charCodeAt(i);
+  return bytes.buffer;
 }

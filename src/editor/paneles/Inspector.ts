@@ -14,9 +14,10 @@ import { tieneHuecos } from '../../proyecto/TextosConHuecos';
 import { datosParaTextos, insertarDato } from '../estado/datosTextos';
 import type { EstadoEditor, RefObjeto } from '../estado/EstadoEditor';
 import type { VistaEscena } from '../escena/VistaEscena';
-import { botonIcono, h, icono, rellenar } from '../interfaz/dom';
+import { botonIcono, fondoDeColor, h, icono, rellenar } from '../interfaz/dom';
 import { confirmar, notificar, pedirTexto } from '../interfaz/dialogos';
 import { campoCasilla, campoColor, campoLista, campoNumero, campoTexto, seccion } from './campos';
+import { tiene } from '../../utilidades/seguro';
 
 export class Inspector {
   readonly elemento = h('div', { class: 'inspector' });
@@ -374,7 +375,7 @@ export class Inspector {
         const elegido = this.vista.tipoPincel === nombre;
         const muestra = t.imagen && e.proyecto.imagenes[t.imagen]
           ? h('img', { class: 'muestra', src: e.proyecto.imagenes[t.imagen], alt: '' })
-          : h('span', { class: 'muestra', style: `background:${t.color ?? 'gray'}` });
+          : fondoDeColor(h('span', { class: 'muestra' }), t.color);
         return h('div', { class: `tipo-casilla ${elegido ? 'elegido' : ''}` },
           h('button', { class: 'elegir-tipo', title: `Pintar con "${nombre}"`, onclick: () => {
             this.vista.tipoPincel = nombre;
@@ -422,11 +423,11 @@ export class Inspector {
   private seccionScript(ref: RefObjeto, def: DefObjeto): HTMLElement {
     const e = this.estado;
     const scripts = Object.keys(e.proyecto.scripts);
-    const tiene = def.script && def.script in e.proyecto.scripts;
+    const conScript = def.script && tiene(e.proyecto.scripts, def.script);
     return seccion('Script', [
-      campoLista('archivo', 'script', tiene ? def.script! : '', [['', '(ninguno)'], ...scripts.map((s): [string, string] => [s, s])], (v) => e.asignarScript(ref, v || null), 'El código .chs que controla este objeto'),
+      campoLista('archivo', 'script', conScript ? def.script! : '', [['', '(ninguno)'], ...scripts.map((s): [string, string] => [s, s])], (v) => e.asignarScript(ref, v || null), 'El código .chs que controla este objeto'),
       h('div', { class: 'acciones-script' },
-        tiene
+        conScript
           ? botonIcono('codigo', 'Abrir el código (o doble clic en el objeto)', () => e.abrirScript(def.script!), 'Abrir el código', 'principal')
           : botonIcono('mas', 'Crear un script nuevo para este objeto', () => e.crearScriptPara(ref), 'Crear script', 'principal'),
       ),

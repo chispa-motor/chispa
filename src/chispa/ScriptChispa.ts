@@ -65,6 +65,9 @@ interface EventoRegistrado {
 /** A quién avisar cuando un script falla. */
 export type InformarError = (error: ErrorChispa, objeto: ObjetoJuego) => void;
 
+/** Hilos que puede tener un objeto a la vez (sus eventos dormidos y sus aLaVez). */
+export const LIMITE_HILOS = 5_000;
+
 export class ScriptChispa extends Componente {
   private entorno!: Entorno;
   private eventos: EventoRegistrado[] = [];
@@ -280,6 +283,14 @@ export class ScriptChispa extends Componente {
 
   /** aLaVez(funcion): la función se ejecuta en un hilo nuevo de este objeto, empezando ya. */
   lanzarFuncion(funcion: FuncionChispa | FuncionNativa, argumentos: Valor[], pos: Posicion): void {
+    // Límite de seguridad: millones de hilos a la vez llenarían la memoria (AUDITORIA_SEGURIDAD.md)
+    if (this.hilos.length >= LIMITE_HILOS) {
+      throw new ErrorChispa(
+        pos,
+        `este objeto ya tiene ${LIMITE_HILOS.toLocaleString('es')} cosas haciéndose a la vez (con aLaVez), y ese es el máximo.`,
+        '¿Hay un bucle que llama a aLaVez sin parar? Cada aLaVez sigue vivo hasta que su función termina.',
+      );
+    }
     this.lanzar(this.interprete.llamar(funcion, argumentos, pos, 'aLaVez'), null);
   }
 
@@ -293,12 +304,11 @@ export class ScriptChispa extends Componente {
 
   /** Avanza un hilo. Devuelve verdadero si se ha quedado dormido (sigue vivo). */
   private avanzarHilo(hilo: Hilo): boolean {
-    this.interprete.reiniciarContadorDeVueltas();
     const anterior = this.interprete.hiloActual;
     this.interprete.hiloActual = hilo;
     let r: IteratorResult<unknown, unknown>;
     try {
-      r = this.comoObjetoActual(() => hilo.generador.next());
+      r = this.interprete.conContadorPropio(() => this.comoObjetoActual(() => hilo.generador.next()));
     } finally {
       this.interprete.hiloActual = anterior;
     }
