@@ -27,6 +27,13 @@ describe('Licencias', () => {
     expect(esCompatible('MIT OR Apache-2.0')).toBe(true);
   });
 
+  it('la lista sale igual en Windows, Mac y Linux (no depende de qué programas compilados instala npm en cada uno)', () => {
+    const md = generarMarkdown(deps) as string;
+    const tablas = md.slice(0, md.indexOf('Además hay'));
+    expect(tablas).not.toMatch(/\| (@esbuild\/|@rollup\/rollup-|fsevents )/);
+    expect(md).toMatch(/Además hay \d+ paquetes con el programa ya compilado para cada sistema/);
+  });
+
   it('LICENCIAS_DEPENDENCIAS.md y public/licencias-de-terceros.txt están al día (si falla: npm run licencias)', () => {
     expect(readFileSync('LICENCIAS_DEPENDENCIAS.md', 'utf8')).toBe(generarMarkdown(deps));
     expect(readFileSync('public/licencias-de-terceros.txt', 'utf8')).toBe(generarAvisos(deps));

@@ -15,6 +15,9 @@ o avisando de fallos.
 *Todavía no hay nadie más en esta lista. ¡Tú puedes ser la primera persona!
 Mira [CONTRIBUIR.md](CONTRIBUIR.md).*
 
+Quien ha enviado cambios de código sale también en GitHub:
+[github.com/chispa-motor/chispa/graphs/contributors](https://github.com/chispa-motor/chispa/graphs/contributors).
+
 ## Ayudas
 
 - Chispa se ha programado con la ayuda de **Claude**, un asistente de

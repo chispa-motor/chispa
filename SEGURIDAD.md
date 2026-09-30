@@ -22,9 +22,11 @@ script de Chispa o un juego exportado:
 **No abras una *issue* pública**: mientras no esté arreglado, cualquiera
 podría usar el fallo.
 
-1. Ve a la pestaña **Security** del repositorio de Chispa en GitHub y pulsa
-   **Report a vulnerability** («informar de una vulnerabilidad»). El aviso
-   solo lo verán quienes mantienen Chispa.
+1. Ve a la pestaña **Security** del [repositorio de Chispa](https://github.com/chispa-motor/chispa) en
+   GitHub y pulsa **Report a vulnerability** («informar de una
+   vulnerabilidad»), o entra directamente en
+   [github.com/chispa-motor/chispa/security/advisories/new](https://github.com/chispa-motor/chispa/security/advisories/new).
+   El aviso solo lo verán quienes mantienen Chispa.
 2. Cuenta:
    - qué has encontrado y qué se puede hacer con ello;
    - los pasos para que pase (lo mejor es un proyecto `.chispa.json` o un

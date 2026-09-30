@@ -51,6 +51,56 @@ describe('Archivos del proyecto abierto', () => {
     expect(rotos).toEqual([]);
   });
 
+  it('GitHub Pages: el workflow pasa todos los tests (también en /chispa/) antes de publicar', () => {
+    const w = leer('.github/workflows/publicar.yml');
+    expect(w).toMatch(/on:\s*\n\s*push:\s*\n\s*branches: \[main\]/);
+    expect(w).toContain('node-version: 22');
+    const orden = ['npm ci', 'npm run pruebas', 'npm run build', 'pruebas-navegador/editor.mjs', 'upload-pages-artifact', 'deploy-pages'];
+    const sitios = orden.map((paso) => w.indexOf(paso));
+    expect(sitios.every((i) => i > 0), 'faltan pasos').toBe(true);
+    expect([...sitios].sort((a, b) => a - b)).toEqual(sitios);
+    expect(w).toContain('RUTA_BASE: /chispa/');
+    expect(w).toContain('needs: probar');
+    // Solo el paso de publicar puede escribir en Pages
+    expect(w.slice(0, w.indexOf('jobs:'))).toContain('contents: read');
+    expect(w.slice(0, w.indexOf('jobs:'))).not.toContain('pages: write');
+  });
+
+  it('el editor compilado usa rutas relativas: funciona en /chispa/ (GitHub Pages) o en cualquier otra carpeta', () => {
+    expect(leer('vite.config.ts')).toMatch(/base: '\.\/'/);
+    // La única ruta que empieza por / es la del código, y Vite la cambia por una relativa al compilar
+    expect(leer('index.html').match(/(src|href)="\/(?!\/)[^"]*"/g)).toEqual(['src="/src/main.ts"']);
+  });
+
+  it('las direcciones son las de la organización chispa-motor (y el botón de la web está arriba del README)', async () => {
+    const { CONFIGURACION } = await import('../src/configuracion');
+    expect(CONFIGURACION.repositorio).toBe('https://github.com/chispa-motor/chispa');
+    expect(CONFIGURACION.web).toBe('https://chispa-motor.github.io/chispa/');
+    const readme = leer('README.md');
+    expect(readme.indexOf('Usar Chispa ahora')).toBeGreaterThan(0);
+    expect(readme.indexOf('Usar Chispa ahora')).toBeLessThan(readme.indexOf('## '));
+    expect(readme).toContain('href="https://chispa-motor.github.io/chispa/"');
+    expect(readme.indexOf('npm install')).toBeGreaterThan(readme.indexOf('### Si quieres modificar el propio Chispa'));
+    // Ninguna dirección vieja en ningún sitio (escrita en dos trozos para que este archivo no se encuentre a sí mismo)
+    const VIEJA = 'rodrigodemartin827' + '-debug';
+    const viejas: string[] = [];
+    const mirar = (dir: string) => {
+      for (const n of readdirSync(dir, { withFileTypes: true })) {
+        const r = join(dir, n.name);
+        if (n.isDirectory()) { if (!['node_modules', 'dist', '.git'].includes(n.name)) mirar(r); }
+        else if (/\.(md|ts|mjs|yml|json|html)$/.test(n.name) && leer(r).includes(VIEJA)) viejas.push(r);
+      }
+    };
+    mirar('.');
+    expect(viejas).toEqual([]);
+  });
+
+  it('.gitattributes: los .chs no cuentan como Haskell', () => {
+    const g = leer('.gitattributes');
+    expect(g).toMatch(/^\*\.chs linguist-language=Text$/m);
+    expect(g).toMatch(/^\* text=auto eol=lf$/m);
+  });
+
   it('las capturas del README existen y no son enormes', () => {
     for (const img of ['editor.png', 'codigo.png', 'bloques.png', 'arena.gif']) {
       const ruta = join('docs/imagenes', img);

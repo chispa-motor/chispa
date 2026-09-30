@@ -39,13 +39,17 @@ export function leerDependencias(raiz = '.') {
   for (const [ruta, info] of Object.entries(lock.packages)) {
     if (!ruta) continue;
     const nombre = ruta.slice(ruta.lastIndexOf('node_modules/') + 'node_modules/'.length);
+    // La licencia se lee de package-lock.json (y si no la dice, del paquete instalado):
+    // así la lista sale IGUAL en Windows, Mac y Linux, aunque cada uno instale cosas distintas
     let licencia = info.license ?? null;
     const pj = join(raiz, ruta, 'package.json');
-    if (existsSync(pj)) {
+    if (!licencia && existsSync(pj)) {
       const p = JSON.parse(readFileSync(pj, 'utf8'));
-      licencia = typeof p.license === 'string' ? p.license : p.license?.type ?? licencia;
+      licencia = typeof p.license === 'string' ? p.license : p.license?.type ?? null;
     }
-    deps.push({ nombre, version: info.version, licencia: licencia ?? 'DESCONOCIDA', desarrollo: !!info.dev, soloEnOtrosSistemas: !!info.optional && !existsSync(pj), ruta: join(raiz, ruta) });
+    // Los programas ya compilados para un sistema concreto (esbuild y Rollup para Windows, Mac, Linux...)
+    const deUnSistema = !!info.optional && !!(info.os || info.cpu);
+    deps.push({ nombre, version: info.version, licencia: licencia ?? 'DESCONOCIDA', desarrollo: !!info.dev, soloEnOtrosSistemas: deUnSistema, ruta: join(raiz, ruta) });
   }
   return deps.sort((a, b) => a.nombre.localeCompare(b.nombre));
 }
@@ -106,7 +110,7 @@ export function generarMarkdown(deps) {
     '|---|---|---|---|',
     ...paraDesarrollar.map(fila),
     '',
-    `Además hay ${binarios.length} paquetes con el programa ya compilado para otros sistemas (Windows, Mac, Linux ARM...) de esbuild y Rollup; npm solo instala el de tu ordenador. Todos son ${[...new Set(binarios.map((d) => d.licencia))].join(', ')}.`,
+    `Además hay ${binarios.length} paquetes con el programa ya compilado para cada sistema (Windows, Mac, Linux...) de esbuild y Rollup; npm solo instala los de tu ordenador. Todos son ${[...new Set(binarios.map((d) => d.licencia))].join(', ')}.`,
     '',
   ].join('\n');
 }

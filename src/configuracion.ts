@@ -15,6 +15,7 @@
  *   - repositorio: dónde está el código de Chispa. Sale en «Acerca de Chispa»
  *                  y en cada juego exportado (la licencia MPL 2.0 pide decir
  *                  dónde se puede conseguir el código del motor).
+ *   - web:         dónde se usa Chispa sin instalar nada (GitHub Pages).
  *
  * Tienen que empezar por https://. Un test lo comprueba.
  */
@@ -22,7 +23,9 @@ export const CONFIGURACION = {
   /** El enlace para donar (Ko-fi, GitHub Sponsors, Patreon...). Vacío = todavía no hay. */
   donaciones: '',
   /** Dónde está el código de Chispa. */
-  repositorio: 'https://github.com/rodrigodemartin827-debug/chispa',
+  repositorio: 'https://github.com/chispa-motor/chispa',
+  /** El editor en internet, para usarlo sin instalar nada (lo publica .github/workflows/publicar.yml). */
+  web: 'https://chispa-motor.github.io/chispa/',
 };
 
 /** Quién hace Chispa (lo que sale en «Acerca de Chispa»). La lista completa, en CREDITOS.md. */

@@ -4,6 +4,10 @@
 
 **Haz tus propios videojuegos 2D programando en español.**
 
+<a href="https://chispa-motor.github.io/chispa/"><img src="https://img.shields.io/badge/%E2%96%B6%20%20Usar%20Chispa%20ahora-e5a50a?style=for-the-badge&labelColor=e5a50a&color=e5a50a" alt="▶ Usar Chispa ahora" height="56"></a>
+
+**Sin instalar nada:** se abre en el navegador.
+
 Un editor en el navegador y un lenguaje de programación pensado para quien
 empieza (a partir de unos 12 años): se escribe como se habla, y cuando algo
 sale mal te explica qué pasa y cómo arreglarlo.
@@ -54,22 +58,39 @@ Línea 2: has escrito 'yo.moverconflecha', que se parece mucho a 'moverConFlecha
 
 ## Empezar
 
-Necesitas [Node.js](https://nodejs.org) (la versión 22 o más nueva; la «LTS» de su web vale). En una
-terminal, dentro de la carpeta de Chispa:
+**Abre [chispa-motor.github.io/chispa](https://chispa-motor.github.io/chispa/) y ya está.** No hay que
+instalar nada ni crear ninguna cuenta. La primera vez te pregunta «¿Hacemos tu
+primer juego?» y te guía paso a paso.
+
+Tus proyectos se guardan solos **en tu navegador** (en ese ordenador). Para
+llevártelos a otro sitio o guardar una copia, usa el botón **Guardar**:
+descarga un archivo `.chispa.json` que luego abres con **Abrir**.
+
+**¿Es tu primera vez? Lee [EMPIEZA_AQUI.md](EMPIEZA_AQUI.md).** En 10 minutos
+tienes un personaje que anda, salta y recoge monedas.
+
+### Si quieres modificar el propio Chispa
+
+Para cambiar el motor o el editor (no hace falta para hacer juegos),
+necesitas [Node.js](https://nodejs.org) 22 o más nuevo (la «LTS» de su web
+vale) y Git:
 
 ```
+git clone https://github.com/chispa-motor/chispa.git
+cd chispa
 npm install
 npm run dev
 ```
 
-Se abre el editor en el navegador (http://localhost:5173). La primera vez te
-pregunta «¿Hacemos tu primer juego?» y te guía paso a paso.
+Se abre el editor en http://localhost:5173 y cada cambio que hagas en el
+código se ve al momento.
 
 > **En Windows**, si PowerShell dice que «la ejecución de scripts está
 > deshabilitada», escribe `npm.cmd install` y `npm.cmd run dev`.
 
-**¿Es tu primera vez? Lee [EMPIEZA_AQUI.md](EMPIEZA_AQUI.md).** En 10 minutos
-tienes un personaje que anda, salta y recoge monedas.
+Cada vez que se sube un cambio a la rama `main`, GitHub pasa todos los tests
+y, si todo va bien, publica la web nueva él solo
+([`.github/workflows/publicar.yml`](.github/workflows/publicar.yml)).
 
 ## Qué trae
 

@@ -43,6 +43,7 @@ export function abrirAcercaDe(): void {
     h('dl', { class: 'acerca-datos' },
       h('dt', {}, 'Creado por'), h('dd', {}, AUTOR, ' y los colaboradores de Chispa (', enlace('ver todos los créditos', enlaceAlRepositorio('CREDITOS.md')), ')'),
       h('dt', {}, 'Licencia'), h('dd', {}, enlace(LICENCIA.nombre, LICENCIA.enlace), '. Es de código abierto: ', enlace('ver el código de Chispa', CONFIGURACION.repositorio), '.'),
+      h('dt', {}, 'En la web'), h('dd', {}, enlace(CONFIGURACION.web.replace(/^https:\/\//, '').replace(/\/$/, ''), CONFIGURACION.web), ', sin instalar nada.'),
       h('dt', {}, 'Tus juegos'), h('dd', {}, h('strong', {}, 'Son tuyos.'), ' La licencia es para el motor, no para lo que haces con él: puedes regalarlos, venderlos o guardarlos sin enseñar su código.'),
       h('dt', {}, 'Usa'), h('dd', {}, enlace('CodeMirror', 'https://codemirror.net'), ' (el editor de código), de Marijn Haverbeke. ', enlace('Licencias de terceros', 'licencias-de-terceros.txt'), '.'),
       h('dt', {}, 'Formato de proyecto'), h('dd', {}, `Versión ${VERSION_PROYECTO}`),

@@ -37,7 +37,7 @@ cortas.
 Necesitas [Node.js](https://nodejs.org) 22 o más nuevo y Git.
 
 ```
-git clone <dirección del repositorio>
+git clone https://github.com/chispa-motor/chispa.git
 cd chispa
 npm install
 npm run dev

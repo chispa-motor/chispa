@@ -1,0 +1,84 @@
+# Chispa — Copyright (c) 2026 Rodrigo y colaboradores de Chispa (ver CREDITOS.md)
+# SPDX-License-Identifier: MPL-2.0
+#
+# PROBAR Y PUBLICAR CHISPA EN GITHUB PAGES
+#
+# Cada vez que se hace push a main:
+#   1. se pasan TODOS los tests (los normales y los del navegador),
+#   2. se compila el editor,
+#   3. y, solo si todo ha ido bien, se publica en
+#      https://chispa-motor.github.io/chispa/
+# Si algún test falla, no se publica nada y la versión de antes sigue en la web.
+#
+# Para que funcione hay que activarlo una vez en GitHub:
+# Settings → Pages → Build and deployment → Source: «GitHub Actions».
+
+name: Probar y publicar Chispa
+
+on:
+  push:
+    branches: [main]
+  # Para lanzarlo a mano desde la pestaña Actions
+  workflow_dispatch:
+
+# Por defecto, solo leer el código
+permissions:
+  contents: read
+
+# Si se hacen dos push seguidos, la segunda publicación espera a la primera
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  probar:
+    name: Pasar los tests y compilar
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v5
+
+      - name: Instalar Node.js 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar las dependencias
+        run: npm ci
+
+      - name: Tests (lenguaje, motor, editor, seguridad, licencias...)
+        run: npm run pruebas
+
+      - name: Compilar el editor
+        run: npm run build
+
+      - name: Instalar el navegador de las pruebas
+        run: npx playwright install --with-deps chromium
+
+      - name: Pruebas en el navegador, servido en /chispa/ como en GitHub Pages
+        run: node pruebas-navegador/editor.mjs
+        env:
+          RUTA_BASE: /chispa/
+
+      - name: Preparar la web para publicarla
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  publicar:
+    name: Publicar en GitHub Pages
+    needs: probar
+    runs-on: ubuntu-latest
+    # Solo este paso puede publicar (y solo en Pages)
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.publicacion.outputs.page_url }}
+    steps:
+      - name: Publicar
+        id: publicacion
+        uses: actions/deploy-pages@v4

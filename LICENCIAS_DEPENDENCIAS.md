@@ -49,13 +49,9 @@ lo permiten todas: solo piden que su aviso de copyright viaje con el código.
 
 | Paquete | Versión | Licencia | Compatible |
 |---|---|---|---|
-| @esbuild/linux-x64 | 0.28.2 | MIT | Sí |
 | @jridgewell/resolve-uri | 3.1.2 | MIT | Sí |
 | @jridgewell/sourcemap-codec | 1.6.0 | MIT | Sí |
 | @jridgewell/trace-mapping | 0.3.31 | MIT | Sí |
-| @napi-rs/lzma-linux-x64-gnu | 1.5.1 | MIT | Sí |
-| @rollup/rollup-linux-x64-gnu | 4.63.5 | MIT | Sí |
-| @rollup/rollup-linux-x64-musl | 4.63.5 | MIT | Sí |
 | @types/chai | 5.2.3 | MIT | Sí |
 | @types/deep-eql | 4.0.2 | MIT | Sí |
 | @types/estree | 1.0.9 | MIT | Sí |
@@ -97,4 +93,4 @@ lo permiten todas: solo piden que su aviso de copyright viaje con el código.
 | why-is-node-running | 3.2.2 | MIT | Sí |
 | ws | 8.22.0 | MIT | Sí |
 
-Además hay 49 paquetes con el programa ya compilado para otros sistemas (Windows, Mac, Linux ARM...) de esbuild y Rollup; npm solo instala el de tu ordenador. Todos son MIT.
+Además hay 53 paquetes con el programa ya compilado para cada sistema (Windows, Mac, Linux...) de esbuild y Rollup; npm solo instala los de tu ordenador. Todos son MIT.

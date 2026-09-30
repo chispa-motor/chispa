@@ -4,23 +4,23 @@ Esta guía es para ti si abres Chispa por primera vez. En unos 10 minutos
 tendrás un personaje que anda, salta y recoge monedas, con un marcador de
 puntos en la pantalla.
 
-## 1. Arrancar el editor
+## 1. Abrir el editor
 
-Necesitas [Node.js](https://nodejs.org), la versión 22 o más nueva (la que
-pone «LTS» en su web). En una terminal, dentro de la carpeta del motor:
+Abre esta dirección en el navegador (mejor Chrome o Edge):
 
-```
-npm install
-npm run dev
-```
+**https://chispa-motor.github.io/chispa/**
 
-La primera orden solo hace falta la primera vez. La segunda abre el editor en
-el navegador (http://localhost:5173).
+Ya está: no hay que instalar nada. Tus proyectos se guardan solos en ese
+navegador, y si vuelves a abrir la dirección, siguen ahí. Para guardar una
+copia o llevarte un proyecto a otro ordenador, usa **Guardar** (descarga un
+archivo) y luego **Abrir**.
 
-> **En Windows,** si PowerShell dice que «la ejecución de scripts está
-> deshabilitada», escribe `npm.cmd install` y `npm.cmd run dev`. Si prefieres
-> arreglarlo para siempre, ejecuta una vez
-> `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` y responde S.
+> **¿Quieres tenerlo en tu ordenador, o cambiar el propio Chispa?** Necesitas
+> [Node.js](https://nodejs.org) 22 o más nuevo (la versión «LTS»). En una
+> terminal, dentro de la carpeta de Chispa, escribe `npm install` (solo la
+> primera vez) y `npm run dev`, y se abre en http://localhost:5173.
+> **En Windows**, si PowerShell dice que «la ejecución de scripts está
+> deshabilitada», escribe `npm.cmd install` y `npm.cmd run dev`.
 
 ## 2. Conoce la ventana
 

@@ -1,0 +1,24 @@
+# Chispa — cómo trata Git (y GitHub) cada tipo de archivo.
+
+# Los finales de línea se guardan siempre como en Linux (LF), en Windows también:
+# así los cambios no salen como «todo el archivo cambiado».
+* text=auto eol=lf
+
+# Los scripts de Chispa (.chs) NO son Haskell: GitHub los adivinaba mal por la
+# extensión. Como Chispa es un lenguaje propio que GitHub no conoce, se tratan
+# como texto (no cuentan en la barra de lenguajes ni se colorean como Haskell).
+*.chs linguist-language=Text
+
+# Archivos que genera un programa (npm run manual, npm run licencias...):
+# GitHub los pliega en las revisiones y no los cuenta en los lenguajes.
+MANUAL_CHISPA.md linguist-generated
+LICENCIAS_DEPENDENCIAS.md linguist-generated
+public/licencias-de-terceros.txt linguist-generated
+package-lock.json linguist-generated
+proyectos/*/*.chispa.json linguist-generated
+
+# Binarios: nunca se tocan sus bytes
+*.png binary
+*.gif binary
+*.jpg binary
+*.ico binary

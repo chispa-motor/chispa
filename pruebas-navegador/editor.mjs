@@ -16,6 +16,10 @@
  *
  * La primera vez hay que descargar el navegador: npx playwright install chromium
  * (Si ya tienes un Chromium, puedes indicarlo con la variable CHROMIUM=ruta.)
+ *
+ * Con RUTA_BASE=/chispa/ el editor se sirve en esa carpeta, igual que en
+ * GitHub Pages (chispa-motor.github.io/chispa/): así se comprueba que todo
+ * funciona también desde allí. El workflow de GitHub lo hace así.
  */
 import { chromium } from 'playwright';
 import { preview } from 'vite';
@@ -25,7 +29,11 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const carpeta = mkdtempSync(join(tmpdir(), 'chispa-'));
-const servidor = await preview({ preview: { port: 4321, strictPort: false }, logLevel: 'silent' });
+const RUTA_BASE = process.env.RUTA_BASE ?? '/';
+// En GitHub Actions (CI) los ordenadores son compartidos y van más lentos y a
+// trompicones: los límites de rendimiento se relajan al doble. En tu ordenador, estrictos.
+const HOLGURA = process.env.CI ? 2 : 1;
+const servidor = await preview({ base: RUTA_BASE, preview: { port: 4321, strictPort: false }, logLevel: 'silent' });
 const direccion = servidor.resolvedUrls.local[0];
 const navegador = await chromium.launch({
   executablePath: process.env.CHROMIUM || undefined,
@@ -59,7 +67,27 @@ function comprobar(condicion, mensaje) {
 const estado = (p, fn, arg) => p.evaluate(fn, arg);
 const textoDe = (p, selector) => p.$eval(selector, (el) => el.innerText);
 
-console.log('Pruebas en el navegador:');
+console.log(`Pruebas en el navegador (en ${direccion}):`);
+
+await prueba('todo se carga desde la carpeta del editor (como en GitHub Pages), sin pedir nada fuera', async () => {
+  const p = await contexto.newPage();
+  const pedidas = [];
+  p.on('request', (r) => pedidas.push(r.url()));
+  const errores = [];
+  p.on('console', (m) => m.type() === 'error' && errores.push(m.text()));
+  await p.goto(direccion + '?limpio');
+  await p.waitForFunction(() => window.chispa);
+  // Abrir cosas que cargan partes del editor más tarde (código, ayuda)
+  await p.evaluate(() => window.chispa.estado.abrirScript(Object.keys(window.chispa.estado.proyecto.scripts)[0]));
+  await p.click('button:has-text("Ayuda")');
+  await p.waitForSelector('.dialogo');
+  const base = new URL(direccion);
+  const fuera = pedidas.filter((u) => !u.startsWith('data:') && !u.startsWith('blob:') && (new URL(u).origin !== base.origin || !new URL(u).pathname.startsWith(base.pathname)));
+  await p.close();
+  comprobar(fuera.length === 0, 'se ha pedido algo fuera de la carpeta del editor: ' + fuera.join(', '));
+  comprobar(errores.length === 0, 'errores en la página: ' + errores.join(' | '));
+  comprobar(pedidas.some((u) => /\/assets\/.+\.css/.test(u)), 'no se han cargado los estilos');
+});
 
 await prueba('el editor arranca con el ejemplo y F5 ejecuta el juego', async (p) => {
   await p.keyboard.press('F5');
@@ -736,7 +764,7 @@ await prueba('Ayuda: «Acerca de Chispa» con la versión 1.0.0 y «Apoya Chispa
 });
 
 await prueba('rendimiento: 2000 objetos (con física amontonados, y con script)', async (p) => {
-  for (const [fisica, maximo] of [[true, 40], [false, 20]]) {
+  for (const [fisica, maximo] of [[true, 40 * HOLGURA], [false, 20 * HOLGURA]]) {
     await estado(p, (fisica) => {
       const e = window.chispa.estado;
       e.abrir({ formato: 'chispa-proyecto', version: 2, nombre: 'r', ancho: 960, alto: 540, imagenes: {}, sonidos: {}, animaciones: {}, plantillas: {},
@@ -809,14 +837,14 @@ await prueba('rendimiento: 500 objetos en la escena', async (p) => {
     return 1000 / (t.reduce((a, b) => a + b, 0) / t.length);
   });
   console.log(`      (editor con 500 objetos, arrastrando: ${fps.toFixed(0)} fotogramas por segundo)`);
-  comprobar(fps > 30, `el editor va a ${fps.toFixed(0)} fotogramas por segundo`);
+  comprobar(fps > 30 / HOLGURA, `el editor va a ${fps.toFixed(0)} fotogramas por segundo`);
   // Y el juego con esos 500 objetos
   await p.keyboard.press('F5');
   await p.waitForFunction(() => document.querySelector('.estado-juego')?.textContent?.startsWith('Jugando'));
   await p.waitForTimeout(3000);
   const juego = await estado(p, () => window.chispa.vistaJuego.motor.tiempo.fps);
   console.log(`      (juego con 500 objetos con física amontonados: ${juego} fotogramas por segundo)`);
-  comprobar(juego > 30, `el juego va a ${juego} fotogramas por segundo`);
+  comprobar(juego > 30 / HOLGURA, `el juego va a ${juego} fotogramas por segundo`);
 });
 
 await navegador.close();

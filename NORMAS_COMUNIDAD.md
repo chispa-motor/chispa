@@ -46,8 +46,8 @@ se hace desde GitHub (Chispa no tiene correo):
   del mensaje y elige **Report content** («reportar contenido»). Así llega
   en privado, y nadie más ve quién lo ha reportado.
 - **Si es algo que hay que hablar** (una norma que no está clara, algo que
-  se repite, una idea para que la comunidad vaya mejor): **abre una
-  *issue***. No pongas en ella datos personales de nadie ni copies lo que te
+  se repite, una idea para que la comunidad vaya mejor): **[abre una
+  *issue*](https://github.com/chispa-motor/chispa/issues/new)**. No pongas en ella datos personales de nadie ni copies lo que te
   han dicho si es ofensivo; basta con explicar qué pasa y enlazar el
   mensaje.
 - **Si es un fallo de seguridad**, no uses ninguna de las dos: sigue

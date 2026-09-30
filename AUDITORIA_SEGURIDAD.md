@@ -274,6 +274,14 @@ nada secreto, pero así no se sube código compilado al repositorio.
 - **El editor permite estilos en línea** en su CSP, por CodeMirror.
 - **`npm run dev` no lleva CSP.** Vite necesita más libertad para recargar
   al momento. La CSP va en lo compilado, que es lo que se publica.
+- **En GitHub Pages, todas las webs de la organización comparten
+  «origen»** (`chispa-motor.github.io`). Para el navegador son la misma web,
+  así que otra página publicada en Pages desde la organización `chispa-motor`
+  (otro repositorio suyo) podría leer lo que Chispa guarda en el navegador:
+  el proyecto autoguardado y los récords de los juegos. No es un problema
+  mientras todo lo que se publique ahí sea de confianza. Si algún día la
+  organización publica en Pages algo que no controla, conviene poner Chispa en
+  su propio dominio (Settings → Pages → Custom domain).
 - Una CSP puesta con `<meta>` no puede decir `frame-ancestors`. Si alguien
   quiere impedir que su juego se meta dentro de otra web, lo tiene que
   configurar en su servidor. Para itch.io justamente tiene que poder ir
