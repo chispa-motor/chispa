@@ -135,6 +135,18 @@ export function instalarBasicas(interprete: Interprete): void {
     const decimales = argNumero(a, 1, 'texto', p, 'texto(3.14159, 2)');
     return n.toFixed(Math.max(0, Math.min(10, Math.round(decimales))));
   });
+  funcion('rango', (a, p) => {
+    // rango(1, 5) → [1, 2, 3, 4, 5]  ·  rango(0, 10, 5) → [0, 5, 10]  ·  rango(5, 1) → [5, 4, 3, 2, 1]
+    const ej = 'para cada i en rango(1, 10):';
+    const desde = argNumero(a, 0, 'rango', p, ej);
+    const hasta = argNumero(a, 1, 'rango', p, ej);
+    const paso = Math.abs(argNumero(a, 2, 'rango', p, ej, 1));
+    if (paso === 0) throw new ErrorChispa(p, 'el paso del rango no puede ser 0 (no avanzaría nunca).', 'Ejemplo: rango(0, 100, 10)');
+    const cuantos = Math.floor(Math.abs(hasta - desde) / paso) + 1;
+    if (cuantos > 1000000) throw new ErrorChispa(p, `ese rango tendría ${cuantos} números: demasiados.`, 'Usa un rango más pequeño o un paso más grande.');
+    const signo = hasta >= desde ? 1 : -1;
+    return Array.from({ length: cuantos }, (_, i) => Math.round((desde + signo * i * paso) * 1e9) / 1e9);
+  });
   funcion('unir', (a, p) => {
     const lista = a[0];
     if (!Array.isArray(lista)) throw new ErrorChispa(p, `'unir' necesita una lista, pero le das ${lista === undefined ? 'nada' : nombreTipo(lista)}.`, 'Ejemplo: unir(["a", "b", "c"], ", ")');

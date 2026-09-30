@@ -1,0 +1,53 @@
+import { chromium } from 'playwright';
+import { preview } from 'vite';
+const D = '/tmp/claude-0/-home-claude/0b009c91-1550-55da-92c7-a365df746021/scratchpad';
+const servidor = await preview({ preview: { port: 4399, strictPort: false }, logLevel: 'silent' });
+const direccion = servidor.resolvedUrls.local[0];
+const nav = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--autoplay-policy=no-user-gesture-required'] });
+const ctx = await nav.newContext({ viewport: { width: 1440, height: 900 } });
+const p = await ctx.newPage();
+const errores = [];
+p.on('pageerror', (e) => errores.push('pageerror ' + e.message));
+p.on('console', (m) => (m.type() === 'error' || m.type() === 'warning') && errores.push(m.type() + ' ' + m.text()));
+await p.goto(direccion + '?limpio');
+await p.waitForFunction(() => window.chispa);
+// Abrir el proyecto como una persona: botón Abrir y elegir el archivo
+const [elegir] = await Promise.all([p.waitForEvent('filechooser'), p.click('button[title^="Abrir un proyecto"]')]);
+await elegir.setFiles('proyectos/arena-de-habilidades/arena-de-habilidades.chispa.json');
+await p.waitForTimeout(800);
+const dlg = await p.$('.dialogo button:has-text("Abrir")');
+if (dlg) await dlg.click();
+await p.waitForTimeout(500);
+await p.screenshot({ path: `${D}/a0-editor.png` });
+const problemas = await p.$eval('.lista-problemas', (e) => e.innerText).catch(() => '(sin panel)');
+console.log('PROBLEMAS:', problemas.slice(0, 500));
+await p.keyboard.press('F5');
+await p.waitForTimeout(800);
+await p.click('button[title^="Ver el juego en grande"]').catch(() => console.log('sin boton grande'));
+await p.waitForTimeout(700);
+await p.screenshot({ path: `${D}/a1-menu.png` });
+const lienzo = await p.$('.vista-juego canvas, canvas.lienzo-juego, #juego canvas');
+const caja = lienzo ? await lienzo.boundingBox() : null;
+console.log('lienzo', caja);
+if (caja) await p.mouse.click(caja.x + caja.width / 2, caja.y + caja.height / 2);
+await p.keyboard.press('Enter');
+await p.waitForTimeout(2500);
+await p.screenshot({ path: `${D}/a2-arena.png` });
+// Jugar: moverse y usar habilidades
+const teclas = ['2', '2', '3', '1', '2', '4', '2'];
+for (let i = 0; i < 40; i++) {
+  await p.keyboard.down(['w', 'd', 's', 'a'][Math.floor(i / 5) % 4]);
+  await p.keyboard.press(teclas[i % teclas.length]);
+  await p.waitForTimeout(150);
+  await p.keyboard.up(['w', 'd', 's', 'a'][Math.floor(i / 5) % 4]);
+  if (i === 6) await p.screenshot({ path: `${D}/a3-combate.png` });
+  if (await p.$('.dialogo')) console.log('dialogo html');
+}
+await p.screenshot({ path: `${D}/a4-combate.png` });
+await p.keyboard.press('p');
+await p.waitForTimeout(400);
+await p.screenshot({ path: `${D}/a5-pausa.png` });
+console.log('consola:', (await p.$eval('.consola-editor', (e) => e.innerText).catch(() => '')).slice(0, 1500));
+console.log('ERRORES:', errores.slice(0, 20));
+await nav.close();
+await servidor.close();

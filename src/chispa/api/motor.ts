@@ -14,7 +14,7 @@ import { ErrorChispa } from '../errores/ErrorChispa';
 import { sugerir } from '../errores/sugerencias';
 import type { Posicion } from '../lexico/tokens';
 import type { Interprete } from '../ejecucion/interprete';
-import { Anfitrion, FuncionNativa, Lugar, PeticionEspera, aTexto, copiarSiVector, nombreTipo, type Valor } from '../ejecucion/valores';
+import { Anfitrion, FuncionChispa, FuncionNativa, Lugar, PeticionEspera, aTexto, copiarSiVector, nombreTipo, type Valor } from '../ejecucion/valores';
 import { NOMBRES_SUAVIZADOS, SUAVIZADOS, mezclar, type ValorAnimable } from '../../objetos/AnimadorDeValores';
 import type { DibujoDepuracion } from '../../objetos/Escena';
 import { esColorValido } from '../../motor/Color';
@@ -40,6 +40,8 @@ export interface ContextoJuego {
   crearDesdePlantilla(nombre: string, x: number | null, y: number | null): ObjetoJuego;
   pedirReinicio(): void;
   cambiarEscena(nombre: string, fundido?: number): void;
+  /** aLaVez(funcion, ...): empieza a ejecutar la función por su cuenta (como otro evento del objeto que la pide). */
+  aLaVez(funcion: FuncionChispa | FuncionNativa, argumentos: Valor[], pos: Posicion): void;
   /** enviar("mensaje", dato): llega a todos los «cuando recibo» al empezar el siguiente fotograma. */
   enviarMensaje(mensaje: string, original: string, dato: Valor): void;
   /** Datos del jugador (texto JSON), guardados en el navegador. */
@@ -272,6 +274,15 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
     return (Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180) / Math.PI;
   });
   funcion('cronometro', () => new Cronometro(() => ctx.motor.tiempo.total));
+  funcion('aLaVez', (a, p) => {
+    // aLaVez(tormenta, 3): la función empieza YA, pero por su cuenta: quien la llama sigue sin esperar a que acabe
+    const f = a[0];
+    if (!(f instanceof FuncionChispa) && !(f instanceof FuncionNativa)) {
+      throw new ErrorChispa(p, `'aLaVez' necesita una función (su nombre, sin paréntesis), pero le das ${a.length ? nombreTipo(f) : 'nada'}.`, 'Ejemplo: aLaVez(lluviaDeRayos, 5)   (y no aLaVez(lluviaDeRayos(5)))');
+    }
+    ctx.aLaVez(f, a.slice(1), p);
+    return null;
+  });
   funcion('dialogo', (a, p) => {
     // dialogo("texto") · dialogo("Ana", "texto") · dialogo("Ana", "¿Vienes?", ["Si", "No"]) → la opción elegida
     const ej = 'dialogo("Ana", "¿Me ayudas?", ["Si", "No"])';
@@ -540,6 +551,11 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
           ctx.motor.sonido.parar(a[0] === undefined ? undefined : argTexto(a, 0, 'sonido.parar', p, 'sonido.parar("salto")'));
           return null;
         },
+        efecto: (a, p) => {
+          const ej = 'sonido.efecto("explosion", 0.8)';
+          ctx.motor.sonido.efecto(argTexto(a, 0, 'sonido.efecto', p, ej), argNumero(a, 1, 'sonido.efecto', p, ej, 1), tonoValido(argNumero(a, 2, 'sonido.efecto', p, ej, 1), p));
+          return null;
+        },
         tono: (a, p) => {
           const ej = 'sonido.tono(440, 0.2)';
           const f = argNumero(a, 0, 'sonido.tono', p, ej);
@@ -549,7 +565,7 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
           return null;
         },
       },
-      ['volumen', 'reproducir', 'bucle', 'parar', 'sonando', 'pausar', 'seguir', 'tono'],
+      ['volumen', 'reproducir', 'bucle', 'parar', 'sonando', 'pausar', 'seguir', 'tono', 'efecto'],
     ),
   );
 
@@ -703,45 +719,54 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
     ),
   );
 
-  // ── dibujar (para ver cosas mientras programas: líneas, círculos...). Coordenadas del mundo; duran un fotograma. ──
-  const dibujo = (d: DibujoDepuracion) => {
-    ctx.escena.dibujos.push(d);
-    return null;
-  };
+  // ── dibujar: líneas, círculos, arcos... que duran un fotograma. En el mundo, o en la pantalla con dibujar.enPantalla ──
   const colorDe = (a: Valor[], i: number, funcion: string, p: Posicion, ej: string) => {
     if (a[i] === undefined) return 'rojo';
     const c = argTexto(a, i, funcion, p, ej);
     if (!esColorValido(c)) throw new ErrorChispa(p, `no conozco el color "${c}".`, `Ejemplo: ${ej}`);
     return c;
   };
+  const metodosDibujar = (fijo: boolean): Record<string, Metodo> => {
+    const m = fijo ? 'dibujar.enPantalla' : 'dibujar';
+    const dibujo = (d: DibujoDepuracion) => {
+      ctx.escena.dibujos.push(fijo ? { ...d, fijo } : d);
+      return null;
+    };
+    return {
+      linea: (a, p) => {
+        const ej = `${m}.linea(yo.x, yo.y, raton.x, raton.y, "rojo")`;
+        const n = (i: number) => argNumero(a, i, `${m}.linea`, p, ej);
+        return dibujo({ tipo: 'linea', x1: n(0), y1: n(1), x2: n(2), y2: n(3), color: colorDe(a, 4, `${m}.linea`, p, ej), grosor: argNumero(a, 5, `${m}.linea`, p, ej, 2) });
+      },
+      circulo: (a, p) => {
+        const ej = `${m}.circulo(yo.x, yo.y, 100, "verde")`;
+        const n = (i: number) => argNumero(a, i, `${m}.circulo`, p, ej);
+        return dibujo({ tipo: 'circulo', x: n(0), y: n(1), radio: n(2), color: colorDe(a, 3, `${m}.circulo`, p, ej), relleno: a[4] === true });
+      },
+      rectangulo: (a, p) => {
+        const ej = `${m}.rectangulo(yo.x, yo.y, 64, 64, "azul")`;
+        const n = (i: number) => argNumero(a, i, `${m}.rectangulo`, p, ej);
+        return dibujo({ tipo: 'rectangulo', x: n(0), y: n(1), ancho: n(2), alto: n(3), color: colorDe(a, 4, `${m}.rectangulo`, p, ej), relleno: a[5] === true });
+      },
+      texto: (a, p) => {
+        const ej = `${m}.texto("aqui", yo.x, yo.y + 40, "blanco")`;
+        const n = (i: number) => argNumero(a, i, `${m}.texto`, p, ej);
+        return dibujo({ tipo: 'texto', texto: aTexto(a[0] ?? null), x: n(1), y: n(2), color: colorDe(a, 3, `${m}.texto`, p, ej), tamano: argNumero(a, 4, `${m}.texto`, p, ej, 16) });
+      },
+      arco: (a, p) => {
+        // Un trozo de círculo, de un ángulo a otro (0 = derecha, 90 = arriba). Relleno = un "quesito" (para enfriamientos y barras redondas)
+        const ej = `${m}.arco(yo.x, yo.y, 30, 90, 270, "blanco", verdadero)`;
+        const n = (i: number) => argNumero(a, i, `${m}.arco`, p, ej);
+        return dibujo({ tipo: 'arco', x: n(0), y: n(1), radio: n(2), desde: n(3), hasta: n(4), color: colorDe(a, 5, `${m}.arco`, p, ej), relleno: a[6] === true, grosor: argNumero(a, 7, `${m}.arco`, p, ej, 3) });
+      },
+    };
+  };
+  const NOMBRES_DIBUJAR = ['linea', 'circulo', 'rectangulo', 'texto', 'arco'];
   g.declarar(
     'dibujar',
-    new Modulo(
-      'dibujar',
-      {},
-      {
-        linea: (a, p) => {
-          const ej = 'dibujar.linea(yo.x, yo.y, raton.x, raton.y, "rojo")';
-          const n = (i: number) => argNumero(a, i, 'dibujar.linea', p, ej);
-          return dibujo({ tipo: 'linea', x1: n(0), y1: n(1), x2: n(2), y2: n(3), color: colorDe(a, 4, 'dibujar.linea', p, ej), grosor: argNumero(a, 5, 'dibujar.linea', p, ej, 2) });
-        },
-        circulo: (a, p) => {
-          const ej = 'dibujar.circulo(yo.x, yo.y, 100, "verde")';
-          const n = (i: number) => argNumero(a, i, 'dibujar.circulo', p, ej);
-          return dibujo({ tipo: 'circulo', x: n(0), y: n(1), radio: n(2), color: colorDe(a, 3, 'dibujar.circulo', p, ej), relleno: a[4] === true });
-        },
-        rectangulo: (a, p) => {
-          const ej = 'dibujar.rectangulo(yo.x, yo.y, 64, 64, "azul")';
-          const n = (i: number) => argNumero(a, i, 'dibujar.rectangulo', p, ej);
-          return dibujo({ tipo: 'rectangulo', x: n(0), y: n(1), ancho: n(2), alto: n(3), color: colorDe(a, 4, 'dibujar.rectangulo', p, ej), relleno: a[5] === true });
-        },
-        texto: (a, p) => {
-          const ej = 'dibujar.texto("aqui", yo.x, yo.y + 40, "blanco")';
-          const n = (i: number) => argNumero(a, i, 'dibujar.texto', p, ej);
-          return dibujo({ tipo: 'texto', texto: aTexto(a[0] ?? null), x: n(1), y: n(2), color: colorDe(a, 3, 'dibujar.texto', p, ej), tamano: argNumero(a, 4, 'dibujar.texto', p, ej, 16) });
-        },
-      },
-      ['linea', 'circulo', 'rectangulo', 'texto'],
+    new Modulo('dibujar', {}, metodosDibujar(false), [...NOMBRES_DIBUJAR, 'enPantalla']).agregarSubmodulo(
+      'enpantalla',
+      new Modulo('dibujar.enPantalla', {}, metodosDibujar(true), NOMBRES_DIBUJAR),
     ),
   );
 

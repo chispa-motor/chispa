@@ -83,13 +83,13 @@ export function errorDe(codigo: string, opciones: { analisis?: boolean } = {}): 
  * Un "motor" con todo lo que usan la escena y los scripts, pero sin Canvas
  * ni requestAnimationFrame: los fotogramas se avanzan a mano con avanzar().
  */
-function motorDePrueba() {
+function motorDePrueba(ancho = 960, alto = 540) {
   const canvas = document.createElement('canvas');
   const tiempo = { delta: 0, deltaReal: 0, total: 0, fotogramas: 0, fps: 60, escala: 1 };
   const actualizadores: ((dt: number) => void)[] = [];
   const entrada = new Entrada(canvas, (x, y) => new Vector2(x, y));
   const motor = {
-    renderizador: { ancho: 960, alto: 540 },
+    renderizador: { ancho, alto },
     entrada,
     recursos: new Recursos(),
     sonido: new Sonido(),
@@ -126,7 +126,7 @@ function motorDePrueba() {
    * Y hacia ARRIBA, como en Chispa: (0, 0) es la esquina inferior izquierda.
    */
   function clic(x: number, y: number) {
-    const opciones = { button: 0, clientX: x, clientY: 540 - y, bubbles: true };
+    const opciones = { button: 0, clientX: x, clientY: alto - y, bubbles: true };
     canvas.dispatchEvent(new MouseEvent('pointermove', opciones));
     canvas.dispatchEvent(new MouseEvent('pointerdown', opciones));
     window.dispatchEvent(new MouseEvent('pointerup', opciones));
@@ -149,14 +149,16 @@ export interface OpcionesJuegoPrueba {
   depurador?: Depurador;
   /** «Datos del juego»: con qué empieza juego. */
   datos?: DefProyecto['datos'];
+  /** Un proyecto entero (por ejemplo, uno de la carpeta proyectos/): se usa tal cual. */
+  proyecto?: DefProyecto;
 }
 
 export function juegoDePrueba(opciones: OpcionesJuegoPrueba) {
-  const m = motorDePrueba();
+  const m = motorDePrueba(opciones.proyecto?.ancho, opciones.proyecto?.alto);
   const salida: string[] = [];
   const errores: { error: ErrorChispa; veces: number }[] = [];
   const avisos: Diagnostico[] = [];
-  const proyecto: DefProyecto = {
+  const proyecto: DefProyecto = opciones.proyecto ?? {
     formato: 'chispa-proyecto',
     version: 2,
     nombre: 'prueba',

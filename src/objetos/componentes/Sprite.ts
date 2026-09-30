@@ -89,14 +89,21 @@ export class Sprite extends Componente {
       // En un objeto de texto, la posición es el punto de anclaje: con alinear = "izquierda"
       // el texto EMPIEZA ahí; con "derecha", TERMINA ahí; con "centro", está centrado.
       r.ctx.globalAlpha = this.opacidad;
-      r.texto(this.texto, x, y, {
-        color: esTexto ? this.color : this.colorTexto,
-        tamano: this.tamano,
-        alinear: esTexto ? this.alinear : 'centro',
-        negrita: true,
-        sombra: true,
-        vertical: 'medio',
-      });
+      // La escala también agranda la letra (así se puede animar un texto que "salta"),
+      // y cada salto de línea ("\n") es una línea nueva, centradas todas en (x, y)
+      const tamano = this.tamano * Math.abs(this.objeto.transformacion.escala.y);
+      const lineas = this.texto.split('\n');
+      const alto = tamano * 1.25;
+      lineas.forEach((linea, i) =>
+        r.texto(linea, x, y + (i - (lineas.length - 1) / 2) * alto, {
+          color: esTexto ? this.color : this.colorTexto,
+          tamano,
+          alinear: esTexto ? this.alinear : 'centro',
+          negrita: true,
+          sombra: true,
+          vertical: 'medio',
+        }),
+      );
       r.ctx.globalAlpha = 1;
     }
   }

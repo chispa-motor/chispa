@@ -16,6 +16,36 @@
  * funciona igual pero en silencio.
  */
 import { ErrorMotor } from './Errores';
+import { normalizar } from '../utilidades/texto';
+import { sugerir } from '../chispa/errores/sugerencias';
+
+/** Efectos generados: forma de la onda, frecuencia al empezar y al acabar (Hz), duración y volumen. */
+interface Efecto {
+  onda: OscillatorType | 'ruido';
+  desde: number;
+  hasta: number;
+  segundos: number;
+  volumen: number;
+}
+export const EFECTOS: Record<string, Efecto> = {
+  disparo: { onda: 'square', desde: 900, hasta: 200, segundos: 0.15, volumen: 0.25 },
+  laser: { onda: 'sawtooth', desde: 1400, hasta: 300, segundos: 0.2, volumen: 0.2 },
+  explosion: { onda: 'ruido', desde: 3000, hasta: 60, segundos: 0.6, volumen: 0.6 },
+  golpe: { onda: 'ruido', desde: 1800, hasta: 200, segundos: 0.12, volumen: 0.5 },
+  salto: { onda: 'square', desde: 300, hasta: 800, segundos: 0.18, volumen: 0.25 },
+  moneda: { onda: 'square', desde: 980, hasta: 1960, segundos: 0.12, volumen: 0.2 },
+  poder: { onda: 'triangle', desde: 200, hasta: 1200, segundos: 0.5, volumen: 0.35 },
+  dash: { onda: 'ruido', desde: 6000, hasta: 800, segundos: 0.2, volumen: 0.35 },
+  escudo: { onda: 'sine', desde: 400, hasta: 900, segundos: 0.35, volumen: 0.35 },
+  hielo: { onda: 'triangle', desde: 2400, hasta: 1200, segundos: 0.3, volumen: 0.3 },
+  fuego: { onda: 'ruido', desde: 1200, hasta: 300, segundos: 0.4, volumen: 0.4 },
+  rayo: { onda: 'sawtooth', desde: 120, hasta: 40, segundos: 0.4, volumen: 0.45 },
+  subir: { onda: 'triangle', desde: 440, hasta: 1760, segundos: 0.6, volumen: 0.35 },
+  perder: { onda: 'sawtooth', desde: 400, hasta: 60, segundos: 0.9, volumen: 0.35 },
+  clic: { onda: 'square', desde: 1200, hasta: 1000, segundos: 0.05, volumen: 0.2 },
+  alarma: { onda: 'square', desde: 700, hasta: 500, segundos: 0.3, volumen: 0.25 },
+  dano: { onda: 'square', desde: 220, hasta: 90, segundos: 0.2, volumen: 0.35 },
+};
 
 export class Sonido {
   /** Volumen general, de 0 a 1. */
@@ -183,6 +213,53 @@ export class Sonido {
     osc.connect(envolvente).connect(this.salida);
     osc.start(t);
     osc.stop(t + segundos + 0.02);
+  }
+
+  /**
+   * Un efecto de sonido GENERADO (sin archivos), de una lista de efectos típicos
+   * de juego: "disparo", "explosion", "golpe"... `tono` lo hace más agudo (2) o grave (0.5).
+   */
+  efecto(nombre: string, volumen = 1, tono = 1): void {
+    nombre = normalizar(nombre);
+    const e = EFECTOS[nombre];
+    if (!e) {
+      const hay = Object.keys(EFECTOS);
+      const parecido = sugerir(nombre, hay);
+      throw new ErrorMotor(`No hay ningún efecto de sonido llamado "${nombre}".`, (parecido ? `¿Querías decir "${parecido}"? ` : '') + `Los efectos que hay son: ${hay.join(', ')}.`);
+    }
+    this.historial.push(`efecto ${nombre}`);
+    const ctx = this.obtenerContexto();
+    if (!ctx || !this.salida) return;
+    const t = ctx.currentTime;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(e.volumen * Math.min(1, Math.max(0, volumen)), t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.001, t + e.segundos);
+    let fuente: AudioScheduledSourceNode;
+    if (e.onda === 'ruido') {
+      // Ruido blanco (explosiones, golpes) pasado por un filtro que se va cerrando
+      const buffer = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * e.segundos), ctx.sampleRate);
+      const datos = buffer.getChannelData(0);
+      for (let i = 0; i < datos.length; i++) datos[i] = Math.random() * 2 - 1;
+      const ruido = ctx.createBufferSource();
+      ruido.buffer = buffer;
+      const filtro = ctx.createBiquadFilter();
+      filtro.type = 'lowpass';
+      filtro.frequency.setValueAtTime(e.desde * tono, t);
+      filtro.frequency.exponentialRampToValueAtTime(Math.max(20, e.hasta * tono), t + e.segundos);
+      ruido.connect(filtro).connect(g);
+      fuente = ruido;
+    } else {
+      const osc = ctx.createOscillator();
+      osc.type = e.onda;
+      osc.frequency.setValueAtTime(e.desde * tono, t);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(20, e.hasta * tono), t + e.segundos);
+      osc.connect(g);
+      fuente = osc;
+    }
+    g.connect(this.salida);
+    fuente.start(t);
+    fuente.stop(t + e.segundos + 0.02);
   }
 
   /**

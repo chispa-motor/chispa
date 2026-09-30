@@ -255,7 +255,7 @@ export class SistemaFisico {
   private apartarDeLoQueSeMueve(c: Cuerpo, cerca: Cerca): void {
     if (cerca.moviles.length === 0) return;
     for (const s of cerca.moviles) {
-      if (s.objeto === c.objeto || s.colision.soloDesdeArriba) continue;
+      if (s.objeto === c.objeto || s.colision.soloDesdeArriba || c.objeto.atraviesaA(s.objeto)) continue;
       const a = c.colision!.caja();
       const b = s.colision.caja();
       if (!solapanDeVerdad(a, b)) continue;
@@ -281,7 +281,7 @@ export class SistemaFisico {
     const caja = c.colision!.caja();
     const res: SolidoCercano[] = [];
     const meter = (s: Colisionador) => {
-      if (s.objeto !== c.objeto) res.push({ caja: s.colision.caja(), objeto: s.objeto, soloArriba: s.colision.soloDesdeArriba });
+      if (s.objeto !== c.objeto && !c.objeto.atraviesaA(s.objeto)) res.push({ caja: s.colision.caja(), objeto: s.objeto, soloArriba: s.colision.soloDesdeArriba });
     };
     for (const s of cerca.rejilla.consultarConGrandes(caja)) meter(s);
     for (const s of cerca.moviles) meter(s);
@@ -315,7 +315,7 @@ export class SistemaFisico {
     const parejas: [Cuerpo, Cuerpo][] = [];
     solidosFisicos.forEach((a, i) => {
       for (const b of rejilla.consultarConGrandes(agrandar(cajas[i], 2))) {
-        if (b.objeto.id > a.objeto.id) parejas.push([a, b]); // cada pareja una sola vez
+        if (b.objeto.id > a.objeto.id && !a.objeto.atraviesaA(b.objeto)) parejas.push([a, b]); // cada pareja una sola vez
       }
     });
     // 2. Separarlas (varias vueltas: al empujar a uno se puede meter en otro)

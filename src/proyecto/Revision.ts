@@ -17,6 +17,7 @@ import { revisarTextos } from './TextosConHuecos';
 import { recorrerExpresiones } from '../chispa/sintaxis/recorrer';
 import { sugerir } from '../chispa/errores/sugerencias';
 import { normalizar } from '../utilidades/texto';
+import { bibliotecasDe, entornoConBibliotecas } from './Bibliotecas';
 
 export interface ResultadoRevision {
   /** Árbol de cada script que se ha podido leer (aunque tenga errores de análisis). */
@@ -44,8 +45,24 @@ export function globalesDelMotor(): Entorno {
   return globalesCacheadas;
 }
 
+/** Las propiedades propias del proyecto: las del inspector y las que algún script asigna a otro objeto (bala.rebotes = ...). */
+export function propiedadesPropias(proyecto: DefProyecto): Set<string> {
+  const r = new Set<string>();
+  const mirar = (o: { propiedades?: Record<string, unknown> }) => Object.keys(o.propiedades ?? {}).forEach((n) => r.add(normalizar(n)));
+  for (const e of Object.values(proyecto.escenas)) e.objetos.forEach(mirar);
+  Object.values(proyecto.plantillas).forEach(mirar);
+  for (const codigo of Object.values(proyecto.scripts)) {
+    // bala.rebotes = 3 cuenta; yo.rebotes = 3 no (podría ser yo.rebote mal escrito: para eso está el inspector)
+    for (const m of codigo.matchAll(/([\p{L}_][\p{L}\p{N}_]*)\s*\.\s*([\p{L}_][\p{L}\p{N}_]*)\s*[-+*/%]?=(?!=)/gu)) {
+      if (!['yo', 'otro'].includes(normalizar(m[1]))) r.add(normalizar(m[2]));
+    }
+  }
+  return r;
+}
+
 function contextoDe(proyecto: DefProyecto, globales: Entorno) {
   return {
+    propiedadesPropias: propiedadesPropias(proyecto),
     globales,
     esScript: true,
     plantillas: Object.keys(proyecto.plantillas),
@@ -57,12 +74,24 @@ function contextoDe(proyecto: DefProyecto, globales: Entorno) {
   };
 }
 
+/** Los scripts de funciones del proyecto ya leídos (los que tienen errores de escritura no cuentan). */
+function leerBibliotecas(proyecto: DefProyecto, cambiado?: { archivo: string; programa: Programa }): Programa[] {
+  return bibliotecasDe(proyecto).flatMap((a) => {
+    if (cambiado && a === cambiado.archivo) return [cambiado.programa];
+    const r = analizarSintaxis(proyecto.scripts[a], a);
+    return r.errores.length ? [] : [r.programa];
+  });
+}
+
 /** Revisa UN script (lo usa el editor mientras escribes). */
 export function revisarScript(archivo: string, codigo: string, proyecto: DefProyecto, globales: Entorno = globalesDelMotor()): Diagnostico[] {
   const { programa, errores } = analizarSintaxis(codigo, archivo);
   if (errores.length) return errores.map((e) => e.diagnostico());
+  const bib = entornoConBibliotecas(leerBibliotecas(proyecto, { archivo, programa }), globales);
+  const esBiblioteca = bibliotecasDe(proyecto).includes(archivo);
   return [
-    ...analizar(programa, contextoDe(proyecto, globales)),
+    ...bib.diagnosticos.filter((d) => d.archivo === archivo),
+    ...analizar(programa, { ...contextoDe(proyecto, bib.entorno), esScript: !esBiblioteca }),
     ...avisosDeMensajes(programa, mensajesRecibidos(proyecto)),
     ...avisosDeJuego(programa, datosGuardadosEnJuego(proyecto)),
   ];
@@ -141,7 +170,9 @@ function avisosDeMensajes(programa: Programa, recibidos: Map<string, string>): D
 
 export function revisarProyecto(proyecto: DefProyecto, globales: Entorno = globalesDelMotor()): ResultadoRevision {
   const r: ResultadoRevision = { programas: new Map(), porArchivo: new Map(), errores: [], avisos: [] };
-  const contexto = contextoDe(proyecto, globales);
+  const bib = entornoConBibliotecas(leerBibliotecas(proyecto), globales);
+  const bibliotecas = new Set(bibliotecasDe(proyecto));
+  const contexto = contextoDe(proyecto, bib.entorno);
   const recibidos = mensajesRecibidos(proyecto);
   const guardados = datosGuardadosEnJuego(proyecto);
 
@@ -152,7 +183,9 @@ export function revisarProyecto(proyecto: DefProyecto, globales: Entorno = globa
     // Solo analizamos si se ha podido leer entero (si no, saldrían errores falsos)
     if (errores.length === 0) {
       r.programas.set(archivo, programa);
-      for (const d of [...analizar(programa, contexto), ...avisosDeMensajes(programa, recibidos), ...avisosDeJuego(programa, guardados)]) {
+      const propios = bib.diagnosticos.filter((d) => d.archivo === archivo);
+      const analisis = analizar(programa, { ...contexto, esScript: !bibliotecas.has(archivo) });
+      for (const d of [...propios, ...analisis, ...avisosDeMensajes(programa, recibidos), ...avisosDeJuego(programa, guardados)]) {
         diagnosticos.push(d);
         if (d.gravedad === 'aviso') r.avisos.push(d);
         else r.errores.push(new ErrorChispa(d.pos, d.mensaje, d.pista).conArchivo(archivo, programa.lineas));
@@ -161,7 +194,7 @@ export function revisarProyecto(proyecto: DefProyecto, globales: Entorno = globa
     r.porArchivo.set(archivo, diagnosticos);
   }
   // Los textos con huecos de los objetos ("Puntos: {juego.puntos}")
-  const textos = revisarTextos(proyecto, globales, r.programas);
+  const textos = revisarTextos(proyecto, bib.entorno, r.programas);
   if (textos.length) {
     r.porArchivo.set('', textos);
     for (const d of textos) r.errores.push(new ErrorChispa(d.pos, d.mensaje, d.pista));

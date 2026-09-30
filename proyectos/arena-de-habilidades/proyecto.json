@@ -1,0 +1,759 @@
+{
+  "formato": "chispa-proyecto",
+  "version": 2,
+  "nombre": "Arena de Habilidades",
+  "ancho": 1280,
+  "alto": 720,
+  "pixelArt": false,
+  "controlesTactiles": true,
+  "imagenes": {},
+  "sonidos": {},
+  "animaciones": {},
+  "datos": {
+    "oleada": 0,
+    "fuerza": 1,
+    "resultado": "",
+    "tiempoJugado": 0,
+    "enemigosDerrotados": 0,
+    "nivelFinal": 1,
+    "nuevoRecord": false,
+    "record": 0
+  },
+  "escenaInicial": "Menu",
+  "escenas": {
+    "Menu": {
+      "colorFondo": "#0b0e1a",
+      "gravedad": 0,
+      "objetos": [
+        {
+          "nombre": "Titulo",
+          "x": 640,
+          "y": 540,
+          "sprite": {
+            "forma": "texto",
+            "texto": "ARENA DE HABILIDADES",
+            "tamano": 64,
+            "color": "#f1c40f",
+            "fijo": true,
+            "capa": 10
+          }
+        },
+        {
+          "nombre": "Subtitulo",
+          "x": 640,
+          "y": 470,
+          "sprite": {
+            "forma": "texto",
+            "texto": "Sobrevive a 9 oleadas y derrota al Guardian",
+            "tamano": 26,
+            "color": "#c0c7d1",
+            "fijo": true,
+            "capa": 10
+          }
+        },
+        {
+          "nombre": "BotonJugar",
+          "x": 640,
+          "y": 340,
+          "sprite": {
+            "forma": "rectangulo",
+            "color": "#2e86de",
+            "ancho": 320,
+            "alto": 70,
+            "fijo": true,
+            "texto": "JUGAR",
+            "tamano": 32,
+            "capa": 5
+          },
+          "script": "menu.chs"
+        },
+        {
+          "nombre": "Record",
+          "x": 640,
+          "y": 250,
+          "sprite": {
+            "forma": "texto",
+            "texto": "Record: oleada 0",
+            "tamano": 24,
+            "color": "#9fb3c8",
+            "fijo": true,
+            "capa": 10
+          }
+        },
+        {
+          "nombre": "Ayuda",
+          "x": 640,
+          "y": 150,
+          "sprite": {
+            "forma": "texto",
+            "texto": "Mover: WASD o flechas  ·  Apuntar: raton  ·  Habilidades: 1 2 3 4 5  ·  Pausa: escape",
+            "tamano": 20,
+            "color": "#8390a8",
+            "fijo": true,
+            "capa": 10
+          }
+        },
+        {
+          "nombre": "AyudaMando",
+          "x": 640,
+          "y": 115,
+          "sprite": {
+            "forma": "texto",
+            "texto": "Con mando: palanca para moverte, A dash, X orbe, Y nova, B escudo, RT definitiva, START pausa",
+            "tamano": 18,
+            "color": "#8390a8",
+            "fijo": true,
+            "capa": 10
+          }
+        }
+      ]
+    },
+    "Arena": {
+      "colorFondo": "#141a2b",
+      "gravedad": 0,
+      "objetos": [
+        {
+          "nombre": "Mapa",
+          "x": 0,
+          "y": 0,
+          "mapa": {
+            "tamano": 40,
+            "capa": -5,
+            "tipos": {
+              "muro": {
+                "color": "#3d4a6b",
+                "solida": true
+              },
+              "pilar": {
+                "color": "#56648a",
+                "solida": true
+              }
+            },
+            "celdas": {
+              "0,0": "muro",
+              "0,15": "muro",
+              "1,0": "muro",
+              "1,15": "muro",
+              "2,0": "muro",
+              "2,15": "muro",
+              "3,0": "muro",
+              "3,15": "muro",
+              "4,0": "muro",
+              "4,15": "muro",
+              "5,0": "muro",
+              "5,15": "muro",
+              "6,0": "muro",
+              "6,15": "muro",
+              "7,0": "muro",
+              "7,15": "muro",
+              "8,0": "muro",
+              "8,15": "muro",
+              "9,0": "muro",
+              "9,15": "muro",
+              "10,0": "muro",
+              "10,15": "muro",
+              "11,0": "muro",
+              "11,15": "muro",
+              "12,0": "muro",
+              "12,15": "muro",
+              "13,0": "muro",
+              "13,15": "muro",
+              "14,0": "muro",
+              "14,15": "muro",
+              "15,0": "muro",
+              "15,15": "muro",
+              "16,0": "muro",
+              "16,15": "muro",
+              "17,0": "muro",
+              "17,15": "muro",
+              "18,0": "muro",
+              "18,15": "muro",
+              "19,0": "muro",
+              "19,15": "muro",
+              "20,0": "muro",
+              "20,15": "muro",
+              "21,0": "muro",
+              "21,15": "muro",
+              "22,0": "muro",
+              "22,15": "muro",
+              "23,0": "muro",
+              "23,15": "muro",
+              "24,0": "muro",
+              "24,15": "muro",
+              "25,0": "muro",
+              "25,15": "muro",
+              "26,0": "muro",
+              "26,15": "muro",
+              "27,0": "muro",
+              "27,15": "muro",
+              "28,0": "muro",
+              "28,15": "muro",
+              "29,0": "muro",
+              "29,15": "muro",
+              "30,0": "muro",
+              "30,15": "muro",
+              "31,0": "muro",
+              "31,15": "muro",
+              "0,1": "muro",
+              "31,1": "muro",
+              "0,2": "muro",
+              "31,2": "muro",
+              "0,3": "muro",
+              "31,3": "muro",
+              "0,4": "muro",
+              "31,4": "muro",
+              "0,5": "muro",
+              "31,5": "muro",
+              "0,6": "muro",
+              "31,6": "muro",
+              "0,7": "muro",
+              "31,7": "muro",
+              "0,8": "muro",
+              "31,8": "muro",
+              "0,9": "muro",
+              "31,9": "muro",
+              "0,10": "muro",
+              "31,10": "muro",
+              "0,11": "muro",
+              "31,11": "muro",
+              "0,12": "muro",
+              "31,12": "muro",
+              "0,13": "muro",
+              "31,13": "muro",
+              "0,14": "muro",
+              "31,14": "muro",
+              "7,4": "pilar",
+              "7,5": "pilar",
+              "8,4": "pilar",
+              "8,5": "pilar",
+              "23,4": "pilar",
+              "23,5": "pilar",
+              "24,4": "pilar",
+              "24,5": "pilar",
+              "7,10": "pilar",
+              "7,11": "pilar",
+              "8,10": "pilar",
+              "8,11": "pilar",
+              "23,10": "pilar",
+              "23,11": "pilar",
+              "24,10": "pilar",
+              "24,11": "pilar"
+            }
+          }
+        },
+        {
+          "nombre": "Jugador",
+          "x": 640,
+          "y": 320,
+          "sprite": {
+            "forma": "circulo",
+            "color": "#48dbfb",
+            "ancho": 34,
+            "alto": 34,
+            "capa": 5
+          },
+          "colision": {},
+          "fisica": {
+            "gravedad": 0,
+            "rozamiento": 0,
+            "masa": 3
+          },
+          "script": "jugador.chs"
+        },
+        {
+          "nombre": "Director",
+          "x": 0,
+          "y": 0,
+          "script": "director.chs"
+        },
+        {
+          "nombre": "Interfaz",
+          "x": 0,
+          "y": 0,
+          "script": "interfaz.chs"
+        },
+        {
+          "nombre": "TextoOleada",
+          "x": 1180,
+          "y": 700,
+          "sprite": {
+            "forma": "texto",
+            "texto": "Oleada 1",
+            "tamano": 24,
+            "color": "#f1c40f",
+            "fijo": true,
+            "capa": 21
+          }
+        },
+        {
+          "nombre": "TextoNivel",
+          "x": 80,
+          "y": 690,
+          "sprite": {
+            "forma": "texto",
+            "texto": "Nivel 1",
+            "tamano": 22,
+            "color": "#48dbfb",
+            "fijo": true,
+            "capa": 21
+          }
+        },
+        {
+          "nombre": "TextoAviso",
+          "x": 640,
+          "y": 560,
+          "sprite": {
+            "forma": "texto",
+            "texto": "",
+            "tamano": 40,
+            "color": "#f1c40f",
+            "fijo": true,
+            "capa": 30
+          }
+        },
+        {
+          "nombre": "PanelPausa",
+          "x": 640,
+          "y": 360,
+          "sprite": {
+            "forma": "rectangulo",
+            "color": "#000000",
+            "ancho": 1280,
+            "alto": 720,
+            "fijo": true,
+            "opacidad": 0.6,
+            "visible": false,
+            "capa": 40
+          }
+        },
+        {
+          "nombre": "TextoPausa",
+          "x": 640,
+          "y": 400,
+          "sprite": {
+            "forma": "texto",
+            "texto": "",
+            "tamano": 48,
+            "color": "blanco",
+            "fijo": true,
+            "capa": 41
+          }
+        }
+      ]
+    },
+    "Derrota": {
+      "colorFondo": "#1a0b0b",
+      "gravedad": 0,
+      "objetos": [
+        {
+          "nombre": "Titulo",
+          "x": 640,
+          "y": 500,
+          "sprite": {
+            "forma": "texto",
+            "texto": "HAS CAIDO",
+            "tamano": 72,
+            "color": "#ff6b6b",
+            "fijo": true,
+            "capa": 10
+          }
+        },
+        {
+          "nombre": "Resumen",
+          "x": 640,
+          "y": 380,
+          "sprite": {
+            "forma": "texto",
+            "texto": "",
+            "tamano": 28,
+            "color": "#e8ecff",
+            "fijo": true,
+            "capa": 10
+          }
+        },
+        {
+          "nombre": "BotonOtraVez",
+          "x": 640,
+          "y": 230,
+          "sprite": {
+            "forma": "rectangulo",
+            "color": "#c0392b",
+            "ancho": 360,
+            "alto": 64,
+            "fijo": true,
+            "texto": "OTRA VEZ",
+            "tamano": 28,
+            "capa": 5
+          },
+          "script": "final.chs"
+        },
+        {
+          "nombre": "Pista",
+          "x": 640,
+          "y": 140,
+          "sprite": {
+            "forma": "texto",
+            "texto": "Pulsa enter o haz clic",
+            "tamano": 20,
+            "color": "#8390a8",
+            "fijo": true,
+            "capa": 10
+          }
+        }
+      ]
+    },
+    "Victoria": {
+      "colorFondo": "#0b1a10",
+      "gravedad": 0,
+      "objetos": [
+        {
+          "nombre": "Titulo",
+          "x": 640,
+          "y": 500,
+          "sprite": {
+            "forma": "texto",
+            "texto": "VICTORIA",
+            "tamano": 80,
+            "color": "#2ecc71",
+            "fijo": true,
+            "capa": 10
+          }
+        },
+        {
+          "nombre": "Resumen",
+          "x": 640,
+          "y": 380,
+          "sprite": {
+            "forma": "texto",
+            "texto": "",
+            "tamano": 28,
+            "color": "#e8ecff",
+            "fijo": true,
+            "capa": 10
+          }
+        },
+        {
+          "nombre": "BotonOtraVez",
+          "x": 640,
+          "y": 230,
+          "sprite": {
+            "forma": "rectangulo",
+            "color": "#27ae60",
+            "ancho": 360,
+            "alto": 64,
+            "fijo": true,
+            "texto": "JUGAR OTRA VEZ",
+            "tamano": 28,
+            "capa": 5
+          },
+          "script": "final.chs"
+        },
+        {
+          "nombre": "Pista",
+          "x": 640,
+          "y": 140,
+          "sprite": {
+            "forma": "texto",
+            "texto": "Pulsa enter o haz clic",
+            "tamano": 20,
+            "color": "#8390a8",
+            "fijo": true,
+            "capa": 10
+          }
+        }
+      ]
+    }
+  },
+  "plantillas": {
+    "Perseguidor": {
+      "nombre": "Perseguidor",
+      "sprite": {
+        "forma": "rectangulo",
+        "color": "#ff6b6b",
+        "ancho": 30,
+        "alto": 30,
+        "capa": 2
+      },
+      "colision": {},
+      "fisica": {
+        "gravedad": 0,
+        "rozamiento": 0,
+        "masa": 1
+      },
+      "script": "enemigo.chs",
+      "propiedades": {
+        "vida": 40,
+        "rapidez": 130,
+        "dano": 10,
+        "xp": 5
+      }
+    },
+    "Tirador": {
+      "nombre": "Tirador",
+      "sprite": {
+        "forma": "circulo",
+        "color": "#a55eea",
+        "ancho": 30,
+        "alto": 30,
+        "capa": 2
+      },
+      "colision": {},
+      "fisica": {
+        "gravedad": 0,
+        "rozamiento": 0,
+        "masa": 1
+      },
+      "script": "enemigo.chs",
+      "propiedades": {
+        "vida": 30,
+        "rapidez": 110,
+        "dano": 8,
+        "xp": 7
+      }
+    },
+    "Embestidor": {
+      "nombre": "Embestidor",
+      "sprite": {
+        "forma": "rectangulo",
+        "color": "#ff9f43",
+        "ancho": 42,
+        "alto": 42,
+        "capa": 2
+      },
+      "colision": {},
+      "fisica": {
+        "gravedad": 0,
+        "rozamiento": 0,
+        "masa": 1
+      },
+      "script": "enemigo.chs",
+      "propiedades": {
+        "vida": 70,
+        "rapidez": 90,
+        "dano": 20,
+        "xp": 9
+      }
+    },
+    "Invocador": {
+      "nombre": "Invocador",
+      "sprite": {
+        "forma": "circulo",
+        "color": "#26de81",
+        "ancho": 36,
+        "alto": 36,
+        "capa": 2
+      },
+      "colision": {},
+      "fisica": {
+        "gravedad": 0,
+        "rozamiento": 0,
+        "masa": 1
+      },
+      "script": "enemigo.chs",
+      "propiedades": {
+        "vida": 60,
+        "rapidez": 70,
+        "dano": 6,
+        "xp": 12
+      }
+    },
+    "Esbirro": {
+      "nombre": "Esbirro",
+      "sprite": {
+        "forma": "rectangulo",
+        "color": "#fd79a8",
+        "ancho": 18,
+        "alto": 18,
+        "capa": 2
+      },
+      "colision": {},
+      "fisica": {
+        "gravedad": 0,
+        "rozamiento": 0,
+        "masa": 1
+      },
+      "script": "enemigo.chs",
+      "propiedades": {
+        "vida": 12,
+        "rapidez": 170,
+        "dano": 5,
+        "xp": 1
+      }
+    },
+    "Jefe": {
+      "nombre": "Jefe",
+      "sprite": {
+        "forma": "circulo",
+        "color": "#8e2d2d",
+        "ancho": 96,
+        "alto": 96,
+        "capa": 3
+      },
+      "colision": {},
+      "fisica": {
+        "gravedad": 0,
+        "rozamiento": 0,
+        "masa": 50
+      },
+      "script": "jefe.chs",
+      "propiedades": {
+        "vida": 2500,
+        "rapidez": 80,
+        "dano": 25,
+        "xp": 0
+      }
+    },
+    "Orbe": {
+      "nombre": "Orbe",
+      "sprite": {
+        "forma": "circulo",
+        "color": "#feca57",
+        "ancho": 16,
+        "alto": 16,
+        "capa": 6
+      },
+      "colision": {
+        "solido": false
+      },
+      "fisica": {
+        "gravedad": 0,
+        "rozamiento": 0,
+        "rebote": 1,
+        "masa": 0.1
+      },
+      "script": "orbe.chs",
+      "propiedades": {
+        "dano": 14,
+        "rebotes": 3,
+        "helado": false
+      }
+    },
+    "BalaEnemiga": {
+      "nombre": "BalaEnemiga",
+      "sprite": {
+        "forma": "circulo",
+        "color": "#e056fd",
+        "ancho": 12,
+        "alto": 12,
+        "capa": 6
+      },
+      "colision": {
+        "solido": false
+      },
+      "script": "bala.chs",
+      "propiedades": {
+        "dano": 8
+      },
+      "fisica": {
+        "gravedad": 0,
+        "rozamiento": 0
+      }
+    },
+    "Aviso": {
+      "nombre": "Aviso",
+      "sprite": {
+        "forma": "circulo",
+        "color": "#ff3838",
+        "ancho": 100,
+        "alto": 100,
+        "capa": -1,
+        "opacidad": 0.25
+      },
+      "script": "aviso.chs",
+      "propiedades": {
+        "radio": 60,
+        "retraso": 1,
+        "dano": 20,
+        "ralentiza": false
+      }
+    },
+    "Estela": {
+      "nombre": "Estela",
+      "sprite": {
+        "forma": "circulo",
+        "color": "#48dbfb",
+        "ancho": 34,
+        "alto": 34,
+        "capa": 4,
+        "opacidad": 0.5
+      },
+      "script": "efecto.chs",
+      "propiedades": {
+        "duracion": 0.25,
+        "escalaFinal": 0.5
+      }
+    },
+    "Onda": {
+      "nombre": "Onda",
+      "sprite": {
+        "forma": "circulo",
+        "color": "#74b9ff",
+        "ancho": 20,
+        "alto": 20,
+        "capa": 4,
+        "opacidad": 0.45
+      },
+      "script": "efecto.chs",
+      "propiedades": {
+        "duracion": 0.4,
+        "escalaFinal": 10
+      }
+    },
+    "Escudo": {
+      "nombre": "Escudo",
+      "sprite": {
+        "forma": "circulo",
+        "color": "#81ecec",
+        "ancho": 60,
+        "alto": 60,
+        "capa": 6,
+        "opacidad": 0.35
+      }
+    },
+    "NumeroDano": {
+      "nombre": "NumeroDano",
+      "sprite": {
+        "forma": "texto",
+        "texto": "0",
+        "tamano": 22,
+        "color": "#ffffff",
+        "capa": 30
+      },
+      "script": "numero.chs"
+    },
+    "Cristal": {
+      "nombre": "Cristal",
+      "sprite": {
+        "forma": "rectangulo",
+        "color": "#55efc4",
+        "ancho": 12,
+        "alto": 12,
+        "capa": 1
+      },
+      "colision": {
+        "solido": false
+      },
+      "script": "cristal.chs",
+      "propiedades": {
+        "xp": 1
+      }
+    },
+    "Rayo": {
+      "nombre": "Rayo",
+      "sprite": {
+        "forma": "rectangulo",
+        "color": "#fffa65",
+        "ancho": 10,
+        "alto": 900,
+        "capa": 8,
+        "opacidad": 0.9
+      },
+      "script": "efecto.chs",
+      "propiedades": {
+        "duracion": 0.35,
+        "escalaFinal": 1
+      }
+    }
+  },
+  "scripts": []
+}

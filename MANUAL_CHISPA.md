@@ -713,6 +713,30 @@ Junta los elementos de una lista en un texto, con el separador entre medias (por
 yo.texto = unir(inventario, " - ")
 ```
 
+#### `rango(desde, hasta, paso)`
+
+Una lista de numeros seguidos, de desde a hasta (los dos incluidos). Sirve para contar con para cada. El paso es opcional (1 si no se dice). Si hasta es menor que desde, cuenta hacia atras.
+
+```
+para cada i en rango(1, 5):
+    crear("Moneda", i * 100, 300)
+```
+
+#### `aLaVez(funcion, valores...)`
+
+Empieza a ejecutar una funcion POR SU CUENTA, como si fuera otro evento: quien la llama sigue sin esperar a que acabe. Sirve para cosas que duran (con esperar dentro) sin parar el resto del script. Se escribe el nombre de la funcion sin parentesis, y detras sus valores.
+
+```
+funcion lluvia(veces):
+    repetir veces veces:
+        crear("Gota", aleatorio(0, 900), 540)
+        esperar(0.2)
+
+cuando se pulsa "espacio":
+    aLaVez(lluvia, 10)
+    mostrar("esto sale enseguida")
+```
+
 #### `dialogo("quien", "texto", opciones)`
 
 Una caja de dialogo abajo de la pantalla: el texto sale letra a letra y se pasa con espacio, intro o clic. Quien habla y las opciones (una lista) no son obligatorios. Con opciones, devuelve la elegida. Mientras se lee, el juego se para.
@@ -1269,6 +1293,24 @@ Va hasta un sitio o detras de un objeto (lo sigue aunque se mueva), RODEANDO las
 ```
 cuando empieza:
     yo.irHacia(buscar("Jugador"), 120)
+```
+
+#### `yo.atravesar("Nombre")`
+
+Deja de chocar con los objetos de ese nombre, tipo o etiqueta: pasa a traves de ellos. Sigue chocando con las paredes y sigue avisando con cuando toco. Sirve para un dash que cruza enemigos o para balas que rebotan en las paredes pero no empujan a nadie.
+
+```
+yo.atravesar("enemigo")
+esperar(0.2)
+yo.dejarDeAtravesar("enemigo")
+```
+
+#### `yo.dejarDeAtravesar("Nombre")`
+
+Vuelve a chocar con los objetos de ese nombre, tipo o etiqueta.
+
+```
+yo.dejarDeAtravesar("enemigo")
 ```
 
 #### `yo.parar()`
@@ -1867,6 +1909,15 @@ Sigue el sonido que se había pausado con sonido.pausar().
 sonido.seguir()
 ```
 
+#### `sonido.efecto("nombre", volumen, tono)`
+
+Un efecto de sonido que se GENERA solo, sin archivos: disparo, laser, explosion, golpe, salto, moneda, poder, dash, escudo, hielo, fuego, rayo, subir, perder, clic, alarma, dano. Con tono 2 suena mas agudo y con 0.5 mas grave.
+
+```
+cuando toco Moneda:
+    sonido.efecto("moneda")
+```
+
 #### `sonido.tono(frecuencia, segundos)`
 
 Un pitido generado, sin archivos. 440 es la nota La.
@@ -2106,6 +2157,72 @@ Un texto en ese sitio del mundo (por ejemplo, encima de un enemigo).
 
 ```
 dibujar.texto(yo.vida, yo.x, yo.y + 40, "blanco")
+```
+
+#### `dibujar.arco(x, y, radio, desde, hasta, color, relleno, grosor)`
+
+Un trozo de circulo de un angulo a otro, en grados (0 = derecha, 90 = arriba, y se cuenta al reves que las agujas del reloj). Con relleno = verdadero es un quesito: sirve para enseñar cuanto falta de un tiempo.
+
+```
+variable falta = 0.25
+dibujar.arco(yo.x, yo.y, 30, 90, 90 + 360 * falta, "#00000099", verdadero)
+```
+
+#### `dibujar.enPantalla`
+
+Lo mismo, pero en la PANTALLA, como la interfaz: (0, 0) es la esquina de abajo a la izquierda y no se mueve con la camara. Sirve para barras de vida, marcadores e iconos.
+
+```
+dibujar.enPantalla.rectangulo(120, 700, 200, 16, "rojo", verdadero)
+```
+
+### `dibujar.enPantalla`
+
+Dibujar en la pantalla (sin camara): lo mismo que dibujar, con (0, 0) en la esquina de abajo a la izquierda. Dura un fotograma. Se ve por encima del mundo, pero por debajo de los objetos de la interfaz (asi un texto o un panel de pausa quedan siempre encima).
+
+```
+cuando cada fotograma:
+    dibujar.enPantalla.rectangulo(110, 700, 200 * yo.vida / 100, 16, "rojo", verdadero)
+```
+
+#### `dibujar.enPantalla.linea(x1, y1, x2, y2, color, grosor)`
+
+Una linea en la pantalla.
+
+```
+dibujar.enPantalla.linea(0, 360, 1280, 360, "blanco")
+```
+
+#### `dibujar.enPantalla.circulo(x, y, radio, color, relleno)`
+
+Un circulo en la pantalla.
+
+```
+dibujar.enPantalla.circulo(60, 60, 30, "blanco", verdadero)
+```
+
+#### `dibujar.enPantalla.rectangulo(x, y, ancho, alto, color, relleno)`
+
+Un rectangulo con el centro en (x, y) de la pantalla.
+
+```
+dibujar.enPantalla.rectangulo(110, 700, 200, 16, "rojo", verdadero)
+```
+
+#### `dibujar.enPantalla.texto(texto, x, y, color, tamano)`
+
+Un texto en la pantalla.
+
+```
+dibujar.enPantalla.texto("Vida", 20, 700, "blanco")
+```
+
+#### `dibujar.enPantalla.arco(x, y, radio, desde, hasta, color, relleno, grosor)`
+
+Un trozo de circulo en la pantalla (quesito si relleno = verdadero).
+
+```
+dibujar.enPantalla.arco(60, 60, 30, 90, 270, "#00000099", verdadero)
 ```
 
 ### `mando`

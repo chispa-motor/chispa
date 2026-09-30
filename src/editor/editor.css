@@ -211,6 +211,8 @@ img.pixelado { image-rendering: pixelated; }
 .aviso-foco:hover { background: #1f3a5cee; }
 .etiqueta-raton { min-width: 150px; color: var(--texto-suave); font-size: 12px; font-variant-numeric: tabular-nums; white-space: pre; }
 .vista-juego.ampliada { position: fixed; inset: 0; z-index: 60; height: auto; }
+.vista-juego .salir-ampliada { display: none; }
+.vista-juego.ampliada .salir-ampliada { display: block; position: absolute; top: 8px; right: 8px; z-index: 2; padding: 6px 12px; border: 1px solid #fff5; border-radius: 8px; background: #0009; color: #fff; cursor: pointer; }
 
 /* ───────────── Inspector ───────────── */
 .inspector { flex: 1; overflow: auto; padding: 8px 10px 20px; }

@@ -194,6 +194,8 @@ class Parser {
         pista = `En Chispa no se escribe '${t.original}': la línea termina directamente en ':'. Ejemplo: si vida == 0:`;
       } else if (palabra === 'es' || palabra === 'igual' || palabra === 'vale') {
         pista = 'Para comparar se usa == (dos iguales). Ejemplo: si puntos == 10:';
+      } else if (EQUIVALENCIAS_INGLES[normalizar(palabra)]) {
+        pista = `'${t.original}' no es de Chispa: aquí se escribe '${EQUIVALENCIAS_INGLES[normalizar(palabra)]}'. Ejemplo: si vida > 0 y puntos > 10:`;
       } else if (que.startsWith('cuando') && t.tipo !== 'nuevaLinea') {
         pista = "Después del evento va ':' directamente, sin más palabras. Ejemplos: cuando empieza:   ·   cuando toco Moneda:";
       }
@@ -240,9 +242,12 @@ class Parser {
         `Escribe ${anterior.original}.${siguiente.original} en lugar de ${anterior.original},${siguiente.original}`,
       );
     }
+    const extranjera = this.actual.tipo === 'identificador' ? EQUIVALENCIAS_INGLES[normalizar(this.actual.valor)] : undefined;
     this.error(
       `sobra algo al final de la línea: ${this.describir(this.actual)}.`,
-      'Cada orden va en su propia línea. Revisa si te falta un operador (+, -, ==...) o una coma.',
+      extranjera
+        ? `'${this.actual.original}' no es de Chispa: aquí se escribe '${extranjera}'.`
+        : 'Cada orden va en su propia línea. Revisa si te falta un operador (+, -, ==...) o una coma.',
     );
   }
 

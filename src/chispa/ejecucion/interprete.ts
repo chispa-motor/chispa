@@ -223,7 +223,7 @@ export class Interprete {
         s.coleccion.pos,
         `'para cada' necesita una lista, un texto o una tabla, pero ${this.describir(s.coleccion)} es ${nombreTipo(coleccion)}.`,
         typeof coleccion === 'number'
-          ? `Para repetir algo un número de veces usa: repetir ${formatearNumero(coleccion)} veces:`
+          ? `Para contar del 1 al ${formatearNumero(coleccion)} usa: para cada i en rango(1, ${formatearNumero(coleccion)}):  ·  para repetir algo sin contar: repetir ${formatearNumero(coleccion)} veces:`
           : 'Ejemplo: para cada enemigo en buscarTodos("Enemigo"):',
       );
     }
@@ -467,13 +467,15 @@ export class Interprete {
       this.programaActual = p;
       this.objetoActual = o;
     };
+    // Las funciones de un script de funciones no son de ningún objeto (objeto: undefined): siguen con el «yo» de quien las llama
+    const objeto = dueno.objeto === undefined ? antes.objeto : dueno.objeto;
     try {
-      poner(dueno.programa, dueno.objeto);
+      poner(dueno.programa, objeto);
       let r = gen.next();
       while (!r.done) {
         poner(antes.programa, antes.objeto);
         yield r.value;
-        poner(dueno.programa, dueno.objeto);
+        poner(dueno.programa, objeto);
         r = gen.next();
       }
       return r.value;
@@ -510,7 +512,7 @@ export class Interprete {
       const hilo = this.hiloActual;
       if (hilo) hilo.profundidad++;
       const dueno = funcion.dueno;
-      const deOtro = !!dueno && (dueno.programa !== this.programaActual || dueno.objeto !== this.objetoActual);
+      const deOtro = !!dueno && (dueno.programa !== this.programaActual || (dueno.objeto !== undefined && dueno.objeto !== this.objetoActual));
       try {
         const senal = deOtro ? yield* this.comoDueno(dueno!, this.ejecutarBloque(def.cuerpo, local)) : yield* this.ejecutarBloque(def.cuerpo, local);
         return senal?.tipo === 'devolver' ? senal.valor : null;

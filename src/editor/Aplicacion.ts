@@ -219,7 +219,7 @@ export class Aplicacion {
     );
     const derecha = h('aside', { class: 'columna-derecha' },
       h('div', { class: 'titulo-panel' }, icono('jugar', 14), h('span', {}, 'Juego'), h('span', { class: 'espacio' }),
-        botonIcono('ampliar', 'Ver el juego en grande (Escape para volver)', () => this.vistaJuego.ampliar(), undefined, 'pequeno')),
+        botonIcono('ampliar', 'Ver el juego en grande (Escape o el botón de arriba para volver)', () => this.vistaJuego.ampliar(), undefined, 'pequeno')),
       this.vistaJuego.elemento,
       divisor('--alto-juego', 'y', 1, 120, 800),
       h('div', { class: 'titulo-panel' }, icono('menu', 14), h('span', {}, 'Propiedades')),

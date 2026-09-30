@@ -10,6 +10,7 @@
  */
 import { Motor } from '../../motor/Motor';
 import type { DefProyecto } from '../../proyecto/formato';
+import { teclasDelJuego } from '../../reproductor/ControlesTactiles';
 import { JuegoEnMarcha, type OpcionesJuego } from '../../proyecto/JuegoEnMarcha';
 import { h, icono } from '../interfaz/dom';
 
@@ -32,16 +33,19 @@ export class VistaJuego {
   private ampliada = false;
 
   /** Aviso cuando el juego está en marcha pero las teclas van a otro sitio (al código, a la escena...). */
+  /** Si el juego usa la tecla Escape, Escape no cierra la vista ampliada (se sale con el botón). */
+  private juegoUsaEscape = false;
   private avisoFoco = h('button', { class: 'aviso-foco', hidden: true, onclick: () => this.enfocar() }, 'Haz clic aquí para jugar con el teclado');
 
   constructor() {
-    this.elemento = h('div', { class: 'vista-juego' }, this.pantalla, this.avisoFoco, this.barraEstado);
+    const salir = h('button', { class: 'salir-ampliada', title: 'Volver al editor', onclick: () => this.ampliar(false) }, '✕ Volver al editor');
+    this.elemento = h('div', { class: 'vista-juego' }, this.pantalla, this.avisoFoco, this.barraEstado, salir);
     document.addEventListener('focusin', () => this.actualizarAvisoFoco());
     document.addEventListener('focusout', () => setTimeout(() => this.actualizarAvisoFoco()));
     this.mostrarEspera();
-    // Escape sale de la vista ampliada
+    // Escape sale de la vista ampliada, salvo que el juego use Escape (pausa...): entonces es para el juego
     window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && this.ampliada) this.ampliar(false);
+      if (e.key === 'Escape' && this.ampliada && !this.juegoUsaEscape) this.ampliar(false);
     });
   }
 
@@ -60,6 +64,7 @@ export class VistaJuego {
     this.parar();
     this.cambiarEstado('cargando');
     const copia = structuredClone(proyecto);
+    this.juegoUsaEscape = teclasDelJuego(copia).acciones.includes('escape');
     const canvas = h('canvas', { class: 'lienzo-juego', tabindex: '0', 'aria-label': 'Juego en marcha' });
     this.pantalla.replaceChildren(canvas);
     const motor = new Motor({ canvas, ancho: copia.ancho, alto: copia.alto, pixelArt: copia.pixelArt });

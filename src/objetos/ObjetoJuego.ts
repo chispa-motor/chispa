@@ -10,6 +10,7 @@ import type { Componente } from './Componente';
 import type { Escena } from './Escena';
 import { Transformacion } from './componentes/Transformacion';
 import { Vector2 } from '../motor/Vector2';
+import { normalizar } from '../utilidades/texto';
 
 let siguienteId = 1;
 
@@ -42,6 +43,23 @@ export class ObjetoJuego {
   arrastrable = false;
   /** La definición de la que salió (para clonar()). */
   definicion: unknown = null;
+  /**
+   * Lo que este objeto atraviesa sin chocar (nombres, tipos o etiquetas, normalizados):
+   * yo.atravesar("enemigo"). Sigue avisando con «cuando toco», y sigue chocando con las paredes.
+   */
+  readonly atraviesa = new Set<string>();
+
+  /** ¿Es este objeto de ese nombre, tipo o etiqueta? (normalizado) */
+  es(n: string): boolean {
+    return normalizar(this.nombre) === n || normalizar(this.tipo) === n || this.etiquetas.has(n);
+  }
+
+  /** ¿Se atraviesan estos dos objetos? (basta con que uno atraviese al otro) */
+  atraviesaA(otro: ObjetoJuego): boolean {
+    if (this.atraviesa.size) for (const n of this.atraviesa) if (otro.es(n)) return true;
+    if (otro.atraviesa.size) for (const n of otro.atraviesa) if (this.es(n)) return true;
+    return false;
+  }
 
   private componentes: Componente[] = [];
   /** Recuerda qué componente es de cada clase: obtener() se usa miles de veces por fotograma. */

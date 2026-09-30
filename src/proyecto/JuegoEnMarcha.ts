@@ -32,9 +32,12 @@ import { Sprite } from '../objetos/componentes/Sprite';
 import { normalizar } from '../utilidades/texto';
 import { migrarProyecto, tipoPorNombre, type DefObjeto, type DefProyecto } from './formato';
 import { comprobarRevision, revisarProyecto } from './Revision';
+import { bibliotecasDe, funcionesDe } from './Bibliotecas';
+import { ErrorChispa as ErrorChispaReal } from '../chispa/errores/ErrorChispa';
 import { fuenteDeTexto, plantillaDeTexto, tieneHuecos } from './TextosConHuecos';
 import { Entorno } from '../chispa/ejecucion/entorno';
-import type { Valor } from '../chispa/ejecucion/valores';
+import type { FuncionChispa, FuncionNativa, Valor } from '../chispa/ejecucion/valores';
+import type { Posicion } from '../chispa/lexico/tokens';
 import { referencia } from '../chispa/api/objetos';
 import type { Depurador } from '../chispa/ejecucion/depurador';
 
@@ -121,11 +124,43 @@ export class JuegoEnMarcha implements ContextoJuego {
     comprobarRevision(revision);
     if (revision.avisos.length) (opciones.alAviso ?? avisosEnConsola)(revision.avisos);
     juego.programas = revision.programas;
+    juego.cargarBibliotecas(bibliotecasDe(proyecto));
     motor.escena = juego.escena;
     motor.alActualizar((dt) => juego.antesDelFotograma(dt));
     if (!opciones.alMostrar) limpiarConsola();
     juego.construir(proyecto.escenaInicial);
     return juego;
+  }
+
+  /**
+   * Los scripts de funciones: se ejecutan sus variables y funciones una vez, y
+   * sus funciones pasan a ser globales (se pueden usar desde cualquier script).
+   */
+  private cargarBibliotecas(archivos: string[]): void {
+    const i = this.interprete;
+    for (const archivo of archivos) {
+      const programa = this.programas.get(archivo);
+      if (!programa) continue;
+      const entorno = new Entorno(i.globales);
+      const antes = { programa: i.programaActual, objeto: i.objetoActual };
+      i.programaActual = programa;
+      i.objetoActual = undefined; // no es de ningún objeto
+      try {
+        const sentencias = programa.sentencias.filter((s) => s.tipo === 'Funcion' || s.tipo === 'Variable');
+        const hilo = i.ejecutarBloque(sentencias, entorno);
+        if (!hilo.next().done) throw new ErrorMotor(`En el script de funciones ${archivo} no se puede usar esperar() fuera de una función.`);
+      } catch (e) {
+        if (e instanceof ErrorChispaReal) e.conArchivo(archivo, programa.lineas);
+        throw e;
+      } finally {
+        i.programaActual = antes.programa;
+        i.objetoActual = antes.objeto;
+      }
+      for (const f of funcionesDe(programa)) {
+        const c = entorno.buscar(f.nombre);
+        if (c) i.globales.declarar(f.nombre, c.valor, f.original);
+      }
+    }
   }
 
   /** Para el juego: vacía la escena y para los sonidos (al pulsar Parar en el editor). */
@@ -180,6 +215,13 @@ export class JuegoEnMarcha implements ContextoJuego {
   pedirReinicio(): void {
     // No reiniciamos en mitad de un script: lo hacemos al principio del siguiente fotograma.
     this.pendiente = { tipo: 'reiniciar' };
+  }
+
+  aLaVez(funcion: FuncionChispa | FuncionNativa, argumentos: Valor[], pos: Posicion): void {
+    const o = this.interprete.objetoActual;
+    const script = o instanceof ObjetoJuego ? o.obtener(ScriptChispa) : undefined;
+    if (!script) throw new ErrorChispaReal(pos, "'aLaVez' solo se puede usar en el script de un objeto (o en una función a la que llama un objeto).");
+    script.lanzarFuncion(funcion, argumentos, pos);
   }
 
   enviarMensaje(mensaje: string, _original: string, dato: Valor): void {

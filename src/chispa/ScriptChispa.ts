@@ -29,7 +29,7 @@ import { Entorno } from './ejecucion/entorno';
 import { ErrorChispa } from './errores/ErrorChispa';
 import type { Ejecucion, Interprete } from './ejecucion/interprete';
 import { referencia } from './api/objetos';
-import { FuncionChispa, PeticionEspera, nombreTipo, type Valor } from './ejecucion/valores';
+import { FuncionChispa, FuncionNativa, PeticionEspera, nombreTipo, type Valor } from './ejecucion/valores';
 import { Sprite } from '../objetos/componentes/Sprite';
 import { ErrorMotor } from '../motor/Errores';
 import { Componente } from '../objetos/Componente';
@@ -271,6 +271,11 @@ export class ScriptChispa extends Componente {
     // Un punto de parada en la línea del «cuando» para en la primera línea de dentro
     const dep = interprete.depurador;
     this.lanzar(cuerpo(), clave, !!dep?.tienePunto(this.programa.archivo, ev.pos.linea));
+  }
+
+  /** aLaVez(funcion): la función se ejecuta en un hilo nuevo de este objeto, empezando ya. */
+  lanzarFuncion(funcion: FuncionChispa | FuncionNativa, argumentos: Valor[], pos: Posicion): void {
+    this.lanzar(this.interprete.llamar(funcion, argumentos, pos, 'aLaVez'), null);
   }
 
   /** Crea un hilo y lo ejecuta YA hasta que termine o se duerma en un esperar(). */

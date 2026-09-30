@@ -20,7 +20,23 @@ export function quitarTildes(texto: string): string {
   return texto.normalize('NFD').replace(/[\u0300-\u0302\u0304-\u036f]/g, '').normalize('NFC');
 }
 
-/** Pasa a minúsculas, quita espacios de los lados y quita tildes. */
+/**
+ * Pasa a minúsculas, quita espacios de los lados y quita tildes.
+ *
+ * Se llama MUCHÍSIMO (cada vez que se busca un objeto por su nombre, en cada
+ * fotograma y para cada enemigo), y quitar tildes es lento. Como los textos
+ * que se normalizan son casi siempre los mismos (nombres de objetos, de
+ * teclas, de propiedades), se recuerdan. Lo encontró la Arena de Habilidades:
+ * era un tercio de todo el tiempo del juego.
+ */
+const recordados = new Map<string, string>();
+const MAXIMO_RECORDADOS = 20000;
 export function normalizar(texto: string): string {
-  return quitarTildes(texto.trim().toLowerCase());
+  let r = recordados.get(texto);
+  if (r === undefined) {
+    r = quitarTildes(texto.trim().toLowerCase());
+    if (recordados.size >= MAXIMO_RECORDADOS) recordados.clear();
+    recordados.set(texto, r);
+  }
+  return r;
 }

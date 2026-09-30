@@ -64,8 +64,11 @@ export class Comportamiento extends Componente {
 
   /** Va hacia un sitio o un objeto por el camino más corto. Devuelve si se puede llegar. */
   irHacia(destino: ObjetoJuego | Vector2, rapidez: number): boolean {
-    this.destino = destino;
+    // Llamarlo en cada fotograma con el mismo destino no recalcula el camino (solo cambia la rapidez)
+    const mismo = this.destino !== null && (this.destino === destino || (this.destino instanceof Vector2 && destino instanceof Vector2 && this.destino.distancia(destino) < 1));
     this.rapidezDestino = rapidez;
+    if (mismo) return this.hayCamino;
+    this.destino = destino;
     this.camino = [];
     this.caminoHacia = null;
     this.hayCamino = this.calcularCamino(this.puntoDe(destino));

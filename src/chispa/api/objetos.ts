@@ -544,8 +544,14 @@ const METODOS: Record<string, (o: ObjetoJuego, args: Valor[], pos: Posicion) => 
     const f = o.obtener(Fisica);
     const conFisica = !!f && f.activo && !f.estatico;
     const cae = conFisica && f!.gravedad !== 0 && escena.gravedad !== 0;
+    // Con la palanca del mando, poco inclinada = despacio (más fino que las flechas)
+    const m = escena.motor.entrada.mando;
     if (cae) dy = 0;
-    if (dx !== 0 && dy !== 0) {
+    if (m.conectado && (m.ejeX !== 0 || m.ejeY !== 0)) {
+      const [ex, ey] = [m.ejeX, cae ? 0 : m.ejeY];
+      const largo = Math.hypot(ex, ey);
+      [dx, dy] = largo > 1 ? [ex / largo, ey / largo] : [ex, ey];
+    } else if (dx !== 0 && dy !== 0) {
       // En diagonal, no más rápido que en recto
       dx *= Math.SQRT1_2;
       dy *= Math.SQRT1_2;
@@ -595,6 +601,15 @@ const METODOS: Record<string, (o: ObjetoJuego, args: Valor[], pos: Posicion) => 
     if (rapidez <= 0) throw new ErrorChispa(p, 'la rapidez tiene que ser mayor que 0.', `Ejemplo: ${ej}`);
     o.escena?.animaciones.cancelar(`${o.id}.ira`);
     return (o.obtener(Comportamiento) ?? o.agregar(new Comportamiento())).irHacia(objetivo, rapidez);
+  },
+  atravesar: (o, a, p) => {
+    // yo.atravesar("enemigo"): no choca con ellos (pero sí con las paredes, y sigue avisando con «cuando toco»)
+    o.atraviesa.add(normalizar(argEtiqueta(a, 'atravesar', p)));
+    return null;
+  },
+  dejardeatravesar: (o, a, p) => {
+    o.atraviesa.delete(normalizar(argEtiqueta(a, 'dejarDeAtravesar', p)));
+    return null;
   },
   parar: (o) => {
     // Deja de ir a donde iba (irHacia, irA) y se queda quieto
@@ -653,7 +668,7 @@ const NOMBRES_BONITOS = [
   'tamanoLetra', 'transparencia', 'voltearVertical', 'etiquetas', 'padre', 'hijos', 'arrastrable', 'arrastrando',
   'teletransportar', 'irA', 'anguloA', 'rotarHacia', 'avanzar', 'ocultar', 'aparecer', 'parpadear', 'ponerDelante', 'ponerDetras',
   'tocando', 'cercanos', 'masCercano', 'clonar', 'ponerEtiqueta', 'quitarEtiqueta', 'tieneEtiqueta', 'pegarA', 'soltar',
-  'irHacia', 'parar', 'yendo',
+  'irHacia', 'parar', 'yendo', 'atravesar', 'dejarDeAtravesar',
 ];
 
 interface PropiedadPropia {

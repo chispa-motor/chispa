@@ -33,7 +33,7 @@ describe('Documentación de la API', () => {
     for (const m of DOC_MODULOS) {
       const partes = m.nombre.split('.');
       let modulo = globales.buscar(partes[0])?.valor as Anfitrion;
-      for (const p of partes.slice(1)) modulo = modulo.submodulo(p)!;
+      for (const p of partes.slice(1)) modulo = modulo.submodulo(normalizar(p))!;
       expect(modulo, m.nombre).toBeInstanceOf(Anfitrion);
       const reales = modulo.propiedadesConocidas().map(normalizar).sort();
       const documentados = m.miembros.map((x) => normalizar(x.nombre)).sort();

@@ -43,6 +43,12 @@ import { TIPOS_PARTICULAS } from '../../objetos/Particulas';
 export interface ContextoAnalisis {
   /** Las variables globales del intérprete (API): mostrar, teclado, crear... */
   globales: Entorno;
+  /**
+   * Propiedades propias que existen en el proyecto (normalizadas): las del
+   * inspector y las que algún script asigna (bala.rebotes = 3). Aunque se
+   * parezcan a una del motor (rebotes ~ rebote), no son errores de escritura.
+   */
+  propiedadesPropias?: Set<string>;
   /** ¿Es el script de un objeto? (entonces existe 'yo') */
   esScript?: boolean;
   /** Nombres de recursos del proyecto, para comprobar textos como crear("Bala"). */
@@ -326,7 +332,7 @@ class Analizador {
       return;
     }
     if (e.nombre === 'yo') {
-      this.error(e.pos, "'yo' solo existe en el script de un objeto (es el propio objeto).");
+      this.error(e.pos, "'yo' solo existe en el script de un objeto (es el propio objeto), y este script no es de ningún objeto.", 'Si es un script de funciones, pásale el objeto a la función: funcion curar(quien, cantidad): quien.vida += cantidad. Si es de un objeto, ponlo en el objeto (inspector > Script).');
       return;
     }
     this.error(e.pos, `intentas usar '${e.original}', pero no existe ninguna variable con ese nombre.`, this.pistaNombre(e.original, amb));
@@ -348,7 +354,7 @@ class Analizador {
 
     // yo.xxx / otro.xxx: propiedades del motor mal escritas (yo.velocidda)
     if (base.tipo === 'Identificador' && (base.nombre === 'yo' || base.nombre === 'otro') && amb.buscar(base.nombre)?.tipo === 'especial') {
-      if (!esMiembroDelMotor(e.propiedad)) {
+      if (!esMiembroDelMotor(e.propiedad) && !this.ctx.propiedadesPropias?.has(e.propiedad)) {
         const parecido = propiedadMalEscrita(e.original);
         if (parecido) {
           this.error(

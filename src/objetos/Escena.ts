@@ -32,11 +32,17 @@ import { resolverColor } from '../motor/Color';
 import type { CajaDialogo } from './Dialogo';
 
 /** Algo dibujado con dibujar.linea(), dibujar.circulo()... Dura un fotograma. Coordenadas del mundo. */
-export type DibujoDepuracion =
+export type DibujoDepuracion = (
   | { tipo: 'linea'; x1: number; y1: number; x2: number; y2: number; color: string; grosor: number }
   | { tipo: 'circulo'; x: number; y: number; radio: number; color: string; relleno: boolean }
   | { tipo: 'rectangulo'; x: number; y: number; ancho: number; alto: number; color: string; relleno: boolean }
-  | { tipo: 'texto'; texto: string; x: number; y: number; color: string; tamano: number };
+  | { tipo: 'texto'; texto: string; x: number; y: number; color: string; tamano: number }
+  /** Ángulos en grados, como en matemáticas: 0 = derecha, 90 = arriba. */
+  | { tipo: 'arco'; x: number; y: number; radio: number; desde: number; hasta: number; color: string; relleno: boolean; grosor: number }
+) & {
+  /** En la pantalla (como la interfaz), no en el mundo. */
+  fijo?: boolean;
+};
 
 export class Escena implements EscenaActiva {
   objetos: ObjetoJuego[] = [];
@@ -138,7 +144,9 @@ export class Escena implements EscenaActiva {
   }
 
   actualizar(dt: number): void {
+    // Con un diálogo abierto se siguen viendo los dibujos del último fotograma (la interfaz no desaparece)
     if (this.dialogos.length) return this.actualizarDialogo();
+    this.dibujos = [];
     this.repartirClic();
     this.empezarArrastre();
     for (const o of [...this.objetos]) {
@@ -320,10 +328,13 @@ export class Escena implements EscenaActiva {
     ctx.scale(cam.zoom, cam.zoom);
     for (const m of mundo) m.dibujar();
     this.particulas.dibujar(r, aLocal);
-    this.dibujarDepuracion(r, aLocal);
+    this.dibujarDepuracion(r, aLocal, false);
     ctx.restore();
 
     // 2. La interfaz, pegada a la pantalla: (0,0) es la esquina inferior izquierda
+    //    Primero lo dibujado con dibujar.enPantalla (barras, iconos...) y encima los objetos
+    //    de la interfaz: así un texto o un panel de pausa siempre se ven por encima.
+    this.dibujarDepuracion(r, (x, y) => ({ x, y: r.alto - y }), true);
     interfaz.sort((a, b) => a.capa - b.capa);
     for (const s of interfaz) s.dibujarEn(r, s.objeto.posicion.x, r.alto - s.objeto.posicion.y);
 
@@ -339,11 +350,28 @@ export class Escena implements EscenaActiva {
     this.dialogos[0]?.dibujar(r);
   }
 
-  /** Líneas, círculos y rectángulos de dibujar.xxx(): se dibujan una vez y se borran. */
-  private dibujarDepuracion(r: Renderizador, aLocal: (x: number, y: number) => { x: number; y: number }): void {
+  /** Líneas, círculos, arcos... de dibujar.xxx(): los de este fotograma (se borran al empezar el siguiente). */
+  private dibujarDepuracion(r: Renderizador, aLocal: (x: number, y: number) => { x: number; y: number }, fijos: boolean): void {
     if (!this.dibujos.length) return;
     for (const d of this.dibujos) {
-      if (d.tipo === 'linea') {
+      if (!!d.fijo !== fijos) continue;
+      if (d.tipo === 'arco') {
+        const c = aLocal(d.x, d.y);
+        const ctx = r.ctx;
+        ctx.beginPath();
+        // En el lienzo la Y va hacia abajo: los ángulos se dan la vuelta
+        if (d.relleno) ctx.moveTo(c.x, c.y);
+        ctx.arc(c.x, c.y, Math.max(0, d.radio), (-d.desde * Math.PI) / 180, (-d.hasta * Math.PI) / 180, d.hasta > d.desde);
+        if (d.relleno) {
+          ctx.closePath();
+          ctx.fillStyle = resolverColor(d.color);
+          ctx.fill();
+        } else {
+          ctx.strokeStyle = resolverColor(d.color);
+          ctx.lineWidth = d.grosor;
+          ctx.stroke();
+        }
+      } else if (d.tipo === 'linea') {
         const a = aLocal(d.x1, d.y1);
         const b = aLocal(d.x2, d.y2);
         r.linea(a.x, a.y, b.x, b.y, d.color, d.grosor);
@@ -359,7 +387,6 @@ export class Escena implements EscenaActiva {
         r.texto(d.texto, c.x, c.y, { color: d.color, tamano: d.tamano });
       }
     }
-    this.dibujos = [];
   }
 
   /** La zona que ocupan todos los mapas de casillas (para que la cámara no salga de ellos). */
