@@ -98,7 +98,7 @@ describe('Documentación de la API', () => {
 describe('Recetas de la guía', () => {
   // Un proyecto con todo lo que nombran las recetas
   const p = proyectoVacio();
-  p.plantillas = { Bala: {}, Enemigo: {} };
+  p.plantillas = { Bala: {}, Enemigo: {}, Moneda: {} };
   p.escenas.Fin = { colorFondo: 'negro', objetos: [] };
   p.escenas.Nivel2 = { colorFondo: 'negro', objetos: [] };
   p.escenas.Principal.objetos = [{ nombre: 'Nave' }, { nombre: 'Jugador' }, { nombre: 'Moneda' }, { nombre: 'Mapa', mapa: { tamano: 32, tipos: { puerta: { solida: false } }, celdas: {} } }];

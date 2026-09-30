@@ -2828,3 +2828,201 @@ cuando empieza:
         record = juego.puntos
     yo.texto = "Récord: {record}"
 ```
+
+### Un objeto avisa a otros (mensajes)
+
+Con enviar, TODOS los objetos que tengan «cuando recibo» con ese mensaje se enteran, estén donde estén. En el script de la llave y en el de la puerta:
+
+```
+cuando toco Jugador:
+    enviar("abrir_puerta")
+    destruir(yo)
+
+cuando recibo "abrir_puerta":
+    destruir(yo)
+```
+
+### Pedirle algo a otro objeto (llamar a su función)
+
+Si la Puerta tiene en su script una función abrir(), desde otro objeto se escribe buscar("Puerta").abrir(). Dentro de la función, yo es la puerta. En el script de la puerta:
+
+```
+funcion abrir():
+    yo.ocultar()
+    sonido.efecto("subir")
+
+cuando toco Jugador:
+    abrir()
+```
+
+### Datos del juego sin código (vidas, nivel...)
+
+Sin nada seleccionado, en Propiedades > Datos del juego puedes añadir datos con su valor de salida (vidas = 3). Existen desde el principio en todas las escenas, antes de cualquier script. Luego se usan así:
+
+```
+cuando toco Enemigo:
+    juego.vidas -= 1
+    si juego.vidas <= 0:
+        escena.cambiar("Fin")
+```
+
+### Un enemigo que persigue sin código
+
+Selecciona el enemigo y activa Propiedades > Comportamiento: «Perseguir si está cerca», a quién (Jugador) y la rapidez. Si el juego se ve desde arriba y hay un mapa con paredes, las rodea. Con código es lo mismo con irHacia:
+
+```
+cuando empieza:
+    yo.irHacia(buscar("Jugador"), 120)
+```
+
+### Un enemigo que patrulla y te ve
+
+Con rayo miras si hay una pared entre el enemigo y el jugador. Si lo ve, lo persigue; si no, pasea.
+
+```
+cuando cada 0.5 segundos:
+    variable jugador = buscar("Jugador")
+    variable veo = falso
+    si jugador != nulo:
+        variable r = rayo(yo, jugador, 400)
+        veo = r != nulo y r.objeto == jugador
+    si veo:
+        yo.irHacia(jugador, 160)
+    sino si no yo.yendo:
+        yo.irHacia(vector(aleatorio(100, 900), aleatorio(100, 500)), 80)
+```
+
+### Hablar con un personaje (diálogos)
+
+En el script del personaje. El juego se para mientras se lee. Con opciones, dialogo devuelve la elegida.
+
+```
+cuando toco Jugador:
+    dialogo("Ana", "¡Hola! Llevo días esperando a alguien.")
+    variable r = dialogo("Ana", "¿Me ayudas a buscar mi gato?", ["Si", "No"])
+    si r == "Si":
+        juego.mision = verdadero
+        dialogo("Ana", "¡Gracias! Creo que se fue al bosque.")
+    sino:
+        dialogo("Ana", "Vaya... Vuelve si cambias de idea.")
+```
+
+### Jugar con mando (o con botones en el móvil)
+
+moverConFlechas ya usa la palanca del mando. Los botones se leen con mando. En el móvil salen botones en la pantalla solos, con las teclas que usa tu juego (se quitan en Propiedades del juego > botones en el móvil).
+
+```
+cuando cada fotograma:
+    yo.moverConFlechas(300)
+    si mando.pulsado("a") o teclado.pulsada("espacio"):
+        yo.saltar(700)
+```
+
+### Funciones para todos los objetos (una biblioteca)
+
+Crea un script, escribe solo funciones (sin ningún «cuando») y NO se lo pongas a ningún objeto. Sus funciones se pueden usar desde cualquier script, y dentro de ellas yo es quien las llama. Por ejemplo, un script «ayudas»:
+
+```
+funcion curar(cuanto):
+    yo.vida = minimo(yo.vida + cuanto, 100)
+    sonido.efecto("poder")
+```
+
+### Hacer dos cosas a la vez
+
+Las cosas con esperar dentro paran el script hasta que acaban. Con aLaVez la función va por su cuenta y el resto sigue.
+
+```
+funcion parpadear():
+    repetir 6 veces:
+        yo.ocultar()
+        esperar(0.1)
+        yo.mostrar()
+        esperar(0.1)
+
+cuando toco Enemigo:
+    aLaVez(parpadear)
+    yo.saltar(500)
+```
+
+### Crear muchas cosas en fila
+
+rango da los números seguidos, para contar con para cada. Moneda tiene que ser una plantilla (botón «Convertir en plantilla» de sus Propiedades).
+
+```
+cuando empieza:
+    para cada i en rango(1, 8):
+        crear("Moneda", i * 100, 300)
+```
+
+### Un dash que atraviesa enemigos
+
+Durante un momento deja de chocar con los enemigos (pero no con las paredes) y se mueve muy rápido.
+
+```
+cuando se pulsa "x":
+    yo.atravesar("Enemigo")
+    yo.velocidad = vector(900, 0)
+    sonido.efecto("dash")
+    esperar(0.2)
+    yo.dejarDeAtravesar("Enemigo")
+```
+
+### Barra de vida en la pantalla
+
+dibujar.enPantalla dibuja en la pantalla, como la interfaz: no se mueve con la cámara. Se dibuja en cada fotograma. (0, 0) es la esquina de abajo a la izquierda.
+
+```
+cuando empieza:
+    yo.vida = 100
+
+cuando cada fotograma:
+    dibujar.enPantalla.rectangulo(120, 500, 200, 16, "gris", verdadero)
+    dibujar.enPantalla.rectangulo(20 + yo.vida, 500, yo.vida * 2, 16, "rojo", verdadero)
+```
+
+### Sonidos sin archivos
+
+sonido.efecto se inventa el sonido solo. Hay disparo, laser, explosion, golpe, salto, moneda, poder, dash, escudo, hielo, fuego, rayo, subir, perder, clic, alarma y dano.
+
+```
+cuando toco Moneda:
+    destruir(otro)
+    sonido.efecto("moneda")
+
+cuando se pulsa "espacio":
+    yo.saltar(700)
+    sonido.efecto("salto")
+```
+
+### Oscurecer la pantalla al perder
+
+pantalla.oscurecer hace un fundido. Con cuanto = 0.5 se sigue viendo el juego detrás (para un menú de pausa).
+
+```
+cuando toco Enemigo:
+    pantalla.oscurecer(1)
+    esperar(1)
+    escena.reiniciar()
+```
+
+### Probar cosas mientras juegas (órdenes)
+
+Mientras el juego está en marcha, abajo de la consola hay una línea para escribir una orden y pulsar Intro. Sirve para hacer trampas y probar: juego.vidas = 99, buscar("Jugador").x = 500, crear("Enemigo", 400, 300)... Lo mismo se puede poner en un script:
+
+```
+cuando se pulsa "t":
+    juego.vidas = 99
+```
+
+### Programar con bloques
+
+Con el botón «Bloques» de arriba del script (o Ctrl+B) el script se ve como bloques de colores. Arrastra un evento («cuando cada fotograma») y mete dentro acciones. Puedes volver al código cuando quieras: los dos son el mismo script. Este código se ve así en bloques:
+
+```
+cuando cada fotograma:
+    yo.moverConFlechas(300)
+
+cuando se pulsa "espacio":
+    yo.saltar(700)
+```

@@ -559,6 +559,86 @@ export const RECETAS: Receta[] = [
     descripcion: 'Los datos guardados siguen ahí aunque cierres el juego. Por ejemplo, en la escena Fin:',
     codigo: 'cuando empieza:\n    variable record = cargar("record", 0)\n    si juego.puntos > record:\n        guardar("record", juego.puntos)\n        record = juego.puntos\n    yo.texto = "Récord: {record}"',
   },
+  {
+    titulo: "Un objeto avisa a otros (mensajes)",
+    descripcion: "Con enviar, TODOS los objetos que tengan «cuando recibo» con ese mensaje se enteran, estén donde estén. En el script de la llave y en el de la puerta:",
+    codigo: "cuando toco Jugador:\n    enviar(\"abrir_puerta\")\n    destruir(yo)\n\ncuando recibo \"abrir_puerta\":\n    destruir(yo)",
+  },
+  {
+    titulo: "Pedirle algo a otro objeto (llamar a su función)",
+    descripcion: "Si la Puerta tiene en su script una función abrir(), desde otro objeto se escribe buscar(\"Puerta\").abrir(). Dentro de la función, yo es la puerta. En el script de la puerta:",
+    codigo: "funcion abrir():\n    yo.ocultar()\n    sonido.efecto(\"subir\")\n\ncuando toco Jugador:\n    abrir()",
+  },
+  {
+    titulo: "Datos del juego sin código (vidas, nivel...)",
+    descripcion: "Sin nada seleccionado, en Propiedades > Datos del juego puedes añadir datos con su valor de salida (vidas = 3). Existen desde el principio en todas las escenas, antes de cualquier script. Luego se usan así:",
+    codigo: "cuando toco Enemigo:\n    juego.vidas -= 1\n    si juego.vidas <= 0:\n        escena.cambiar(\"Fin\")",
+  },
+  {
+    titulo: "Un enemigo que persigue sin código",
+    descripcion: "Selecciona el enemigo y activa Propiedades > Comportamiento: «Perseguir si está cerca», a quién (Jugador) y la rapidez. Si el juego se ve desde arriba y hay un mapa con paredes, las rodea. Con código es lo mismo con irHacia:",
+    codigo: "cuando empieza:\n    yo.irHacia(buscar(\"Jugador\"), 120)",
+  },
+  {
+    titulo: "Un enemigo que patrulla y te ve",
+    descripcion: "Con rayo miras si hay una pared entre el enemigo y el jugador. Si lo ve, lo persigue; si no, pasea.",
+    codigo: "cuando cada 0.5 segundos:\n    variable jugador = buscar(\"Jugador\")\n    variable veo = falso\n    si jugador != nulo:\n        variable r = rayo(yo, jugador, 400)\n        veo = r != nulo y r.objeto == jugador\n    si veo:\n        yo.irHacia(jugador, 160)\n    sino si no yo.yendo:\n        yo.irHacia(vector(aleatorio(100, 900), aleatorio(100, 500)), 80)",
+  },
+  {
+    titulo: "Hablar con un personaje (diálogos)",
+    descripcion: "En el script del personaje. El juego se para mientras se lee. Con opciones, dialogo devuelve la elegida.",
+    codigo: "cuando toco Jugador:\n    dialogo(\"Ana\", \"¡Hola! Llevo días esperando a alguien.\")\n    variable r = dialogo(\"Ana\", \"¿Me ayudas a buscar mi gato?\", [\"Si\", \"No\"])\n    si r == \"Si\":\n        juego.mision = verdadero\n        dialogo(\"Ana\", \"¡Gracias! Creo que se fue al bosque.\")\n    sino:\n        dialogo(\"Ana\", \"Vaya... Vuelve si cambias de idea.\")",
+  },
+  {
+    titulo: "Jugar con mando (o con botones en el móvil)",
+    descripcion: "moverConFlechas ya usa la palanca del mando. Los botones se leen con mando. En el móvil salen botones en la pantalla solos, con las teclas que usa tu juego (se quitan en Propiedades del juego > botones en el móvil).",
+    codigo: "cuando cada fotograma:\n    yo.moverConFlechas(300)\n    si mando.pulsado(\"a\") o teclado.pulsada(\"espacio\"):\n        yo.saltar(700)",
+  },
+  {
+    titulo: "Funciones para todos los objetos (una biblioteca)",
+    descripcion: "Crea un script, escribe solo funciones (sin ningún «cuando») y NO se lo pongas a ningún objeto. Sus funciones se pueden usar desde cualquier script, y dentro de ellas yo es quien las llama. Por ejemplo, un script «ayudas»:",
+    codigo: "funcion curar(cuanto):\n    yo.vida = minimo(yo.vida + cuanto, 100)\n    sonido.efecto(\"poder\")",
+  },
+  {
+    titulo: "Hacer dos cosas a la vez",
+    descripcion: "Las cosas con esperar dentro paran el script hasta que acaban. Con aLaVez la función va por su cuenta y el resto sigue.",
+    codigo: "funcion parpadear():\n    repetir 6 veces:\n        yo.ocultar()\n        esperar(0.1)\n        yo.mostrar()\n        esperar(0.1)\n\ncuando toco Enemigo:\n    aLaVez(parpadear)\n    yo.saltar(500)",
+  },
+  {
+    titulo: "Crear muchas cosas en fila",
+    descripcion: "rango da los números seguidos, para contar con para cada. Moneda tiene que ser una plantilla (botón «Convertir en plantilla» de sus Propiedades).",
+    codigo: "cuando empieza:\n    para cada i en rango(1, 8):\n        crear(\"Moneda\", i * 100, 300)",
+  },
+  {
+    titulo: "Un dash que atraviesa enemigos",
+    descripcion: "Durante un momento deja de chocar con los enemigos (pero no con las paredes) y se mueve muy rápido.",
+    codigo: "cuando se pulsa \"x\":\n    yo.atravesar(\"Enemigo\")\n    yo.velocidad = vector(900, 0)\n    sonido.efecto(\"dash\")\n    esperar(0.2)\n    yo.dejarDeAtravesar(\"Enemigo\")",
+  },
+  {
+    titulo: "Barra de vida en la pantalla",
+    descripcion: "dibujar.enPantalla dibuja en la pantalla, como la interfaz: no se mueve con la cámara. Se dibuja en cada fotograma. (0, 0) es la esquina de abajo a la izquierda.",
+    codigo: "cuando empieza:\n    yo.vida = 100\n\ncuando cada fotograma:\n    dibujar.enPantalla.rectangulo(120, 500, 200, 16, \"gris\", verdadero)\n    dibujar.enPantalla.rectangulo(20 + yo.vida, 500, yo.vida * 2, 16, \"rojo\", verdadero)",
+  },
+  {
+    titulo: "Sonidos sin archivos",
+    descripcion: "sonido.efecto se inventa el sonido solo. Hay disparo, laser, explosion, golpe, salto, moneda, poder, dash, escudo, hielo, fuego, rayo, subir, perder, clic, alarma y dano.",
+    codigo: "cuando toco Moneda:\n    destruir(otro)\n    sonido.efecto(\"moneda\")\n\ncuando se pulsa \"espacio\":\n    yo.saltar(700)\n    sonido.efecto(\"salto\")",
+  },
+  {
+    titulo: "Oscurecer la pantalla al perder",
+    descripcion: "pantalla.oscurecer hace un fundido. Con cuanto = 0.5 se sigue viendo el juego detrás (para un menú de pausa).",
+    codigo: "cuando toco Enemigo:\n    pantalla.oscurecer(1)\n    esperar(1)\n    escena.reiniciar()",
+  },
+  {
+    titulo: "Probar cosas mientras juegas (órdenes)",
+    descripcion: "Mientras el juego está en marcha, abajo de la consola hay una línea para escribir una orden y pulsar Intro. Sirve para hacer trampas y probar: juego.vidas = 99, buscar(\"Jugador\").x = 500, crear(\"Enemigo\", 400, 300)... Lo mismo se puede poner en un script:",
+    codigo: "cuando se pulsa \"t\":\n    juego.vidas = 99",
+  },
+  {
+    titulo: "Programar con bloques",
+    descripcion: "Con el botón «Bloques» de arriba del script (o Ctrl+B) el script se ve como bloques de colores. Arrastra un evento («cuando cada fotograma») y mete dentro acciones. Puedes volver al código cuando quieras: los dos son el mismo script. Este código se ve así en bloques:",
+    codigo: "cuando cada fotograma:\n    yo.moverConFlechas(300)\n\ncuando se pulsa \"espacio\":\n    yo.saltar(700)",
+  },
 ];
 
 // ═════════════════════════ Búsqueda ═════════════════════════

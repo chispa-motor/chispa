@@ -24,7 +24,7 @@ el navegador (http://localhost:5173).
 ## 2. Conoce la ventana
 
 ```
-┌──────── Nuevo · Abrir · Guardar · Exportar ·   ▶ Ejecutar  ⏸  ⏹   · Ayuda ────────┐
+┌─── Nuevo · Abrir · Guardar · Exportar ·  ▶ Ejecutar  ⏸  ⏹  · Ajustes · Ayuda ───┐
 │ ESCENA /     │  Escena  |  jugador.chs                    │  JUEGO            │
 │ PROYECTO     │                                            │  (aquí se juega)  │
 │ (tus objetos │  la escena (colocar objetos)               ├───────────────────┤
@@ -102,6 +102,14 @@ La primera vez se abre un ejemplo. Pulsa **▶ Ejecutar** (o F5) para verlo.
 
 8. Pulsa **▶ Ejecutar**, haz clic en el juego y usa las flechas y el espacio.
 
+> **¿Mejor con bloques?** Arriba de cada script hay dos botones: **Código** y
+> **Bloques** (o pulsa **Ctrl+B**). En bloques, arrastras piezas de colores
+> desde la paleta de la izquierda: un evento como «cuando cada fotograma» y,
+> dentro, acciones como «moverme con las flechas». Los huecos blancos se
+> rellenan escribiendo, y si pones algo que no vale se ponen rojos y te dicen
+> por qué. Código y bloques son **el mismo script**: puedes cambiar cuando
+> quieras y ver cómo se escribe en código lo que has montado.
+
 Qué significa cada trozo:
 
 - `yo` es el objeto de este script.
@@ -126,6 +134,13 @@ Qué significa cada trozo:
   `teclado.pulsada("derecha")`, `crear("Bala")`.
 - Para ver qué está pasando, escribe `mostrar(algo)` en tu código: el valor
   sale en la consola.
+- **Paso a paso.** Haz clic en el número de una línea: sale un punto rojo. Al
+  ejecutar, el juego se para ahí y ves cuánto vale cada variable (también las
+  de `juego`). **F10** va a la siguiente línea y **F8** sigue jugando.
+- **Probar sin tocar el código.** Con el juego en marcha, abajo de la consola
+  puedes escribir una orden, como `juego.vidas = 99`, y pulsar **Intro**.
+- Si el navegador se cierra de golpe, no pasa nada: al volver, el editor
+  recupera tu proyecto y te lo dice.
 
 ## 5. Tu siguiente juego
 
@@ -147,6 +162,24 @@ copiarlo:
   `cuando toco puerta:`.
 - **El mismo jugador en otra escena.** Selecciónalo, **Ctrl+C**, cambia de
   escena y **Pegar**.
+- **Enemigos que te persiguen sin código.** En sus *Propiedades*, activa
+  **Comportamiento** y elige «Perseguir si está cerca» (o huir, o seguirte
+  como una mascota). Si hay paredes en un juego visto desde arriba, las
+  rodean. Con código: `yo.irHacia(buscar("Jugador"), 120)`.
+- **Hablar con personajes:** `dialogo("Ana", "¿Me ayudas?", ["Si", "No"])`.
+  El juego se para mientras se lee y te dice qué se ha elegido.
+- **Avisar a otros objetos:** `enviar("abrir_puerta")` en uno y
+  `cuando recibo "abrir_puerta":` en los que tengan que enterarse.
+- **Vidas, nivel…** Sin nada seleccionado, en **Datos del juego** añades datos
+  con su valor de salida (`vidas = 3`), sin escribir código.
+- **Sonidos sin archivos:** `sonido.efecto("moneda")`, `sonido.efecto("salto")`…
+- **Barras de vida y marcadores:** `dibujar.enPantalla.rectangulo(…)`.
+- **Mando y móvil.** `yo.moverConFlechas` ya funciona con la palanca de un
+  mando, y los botones se leen con `mando.pulsado("a")`. Si abren tu juego
+  exportado en un móvil, salen botones en la pantalla solos.
+- **Funciones para todos.** Un script con solo funciones (sin ningún
+  `cuando`) que no está puesto en ningún objeto es una *biblioteca*: sus
+  funciones se pueden usar desde cualquier script.
 
 ## 6. Guardar y compartir
 
@@ -164,5 +197,13 @@ copiarlo:
 
   No hace falta conectar ninguna cuenta al editor: tú subes el archivo.
 
+## 7. A tu gusto
+
+- **Ajustes** (arriba, o **Ctrl+,**): tema claro u oscuro y tamaño de la
+  letra del código y del editor. Se quedan guardados en tu navegador.
+- **F1** enseña todos los atajos de teclado.
+
 Todo el lenguaje, con un ejemplo de cada cosa, está en **MANUAL_CHISPA.md**
-(y en la pestaña **Guía** del editor).
+(y en la pestaña **Guía** del editor). Un juego grande hecho solo con Chispa,
+para ver hasta dónde se puede llegar, está en
+`proyectos/arena-de-habilidades/` (ábrelo con **Abrir**).
