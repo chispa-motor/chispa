@@ -129,3 +129,34 @@ el tiempo, sale la escena de «sin tiempo». Los juegos se borraron después.
 ## Queda por mejorar (ideas, no arreglado)
 
 - «Añadir» pone el objeto en el centro de lo que se ve. Con la vista alejada o movida, ese centro puede quedar **debajo del suelo**, y el jugador cae al vacío al empezar. Se ve enseguida en la escena, pero se podría avisar.
+
+---
+
+# Prueba de principiante de la noche (bloque 7)
+
+Tres juegos de géneros que no se habían probado antes, usando sobre todo lo nuevo de la noche. Se hicieron, se jugaron y se **borraron** al acabar.
+
+- **a) «La aldea»** (diálogos con personajes): Ana te pide buscar su llave con un `dialogo` con opciones. Hay datos del juego con valor inicial (`juego.mision`), una mascota que te sigue sin código (comportamiento «seguir»), un mensaje `enviar("abrir_puerta")` / `cuando recibo`, `animar` y `sonido.efecto`.
+- **b) «Laberinto»** (enemigos que persiguen): un mapa de casillas con pasillos y un fantasma con el comportamiento «perseguir» (sin código) que rodea las paredes. Además, un `rayo` para que te «vea», monedas, `escena.reiniciar()` al tocarte y un `dialogo` al llegar a la salida.
+- **c) «Estrellas»**, hecho **solo con bloques**, arrastrando en el editor de verdad. El jugador se mueve con las flechas y recoge estrellas que caen y que crea otro objeto cada segundo. Se probó con una orden en la consola (`juego.puntos` → 1).
+
+## Qué se encontró y se arregló
+
+| # | Problema | Arreglo |
+|---|---|---|
+| 1 | El script nuevo de un objeto dice «quita los # de estas dos líneas» para moverse. En bloques, eso son dos notas que no se pueden «quitar»: no se entiende qué hacer. | El texto dice también cómo hacerlo con bloques: «o, en bloques, arrastra *cuando cada fotograma* y *moverme con las flechas*». |
+| 2 | Al arrastrar un evento nuevo (todavía vacío), en Problemas sale «el bloque está vacío o le falta **sangría**». Con bloques no hay sangría: el mensaje despista. | La pista añade: «(Si usas bloques: arrastra algún bloque dentro de este.)». |
+| 3 | Un script con `cuando` que todavía no estaba puesto en ningún objeto se trataba como script de funciones: su `yo` daba error y **no dejaba ejecutar** el juego. Lo encontró la prueba de rendimiento, pero le pasa a cualquiera que crea un script antes de ponerlo en su objeto. | Solo es de funciones el script que no tiene ningún `cuando`. El otro solo avisa: «este script no está puesto en ningún objeto, así que no se ejecuta». |
+
+## Lo que funcionó bien a la primera
+
+- Los diálogos con opciones paran el juego: el héroe no se mueve mientras lee, y la tecla que cierra el diálogo no llega al juego.
+- El fantasma encuentra el camino por el laberinto solo con el desplegable «perseguir» del inspector.
+- El perro que te sigue no necesita ni una línea de código.
+- Con bloques, el código que se escribe es el mismo que se escribiría a mano, y los errores se entienden.
+- La variable que se crea y no se usa sale como aviso, no como error.
+
+## Queda por mejorar (ideas, no arreglado)
+
+- Un objeto que se convierte en plantilla conserva el `mostrar("Hola, soy ...")` del script nuevo: con muchas copias, la consola se llena. Se podría quitar esa línea al hacer la plantilla, o no ponerla en las plantillas.
+- `cuando toco` solo avisa al **empezar** a tocar: para volver a hablar con alguien hay que apartarse y volver. Es lo esperado, pero podría existir «cuando pulso una tecla al lado de…».

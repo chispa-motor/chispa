@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { aCodigo, desdeCodigo, type Bloque } from '../src/editor/bloques/modelo';
 import { analizarSintaxis } from '../src/chispa/sintaxis/parser';
+import { EstadoEditor } from '../src/editor/estado/EstadoEditor';
 
 /** El árbol de un programa sin las posiciones (para comparar dos códigos que dicen lo mismo). */
 function arbol(codigo: string): unknown {
@@ -80,5 +81,19 @@ describe('Código → bloques → código', () => {
       { id: 3, tipo: 'evento', clase: 'clic', dato: '', cuerpo: [{ id: 4, tipo: 'romper' }] },
     ];
     expect([...aCodigo(bloques).lineaDe]).toEqual([[1, 1], [2, 2], [3, 4], [4, 5]]);
+  });
+
+  it('prueba de principiante: el script nuevo de un objeto pasa a bloques y dice cómo moverse también con bloques', () => {
+    const e = new EstadoEditor();
+    e.crearObjeto('circulo', 0, 0);
+    const archivo = e.crearScriptPara(e.seleccion!)!;
+    const b = ida(e.proyecto.scripts[archivo]);
+    expect(b.filter((x) => x.tipo === 'nota').map((x) => (x as { texto: string }).texto).join(' ')).toContain('en bloques, arrastra «cuando cada fotograma»');
+    expect(aCodigo(b).codigo.trim()).toBe(e.proyecto.scripts[archivo].trim());
+  });
+
+  it('prueba de principiante: un evento vacío (recién arrastrado) explica que falta un bloque dentro', () => {
+    const { codigo } = aCodigo([{ tipo: 'evento', clase: 'fotograma', dato: '', cuerpo: [] }]);
+    expect(analizarSintaxis(codigo, 'x').errores[0].pista).toContain('arrastra algún bloque dentro');
   });
 });

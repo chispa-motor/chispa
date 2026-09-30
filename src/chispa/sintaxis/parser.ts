@@ -212,7 +212,7 @@ class Parser {
     if (!this.es('indentar')) {
       this.error(
         `el bloque de "${que}" está vacío o le falta sangría.`,
-        "Las líneas que van DENTRO de un bloque tienen que empezar con 4 espacios más que la línea con ':'.",
+        "Las líneas que van DENTRO de un bloque tienen que empezar con 4 espacios más que la línea con ':'. (Si usas bloques: arrastra algún bloque dentro de este.)",
       );
     }
     this.avanzar();
