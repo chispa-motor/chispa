@@ -13,10 +13,12 @@
  *     cuando toco Fuego:
  *         quemar(yo, 3)
  *
- * DECISIÓN: sin «importar». Basta con crear el script y no ponerlo en ningún
- * objeto. Sus variables son solo suyas (las comparten sus funciones), y dentro
- * no hay `yo` (no es de nadie): el objeto se pasa como un valor más.
- * Los `cuando` de un script de funciones no se ejecutan nunca, y se avisa.
+ * DECISIÓN: sin «importar». Basta con crear el script, escribir solo
+ * funciones (y variables) y no ponerlo en ningún objeto. Sus variables son
+ * solo suyas (las comparten sus funciones), y dentro no hay `yo` (no es de
+ * nadie): el objeto se pasa como un valor más.
+ * Un script con algún `cuando` es de un objeto: si no está en ninguno, no es
+ * una biblioteca; es un script que se ha quedado sin objeto, y se avisa.
  */
 import type { Diagnostico } from '../chispa/errores/ErrorChispa';
 import { Entorno } from '../chispa/ejecucion/entorno';
@@ -33,10 +35,18 @@ export function scriptsDeObjetos(proyecto: DefProyecto): Set<string> {
   return usados;
 }
 
-/** Los archivos que son scripts de funciones. */
-export function bibliotecasDe(proyecto: DefProyecto): string[] {
+/** ¿Tiene el código algún «cuando» (en el nivel principal)? Entonces es el script de un objeto. */
+export const tieneEventos = (codigo: string) => /^cuando\b/im.test(codigo);
+
+/** Los scripts que no están en ningún objeto ni plantilla. */
+export function scriptsSinObjeto(proyecto: DefProyecto): string[] {
   const usados = scriptsDeObjetos(proyecto);
   return Object.keys(proyecto.scripts).filter((a) => !usados.has(a));
+}
+
+/** Los archivos que son scripts de funciones: sin objeto y sin ningún «cuando». */
+export function bibliotecasDe(proyecto: DefProyecto): string[] {
+  return scriptsSinObjeto(proyecto).filter((a) => !tieneEventos(proyecto.scripts[a]));
 }
 
 /** Las funciones escritas en el nivel principal de un programa. */
@@ -47,7 +57,7 @@ export function funcionesDe(programa: Programa): SentenciaFuncion[] {
 /**
  * Un entorno con las globales del motor MÁS las funciones de las bibliotecas
  * (para el análisis: así `quemar(yo, 3)` no da "no existe"), y los avisos y
- * errores propios de las bibliotecas (nombres repetidos, `cuando` que no se ejecutan).
+ * errores propios de las bibliotecas (nombres repetidos, órdenes sueltas que no se ejecutan).
  */
 export function entornoConBibliotecas(bibliotecas: Programa[], globales: Entorno): { entorno: Entorno; diagnosticos: Diagnostico[] } {
   const entorno = new Entorno(globales);
@@ -67,14 +77,6 @@ export function entornoConBibliotecas(bibliotecas: Programa[], globales: Entorno
         }
         deQuien.set(s.nombre, p.archivo);
         entorno.declarar(s.nombre, new FuncionChispa(s, entorno, { programa: p, objeto: undefined }), s.original);
-      } else if (s.tipo === 'Cuando') {
-        diagnosticos.push({
-          gravedad: 'aviso',
-          archivo: p.archivo,
-          pos: s.pos,
-          mensaje: 'este script no es de ningún objeto, así que sus «cuando» no se ejecutan nunca.',
-          pista: 'Ponlo en un objeto (inspector > Script) o, si es un script de funciones, deja solo funciones y variables.',
-        });
       } else if (s.tipo !== 'Variable') {
         diagnosticos.push({ gravedad: 'aviso', archivo: p.archivo, pos: s.pos, mensaje: 'en un script de funciones esto no se ejecuta: solo cuentan las funciones y las variables.', pista: 'Mételo dentro de una función, o pon el script en un objeto.' });
       }

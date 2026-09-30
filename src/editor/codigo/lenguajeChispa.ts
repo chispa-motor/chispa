@@ -142,17 +142,17 @@ export const lenguajeChispa = StreamLanguage.define(parserChispa);
 /** Colores (tema oscuro). */
 export const coloresChispa = syntaxHighlighting(
   HighlightStyle.define([
-    { tag: t.keyword, color: '#c792ea', fontWeight: '600' },
-    { tag: t.function(t.variableName), color: '#82aaff' },
-    { tag: t.special(t.variableName), color: '#ffcb6b' },
-    { tag: t.atom, color: '#f78c6c' },
-    { tag: t.string, color: '#c3e88d' },
-    { tag: t.number, color: '#f9e27d' },
-    { tag: t.comment, color: '#6b7489', fontStyle: 'italic' },
-    { tag: t.propertyName, color: '#89ddff' },
-    { tag: t.operator, color: '#89ddff' },
-    { tag: t.variableName, color: '#e6e9f0' },
-    { tag: t.punctuation, color: '#9aa3b5' },
+    { tag: t.keyword, color: 'var(--sx-palabra)', fontWeight: '600' },
+    { tag: t.function(t.variableName), color: 'var(--sx-funcion)' },
+    { tag: t.special(t.variableName), color: 'var(--sx-especial)' },
+    { tag: t.atom, color: 'var(--sx-atomo)' },
+    { tag: t.string, color: 'var(--sx-texto)' },
+    { tag: t.number, color: 'var(--sx-numero)' },
+    { tag: t.comment, color: 'var(--sx-comentario)', fontStyle: 'italic' },
+    { tag: t.propertyName, color: 'var(--sx-propiedad)' },
+    { tag: t.operator, color: 'var(--sx-propiedad)' },
+    { tag: t.variableName, color: 'var(--texto-codigo)' },
+    { tag: t.punctuation, color: 'var(--sx-puntuacion)' },
   ]),
 );
 

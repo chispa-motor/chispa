@@ -40,16 +40,20 @@ describe('Scripts de funciones (bibliotecas)', () => {
     expect(j.errores[0].error.ubicacion.linea).toBe(4);
   });
 
-  it('avisos y errores: yo no existe, los cuando no se ejecutan, nombres repetidos', () => {
+  it('avisos y errores: yo no existe, órdenes sueltas, scripts sin objeto, nombres repetidos', () => {
     const p = proyectoVacio();
     p.escenas.Principal.objetos.push({ nombre: 'A', script: 'a.chs' });
     p.scripts['a.chs'] = 'cuando empieza:\n    mostrar(doble(2))';
-    p.scripts['lib.chs'] = 'funcion doble(n):\n    devolver n * 2\nfuncion crear(x):\n    devolver x\ncuando empieza:\n    mostrar(1)';
+    p.scripts['lib.chs'] = 'funcion doble(n):\n    devolver n * 2\nfuncion crear(x):\n    devolver x\nmostrar(1)';
+    p.scripts['suelto.chs'] = 'cuando empieza:\n    yo.x = 1';
     p.scripts['lib2.chs'] = 'funcion doble(n):\n    devolver yo.x';
     const r = revisarProyecto(p);
     const mensajes = [...r.porArchivo.values()].flat().map((d) => `${d.gravedad} ${d.archivo}:${d.pos.linea} ${d.mensaje}`);
     expect(mensajes).toContain("error lib.chs:3 ya hay una función del motor que se llama 'crear'.");
-    expect(mensajes).toContain('aviso lib.chs:5 este script no es de ningún objeto, así que sus «cuando» no se ejecutan nunca.');
+    expect(mensajes).toContain('aviso lib.chs:5 en un script de funciones esto no se ejecuta: solo cuentan las funciones y las variables.');
+    // Un script con «cuando» sin objeto no es de funciones: puede usar yo, pero se avisa de que no se ejecuta
+    expect(mensajes).toContain('aviso suelto.chs:1 este script no está puesto en ningún objeto, así que no se ejecuta.');
+    expect(mensajes.filter((m) => m.startsWith('error suelto.chs'))).toEqual([]);
     expect(mensajes).toContain("error lib2.chs:1 la función 'doble' ya está en el script de funciones lib.chs.");
     expect(mensajes.some((m) => m.startsWith("error lib2.chs:2 'yo' solo existe"))).toBe(true);
     // Mientras se escribe, el editor también conoce las funciones de las bibliotecas

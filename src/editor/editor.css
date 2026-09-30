@@ -22,7 +22,52 @@
   --jugar: #3fbf6a;
   --letra-interfaz: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --letra-codigo: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', Consolas, 'Courier New', monospace;
+  --texto-codigo: #e6e9f0;
+  --cursor-codigo: #ffcb6b;
+  --seleccion-codigo: #3a4a6b;
+  --numeros-codigo: #56607a;
+  --linea-activa: #ffffff08;
+  --fondo-paleta: #171a22;
+  --fondo-alterno: #12151c;
+  --sx-palabra: #c792ea; --sx-funcion: #82aaff; --sx-especial: #ffcb6b; --sx-atomo: #f78c6c; --sx-texto: #c3e88d;
+  --sx-numero: #f9e27d; --sx-comentario: #6b7489; --sx-propiedad: #89ddff; --sx-puntuacion: #9aa3b5;
   color-scheme: dark;
+}
+
+/* ── Tema claro (Ajustes) ── */
+:root[data-tema="claro"] {
+  --fondo-profundo: #dfe3ea;
+  --fondo: #f3f5f9;
+  --fondo-panel: #e9ecf2;
+  --fondo-elevado: #ffffff;
+  --fondo-hover: #d9dee8;
+  --fondo-codigo: #fbfcfe;
+  --borde: #cdd3de;
+  --borde-fuerte: #b7bfcd;
+  --texto: #1f2430;
+  --texto-suave: #4f5869;
+  --texto-tenue: #7b8494;
+  --acento: #1f6fd1;
+  --acento-fondo: #d6e6fb;
+  --ok: #1f9d4c;
+  --error: #d63c3c;
+  --aviso: #b27700;
+  --texto-codigo: #1f2430;
+  --cursor-codigo: #d15c00;
+  --seleccion-codigo: #cfe0fb;
+  --numeros-codigo: #9aa3b3;
+  --linea-activa: #00000008;
+  --fondo-paleta: #e4e8ef;
+  --fondo-alterno: #eef1f6;
+  --sx-palabra: #8a2fc7; --sx-funcion: #1f5fd1; --sx-especial: #a86200; --sx-atomo: #c24a1e; --sx-texto: #2e7d20;
+  --sx-numero: #9c6b00; --sx-comentario: #7b8494; --sx-propiedad: #0b7a92; --sx-puntuacion: #5b6475;
+  color-scheme: light;
+}
+:root[data-tema="claro"] ::-webkit-scrollbar-thumb { background-color: #0000002a; }
+
+/* ── Tamaño de la letra del editor (Ajustes): se agrandan los paneles, no la escena ni el juego ── */
+.barra-principal, .panel-izquierdo, .inspector, .panel-inferior, .pestanas-centro, .modo-script, .paleta-bloques, .barra-bloques, .area-bloques, .dialogo {
+  zoom: var(--zoom-interfaz, 1);
 }
 
 * { box-sizing: border-box; }
@@ -63,7 +108,7 @@ code, pre, kbd { font-family: var(--letra-codigo); }
 
 /* ── Modo bloques ── */
 .editor-bloques { flex: 1; min-height: 0; display: flex; outline: none; }
-.paleta-bloques { width: 220px; flex: none; display: flex; border-right: 1px solid var(--borde); background: #171a22; }
+.paleta-bloques { width: 220px; flex: none; display: flex; border-right: 1px solid var(--borde); background: var(--fondo-paleta); }
 .categorias-bloques { display: flex; flex-direction: column; gap: 2px; padding: 6px 4px; border-right: 1px solid var(--borde); }
 .categoria-bloques { display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: none; color: var(--texto); font-size: 10px; padding: 5px 2px; border-radius: 6px; cursor: pointer; }
 .categoria-bloques .punto { width: 16px; height: 16px; border-radius: 50%; background: var(--color); border: 2px solid #0003; }
@@ -89,7 +134,7 @@ code, pre, kbd { font-family: var(--letra-codigo); }
 .quitar-rama { position: static; opacity: 1; }
 .cabeza-bloque:hover > .quitar-bloque { opacity: 1; }
 .boca-bloque { margin-left: 16px; padding: 3px 0 3px 3px; background: #0000; border-left: 10px solid var(--color); }
-.boca-bloque > .lista-bloques { background: var(--fondo, #15181f); border-radius: 0 6px 6px 0; padding: 4px; min-height: 30px; }
+.boca-bloque > .lista-bloques { background: var(--fondo); border-radius: 0 6px 6px 0; padding: 4px; min-height: 30px; }
 .boca-vacia { color: #fff7; font-weight: 400; font-style: italic; font-size: 12px; padding: 6px; }
 .pie-bloque { min-height: 10px; padding: 0 10px 4px; display: flex; gap: 10px; }
 .pie-bloque .boton-enlace { color: #fff; opacity: .85; font-size: 12px; }
@@ -99,7 +144,7 @@ select.campo-bloque { border-radius: 6px; font-family: inherit; font-weight: 600
 .tipo-nota .campo-bloque { background: #ffffff18; color: #dfe3ea; font-style: italic; }
 .hueco-soltar { height: 6px; border-radius: 3px; background: #ffd32a; margin: 2px 0; }
 .editor-bloques.arrastrando .paleta-bloques { outline: 2px dashed #e74c3c88; outline-offset: -4px; }
-.codigo-de-bloques { width: 300px; flex: none; margin: 0; padding: 10px; overflow: auto; border-left: 1px solid var(--borde); background: #12151c; font: 12px/1.5 ui-monospace, monospace; color: #c8cdd8; }
+.codigo-de-bloques { width: 300px; flex: none; margin: 0; padding: 10px; overflow: auto; border-left: 1px solid var(--borde); background: var(--fondo-alterno); font: 12px/1.5 ui-monospace, monospace; color: var(--texto-suave); }
 .vacio-bloques { margin: 20px; }
 
 .divisor { flex: none; background: var(--borde); position: relative; z-index: 5; transition: background .15s; }
@@ -312,7 +357,7 @@ img.pixelado { image-rendering: pixelated; }
 .mensaje.info { color: var(--texto-suave); }
 .mensaje.info .texto { white-space: pre-wrap; }
 .mensaje.orden { color: var(--acento, #f1c40f); }
-.orden-consola { flex: none; margin: 4px 8px 6px; padding: 6px 10px; border-radius: 6px; border: 1px solid #ffffff22; background: #0006; color: inherit; font: 13px ui-monospace, monospace; }
+.orden-consola { flex: none; margin: 4px 8px 6px; padding: 6px 10px; border-radius: 6px; border: 1px solid #ffffff22; background: var(--fondo-codigo); color: inherit; font: 13px ui-monospace, monospace; }
 .orden-consola:focus { outline: 2px solid var(--acento, #f1c40f); }
 .mensaje.info .icono { margin-top: 2px; }
 .mensaje.error, .mensaje.aviso { cursor: pointer; }
@@ -505,3 +550,14 @@ a.boton { text-decoration: none; display: inline-flex; align-items: center; }
 .previa-pixel { width: 96px; height: 96px; image-rendering: pixelated; border-radius: 6px; border: 1px solid var(--borde); background: repeating-conic-gradient(#ffffff0a 0 25%, transparent 0 50%) 0 0 / 12px 12px; }
 .columna-opciones .campo-fila { grid-template-columns: 70px 1fr; }
 @media (max-width: 860px) { .editor-pixel { grid-template-columns: 1fr; } }
+
+/* ── Ajustes ── */
+.ajustes h3 { margin: 14px 0 6px; font-size: 13px; color: var(--texto-suave); }
+.opciones-tema { display: flex; gap: 8px; }
+.opcion-tema { padding: 8px 16px; border-radius: 8px; border: 2px solid var(--borde); background: var(--fondo-elevado); cursor: pointer; }
+.opcion-tema.activa { border-color: var(--acento); }
+.fila-ajuste { display: flex; align-items: center; gap: 10px; }
+.fila-ajuste input { flex: 1; }
+.valor-ajuste { width: 52px; text-align: right; color: var(--texto-suave); }
+.grupos-atajos { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 4px 24px; }
+.grupos-atajos h3 { margin: 12px 0 4px; }

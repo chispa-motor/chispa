@@ -199,6 +199,11 @@ export class ScriptChispa extends Componente {
     });
   }
 
+  /** Solo si tiene algún «cuando toco» o «cuando dejo de tocar» (si no, la física no busca sus contactos). */
+  escuchaContactos(): boolean {
+    return !this.detenido && this.eventos.some((ev) => ev.evento.tipo === 'toco');
+  }
+
   alTocar(otro: ObjetoJuego, casilla?: string): void {
     this.avisarContacto(otro, false, casilla);
   }

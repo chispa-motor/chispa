@@ -33,7 +33,13 @@ import { MapaCasillas } from './componentes/MapaCasillas';
 import { Recorrido } from './componentes/Recorrido';
 
 const PASO = 1 / 120;
-const MAX_PASOS = 12;
+/**
+ * Como mucho, estos pasos por fotograma (1/30 de segundo de física). Si el
+ * ordenador va tan lento que haría falta más, el juego va un poco más lento
+ * en vez de intentar recuperar: recuperar hace cada fotograma todavía más
+ * lento, y el juego se acaba congelando (con 2000 cajas amontonadas pasaba).
+ */
+const MAX_PASOS = 4;
 /** Tolerancia para errores de redondeo (0,1 + 0,2 no es exactamente 0,3 en un ordenador). */
 const EPSILON = 0.01;
 /** Por debajo de esta velocidad, un rebote se considera "ya ha parado" (si no, rebotaría para siempre con saltitos). */
@@ -90,7 +96,7 @@ interface Contacto {
 
 export class SistemaFisico {
   private acumulador = 0;
-  private contactos = new Map<string, Contacto>();
+  private contactos = new Map<number | string, Contacto>();
   private apoyados = new WeakMap<ObjetoJuego, boolean>();
   /** Sobre qué está apoyado cada cuerpo (para moverse con él si se mueve: plataformas). */
   private soportes = new WeakMap<ObjetoJuego, ObjetoJuego>();
@@ -204,10 +210,13 @@ export class SistemaFisico {
     this.soportes.delete(c.objeto); // se vuelve a apuntar si sigue apoyado en algo
     if (choca) this.apartarDeLoQueSeMueve(c, cerca);
 
+    // Los sólidos que puede tocar en este paso (se buscan una vez para los dos ejes)
+    const cercanos = choca ? this.solidosCerca(c, cerca, (Math.abs(f.velocidad.x) + Math.abs(f.velocidad.y)) * PASO + 2) : [];
+
     // 4. Eje X: mover y, si nos metemos en un sólido, salir por el lado por el que entramos
     pos.x += f.velocidad.x * PASO;
     if (choca) {
-      for (const { caja: b, soloArriba } of this.solidosCerca(c, cerca)) {
+      for (const { caja: b, soloArriba } of cercanos) {
         if (soloArriba) continue; // las plataformas de "solo desde arriba" no son paredes
         const a = c.colision!.caja();
         if (!solapanDeVerdad(a, b)) continue;
@@ -222,7 +231,7 @@ export class SistemaFisico {
     const piesAntes = choca ? c.colision!.caja().abajo : 0;
     pos.y += f.velocidad.y * PASO;
     if (choca) {
-      for (const { caja: b, objeto: soporte, soloArriba } of this.solidosCerca(c, cerca)) {
+      for (const { caja: b, objeto: soporte, soloArriba } of cercanos) {
         const a = c.colision!.caja();
         if (!solapanDeVerdad(a, b)) continue;
         const haciaAbajo = f.velocidad.y < 0 || (f.velocidad.y === 0 && centroY(a) > centroY(b));
@@ -277,8 +286,9 @@ export class SistemaFisico {
   }
 
   /** Cajas sólidas cerca de un cuerpo: objetos sólidos (quietos y con recorrido) y casillas sólidas de los mapas. */
-  private solidosCerca(c: Cuerpo, cerca: Cerca): SolidoCercano[] {
-    const caja = c.colision!.caja();
+  private solidosCerca(c: Cuerpo, cerca: Cerca, margen = 0): SolidoCercano[] {
+    const k = c.colision!.caja();
+    const caja = margen ? { izquierda: k.izquierda - margen, derecha: k.derecha + margen, abajo: k.abajo - margen, arriba: k.arriba + margen } : k;
     const res: SolidoCercano[] = [];
     const meter = (s: Colisionador) => {
       if (s.objeto !== c.objeto && !c.objeto.atraviesaA(s.objeto)) res.push({ caja: s.colision.caja(), objeto: s.objeto, soloArriba: s.colision.soloDesdeArriba });
@@ -308,16 +318,22 @@ export class SistemaFisico {
       const p = c.objeto.transformacion.posicion;
       c.medio = { x: (k.derecha - k.izquierda) / 2, y: (k.arriba - k.abajo) / 2, dx: (k.izquierda + k.derecha) / 2 - p.x, dy: (k.abajo + k.arriba) / 2 - p.y };
     });
-    const rejilla = new RejillaEspacial<Cuerpo>(tamanoDeCelda(cajas));
-    solidosFisicos.forEach((c, i) => rejilla.insertar(cajas[i], c));
-
-    // 1. Qué parejas están cerca (una sola vez por paso: es lo que más cuesta)
+    // 1. Qué parejas están cerca (una sola vez por paso: es lo que más cuesta).
+    //    "Barrido": se ordenan por su borde izquierdo y cada una solo se compara con
+    //    las que empiezan antes de que ella acabe. Sin crear listas por el camino.
+    const orden = solidosFisicos.map((_, i) => i).sort((i, j) => cajas[i].izquierda - cajas[j].izquierda);
     const parejas: [Cuerpo, Cuerpo][] = [];
-    solidosFisicos.forEach((a, i) => {
-      for (const b of rejilla.consultarConGrandes(agrandar(cajas[i], 2))) {
-        if (b.objeto.id > a.objeto.id && !a.objeto.atraviesaA(b.objeto)) parejas.push([a, b]); // cada pareja una sola vez
+    for (let x = 0; x < orden.length; x++) {
+      const ca = cajas[orden[x]];
+      for (let y = x + 1; y < orden.length; y++) {
+        const cb = cajas[orden[y]];
+        if (cb.izquierda > ca.derecha + 2) break;
+        if (cb.abajo > ca.arriba + 2 || cb.arriba < ca.abajo - 2) continue;
+        const a = solidosFisicos[orden[x]];
+        const b = solidosFisicos[orden[y]];
+        if (!a.objeto.atraviesaA(b.objeto)) parejas.push([a, b]);
       }
-    });
+    }
     // 2. Separarlas (varias vueltas: al empujar a uno se puede meter en otro)
     for (let it = 0; it < ITERACIONES; it++) {
       let algo = false;
@@ -406,9 +422,11 @@ export class SistemaFisico {
     const rejilla = new RejillaEspacial<Colisionador>(tamanoDeCelda(cajas));
     colisionadores.forEach((c, i) => rejilla.insertar(cajas[i], c));
 
-    const nuevos = new Map<string, Contacto>();
+    const nuevos = new Map<number | string, Contacto>();
     for (const a of colisionadores) {
-      if (!interesaContactos(a.objeto)) continue;
+      // Solo se buscan los contactos desde quien los escucha (un script con «cuando toco»...):
+      // con 2000 cajas con física amontonadas, buscarlos todos era la mitad del tiempo del juego
+      if (!escuchaContactos(a.objeto)) continue;
       const cajaA = a.colision.caja();
       // Con otros objetos
       for (const b of rejilla.consultarConGrandes(cajaA)) {
@@ -444,11 +462,9 @@ export class SistemaFisico {
   }
 }
 
-/** ¿Le interesan los contactos a este objeto? (se mueve con física o tiene quien escuche) */
-function interesaContactos(o: ObjetoJuego): boolean {
-  const f = o.obtener(Fisica);
-  if (f && !f.estatico) return true;
-  return o.todosLosComponentes.some((c) => c.activo && (c.alTocar || c.alDejarDeTocar));
+/** ¿Tiene este objeto quien escuche sus contactos? (si ninguno de los dos escucha, a nadie le importa que se toquen) */
+function escuchaContactos(o: ObjetoJuego): boolean {
+  return o.todosLosComponentes.some((c) => c.activo && (c.alTocar || c.alDejarDeTocar) && (c.escuchaContactos?.() ?? true));
 }
 
 function avisar(a: ObjetoJuego, b: ObjetoJuego, evento: 'alTocar' | 'alDejarDeTocar', casilla?: string): void {
@@ -456,8 +472,9 @@ function avisar(a: ObjetoJuego, b: ObjetoJuego, evento: 'alTocar' | 'alDejarDeTo
   for (const comp of a.todosLosComponentes) if (comp.activo) comp[evento]?.(b, casilla);
 }
 
-function claveContacto(a: ObjetoJuego, b: ObjetoJuego): string {
-  return a.id < b.id ? `${a.id}-${b.id}` : `${b.id}-${a.id}`;
+/** Una clave numérica por pareja (crear un texto por pareja en cada fotograma costaba mucho). */
+function claveContacto(a: ObjetoJuego, b: ObjetoJuego): number {
+  return a.id < b.id ? a.id * 4_194_304 + b.id : b.id * 4_194_304 + a.id;
 }
 
 /**
@@ -470,10 +487,6 @@ function tamanoDeCelda(cajas: Caja[]): number {
   let suma = 0;
   for (const c of cajas) suma += Math.max(c.derecha - c.izquierda, c.arriba - c.abajo);
   return Math.min(256, Math.max(32, (2 * suma) / cajas.length));
-}
-
-function agrandar(c: Caja, m: number): Caja {
-  return { izquierda: c.izquierda - m, derecha: c.derecha + m, abajo: c.abajo - m, arriba: c.arriba + m };
 }
 
 function rebotar(v: number, rebote: number): number {

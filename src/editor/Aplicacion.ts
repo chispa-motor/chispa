@@ -34,8 +34,13 @@ import { Depurador } from '../chispa/ejecucion/depurador';
 import { importarArchivos, resumenImportar } from './recursos/importar';
 import { PanelDepurador } from './paneles/PanelDepurador';
 import { revisarProyecto } from '../proyecto/Revision';
+import { ATAJOS, abrirAtajos, tablaAtajos } from './atajos';
+import { abrirAjustes } from './ajustes';
 
 const CLAVE_DISPOSICION = 'chispa-editor:disposicion';
+/** Milisegundos después de un cambio para guardar solo, y como mucho sin guardar mientras se sigue cambiando. */
+const ESPERA_GUARDADO = 1200;
+const ESPERA_MAXIMA_GUARDADO = 5000;
 
 export class Aplicacion {
   readonly estado = new EstadoEditor(proyectoMinimo);
@@ -111,6 +116,8 @@ export class Aplicacion {
       this.estado.abrir(JSON.parse(guardado.json));
       this.recuperado = true;
       this.guardadoEn = guardado.fecha;
+      const minutos = Math.round((Date.now() - guardado.fecha) / 60000);
+      notificar(`Recuperado «${this.estado.proyecto.nombre}», tal como estaba ${minutos < 1 ? 'hace un momento' : minutos < 60 ? `hace ${minutos} min` : 'la última vez'}.`, 'ok');
       this.vistaEscena.encuadrar();
       this.dibujarBarra();
     } catch {
@@ -290,7 +297,10 @@ export class Aplicacion {
         h('span', {}, e.proyecto.nombre),
         h('span', { class: 'estado-guardado' }, this.guardadoEn ? '✓ guardado' : ''),
       ),
-      h('div', { class: 'grupo-barra derecha' }, botonIcono('ayuda', 'Ayuda: primeros pasos y atajos', () => this.ayuda(), 'Ayuda')),
+      h('div', { class: 'grupo-barra derecha' },
+        botonIcono('ajustes', 'Ajustes: tema claro u oscuro y tamaño de la letra (Ctrl + ,)', () => abrirAjustes(), 'Ajustes'),
+        botonIcono('ayuda', 'Ayuda: primeros pasos y atajos (F1: todos los atajos)', () => this.ayuda(), 'Ayuda'),
+      ),
     );
   }
 
@@ -421,13 +431,24 @@ export class Aplicacion {
 
   // ═════════════════════════ Archivos ═════════════════════════
 
+  /**
+   * Guardado automático: un momento después de cada cambio. Si se sigue
+   * cambiando sin parar (escribiendo mucho rato), no se espera a que se pare:
+   * se guarda como mucho cada 5 segundos. Así, si el navegador se cierra de
+   * golpe, como mucho se pierden los últimos segundos.
+   */
   private programarGuardado(): void {
     clearTimeout(this.temporizadorGuardado);
-    this.temporizadorGuardado = window.setTimeout(() => void this.guardarEnNavegador(), 1200);
+    const ahora = Date.now();
+    this.cambioSinGuardarDesde ??= ahora;
+    const espera = ahora - this.cambioSinGuardarDesde >= ESPERA_MAXIMA_GUARDADO ? 0 : ESPERA_GUARDADO;
+    this.temporizadorGuardado = window.setTimeout(() => void this.guardarEnNavegador(), espera);
   }
+  private cambioSinGuardarDesde: number | null = null;
 
   async guardarEnNavegador(avisar = false): Promise<void> {
     try {
+      this.cambioSinGuardarDesde = null;
       await guardarAutomatico(this.estado.aJSON());
       this.guardadoEn = Date.now();
       this.dibujarBarra();
@@ -532,7 +553,6 @@ export class Aplicacion {
   }
 
   private ayuda(): void {
-    const tecla = (t: string) => h('kbd', {}, t);
     abrirDialogo('Ayuda de Chispa', h('div', { class: 'ayuda' },
       h('h3', {}, 'Primeros pasos'),
       h('ol', {},
@@ -542,34 +562,14 @@ export class Aplicacion {
         h('li', {}, 'Pulsa ', h('strong', {}, '▶ Ejecutar'), ' y prueba tu juego a la derecha.'),
       ),
       h('p', { class: 'nota' }, '¿Primera vez? El botón ', h('strong', {}, 'Tutorial: tu primer juego'), ' (abajo) te lleva paso a paso, señalando dónde hacer clic.'),
-      h('h3', {}, 'Atajos'),
-      h('table', { class: 'atajos' },
-        [
-          [[tecla('F5')], 'Ejecutar / reiniciar el juego'],
-          [[tecla('Mayús'), '+', tecla('F5')], 'Parar el juego'],
-          [['Clic en el número de una línea'], 'Poner o quitar un punto de parada (el juego se para ahí)'],
-          [[tecla('F8'), ' ', tecla('F10'), ' ', tecla('F11')], 'Depurar: continuar · siguiente línea · entrar en función'],
-          [[tecla('Ctrl'), '+', tecla('Z'), ' / ', tecla('Ctrl'), '+', tecla('Y')], 'Deshacer / rehacer (cualquier cambio en la escena o el proyecto)'],
-          [[tecla('Ctrl'), '+', tecla('S')], 'Guardar (descargar el proyecto)'],
-          [[tecla('Ctrl'), '+', tecla('D')], 'Duplicar lo seleccionado'],
-          [[tecla('Ctrl'), '+ clic'], 'Seleccionar varios objetos (en la escena o en la lista)'],
-          [['Arrastrar el fondo'], 'Seleccionar con un rectángulo todo lo que toque'],
-          [[tecla('Ctrl'), '+', tecla('A')], 'Seleccionar todos los objetos de la escena (menos los mapas)'],
-          [[tecla('Ctrl'), '+', tecla('C'), ' / ', tecla('Ctrl'), '+', tecla('V')], 'Copiar y pegar objetos (también de una escena a otra)'],
-          [[tecla('Mayús'), ' + arrastrar'], 'Con el pincel: pintar un rectángulo de casillas'],
-          [[tecla('Supr')], 'Borrar lo seleccionado'],
-          [[tecla('Flechas')], 'Mover lo seleccionado (con Mayús, de 10 en 10)'],
-          [['Botón derecho + arrastrar'], 'Mover la vista de la escena (también con el botón central, o con Espacio + arrastrar)'],
-          [[tecla('Rueda')], 'Acercar / alejar la escena'],
-          [[tecla('V'), ' ', tecla('B'), ' ', tecla('E')], 'Mover · pintar casillas · borrar casillas'],
-          [[tecla('Ctrl'), '+', tecla('Espacio')], 'Sugerencias en el editor de código'],
-          [[tecla('Ctrl'), '+', tecla('F')], 'Buscar en el código'],
-        ].map(([teclas, texto]) => h('tr', {}, h('td', {}, teclas as (HTMLElement | string)[]), h('td', {}, texto as string))),
-      ),
+      h('h3', {}, 'Los atajos más útiles'),
+      tablaAtajos(ATAJOS.filter((g) => g.grupo === 'General' || g.grupo === 'Jugar')),
+      h('p', { class: 'nota' }, 'Todos los atajos: pulsa ', h('kbd', {}, 'F1'), '.'),
       h('p', { class: 'nota' }, 'Toda la documentación del lenguaje está en la pestaña ', h('strong', {}, 'Guía'), ' de abajo, con buscador.'),
     ), [
       { texto: 'Tutorial: tu primer juego', alPulsar: () => void this.empezarTutorial() },
       { texto: 'Abrir la Guía', alPulsar: () => this.inferior.mostrarPestana('guia') },
+      { texto: 'Todos los atajos', alPulsar: () => abrirAtajos() },
       { texto: 'Cerrar', clase: 'principal' },
     ], 'dialogo-ancho');
   }
@@ -610,8 +610,23 @@ export class Aplicacion {
         void this.ejecutar();
         return;
       }
-      // El editor de código y los campos de texto tienen su propio deshacer
-      if (enCodigo || enCampo || enJuego) return;
+      if (ev.key === 'F1') {
+        ev.preventDefault();
+        abrirAtajos();
+        return;
+      }
+      if (ctrl && ev.key === ',') {
+        ev.preventDefault();
+        abrirAjustes();
+        return;
+      }
+      if (ctrl && k === 'b' && this.estado.pestanaActiva !== 'escena') {
+        ev.preventDefault();
+        this.editorCodigo.alternarModo(this.estado.pestanaActiva);
+        return;
+      }
+      // El editor de código, los bloques y los campos de texto tienen su propio deshacer
+      if (enCodigo || enCampo || enJuego || objetivo?.closest?.('.editor-bloques')) return;
       if (ctrl && (k === 'z' || k === 'y')) {
         ev.preventDefault();
         if (k === 'y' || ev.shiftKey) this.estado.rehacer();

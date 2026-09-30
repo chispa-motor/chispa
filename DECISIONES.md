@@ -311,3 +311,15 @@ Ver PROBLEMAS_PRINCIPIANTE.md para la lista completa de lo que se encontró.
 | Un «si» o un «repetir» **vacío** se deja: en el código sale como un bloque vacío (que da su error, como si se escribiera a mano) y en los bloques pone «Arrastra aquí lo que tiene que hacer». | Es lo mismo que pasa en código; no se inventa una orden «no hacer nada». |
 | Los errores y el depurador **resaltan el bloque** de esa línea. Ctrl+Z deshace dentro de los bloques. | Lo mismo que se puede hacer en código. |
 | Si el script se deja en bloques, se abre en bloques la próxima vez (se guarda en el proyecto). | Quien trabaja con bloques no quiere encontrarse el código cada vez. |
+
+### Robustez y comodidad (noche, bloque 6)
+
+| Decisión | Por qué |
+|---|---|
+| El guardado automático se hace **un momento después de cada cambio**, pero si se sigue cambiando sin parar, **como mucho cada 5 segundos**. Al abrir, se recupera solo y **se avisa** («Recuperado …, tal como estaba hace 3 min»). | Antes, escribiendo mucho rato seguido no se guardaba hasta parar; si el navegador se cerraba de golpe (sin avisar), se perdía todo ese rato. Ahora, como mucho, los últimos segundos. |
+| **Ajustes** (botón arriba a la derecha, o Ctrl + ,): tema **oscuro o claro**, tamaño de la **letra del código** y de la **letra del editor**. Se guardan en el navegador, no en el proyecto. | Son de la persona, no del juego: un proyecto compartido no le cambia el tema a nadie. |
+| La letra del editor agranda **todos los paneles a la vez** (zoom), pero no la escena ni el juego. | Cambiar tamaños sueltos descoloca los paneles; y la escena y el juego tienen su propio zoom. |
+| **F1** abre la ventana con **todos los atajos**, por grupos. La lista está en un solo sitio (atajos.ts) y de ahí sale también la de la Ayuda. | Dos listas escritas a mano acaban diciendo cosas distintas. |
+| Nuevos atajos: **F1** (atajos), **Ctrl + ,** (ajustes), **Ctrl + B** (código ⇄ bloques). Ctrl + Z dentro de los bloques deshace en los bloques, no en la escena. | Los tres son cosas que se hacen a menudo. |
+| **Rendimiento con 2000 objetos**: la física busca los contactos solo desde quien los escucha, con claves numéricas; las parejas cercanas se buscan con un barrido (sin crear listas); los sólidos cercanos se buscan una vez por paso; como mucho 4 pasos de física por fotograma; y las expresiones sin llamadas se calculan sin generadores. | Con 2000 cajas amontonadas el juego iba a 10 fotogramas por segundo y con 2000 objetos con script, a 28. Ahora el motor tarda 17 ms y 7 ms por fotograma (antes 52 y 46). Hay una prueba de navegador que lo vigila. |
+| Un script **con «cuando» que no está en ningún objeto** no es un script de funciones: solo avisa de que no se ejecuta (antes, al crear un script y no ponerlo todavía en un objeto, su `yo` daba error y no dejaba ejecutar el juego). | Lo encontró la prueba de rendimiento. Un script de funciones es el que solo tiene funciones. |

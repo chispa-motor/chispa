@@ -133,7 +133,7 @@ export class Interprete {
     }
     switch (s.tipo) {
       case 'Variable': {
-        const valor = yield* this.evaluar(s.valor, ent);
+        const valor = (sinLlamadas(s.valor) ? this.evaluarDirecto(s.valor, ent) : yield* this.evaluar(s.valor, ent));
         ent.declarar(s.nombre, copiarSiVector(valor), s.original);
         return;
       }
@@ -144,7 +144,7 @@ export class Interprete {
 
       case 'Si':
         for (const rama of s.ramas) {
-          if (esVerdadero(yield* this.evaluar(rama.condicion, ent))) {
+          if (esVerdadero((sinLlamadas(rama.condicion) ? this.evaluarDirecto(rama.condicion, ent) : yield* this.evaluar(rama.condicion, ent)))) {
             return yield* this.ejecutarBloque(rama.cuerpo, new Entorno(ent));
           }
         }
@@ -152,7 +152,7 @@ export class Interprete {
         return;
 
       case 'Mientras':
-        while (esVerdadero(yield* this.evaluar(s.condicion, ent))) {
+        while (esVerdadero((sinLlamadas(s.condicion) ? this.evaluarDirecto(s.condicion, ent) : yield* this.evaluar(s.condicion, ent)))) {
           this.contarVuelta(s.pos, 'mientras');
           const senal = yield* this.ejecutarBloque(s.cuerpo, new Entorno(ent));
           if (senal?.tipo === 'romper') break;
@@ -161,7 +161,7 @@ export class Interprete {
         return;
 
       case 'Repetir': {
-        const veces = yield* this.evaluar(s.veces, ent);
+        const veces = (sinLlamadas(s.veces) ? this.evaluarDirecto(s.veces, ent) : yield* this.evaluar(s.veces, ent));
         if (typeof veces !== 'number' || veces < 0) {
           throw new ErrorChispa(
             s.veces.pos,
@@ -186,7 +186,7 @@ export class Interprete {
         return;
 
       case 'Devolver':
-        return { tipo: 'devolver', valor: s.valor ? yield* this.evaluar(s.valor, ent) : null };
+        return { tipo: 'devolver', valor: s.valor ? (sinLlamadas(s.valor) ? this.evaluarDirecto(s.valor, ent) : yield* this.evaluar(s.valor, ent)) : null };
 
       case 'Romper':
         return { tipo: 'romper' };
@@ -199,14 +199,14 @@ export class Interprete {
         return;
 
       case 'ExpresionSuelta':
-        yield* this.evaluar(s.expresion, ent);
+        (sinLlamadas(s.expresion) ? this.evaluarDirecto(s.expresion, ent) : yield* this.evaluar(s.expresion, ent));
         return;
     }
   }
 
   /** para cada x en lista / texto / tabla   ·   para cada clave, valor en tabla */
   private *paraCada(s: Extract<Sentencia, { tipo: 'ParaCada' }>, ent: Entorno): Ejecucion<Senal> {
-    const coleccion = yield* this.evaluar(s.coleccion, ent);
+    const coleccion = (sinLlamadas(s.coleccion) ? this.evaluarDirecto(s.coleccion, ent) : yield* this.evaluar(s.coleccion, ent));
     const dos = s.variables.length === 2;
     let pasos: Valor[][]; // cada paso: los valores de las variables del bucle
 
@@ -253,11 +253,11 @@ export class Interprete {
         }
       }
     }
-    let valor = yield* this.evaluar(exprValor, ent);
+    let valor = (sinLlamadas(exprValor) ? this.evaluarDirecto(exprValor, ent) : yield* this.evaluar(exprValor, ent));
 
     // Para += -= *= /= primero leemos el valor actual y operamos.
     if (operador !== '=') {
-      const actual = yield* this.evaluar(objetivo, ent);
+      const actual = (sinLlamadas(objetivo) ? this.evaluarDirecto(objetivo, ent) : yield* this.evaluar(objetivo, ent));
       valor = this.operar(operador[0], actual, valor, pos, objetivo, exprValor);
     }
     valor = copiarSiVector(valor);
@@ -300,8 +300,8 @@ export class Interprete {
     }
 
     if (objetivo.tipo === 'Indice') {
-      const cont = yield* this.evaluar(objetivo.objeto, ent);
-      const indice = yield* this.evaluar(objetivo.indice, ent);
+      const cont = (sinLlamadas(objetivo.objeto) ? this.evaluarDirecto(objetivo.objeto, ent) : yield* this.evaluar(objetivo.objeto, ent));
+      const indice = (sinLlamadas(objetivo.indice) ? this.evaluarDirecto(objetivo.indice, ent) : yield* this.evaluar(objetivo.indice, ent));
       if (Array.isArray(cont)) {
         cont[this.comprobarIndice(cont.length, indice, objetivo.indice.pos) - 1] = valor;
         return;
@@ -317,6 +317,10 @@ export class Interprete {
   // ═════════════════════════ EXPRESIONES ═════════════════════════
 
   *evaluar(e: Expresion, ent: Entorno): Ejecucion<Valor> {
+    // Sin llamadas dentro (yo.x + v * delta), nada puede esperar: se calcula de golpe, sin
+    // generadores. Los generadores crean mucha basura: con 2000 objetos con script, la mitad
+    // del tiempo se iba en recogerla.
+    if (sinLlamadas(e)) return this.evaluarDirecto(e, ent);
     switch (e.tipo) {
       case 'Numero':
         return e.valor;
@@ -324,7 +328,7 @@ export class Interprete {
         if (!e.partes) return e.valor;
         // "Puntos: {juego.puntos}": cada hueco se calcula ahora y se une al resto
         let r = '';
-        for (const p of e.partes) r += typeof p === 'string' ? p : aTexto(yield* this.evaluar(p, ent));
+        for (const p of e.partes) r += typeof p === 'string' ? p : aTexto((sinLlamadas(p) ? this.evaluarDirecto(p, ent) : yield* this.evaluar(p, ent)));
         return r;
       }
       case 'Logico':
@@ -346,18 +350,18 @@ export class Interprete {
 
       case 'Lista': {
         const lista: Valor[] = [];
-        for (const el of e.elementos) lista.push(copiarSiVector(yield* this.evaluar(el, ent)));
+        for (const el of e.elementos) lista.push(copiarSiVector((sinLlamadas(el) ? this.evaluarDirecto(el, ent) : yield* this.evaluar(el, ent))));
         return lista;
       }
 
       case 'Tabla': {
         const t = new Tabla();
-        for (const entrada of e.entradas) t.poner(entrada.clave, copiarSiVector(yield* this.evaluar(entrada.valor, ent)));
+        for (const entrada of e.entradas) t.poner(entrada.clave, copiarSiVector((sinLlamadas(entrada.valor) ? this.evaluarDirecto(entrada.valor, ent) : yield* this.evaluar(entrada.valor, ent))));
         return t;
       }
 
       case 'Unaria': {
-        const v = yield* this.evaluar(e.operando, ent);
+        const v = (sinLlamadas(e.operando) ? this.evaluarDirecto(e.operando, ent) : yield* this.evaluar(e.operando, ent));
         if (e.operador === 'no') return !esVerdadero(v);
         if (typeof v === 'number') return -v;
         if (v instanceof Vector2) return v.multiplicar(-1);
@@ -367,14 +371,14 @@ export class Interprete {
       case 'Logica': {
         // "Cortocircuito": en `a y b`, si `a` es falso ni siquiera miramos `b`.
         // Así funciona: si enemigo != nulo y enemigo.vida > 0:
-        const izq = esVerdadero(yield* this.evaluar(e.izquierda, ent));
-        if (e.operador === 'y') return izq ? esVerdadero(yield* this.evaluar(e.derecha, ent)) : false;
-        return izq ? true : esVerdadero(yield* this.evaluar(e.derecha, ent));
+        const izq = esVerdadero((sinLlamadas(e.izquierda) ? this.evaluarDirecto(e.izquierda, ent) : yield* this.evaluar(e.izquierda, ent)));
+        if (e.operador === 'y') return izq ? esVerdadero((sinLlamadas(e.derecha) ? this.evaluarDirecto(e.derecha, ent) : yield* this.evaluar(e.derecha, ent))) : false;
+        return izq ? true : esVerdadero((sinLlamadas(e.derecha) ? this.evaluarDirecto(e.derecha, ent) : yield* this.evaluar(e.derecha, ent)));
       }
 
       case 'Binaria': {
-        const a = yield* this.evaluar(e.izquierda, ent);
-        const b = yield* this.evaluar(e.derecha, ent);
+        const a = (sinLlamadas(e.izquierda) ? this.evaluarDirecto(e.izquierda, ent) : yield* this.evaluar(e.izquierda, ent));
+        const b = (sinLlamadas(e.derecha) ? this.evaluarDirecto(e.derecha, ent) : yield* this.evaluar(e.derecha, ent));
         if (e.operador === 'en') return this.contiene(b, a, e);
         return this.operar(e.operador, a, b, e.pos, e.izquierda, e.derecha);
       }
@@ -385,26 +389,98 @@ export class Interprete {
       }
 
       case 'Indice': {
-        const obj = yield* this.evaluar(e.objeto, ent);
-        const indice = yield* this.evaluar(e.indice, ent);
-        if (Array.isArray(obj)) return obj[this.comprobarIndice(obj.length, indice, e.indice.pos) - 1];
-        if (typeof obj === 'string') {
-          const letras = Array.from(obj);
-          return letras[this.comprobarIndice(letras.length, indice, e.indice.pos) - 1];
-        }
-        if (obj instanceof Tabla) return this.leerClave(obj, this.comprobarClave(indice, e.indice.pos), e.objeto, e.indice.pos);
-        throw new ErrorChispa(e.pos, `solo se puede usar [ ] con listas, textos y tablas, pero ${this.describir(e.objeto)} es ${nombreTipo(obj)}.`);
+        const obj = (sinLlamadas(e.objeto) ? this.evaluarDirecto(e.objeto, ent) : yield* this.evaluar(e.objeto, ent));
+        const indice = (sinLlamadas(e.indice) ? this.evaluarDirecto(e.indice, ent) : yield* this.evaluar(e.indice, ent));
+        return this.leerIndice(obj, indice, e);
       }
 
       case 'Llamada': {
-        const funcion = yield* this.evaluar(e.funcion, ent);
+        const funcion = (sinLlamadas(e.funcion) ? this.evaluarDirecto(e.funcion, ent) : yield* this.evaluar(e.funcion, ent));
         const args: Valor[] = [];
         const conLugar = funcion instanceof FuncionNativa && funcion.recibeLugar && e.argumentos.length > 0;
         if (conLugar) args.push(yield* this.lugar(e.argumentos[0], ent, this.describir(e.funcion)));
-        for (const a of e.argumentos.slice(conLugar ? 1 : 0)) args.push(yield* this.evaluar(a, ent));
+        for (const a of e.argumentos.slice(conLugar ? 1 : 0)) args.push((sinLlamadas(a) ? this.evaluarDirecto(a, ent) : yield* this.evaluar(a, ent)));
         return yield* this.llamar(funcion, args, e.pos, this.describir(e.funcion));
       }
     }
+  }
+
+  /** Lo mismo que evaluar(), para expresiones sin llamadas (ver sinLlamadas): sin generadores. */
+  private evaluarDirecto(e: Expresion, ent: Entorno): Valor {
+    switch (e.tipo) {
+      case 'Numero':
+      case 'Logico':
+        return e.valor;
+      case 'Nulo':
+        return null;
+      case 'Texto': {
+        if (!e.partes) return e.valor;
+        let r = '';
+        for (const p of e.partes) r += typeof p === 'string' ? p : aTexto(this.evaluarDirecto(p, ent));
+        return r;
+      }
+      case 'Identificador': {
+        const c = ent.buscar(e.nombre);
+        if (!c) throw new ErrorChispa(e.pos, `intentas usar '${e.original}', pero no existe ninguna variable con ese nombre.`, this.pistaNombre(e.original, ent));
+        return c.valor;
+      }
+      case 'Lista':
+        return e.elementos.map((el) => copiarSiVector(this.evaluarDirecto(el, ent)));
+      case 'Tabla': {
+        const t = new Tabla();
+        for (const entrada of e.entradas) t.poner(entrada.clave, copiarSiVector(this.evaluarDirecto(entrada.valor, ent)));
+        return t;
+      }
+      case 'Unaria': {
+        const v = this.evaluarDirecto(e.operando, ent);
+        if (e.operador === 'no') return !esVerdadero(v);
+        if (typeof v === 'number') return -v;
+        if (v instanceof Vector2) return v.multiplicar(-1);
+        throw new ErrorChispa(e.pos, `no puedo poner un signo menos delante de ${nombreTipo(v)}.`);
+      }
+      case 'Logica': {
+        const izq = esVerdadero(this.evaluarDirecto(e.izquierda, ent));
+        if (e.operador === 'y') return izq ? esVerdadero(this.evaluarDirecto(e.derecha, ent)) : false;
+        return izq ? true : esVerdadero(this.evaluarDirecto(e.derecha, ent));
+      }
+      case 'Binaria': {
+        const a = this.evaluarDirecto(e.izquierda, ent);
+        const b = this.evaluarDirecto(e.derecha, ent);
+        if (e.operador === 'en') return this.contiene(b, a, e);
+        return this.operar(e.operador, a, b, e.pos, e.izquierda, e.derecha);
+      }
+      case 'Miembro':
+        return this.obtenerMiembro(this.contenedorDirecto(e.objeto, ent, `usar '${e.original}'`), e);
+      case 'Indice': {
+        const obj = this.evaluarDirecto(e.objeto, ent);
+        const indice = this.evaluarDirecto(e.indice, ent);
+        return this.leerIndice(obj, indice, e);
+      }
+      case 'Llamada':
+        throw new Error('evaluarDirecto no sabe hacer llamadas');
+    }
+  }
+
+  private contenedorDirecto(expr: Expresion, ent: Entorno, accion: string): Valor {
+    if (expr.tipo === 'Identificador' && !ent.buscar(expr.nombre)) {
+      throw new ErrorChispa(expr.pos, `intentas ${accion} de '${expr.original}', pero '${expr.original}' no existe.`, this.pistaNombre(expr.original, ent, '¿Lo has creado antes o está bien escrito el nombre?'));
+    }
+    const obj = this.evaluarDirecto(expr, ent);
+    if (obj === null) {
+      throw new ErrorChispa(expr.pos, `intentas ${accion} de '${this.describir(expr)}', pero '${this.describir(expr)}' está vacío (nulo).`, '¿Le has dado un valor antes? Si lo buscas con buscar("..."), ¿está bien escrito el nombre?');
+    }
+    return obj;
+  }
+
+  /** lista[3], texto[1], tabla["clave"] */
+  private leerIndice(obj: Valor, indice: Valor, e: Extract<Expresion, { tipo: 'Indice' }>): Valor {
+    if (Array.isArray(obj)) return obj[this.comprobarIndice(obj.length, indice, e.indice.pos) - 1];
+    if (typeof obj === 'string') {
+      const letras = Array.from(obj);
+      return letras[this.comprobarIndice(letras.length, indice, e.indice.pos) - 1];
+    }
+    if (obj instanceof Tabla) return this.leerClave(obj, this.comprobarClave(indice, e.indice.pos), e.objeto, e.indice.pos);
+    throw new ErrorChispa(e.pos, `solo se puede usar [ ] con listas, textos y tablas, pero ${this.describir(e.objeto)} es ${nombreTipo(obj)}.`);
   }
 
   /**
@@ -647,7 +723,7 @@ export class Interprete {
         this.pistaNombre(expr.original, ent, '¿Lo has creado antes o está bien escrito el nombre?'),
       );
     }
-    const obj = yield* this.evaluar(expr, ent);
+    const obj = (sinLlamadas(expr) ? this.evaluarDirecto(expr, ent) : yield* this.evaluar(expr, ent));
     if (obj === null) {
       throw new ErrorChispa(
         expr.pos,
@@ -899,3 +975,44 @@ export const METODOS_LISTA: Record<string, (lista: Valor[], args: Valor[], pos: 
     return null;
   },
 };
+
+/**
+ * ¿Es una expresión sin ninguna llamada dentro? Entonces se puede calcular de
+ * golpe (nada dentro puede esperar). Se apunta la respuesta de cada expresión.
+ */
+const sinLlamadasRecordado = new WeakMap<Expresion, boolean>();
+function sinLlamadas(e: Expresion): boolean {
+  let r = sinLlamadasRecordado.get(e);
+  if (r !== undefined) return r;
+  switch (e.tipo) {
+    case 'Llamada':
+      r = false;
+      break;
+    case 'Texto':
+      r = !e.partes || e.partes.every((p) => typeof p === 'string' || sinLlamadas(p));
+      break;
+    case 'Lista':
+      r = e.elementos.every(sinLlamadas);
+      break;
+    case 'Tabla':
+      r = e.entradas.every((x) => sinLlamadas(x.valor));
+      break;
+    case 'Unaria':
+      r = sinLlamadas(e.operando);
+      break;
+    case 'Binaria':
+    case 'Logica':
+      r = sinLlamadas(e.izquierda) && sinLlamadas(e.derecha);
+      break;
+    case 'Miembro':
+      r = sinLlamadas(e.objeto);
+      break;
+    case 'Indice':
+      r = sinLlamadas(e.objeto) && sinLlamadas(e.indice);
+      break;
+    default:
+      r = true;
+  }
+  sinLlamadasRecordado.set(e, r);
+  return r;
+}

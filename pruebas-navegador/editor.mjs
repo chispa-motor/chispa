@@ -442,6 +442,44 @@ await prueba('modo bloques: arrastrar bloques escribe el código, y avisa si el 
   await p.click('.dialogo button:has-text("Entendido")');
 });
 
+await prueba('ajustes (tema claro, letra) se guardan; F1 enseña los atajos; Ctrl+B cambia a bloques', async (p) => {
+  await p.keyboard.press('Control+,');
+  await p.waitForSelector('.dialogo:has-text("Ajustes")');
+  await p.click('.opcion-tema[data-tema="claro"]');
+  await p.locator('input[data-ajuste="letraCodigo"]').fill('20');
+  await p.click('.dialogo button:has-text("Cerrar")');
+  comprobar((await p.evaluate(() => document.documentElement.dataset.tema)) === 'claro', 'no se pone el tema claro');
+  await p.reload();
+  await p.waitForFunction(() => window.chispa);
+  comprobar((await p.evaluate(() => document.documentElement.dataset.tema)) === 'claro', 'el tema no se recuerda al volver');
+  comprobar((await p.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--tamano-codigo').trim())) === '20px', 'la letra del código no se recuerda');
+  await p.keyboard.press('F1');
+  await p.waitForSelector('.dialogo:has-text("Atajos de teclado")');
+  comprobar((await textoDe(p, '.dialogo')).includes('Cambiar el script abierto entre código y bloques'), 'faltan atajos en la ventana');
+  await p.click('.dialogo button:has-text("Cerrar")');
+  const archivo = await estado(p, () => Object.keys(window.chispa.estado.proyecto.scripts)[0]);
+  await estado(p, (a) => window.chispa.estado.abrirScript(a), archivo);
+  await p.keyboard.press('Control+b');
+  await p.waitForSelector('.editor-bloques .bloque');
+  // Lo dejamos como estaba, para las demás pruebas
+  await p.evaluate(() => localStorage.removeItem('chispa-ajustes'));
+});
+
+await prueba('si el navegador se cierra de golpe, el proyecto se recupera al volver', async () => {
+  const ctx = await navegador.newContext({ viewport: { width: 1440, height: 860 } });
+  const p = await ctx.newPage();
+  await p.goto(direccion + '?limpio');
+  await p.waitForFunction(() => window.chispa);
+  await p.evaluate(() => window.chispa.estado.renombrarProyecto('Mi juego que no quiero perder'));
+  await p.waitForTimeout(1800); // el guardado automático (un momento después del cambio)
+  await p.close({ runBeforeUnload: false }); // sin avisar: como si se cerrara de golpe
+  const q = await ctx.newPage();
+  await q.goto(direccion);
+  await q.waitForFunction(() => window.chispa?.estado.proyecto.nombre === 'Mi juego que no quiero perder', null, { timeout: 5000 });
+  await q.waitForSelector('.notificacion:has-text("Recuperado «Mi juego que no quiero perder»")', { timeout: 3000 });
+  await ctx.close();
+});
+
 await prueba('los errores se subrayan mientras escribes y bloquean Ejecutar', async (p) => {
   await p.click('.nodo.hijo');
   await p.click('.cm-content');
@@ -602,6 +640,41 @@ await prueba('exportar el juego y que funcione solo, sin el editor', async (p) =
   await juego.close();
   comprobar(panel, 'el juego exportado enseña un error');
   comprobar(mensajes.some((m) => m.includes('¡Hola!')), 'el juego exportado no ha arrancado: ' + mensajes.join(' | '));
+});
+
+await prueba('rendimiento: 2000 objetos (con física amontonados, y con script)', async (p) => {
+  for (const [fisica, maximo] of [[true, 40], [false, 20]]) {
+    await estado(p, (fisica) => {
+      const e = window.chispa.estado;
+      e.abrir({ formato: 'chispa-proyecto', version: 2, nombre: 'r', ancho: 960, alto: 540, imagenes: {}, sonidos: {}, animaciones: {}, plantillas: {},
+        scripts: { 'm.chs': 'variable v = aleatorio(50, 150)\ncuando cada fotograma:\n    yo.rotar(90 * delta)\n    yo.x += v * delta\n    si yo.x > 950:\n        yo.x = 10' },
+        escenas: { Principal: { colorFondo: '#111', objetos: [] } }, escenaInicial: 'Principal' });
+      e.empezarCambioLargo();
+      e.crearObjeto('mapa', 0, 0);
+      e.pintarRectangulo(e.seleccion, 0, 0, 19, 0, 'suelo');
+      for (let i = 0; i < 2000; i++) {
+        e.crearObjeto(i % 2 ? 'circulo' : 'rectangulo', 20 + (i % 50) * 18, 60 + Math.floor(i / 50) * 12);
+        if (fisica) e.activarComponente(e.seleccion, 'fisica', true);
+        else e.asignarScript(e.seleccion, 'm.chs');
+        e.cambiarPropiedad(e.seleccion, 'sprite.ancho', 10);
+        e.cambiarPropiedad(e.seleccion, 'sprite.alto', 10);
+      }
+      e.terminarCambioLargo();
+    }, fisica);
+    await p.keyboard.press('F5');
+    await p.waitForFunction(() => document.querySelector('.estado-juego')?.textContent?.startsWith('Jugando'), null, { timeout: 15000 });
+    await p.waitForTimeout(2000);
+    // Lo que tarda el motor en un fotograma (sin contar lo que tarda el navegador en pintar)
+    const ms = await estado(p, () => {
+      const m = window.chispa.vistaJuego.motor;
+      const t = performance.now();
+      for (let i = 0; i < 20; i++) m.escena.actualizar(1 / 60);
+      return (performance.now() - t) / 20;
+    });
+    console.log(`      (2000 objetos ${fisica ? 'con física amontonados' : 'con script'}: ${ms.toFixed(1)} ms por fotograma)`);
+    comprobar(ms < maximo, `un fotograma tarda ${ms.toFixed(1)} ms (como mucho ${maximo})`);
+    await p.keyboard.press('Shift+F5');
+  }
 });
 
 await prueba('rendimiento: 500 objetos en la escena', async (p) => {

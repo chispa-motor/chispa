@@ -37,6 +37,9 @@ async function arrancarDemo(): Promise<void> {
 }
 
 async function arrancarEditor(): Promise<void> {
+  // El tema y la letra, antes de dibujar nada (si no, se vería un momento el tema oscuro)
+  const { aplicarAjustes, cargarAjustes } = await import('./editor/ajustes');
+  aplicarAjustes(cargarAjustes());
   await import('./editor/editor.css');
   const { Aplicacion } = await import('./editor/Aplicacion');
   document.getElementById('pagina-demo')?.remove();

@@ -65,17 +65,17 @@ const FRASES = EditorState.phrases.of({
 /** Tema oscuro del editor (a juego con el resto de la Zona de Programación). */
 const TEMA = EditorView.theme(
   {
-    '&': { height: '100%', backgroundColor: 'var(--fondo-codigo)', color: '#e6e9f0', fontSize: '15px' },
+    '&': { height: '100%', backgroundColor: 'var(--fondo-codigo)', color: 'var(--texto-codigo)', fontSize: 'var(--tamano-codigo, 15px)' },
     '.cm-scroller': { fontFamily: 'var(--letra-codigo)', lineHeight: '1.55' },
-    '.cm-content': { caretColor: '#ffcb6b', padding: '8px 0' },
-    '.cm-cursor, .cm-dropCursor': { borderLeftColor: '#ffcb6b', borderLeftWidth: '2px' },
-    '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection': { backgroundColor: '#3a4a6b !important' },
-    '.cm-gutters': { backgroundColor: 'var(--fondo-codigo)', color: '#56607a', border: 'none' },
-    '.cm-activeLineGutter': { backgroundColor: 'transparent', color: '#c4cbe0' },
-    '.cm-activeLine': { backgroundColor: '#ffffff08' },
+    '.cm-content': { caretColor: 'var(--cursor-codigo)', padding: '8px 0' },
+    '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--cursor-codigo)', borderLeftWidth: '2px' },
+    '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection': { backgroundColor: 'var(--seleccion-codigo) !important' },
+    '.cm-gutters': { backgroundColor: 'var(--fondo-codigo)', color: 'var(--numeros-codigo)', border: 'none' },
+    '.cm-activeLineGutter': { backgroundColor: 'transparent', color: 'var(--texto)' },
+    '.cm-activeLine': { backgroundColor: 'var(--linea-activa)' },
     '.cm-selectionMatch': { backgroundColor: '#ffffff14' },
     '.cm-matchingBracket': { backgroundColor: '#ffffff1f', outline: '1px solid #ffffff40' },
-    '.cm-tooltip': { backgroundColor: '#1b2030', border: '1px solid #33405c', borderRadius: '8px', boxShadow: '0 10px 30px #0008' },
+    '.cm-tooltip': { backgroundColor: 'var(--fondo-elevado)', color: 'var(--texto)', border: '1px solid var(--borde-fuerte)', borderRadius: '8px', boxShadow: '0 10px 30px #0008' },
     '.cm-tooltip-autocomplete > ul > li[aria-selected]': { backgroundColor: '#2d4a7a', color: '#fff' },
     '.cm-tooltip-autocomplete > ul': { fontFamily: 'var(--letra-codigo)', maxHeight: '18em' },
     '.cm-completionDetail': { color: '#8b95ad', fontStyle: 'normal', marginLeft: '1em' },
@@ -84,7 +84,7 @@ const TEMA = EditorView.theme(
     '.cm-diagnostic-warning': { borderLeft: '4px solid #ffcb6b' },
     '.cm-lintRange-error': { backgroundImage: 'none', textDecoration: 'underline wavy #ff6b6b', textUnderlineOffset: '3px' },
     '.cm-lintRange-warning': { backgroundImage: 'none', textDecoration: 'underline wavy #ffcb6b', textUnderlineOffset: '3px' },
-    '.cm-panels': { backgroundColor: '#1b2030', color: '#e6e9f0' },
+    '.cm-panels': { backgroundColor: 'var(--fondo-elevado)', color: 'var(--texto)' },
     '.cm-panels input, .cm-panels button': { fontFamily: 'var(--letra-interfaz)' },
     '.cm-searchMatch': { backgroundColor: '#ffcb6b40' },
     '.cm-gutter-puntos': { width: '14px', cursor: 'pointer' },
@@ -212,6 +212,12 @@ export class EditorCodigo {
     );
     p.cajaCodigo.style.display = enBloques ? 'none' : '';
     if (p.bloques) p.bloques.elemento.style.display = enBloques ? '' : 'none';
+  }
+
+  /** Ctrl+B: de código a bloques o al revés, en el script que se ve. */
+  alternarModo(archivo: string): void {
+    const p = this.pestanas.get(archivo);
+    if (p) void this.cambiarModo(p, !(this.estado.enBloques(archivo) && p.bloques));
   }
 
   private async cambiarModo(p: Pestana, bloques: boolean): Promise<void> {

@@ -17,7 +17,7 @@ import { revisarTextos } from './TextosConHuecos';
 import { recorrerExpresiones } from '../chispa/sintaxis/recorrer';
 import { sugerir } from '../chispa/errores/sugerencias';
 import { normalizar } from '../utilidades/texto';
-import { bibliotecasDe, entornoConBibliotecas } from './Bibliotecas';
+import { bibliotecasDe, entornoConBibliotecas, scriptsSinObjeto, tieneEventos } from './Bibliotecas';
 
 export interface ResultadoRevision {
   /** Árbol de cada script que se ha podido leer (aunque tenga errores de análisis). */
@@ -74,6 +74,19 @@ function contextoDe(proyecto: DefProyecto, globales: Entorno) {
   };
 }
 
+/** Un script con «cuando» que no está en ningún objeto no se ejecuta: se avisa en su primer «cuando». */
+function avisoSinObjeto(proyecto: DefProyecto, archivo: string, programa: Programa): Diagnostico[] {
+  const primero = programa.sentencias.find((s) => s.tipo === 'Cuando');
+  if (!primero || !scriptsSinObjeto(proyecto).includes(archivo)) return [];
+  return [{
+    gravedad: 'aviso',
+    archivo,
+    pos: primero.pos,
+    mensaje: 'este script no está puesto en ningún objeto, así que no se ejecuta.',
+    pista: 'Ponlo en un objeto: selecciónalo en la escena y elige este script en Propiedades > Script. (Un script sin ningún «cuando», solo con funciones, es un script de funciones: sus funciones se pueden usar desde todos.)',
+  }];
+}
+
 /** Los scripts de funciones del proyecto ya leídos (los que tienen errores de escritura no cuentan). */
 function leerBibliotecas(proyecto: DefProyecto, cambiado?: { archivo: string; programa: Programa }): Programa[] {
   return bibliotecasDe(proyecto).flatMap((a) => {
@@ -88,9 +101,10 @@ export function revisarScript(archivo: string, codigo: string, proyecto: DefProy
   const { programa, errores } = analizarSintaxis(codigo, archivo);
   if (errores.length) return errores.map((e) => e.diagnostico());
   const bib = entornoConBibliotecas(leerBibliotecas(proyecto, { archivo, programa }), globales);
-  const esBiblioteca = bibliotecasDe(proyecto).includes(archivo);
+  const esBiblioteca = !tieneEventos(codigo) && scriptsSinObjeto(proyecto).includes(archivo);
   return [
     ...bib.diagnosticos.filter((d) => d.archivo === archivo),
+    ...avisoSinObjeto(proyecto, archivo, programa),
     ...analizar(programa, { ...contextoDe(proyecto, bib.entorno), esScript: !esBiblioteca }),
     ...avisosDeMensajes(programa, mensajesRecibidos(proyecto)),
     ...avisosDeJuego(programa, datosGuardadosEnJuego(proyecto)),
@@ -183,7 +197,7 @@ export function revisarProyecto(proyecto: DefProyecto, globales: Entorno = globa
     // Solo analizamos si se ha podido leer entero (si no, saldrían errores falsos)
     if (errores.length === 0) {
       r.programas.set(archivo, programa);
-      const propios = bib.diagnosticos.filter((d) => d.archivo === archivo);
+      const propios = [...bib.diagnosticos.filter((d) => d.archivo === archivo), ...avisoSinObjeto(proyecto, archivo, programa)];
       const analisis = analizar(programa, { ...contexto, esScript: !bibliotecas.has(archivo) });
       for (const d of [...propios, ...analisis, ...avisosDeMensajes(programa, recibidos), ...avisosDeJuego(programa, guardados)]) {
         diagnosticos.push(d);

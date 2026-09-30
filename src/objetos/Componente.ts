@@ -31,6 +31,8 @@ export abstract class Componente {
   alTocar?(otro: ObjetoJuego, casilla?: string): void;
   /** Se llama cuando este objeto DEJA de tocar a otro. */
   alDejarDeTocar?(otro: ObjetoJuego, casilla?: string): void;
+  /** ¿Le interesan ahora los contactos? (si no se dice, sí). Así la física no los busca para nadie. */
+  escuchaContactos?(): boolean;
   /** ¿Le interesan los clics encima? (así un objeto invisible sin botón no "roba" los clics) */
   recibeClics?(): boolean;
   /** Se llama cuando se hace clic encima de este objeto (si recibeClics() dice que sí). */
