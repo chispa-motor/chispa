@@ -29,7 +29,8 @@ son **una propiedad de un objeto** (`yo.color`) en vez de una función.
 | `setFont` / `newFont` | ✅ `yo.tamano` (en textos) · 🆕 `yo.tamanoLetra` | ➖ Elegir tipo de letra: con una sola letra clara no hay que decidir nada; queda como idea. |
 | transparencia (`setColor` con alfa) | ✅ `yo.opacidad` · 🆕 `yo.transparencia` | `transparencia` es lo que buscaría alguien que empieza. |
 | `getWidth`, `getHeight` | ✅ `pantalla.ancho`, `pantalla.alto` | |
-| `arc`, `ellipse`, `polygon`, `points` | ➖ | Con rectángulos, círculos, líneas e imágenes basta para empezar. |
+| `arc` | 🆕 `dibujar.arco` y `dibujar.enPantalla.arco` | Salió en el juego Arena: los círculos de recarga de las habilidades. |
+| `ellipse`, `polygon`, `points` | ➖ | Con rectángulos, círculos, arcos, líneas e imágenes basta para empezar. |
 | `newCanvas`, `setCanvas` (dibujar en una imagen) | ➖ | Es un concepto avanzado (dibujar fuera de la pantalla). |
 | `newShader`, `setShader` | ➖ | Se programan en otro lenguaje (GLSL). Demasiado para un principiante. |
 | `setBlendMode`, `stencil`, `setScissor`, `setLineStyle`… | ➖ | Detalles de dibujo de bajo nivel; los objetos ya se dibujan bien solos. |
@@ -66,7 +67,7 @@ son **una propiedad de un objeto** (`yo.color`) en vez de una función.
 | teclas pulsadas ahora | 🆕 `teclado.pulsadas` | |
 | `isScancodeDown`, `getScancodeFromKey`, `getKeyFromScancode` | ➖ | Diferencia técnica entre la tecla física y la letra; los nombres en español ya lo resuelven. |
 | `setKeyRepeat`, `hasKeyRepeat` | ➖ | Chispa ignora la repetición a propósito (mantener pulsada una tecla no dispara el evento 30 veces). |
-| `setTextInput`, `hasScreenKeyboard` | ➖ | Teclado en pantalla del móvil: se verá con los controles táctiles (bloque 4). |
+| `setTextInput`, `hasScreenKeyboard` | ➖ | Teclado en pantalla del móvil para escribir texto. Los controles táctiles (bloque 4) ponen botones, no teclado: para un nombre, mejor elegir con botones. |
 
 ## love.mouse (ratón)
 
@@ -149,7 +150,7 @@ son **una propiedad de un objeto** (`yo.color`) en vez de una función.
 |---|---|---|
 | `getOS` | 🆕 `sistema.movil` | Lo que de verdad importa: ¿móvil (táctil) u ordenador? |
 | `openURL` | 🆕 `sistema.abrirWeb("https://...")` | Solo direcciones web (http o https). |
-| `setClipboardText`, `getPowerInfo`, `getProcessorCount`, `vibrate` | ➖ | Casi nunca se usan en un juego, y los navegadores piden permiso para algunas. |
+| `setClipboardText`, `getPowerInfo`, `getProcessorCount` | ➖ | Casi nunca se usan en un juego, y los navegadores piden permiso para algunas. |
 | `love.event.quit` | ✅ `escena.cambiar(...)`, `escena.reiniciar()` | Un juego web no se «cierra»: se cambia de escena. |
 | `love.load` | ✅ `cuando empieza:` | |
 | `love.update` | ✅ `cuando cada fotograma:` | |
@@ -162,7 +163,7 @@ son **una propiedad de un objeto** (`yo.color`) en vez de una función.
 
 | LÖVE | Chispa | Por qué / notas |
 |---|---|---|
-| love.image (`newImageData`, leer píxeles) | ⏳ bloque 2: editor de pixel art | Dibujar sprites se hace en el editor, no con código. |
+| love.image (`newImageData`, leer píxeles) | 🆕 editor de pixel art (bloque 2) | Dibujar sprites se hace en el editor, no con código. |
 | love.font (`newRasterizer`, `newGlyphData`…) | ➖ | Cómo se fabrican las letras por dentro. |
 | love.data (`compress`, `encode`, `hash`) | ➖ | Datos binarios y códigos: no hacen falta para hacer juegos. |
 | love.thread | ➖ | Varios hilos del procesador: muy avanzado. Chispa ya tiene «hilos» sencillos (cada evento con `esperar`). |
@@ -192,13 +193,13 @@ son **una propiedad de un objeto** (`yo.color`) en vez de una función.
 
 ## Cuánto de LÖVE cubre Chispa
 
-Las tablas de arriba tienen **97 filas**: cada una es una función de LÖVE o
+Las tablas de arriba tienen **98 filas**: cada una es una función de LÖVE o
 un grupo de funciones que hacen lo mismo. Se cuentan con un pequeño script
 sobre este mismo archivo, así que el número no es a ojo:
 
 | | Filas | % |
 |---|---:|---:|
-| ✅ / 🆕 Chispa lo tiene | 68 | 70 % |
+| ✅ / 🆕 Chispa lo tiene | 69 | 70 % |
 | ⏳ Llega en otro bloque de esta noche | 0 | 0 % |
 | ➖ Se deja fuera a propósito (explicado en su fila) | 29 | 30 % |
 
@@ -210,5 +211,5 @@ Lo que falta y sí podría servirle a un principiante:
 
 - números al azar con semilla (para mundos que se repiten);
 - elegir el tipo de letra;
-- elipses y polígonos;
+- elipses y polígonos (los arcos ya están);
 - juntas físicas de cuerda y de muelle.
