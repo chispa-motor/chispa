@@ -32,7 +32,9 @@ podría usar el fallo.
    - la versión de Chispa (sale en **Ayuda → Acerca de Chispa**) y tu
      navegador.
 
-<!-- CAMBIA ESTO si quieres dar otra forma de contacto (por ejemplo, un correo solo para seguridad). -->
+Esa es la **única** forma de avisar de un fallo de seguridad: Chispa no
+tiene correo. Nunca lo cuentes en una *issue*, en un comentario ni en un
+*pull request*, porque todo eso es público.
 
 ## Qué pasará después
 

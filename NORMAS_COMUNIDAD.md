@@ -37,12 +37,23 @@ donde hables en nombre de Chispa.
 
 ## Si algo va mal
 
-Si alguien no cumple estas normas contigo o con otra persona, avisa a quienes
-mantienen Chispa. Puedes hacerlo en privado.
+Si alguien no cumple estas normas contigo o con otra persona, avisa. Todo
+se hace desde GitHub (Chispa no tiene correo):
 
-<!-- CAMBIA ESTO: pon aquí cómo contactar con quienes moderan (un correo o un formulario). -->
+- **Si es un mensaje concreto** (un comentario, una *issue* o un *pull
+  request* con insultos, contenido inadecuado o datos personales):
+  **repórtalo con la herramienta de GitHub**. Pulsa los tres puntos (**···**)
+  del mensaje y elige **Report content** («reportar contenido»). Así llega
+  en privado, y nadie más ve quién lo ha reportado.
+- **Si es algo que hay que hablar** (una norma que no está clara, algo que
+  se repite, una idea para que la comunidad vaya mejor): **abre una
+  *issue***. No pongas en ella datos personales de nadie ni copies lo que te
+  han dicho si es ofensivo; basta con explicar qué pasa y enlazar el
+  mensaje.
+- **Si es un fallo de seguridad**, no uses ninguna de las dos: sigue
+  [SEGURIDAD.md](SEGURIDAD.md).
 
-Todos los avisos se tratan en privado. Según lo que haya pasado, puede ser
+Los reportes se tratan en privado. Según lo que haya pasado, puede ser
 una advertencia, que se borre lo que se escribió o que esa persona no pueda
 participar más en Chispa.
 
