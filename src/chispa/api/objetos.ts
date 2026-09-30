@@ -21,6 +21,7 @@ import { Sprite } from '../../objetos/componentes/Sprite';
 import { Animador } from '../../objetos/componentes/Animador';
 import { MapaCasillas } from '../../objetos/componentes/MapaCasillas';
 import { Recorrido } from '../../objetos/componentes/Recorrido';
+import { Comportamiento } from '../../objetos/componentes/Comportamiento';
 import { SUAVIZADOS } from '../../objetos/AnimadorDeValores';
 import { argTexto } from './argumentos';
 import { enumerar } from '../errores/sugerencias';
@@ -300,6 +301,7 @@ const PROPIEDADES: Record<string, PropiedadObjeto> = {
   },
   ratonencima: { obtener: (o) => o.escena?.ratonEncima(o) ?? false },
   destruido: { obtener: (o) => o.destruido },
+  yendo: { obtener: (o) => o.obtener(Comportamiento)?.yendo ?? false },
 };
 
 /** yo.moviendo solo existe si el objeto tiene un recorrido (se pone en el editor). */
@@ -577,6 +579,31 @@ const METODOS: Record<string, (o: ObjetoJuego, args: Valor[], pos: Posicion) => 
     o.posicion.y += mover.y;
     return false;
   },
+  irhacia: (o, a, p) => {
+    // Va hasta un sitio (o detrás de un objeto) rodeando las paredes del mapa: yo.irHacia(buscar("Jugador"), 120)
+    const ej = 'yo.irHacia(buscar("Jugador"), 120)';
+    let objetivo: ObjetoJuego | Vector2;
+    let usados = 1;
+    if (a[0] instanceof RefObjeto) objetivo = a[0].objeto;
+    else {
+      const d = destinoOPunto(a, 'irHacia', p, ej);
+      objetivo = d.punto;
+      usados = d.usados;
+    }
+    if (objetivo === o) throw new ErrorChispa(p, 'un objeto no puede ir hacia sí mismo.', `Ejemplo: ${ej}`);
+    const rapidez = argNumero(a, usados, 'irHacia', p, ej, 150);
+    if (rapidez <= 0) throw new ErrorChispa(p, 'la rapidez tiene que ser mayor que 0.', `Ejemplo: ${ej}`);
+    o.escena?.animaciones.cancelar(`${o.id}.ira`);
+    return (o.obtener(Comportamiento) ?? o.agregar(new Comportamiento())).irHacia(objetivo, rapidez);
+  },
+  parar: (o) => {
+    // Deja de ir a donde iba (irHacia, irA) y se queda quieto
+    o.obtener(Comportamiento)?.parar();
+    o.escena?.animaciones.cancelar(`${o.id}.ira`);
+    const f = o.obtener(Fisica);
+    if (f) f.velocidad.x = f.velocidad.y = 0;
+    return null;
+  },
   mirara: (o, a, p) => {
     // Gira el objeto para que "mire" (su lado derecho) hacia el destino
     const falta = destino(a[0], 'mirarA', p).restar(o.posicion);
@@ -626,6 +653,7 @@ const NOMBRES_BONITOS = [
   'tamanoLetra', 'transparencia', 'voltearVertical', 'etiquetas', 'padre', 'hijos', 'arrastrable', 'arrastrando',
   'teletransportar', 'irA', 'anguloA', 'rotarHacia', 'avanzar', 'ocultar', 'aparecer', 'parpadear', 'ponerDelante', 'ponerDetras',
   'tocando', 'cercanos', 'masCercano', 'clonar', 'ponerEtiqueta', 'quitarEtiqueta', 'tieneEtiqueta', 'pegarA', 'soltar',
+  'irHacia', 'parar', 'yendo',
 ];
 
 interface PropiedadPropia {

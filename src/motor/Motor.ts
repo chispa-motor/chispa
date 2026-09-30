@@ -149,7 +149,8 @@ export class Motor {
     this.medirFps(dtReal);
 
     try {
-      // 2. Actualizar (primero las funciones sueltas, luego la escena)
+      // 2. Leer el mando, actualizar (primero las funciones sueltas, luego la escena)
+      this.entrada.leerMandos();
       for (const f of this.actualizadores) f(t.delta);
       this.escena?.actualizar(t.delta);
       // 3. Dibujar (primero la escena, luego las funciones sueltas, que quedan encima)

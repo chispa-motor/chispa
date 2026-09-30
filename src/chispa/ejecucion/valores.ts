@@ -89,7 +89,13 @@ export class FuncionChispa {
 
 /** Petición de pausa que devuelve esperar(): el intérprete la entiende y duerme el hilo. */
 export class PeticionEspera {
-  constructor(readonly segundos: number) {}
+  constructor(
+    readonly segundos: number,
+    /** Si está: el hilo sigue dormido hasta que esto dé verdadero (un diálogo que se cierra...). */
+    readonly hasta?: () => boolean,
+    /** Si está: lo que devuelve la función al despertar (la opción elegida en un diálogo...). */
+    readonly resultado?: () => Valor,
+  ) {}
 }
 
 /** Función del motor (escrita en TypeScript), como crear(), aleatorio() o esperar(). */

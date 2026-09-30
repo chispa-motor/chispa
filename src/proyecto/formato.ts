@@ -52,6 +52,17 @@ export interface DefColision {
   soloDesdeArriba?: boolean;
 }
 
+/** Se mueve solo según otro objeto: lo sigue, lo persigue si está cerca o huye de él. */
+export interface DefComportamiento {
+  tipo: 'seguir' | 'perseguir' | 'huir';
+  /** Nombre, tipo o etiqueta del otro objeto. */
+  objetivo: string;
+  /** Píxeles por segundo (150 si no se dice). */
+  rapidez?: number;
+  /** seguir: a qué distancia se queda. perseguir y huir: desde qué distancia reacciona. */
+  distancia?: number;
+}
+
 /** Camino que sigue el objeto él solo (plataformas que se mueven, enemigos que patrullan). */
 export interface DefRecorrido {
   /** Puntos RELATIVOS al sitio donde empieza el objeto (el inicio no se escribe). */
@@ -97,6 +108,7 @@ export interface DefObjeto {
   fisica?: DefFisica;
   mapa?: DefMapa;
   recorrido?: DefRecorrido;
+  comportamiento?: DefComportamiento;
   /** Animación con la que empieza. */
   animacion?: string;
   /** Nombre de un script de `proyecto.scripts`. */
@@ -131,6 +143,8 @@ export interface DefProyecto {
   ancho: number;
   alto: number;
   pixelArt?: boolean;
+  /** En el juego exportado, botones en la pantalla de los móviles (si no se dice: sí). */
+  controlesTactiles?: boolean;
   /** nombre corto → ruta del archivo o "data URL" */
   imagenes: Record<string, string>;
   /** nombre corto → ruta del archivo o "data URL" (.mp3, .ogg, .wav) */
@@ -193,6 +207,7 @@ function completar(p: DefProyecto): DefProyecto {
     ancho: p.ancho ?? 960,
     alto: p.alto ?? 540,
     pixelArt: p.pixelArt ?? false,
+    controlesTactiles: p.controlesTactiles ?? true,
     imagenes: p.imagenes ?? {},
     sonidos: p.sonidos ?? {},
     animaciones: p.animaciones ?? {},

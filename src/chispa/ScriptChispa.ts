@@ -29,7 +29,7 @@ import { Entorno } from './ejecucion/entorno';
 import { ErrorChispa } from './errores/ErrorChispa';
 import type { Ejecucion, Interprete } from './ejecucion/interprete';
 import { referencia } from './api/objetos';
-import { FuncionChispa, nombreTipo, type Valor } from './ejecucion/valores';
+import { FuncionChispa, PeticionEspera, nombreTipo, type Valor } from './ejecucion/valores';
 import { Sprite } from '../objetos/componentes/Sprite';
 import { ErrorMotor } from '../motor/Errores';
 import { Componente } from '../objetos/Componente';
@@ -46,6 +46,8 @@ interface Hilo {
   profundidad: number;
   /** Parado en una línea por el depurador (sigue cuando el depurador lo diga). */
   enParada: boolean;
+  /** Dormido hasta que esto dé verdadero (un diálogo abierto...). */
+  esperaHasta?: () => boolean;
 }
 
 interface EventoRegistrado {
@@ -300,7 +302,9 @@ export class ScriptChispa extends Componente {
       this.interprete.depurador?.parar({ archivo: r.value.archivo, linea: r.value.linea, entorno: r.value.entorno, hilo, objeto: this.objeto.nombre });
       return true;
     }
-    hilo.despertarEn = this.motor.tiempo.total + (r.value as { segundos: number }).segundos;
+    const espera = r.value as PeticionEspera;
+    hilo.despertarEn = this.motor.tiempo.total + espera.segundos;
+    hilo.esperaHasta = espera.hasta;
     return true;
   }
 
@@ -354,7 +358,7 @@ export class ScriptChispa extends Componente {
       if (hilo.enParada) {
         if (this.interprete.depurador?.estaParado(hilo)) continue;
         hilo.enParada = false; // el depurador ya lo ha soltado: sigue ahora mismo
-      } else if (hilo.despertarEn > ahora || !this.hilos.includes(hilo)) continue;
+      } else if (hilo.despertarEn > ahora || !this.hilos.includes(hilo) || (hilo.esperaHasta && !hilo.esperaHasta())) continue;
       if (!this.avanzarHilo(hilo)) this.hilos = this.hilos.filter((h) => h !== hilo);
       if (this.objeto.destruido) return;
     }

@@ -8,6 +8,7 @@
  * o quitarlas (como los componentes de Unity).
  */
 import { NOMBRES_COLORES } from '../../motor/Color';
+import { DISTANCIA_POR_DEFECTO } from '../../objetos/componentes/Comportamiento';
 import { leerDatoInicial, tipoPorNombre, type DatoInicial, type DefObjeto } from '../../proyecto/formato';
 import { tieneHuecos } from '../../proyecto/TextosConHuecos';
 import { datosParaTextos, insertarDato } from '../estado/datosTextos';
@@ -191,8 +192,8 @@ export class Inspector {
       if (v && !def.colision) e.activarComponente(ref, 'colision', true);
     }, ayuda: 'Gravedad, velocidad, choques y empujones' }));
 
-    // Recorrido (plataformas que se mueven solas)
-    if (!def.mapa) partes.push(this.seccionRecorrido(ref, def));
+    // Recorrido (plataformas que se mueven solas) y comportamiento (seguir, perseguir, huir)
+    if (!def.mapa) partes.push(this.seccionRecorrido(ref, def), this.seccionComportamiento(ref, def));
 
     // Mapa de casillas
     if (def.mapa) partes.push(this.seccionMapa(ref, def));
@@ -309,6 +310,36 @@ export class Inspector {
       alActivar: (v) => e.activarComponente(ref, 'recorrido', v),
       ayuda: 'Se mueve solo por un camino: plataformas que van y vienen, ascensores, enemigos que patrullan',
       plegada: !r,
+    });
+  }
+
+  /** Comportamiento: se mueve solo según otro objeto, sin código. */
+  private seccionComportamiento(ref: RefObjeto, def: DefObjeto): HTMLElement {
+    const e = this.estado;
+    const c = def.comportamiento;
+    const largo = { empezar: () => e.empezarCambioLargo(), terminar: () => e.terminarCambioLargo() };
+    const otros = [...new Set([...e.escena.objetos.map((o) => o.nombre ?? ''), ...Object.keys(e.proyecto.plantillas)])].filter((n) => n && n !== def.nombre);
+    if (c && !otros.includes(c.objetivo)) otros.unshift(c.objetivo);
+    const que = { seguir: 'se queda a', perseguir: 'si está a menos de', huir: 'si está a menos de' };
+    const contenido = c
+      ? [
+          campoLista('qué hace', 'comportamiento.tipo', c.tipo, [['perseguir', 'Perseguir si está cerca'], ['huir', 'Huir si está cerca'], ['seguir', 'Seguir (como una mascota)']], (v) => {
+            e.cambiarPropiedad(ref, 'comportamiento.tipo', v);
+            e.cambiarPropiedad(ref, 'comportamiento.distancia', undefined);
+          }, 'Cómo se mueve según el otro objeto'),
+          campoLista('a quién', 'comportamiento.objetivo', c.objetivo, otros.map((n): [string, string] => [n, n]), (v) => e.cambiarPropiedad(ref, 'comportamiento.objetivo', v), 'El objeto (o el tipo: la plantilla) al que sigue, persigue o del que huye. Si hay varios, el más cercano'),
+          h('div', { class: 'dos-columnas' },
+            campoNumero('rapidez', 'comportamiento.rapidez', c.rapidez ?? 150, (v) => e.cambiarPropiedad(ref, 'comportamiento.rapidez', v === 150 ? undefined : v), { ...largo, min: 1, paso: 10, ayuda: 'Píxeles por segundo' }),
+            campoNumero(que[c.tipo], 'comportamiento.distancia', c.distancia ?? DISTANCIA_POR_DEFECTO[c.tipo], (v) => e.cambiarPropiedad(ref, 'comportamiento.distancia', v === DISTANCIA_POR_DEFECTO[c.tipo] ? undefined : v), { ...largo, min: 0, paso: 10, ayuda: c.tipo === 'seguir' ? 'Píxeles a los que se queda del otro' : 'Píxeles: si el otro está más cerca, reacciona' }),
+          ),
+          h('p', { class: 'nota' }, 'Si hay un mapa con paredes y el juego se ve desde arriba, las rodea. Con recorrido: patrulla y deja el camino mientras persigue. Desde el código: yo.irHacia(sitio).'),
+        ]
+      : [];
+    return seccion('Comportamiento', contenido, {
+      activo: !!c,
+      alActivar: (v) => e.activarComponente(ref, 'comportamiento', v),
+      ayuda: 'Se mueve solo, sin código: persigue al jugador, huye de él o lo sigue',
+      plegada: !c,
     });
   }
 
@@ -432,6 +463,7 @@ export class Inspector {
           campoNumero('alto', 'proyecto.alto', e.proyecto.alto, (v) => e.cambiarAjusteProyecto('alto', v ?? 540), { min: 64, max: 4096, paso: 16, ayuda: 'Alto de la pantalla del juego, en píxeles' }),
         ),
         campoCasilla('píxeles nítidos', 'proyecto.pixelArt', e.proyecto.pixelArt ?? false, (v) => e.cambiarAjusteProyecto('pixelArt', v), 'Dibuja las imágenes pequeñas con píxeles nítidos, sin suavizar'),
+        campoCasilla('botones en el móvil', 'proyecto.controlesTactiles', e.proyecto.controlesTactiles ?? true, (v) => e.cambiarAjusteProyecto('controlesTactiles', v), 'En el juego exportado, si se abre en un móvil o una tableta, salen botones en la pantalla con las teclas que usa tu juego'),
         h('p', { class: 'nota' }, 'Colores con nombre: ', NOMBRES_COLORES.filter((c) => c !== 'violeta').join(', '), '.'),
       ]),
       seccion('Datos del juego', [

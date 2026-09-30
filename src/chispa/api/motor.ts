@@ -18,7 +18,7 @@ import { Anfitrion, FuncionNativa, Lugar, PeticionEspera, aTexto, copiarSiVector
 import { NOMBRES_SUAVIZADOS, SUAVIZADOS, mezclar, type ValorAnimable } from '../../objetos/AnimadorDeValores';
 import type { DibujoDepuracion } from '../../objetos/Escena';
 import { esColorValido } from '../../motor/Color';
-import type { BotonRaton } from '../../motor/Entrada';
+import { BOTONES_MANDO, type BotonRaton } from '../../motor/Entrada';
 import type { Motor } from '../../motor/Motor';
 import { Vector2 } from '../../motor/Vector2';
 import type { Escena } from '../../objetos/Escena';
@@ -28,6 +28,8 @@ import { MapaCasillas } from '../../objetos/componentes/MapaCasillas';
 import { TIPOS_PARTICULAS, type ConfigParticulas } from '../../objetos/Particulas';
 import { deserializar, serializar } from './guardado';
 import { Tabla } from '../ejecucion/valores';
+import { lanzarRayo } from '../../objetos/Rayos';
+import { CajaDialogo } from '../../objetos/Dialogo';
 
 /** Lo que la API necesita del juego en marcha (lo implementa JuegoEnMarcha). */
 export interface ContextoJuego {
@@ -270,6 +272,46 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
     return (Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180) / Math.PI;
   });
   funcion('cronometro', () => new Cronometro(() => ctx.motor.tiempo.total));
+  funcion('dialogo', (a, p) => {
+    // dialogo("texto") · dialogo("Ana", "texto") · dialogo("Ana", "¿Vienes?", ["Si", "No"]) → la opción elegida
+    const ej = 'dialogo("Ana", "¿Me ayudas?", ["Si", "No"])';
+    const textos = a.filter((v) => typeof v === 'string') as string[];
+    const opciones = a.find((v) => Array.isArray(v)) as Valor[] | undefined;
+    const raros = a.filter((v) => typeof v !== 'string' && !Array.isArray(v));
+    if (!textos.length || textos.length > 2 || raros.length || (opciones && a.indexOf(opciones) !== a.length - 1)) {
+      throw new ErrorChispa(p, "'dialogo' necesita el texto (y, si quieres, antes quién habla y después una lista de opciones).", `Ejemplos: dialogo("Hola")  ·  ${ej}`);
+    }
+    if (opciones && (!opciones.length || opciones.some((o) => typeof o !== 'string'))) {
+      throw new ErrorChispa(p, 'las opciones del diálogo tienen que ser una lista de textos (al menos uno).', `Ejemplo: ${ej}`);
+    }
+    const caja = new CajaDialogo(textos[textos.length - 1], textos.length === 2 ? textos[0] : null, (opciones as string[] | undefined) ?? []);
+    ctx.escena.dialogos.push(caja);
+    return new PeticionEspera(0, () => caja.terminado, () => caja.elegida);
+  });
+  funcion('rayo', (a, p) => {
+    // rayo(yo, 0, 500): lo primero que toca una línea que sale de yo hacia la derecha, hasta 500 píxeles
+    const ej = 'rayo(yo, buscar("Jugador"), 400)';
+    const desde = a[0];
+    const origen = desde instanceof RefObjeto ? desde.objeto.posicion : desde instanceof Vector2 ? desde : null;
+    if (!origen) throw new ErrorChispa(p, "'rayo' necesita saber de dónde sale: un objeto o una posición (vector).", `Ejemplo: ${ej}`);
+    const d = a[1];
+    let direccion: Vector2 | null = null;
+    if (typeof d === 'number') direccion = new Vector2(Math.cos((d * Math.PI) / 180), Math.sin((d * Math.PI) / 180));
+    else if (d instanceof Vector2) direccion = d.normalizado();
+    else if (d instanceof RefObjeto) direccion = d.objeto.posicion.restar(origen).normalizado();
+    if (!direccion) throw new ErrorChispa(p, "'rayo' necesita una dirección: un ángulo (0 = derecha, 90 = arriba), un vector o un objeto hacia el que mirar.", `Ejemplo: ${ej}`);
+    if (direccion.longitud() === 0) throw new ErrorChispa(p, 'el rayo no tiene dirección: el vector es (0, 0) o el objetivo está justo en el mismo sitio.', `Ejemplo: ${ej}`);
+    const largo = argNumero(a, 2, 'rayo', p, ej, 1000);
+    if (largo <= 0) throw new ErrorChispa(p, 'el largo del rayo tiene que ser mayor que 0.', `Ejemplo: ${ej}`);
+    const i = lanzarRayo(ctx.escena, origen, direccion, largo, desde instanceof RefObjeto ? desde.objeto : null);
+    if (!i) return null;
+    const r = new Tabla();
+    r.poner('objeto', referencia(i.objeto));
+    r.poner('punto', i.punto);
+    r.poner('distancia', i.distancia);
+    r.poner('casilla', i.casilla);
+    return r;
+  });
   // animar(yo.tamano, 2, 0.5, "rebote"): recibe el SITIO (yo.tamano), no su valor
   g.declarar(
     'animar',
@@ -325,6 +367,34 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
       sesolto: (a, p) => ctx.motor.entrada.seSolto(argTexto(a, 0, 'teclado.seSolto', p, 'teclado.seSolto("espacio")')),
       algunasepulso: () => ctx.motor.entrada.algunaSePulso(),
     }, ['pulsada', 'sePulso', 'seSolto', 'algunaSePulso', 'ultima', 'pulsadas']),
+  );
+
+  // ── mando (el primer mando conectado; además hace de teclado: ver Entrada) ──
+  const botonMando = (a: Valor[], p: Posicion, funcion: string): string => {
+    const b = normalizar(argTexto(a, 0, funcion, p, `${funcion}("a")`));
+    if (!BOTONES_MANDO.includes(b)) {
+      const s = sugerir(b, BOTONES_MANDO);
+      throw new ErrorChispa(p, `el mando no tiene ningún botón llamado "${b}".`, (s ? `¿Querías decir "${s}"? ` : '') + `Los botones son: ${BOTONES_MANDO.join(', ')}.`);
+    }
+    return b;
+  };
+  const mando = () => ctx.motor.entrada.mando;
+  g.declarar(
+    'mando',
+    new Modulo('mando', {
+      conectado: { obtener: () => mando().conectado },
+      ejex: { obtener: () => mando().ejeX },
+      ejey: { obtener: () => mando().ejeY },
+      ejederechox: { obtener: () => mando().ejeDerechoX },
+      ejederechoy: { obtener: () => mando().ejeDerechoY },
+    }, {
+      pulsado: (a, p) => mando().botones.has(botonMando(a, p, 'mando.pulsado')),
+      sepulso: (a, p) => mando().pulsados.has(botonMando(a, p, 'mando.sePulso')),
+      vibrar: (a, p) => {
+        ctx.motor.entrada.vibrar(argNumero(a, 0, 'mando.vibrar', p, 'mando.vibrar(0.3)', 0.3), argNumero(a, 1, 'mando.vibrar', p, 'mando.vibrar(0.3, 0.5)', 1));
+        return null;
+      },
+    }, ['conectado', 'ejeX', 'ejeY', 'ejeDerechoX', 'ejeDerechoY', 'pulsado', 'sePulso', 'vibrar']),
   );
 
   // ── raton (coordenadas del mundo, con la Y hacia arriba) ──

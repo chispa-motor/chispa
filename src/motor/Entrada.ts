@@ -23,6 +23,26 @@ import { sugerir } from '../chispa/errores/sugerencias';
 
 export type BotonRaton = 'izquierdo' | 'medio' | 'derecho';
 
+/**
+ * Botones del mando, con la distribución "estándar" (la de los mandos de Xbox;
+ * en PlayStation, a = ✕, b = ◯, x = ▢, y = △). El número es su posición.
+ */
+export const BOTONES_MANDO = ['a', 'b', 'x', 'y', 'lb', 'rb', 'lt', 'rt', 'select', 'start', 'l3', 'r3', 'arriba', 'abajo', 'izquierda', 'derecha'];
+
+/**
+ * DECISIÓN: el mando hace de TECLADO. La cruceta y la palanca izquierda son
+ * las flechas; A es espacio, B es "x", X es "z", Y es "c", start es enter y
+ * select es escape. Así cualquier juego hecho para teclado se juega con mando
+ * sin cambiar nada. Para más control está el módulo `mando`.
+ */
+const TECLA_DE_BOTON: Record<string, string> = {
+  a: 'espacio', b: 'x', x: 'z', y: 'c', start: 'enter', select: 'escape',
+  arriba: 'arriba', abajo: 'abajo', izquierda: 'izquierda', derecha: 'derecha',
+};
+
+/** Palanca: por debajo de esto se considera que está en el centro (los mandos nunca dan 0 exacto). */
+const ZONA_MUERTA = 0.25;
+
 /** Teclas especiales: código físico del navegador → nombre en español. */
 const NOMBRES_POR_CODIGO: Record<string, string> = {
   Space: 'espacio',
@@ -245,6 +265,69 @@ export class Entrada {
     return [...new Set(this.teclasAbajo.values())];
   }
 
+  // ───────────────────────── Teclas virtuales (mando, botones táctiles) ─────────────────────────
+
+  /** Pulsa una tecla "de mentira" (un botón en la pantalla del móvil, un botón del mando). `id` la identifica para soltarla. */
+  pulsarVirtual(id: string, tecla: string): void {
+    const clave = `virtual:${id}`;
+    if (this.teclasAbajo.get(clave) === tecla) return;
+    this.teclasAbajo.set(clave, tecla);
+    this.pulsadasEsteFotograma.add(tecla);
+    this.ultimaTecla = tecla;
+  }
+
+  soltarVirtual(id: string): void {
+    const clave = `virtual:${id}`;
+    const tecla = this.teclasAbajo.get(clave);
+    if (tecla === undefined) return;
+    this.teclasAbajo.delete(clave);
+    this.soltadasEsteFotograma.add(tecla);
+  }
+
+  // ───────────────────────── Mando ─────────────────────────
+
+  /** El primer mando conectado: sus botones pulsados y la palanca izquierda (-1 a 1, la Y positiva hacia arriba). */
+  readonly mando = { conectado: false, botones: new Set<string>(), pulsados: new Set<string>(), ejeX: 0, ejeY: 0, ejeDerechoX: 0, ejeDerechoY: 0 };
+  /** El mando del navegador, para vibrar. */
+  private mandoNavegador: Gamepad | null = null;
+
+  /** Lee el mando (el navegador no avisa: hay que preguntarle en cada fotograma). */
+  leerMandos(): void {
+    const lista = typeof navigator !== 'undefined' && navigator.getGamepads ? navigator.getGamepads() : [];
+    const g = [...lista].find((x): x is Gamepad => !!x && x.connected) ?? null;
+    this.mandoNavegador = g;
+    const botones = new Set<string>();
+    let [ejeX, ejeY, dx, dy] = [0, 0, 0, 0];
+    if (g) {
+      g.buttons.forEach((b, i) => {
+        if (b.pressed && BOTONES_MANDO[i]) botones.add(BOTONES_MANDO[i]);
+      });
+      const eje = (i: number) => (Math.abs(g.axes[i] ?? 0) < ZONA_MUERTA ? 0 : (g.axes[i] ?? 0));
+      [ejeX, ejeY, dx, dy] = [eje(0), -eje(1), eje(2), -eje(3)];
+    }
+    this.ponerMando(g !== null, botones, ejeX, ejeY, dx, dy);
+  }
+
+  /** Aplica un estado del mando (separado de leerMandos para poder probarlo sin mando de verdad). */
+  ponerMando(conectado: boolean, botones: Set<string>, ejeX: number, ejeY: number, ejeDerechoX = 0, ejeDerechoY = 0): void {
+    const m = this.mando;
+    // La palanca también cuenta como la cruceta
+    if (ejeX < -0.5) botones.add('izquierda');
+    if (ejeX > 0.5) botones.add('derecha');
+    if (ejeY > 0.5) botones.add('arriba');
+    if (ejeY < -0.5) botones.add('abajo');
+    m.pulsados = new Set([...botones].filter((b) => !m.botones.has(b)));
+    for (const b of m.botones) if (!botones.has(b) && TECLA_DE_BOTON[b]) this.soltarVirtual(`mando:${b}`);
+    for (const b of m.pulsados) if (TECLA_DE_BOTON[b]) this.pulsarVirtual(`mando:${b}`, TECLA_DE_BOTON[b]);
+    Object.assign(m, { conectado, botones, ejeX, ejeY, ejeDerechoX, ejeDerechoY });
+  }
+
+  /** Hace vibrar el mando (si el navegador y el mando saben). */
+  vibrar(segundos: number, fuerza = 1): void {
+    const actuador = (this.mandoNavegador as (Gamepad & { vibrationActuator?: { playEffect(t: string, o: object): Promise<unknown> } }) | null)?.vibrationActuator;
+    void actuador?.playEffect('dual-rumble', { duration: segundos * 1000, strongMagnitude: fuerza, weakMagnitude: fuerza }).catch(() => {});
+  }
+
   // ───────────────────────── Ratón ─────────────────────────
 
   ratonPulsado(boton: BotonRaton = 'izquierdo'): boolean {
@@ -267,6 +350,7 @@ export class Entrada {
     this.soltadasEsteFotograma.clear();
     this.botonesPulsados.clear();
     this.botonesSoltados.clear();
+    this.mando.pulsados.clear();
     this.rueda = 0;
   }
 

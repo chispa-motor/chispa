@@ -27,6 +27,7 @@ import { Colision } from '../objetos/componentes/Colision';
 import { Fisica, GRAVEDAD_MUNDO } from '../objetos/componentes/Fisica';
 import { MapaCasillas } from '../objetos/componentes/MapaCasillas';
 import { Recorrido } from '../objetos/componentes/Recorrido';
+import { Comportamiento } from '../objetos/componentes/Comportamiento';
 import { Sprite } from '../objetos/componentes/Sprite';
 import { normalizar } from '../utilidades/texto';
 import { migrarProyecto, tipoPorNombre, type DefObjeto, type DefProyecto } from './formato';
@@ -162,7 +163,8 @@ export class JuegoEnMarcha implements ContextoJuego {
 
   private antesDelFotograma(dt: number): void {
     this.interprete.globales.declarar('delta', dt);
-    this.repartirMensajes();
+    // Con un diálogo abierto el juego está parado: los mensajes esperan a que se cierre
+    if (!this.escena.enDialogo) this.repartirMensajes();
     const p = this.pendiente;
     if (!p) return;
     // Cambio con fundido: primero se oscurece la pantalla (en tiempo real, aunque el juego esté en pausa)
@@ -379,6 +381,13 @@ export function crearObjetoDesdeDefinicion(def: DefObjeto, nombrePorDefecto: str
     r.rapidez = def.recorrido.rapidez ?? 100;
     r.modo = def.recorrido.modo ?? 'idaYVuelta';
     r.pausa = def.recorrido.pausa ?? 0.5;
+  }
+  if (def.comportamiento) {
+    const c = o.agregar(new Comportamiento());
+    c.tipo = def.comportamiento.tipo;
+    c.objetivo = def.comportamiento.objetivo;
+    c.rapidez = def.comportamiento.rapidez ?? 150;
+    c.distancia = def.comportamiento.distancia ?? 0;
   }
   if (def.fisica) {
     const f = o.agregar(new Fisica());

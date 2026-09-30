@@ -162,9 +162,9 @@ export class EstadoEditor {
   }
 
   /** Tamaño de la pantalla del juego y pixel art. */
-  cambiarAjusteProyecto(ajuste: 'ancho' | 'alto' | 'pixelArt', valor: number | boolean): void {
+  cambiarAjusteProyecto(ajuste: 'ancho' | 'alto' | 'pixelArt' | 'controlesTactiles', valor: number | boolean): void {
     this.cambiar('proyecto', () => {
-      if (ajuste === 'pixelArt') this.proyecto.pixelArt = Boolean(valor);
+      if (ajuste === 'pixelArt' || ajuste === 'controlesTactiles') this.proyecto[ajuste] = Boolean(valor);
       else this.proyecto[ajuste] = Math.max(64, Math.min(4096, Math.round(Number(valor) || 0)));
     });
   }
@@ -462,7 +462,7 @@ export class EstadoEditor {
   }
 
   /** Pone o quita un componente entero: sprite, colision, fisica o mapa. */
-  activarComponente(ref: RefObjeto, componente: 'sprite' | 'colision' | 'fisica' | 'mapa' | 'recorrido', activo: boolean): void {
+  activarComponente(ref: RefObjeto, componente: 'sprite' | 'colision' | 'fisica' | 'mapa' | 'recorrido' | 'comportamiento', activo: boolean): void {
     const porDefecto = {
       sprite: { forma: 'rectangulo', color: '#4aa3ff', ancho: 64, alto: 64 },
       colision: {},
@@ -470,6 +470,8 @@ export class EstadoEditor {
       mapa: { tamano: 48, tipos: { suelo: { color: '#5ad17a', solida: true } }, celdas: {} },
       // Una plataforma que va y viene 200 píxeles a la derecha
       recorrido: { puntos: [{ x: 200, y: 0 }], rapidez: 100 },
+      // Lo más pedido: un enemigo que va a por el jugador
+      comportamiento: { tipo: 'perseguir', objetivo: 'Jugador' },
     };
     this.cambiarPropiedad(ref, componente, activo ? structuredClone(porDefecto[componente]) : undefined);
   }

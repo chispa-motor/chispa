@@ -29,6 +29,7 @@ import { Sprite } from './componentes/Sprite';
 import { Fisica } from './componentes/Fisica';
 import { AnimadorDeValores } from './AnimadorDeValores';
 import { resolverColor } from '../motor/Color';
+import type { CajaDialogo } from './Dialogo';
 
 /** Algo dibujado con dibujar.linea(), dibujar.circulo()... Dura un fotograma. Coordenadas del mundo. */
 export type DibujoDepuracion =
@@ -56,6 +57,8 @@ export class Escena implements EscenaActiva {
   clonador: ((o: ObjetoJuego) => ObjetoJuego) | null = null;
   /** El objeto que se está arrastrando con el ratón (y dónde se cogió). */
   private arrastre: { objeto: ObjetoJuego; dx: number; dy: number } | null = null;
+  /** Diálogos pedidos con dialogo(): se enseñan de uno en uno y, mientras, el juego se para. */
+  dialogos: CajaDialogo[] = [];
 
   constructor(readonly motor: Motor) {
     this.camara = new Camara(motor.renderizador.ancho, motor.renderizador.alto);
@@ -135,6 +138,7 @@ export class Escena implements EscenaActiva {
   }
 
   actualizar(dt: number): void {
+    if (this.dialogos.length) return this.actualizarDialogo();
     this.repartirClic();
     this.empezarArrastre();
     for (const o of [...this.objetos]) {
@@ -149,6 +153,20 @@ export class Escena implements EscenaActiva {
     this.camara.actualizar(dt);
     this.actualizarFundido(this.motor.tiempo.deltaReal);
     this.quitarDestruidos();
+  }
+
+  /** Con un diálogo abierto solo se mueve el diálogo (en tiempo real: da igual la cámara lenta). */
+  private actualizarDialogo(): void {
+    const d = this.dialogos[0];
+    const p = this.motor.entrada.posicionRaton;
+    d.actualizar(this.motor.tiempo.deltaReal, this.motor.entrada, { x: p.x, y: p.y });
+    if (d.terminado) this.dialogos.shift();
+    this.actualizarFundido(this.motor.tiempo.deltaReal);
+  }
+
+  /** ¿Está el juego parado por un diálogo? */
+  get enDialogo(): boolean {
+    return this.dialogos.length > 0;
   }
 
   // ───────────────────────── Padres e hijos ─────────────────────────
@@ -317,6 +335,8 @@ export class Escena implements EscenaActiva {
       ctx.fillRect(0, 0, r.ancho, r.alto);
       ctx.restore();
     }
+    // 4. El diálogo, lo último (se tiene que leer aunque la pantalla esté oscura)
+    this.dialogos[0]?.dibujar(r);
   }
 
   /** Líneas, círculos y rectángulos de dibujar.xxx(): se dibujan una vez y se borran. */
@@ -364,6 +384,7 @@ export class Escena implements EscenaActiva {
     this.animaciones.vaciar();
     this.dibujos = [];
     this.arrastre = null;
+    this.dialogos = [];
     this.camara.objetivo = null;
     this.camara.limites = null;
     this.camara.zoom = 1;

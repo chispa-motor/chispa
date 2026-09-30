@@ -713,6 +713,27 @@ Junta los elementos de una lista en un texto, con el separador entre medias (por
 yo.texto = unir(inventario, " - ")
 ```
 
+#### `dialogo("quien", "texto", opciones)`
+
+Una caja de dialogo abajo de la pantalla: el texto sale letra a letra y se pasa con espacio, intro o clic. Quien habla y las opciones (una lista) no son obligatorios. Con opciones, devuelve la elegida. Mientras se lee, el juego se para.
+
+```
+cuando toco Jugador:
+    variable r = dialogo("Ana", "¿Me ayudas?", ["Si", "No"])
+    si r == "Si":
+        juego.mision = 1
+```
+
+#### `rayo(desde, direccion, largo)`
+
+Lanza una linea invisible y dice lo primero que toca (un objeto con colision o una casilla solida), o nulo. Desde: un objeto (no se toca a si mismo) o un vector. Direccion: un angulo (0 = derecha, 90 = arriba), un vector o un objeto hacia el que mirar. Da una tabla con objeto, punto, distancia y casilla.
+
+```
+variable r = rayo(yo, buscar("Jugador"), 400)
+si r != nulo y r.objeto.nombre == "Jugador":
+    mostrar("te veo")
+```
+
 #### `enviar("mensaje", dato)`
 
 Avisa a todos los objetos que tengan 'cuando recibo "mensaje"'. El dato es opcional (un numero, un texto, un objeto...) y llega en 'dato'.
@@ -1113,6 +1134,15 @@ si objetivo.destruido:
     romper
 ```
 
+#### `yo.yendo`
+
+Verdadero mientras va hacia el sitio de yo.irHacia(). Al llegar, falso.
+
+```
+si no yo.yendo:
+    yo.irHacia(vector(aleatorio(0, 900), aleatorio(0, 500)))
+```
+
 #### `yo.etiquetas`
 
 La lista de sus etiquetas.
@@ -1230,6 +1260,24 @@ Distancia en píxeles hasta otro objeto o una posición (también con dos númer
 
 ```
 si yo.distanciaA(jugador) < 50:
+```
+
+#### `yo.irHacia(destino, rapidez)`
+
+Va hasta un sitio o detras de un objeto (lo sigue aunque se mueva), RODEANDO las paredes del mapa de casillas si el juego se ve desde arriba. Rapidez en pixeles/segundo (150 si no se dice). Devuelve falso si no hay camino.
+
+```
+cuando empieza:
+    yo.irHacia(buscar("Jugador"), 120)
+```
+
+#### `yo.parar()`
+
+Deja de ir a donde iba (irHacia, irA) y se queda quieto.
+
+```
+cuando toco Jugador:
+    yo.parar()
 ```
 
 #### `yo.irA(destino, segundos)`
@@ -2058,6 +2106,83 @@ Un texto en ese sitio del mundo (por ejemplo, encima de un enemigo).
 
 ```
 dibujar.texto(yo.vida, yo.x, yo.y + 40, "blanco")
+```
+
+### `mando`
+
+El mando de consola (el primero que se conecte). No hace falta para jugar con mando: la cruceta y la palanca ya son las flechas, A es espacio, B es "x", X es "z", Y es "c", start es enter y select es escape.
+
+```
+cuando cada fotograma:
+    yo.x += mando.ejeX * 300 * delta
+```
+
+#### `mando.conectado`
+
+Verdadero si hay un mando conectado.
+
+```
+si mando.conectado:
+    mostrar("Mando listo")
+```
+
+#### `mando.ejeX`
+
+La palanca izquierda de lado: de -1 (izquierda) a 1 (derecha). 0 en el centro.
+
+```
+yo.x += mando.ejeX * 300 * delta
+```
+
+#### `mando.ejeY`
+
+La palanca izquierda de arriba abajo: de -1 (abajo) a 1 (arriba).
+
+```
+yo.y += mando.ejeY * 300 * delta
+```
+
+#### `mando.ejeDerechoX`
+
+La palanca derecha de lado (de -1 a 1). Sirve para apuntar.
+
+```
+yo.rotacion = angulo(vector(0, 0), vector(mando.ejeDerechoX, mando.ejeDerechoY))
+```
+
+#### `mando.ejeDerechoY`
+
+La palanca derecha de arriba abajo (de -1 a 1).
+
+```
+mostrar(mando.ejeDerechoY)
+```
+
+#### `mando.pulsado("boton")`
+
+Verdadero mientras el boton esta pulsado. Botones: a, b, x, y, lb, rb, lt, rt, select, start, l3, r3, arriba, abajo, izquierda, derecha.
+
+```
+si mando.pulsado("rt"):
+    yo.x += 400 * delta
+```
+
+#### `mando.sePulso("boton")`
+
+Verdadero solo en el fotograma en que se pulsa el boton.
+
+```
+si mando.sePulso("lb"):
+    mostrar("lb")
+```
+
+#### `mando.vibrar(segundos, fuerza)`
+
+Hace vibrar el mando (fuerza de 0 a 1). Si el mando no sabe vibrar, no pasa nada.
+
+```
+cuando toco Enemigo:
+    mando.vibrar(0.3)
 ```
 
 ### `sistema`

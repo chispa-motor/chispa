@@ -488,7 +488,7 @@ export class Interprete {
       const r = this.conErroresDelMotor(pos, () => funcion.ejecutar(args, pos));
       if (r instanceof PeticionEspera) {
         yield r; // ← aquí se pausa el hilo (esperar)
-        return null;
+        return r.resultado ? r.resultado() : null;
       }
       return r;
     }

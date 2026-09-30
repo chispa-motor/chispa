@@ -14,6 +14,7 @@ import { ErrorCompilacion, formatearError } from '../chispa/errores/ErrorChispa'
 import { ErrorMotor } from '../motor/Errores';
 import { JuegoEnMarcha } from '../proyecto/JuegoEnMarcha';
 import { migrarProyecto } from '../proyecto/formato';
+import { esPantallaTactil, ponerControlesTactiles } from './ControlesTactiles';
 
 async function empezar(): Promise<void> {
   const datos = document.getElementById('proyecto-chispa')?.textContent;
@@ -29,6 +30,7 @@ async function empezar(): Promise<void> {
       alMostrar: (t) => console.log('[Chispa]', t),
       alAviso: () => {},
     });
+    if (proyecto.controlesTactiles !== false && esPantallaTactil()) ponerControlesTactiles(motor.entrada, proyecto);
     canvas.focus();
   } catch (error) {
     if (error instanceof ErrorCompilacion) {

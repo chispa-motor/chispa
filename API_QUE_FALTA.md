@@ -86,8 +86,8 @@ son **una propiedad de un objeto** (`yo.color`) en vez de una función.
 
 | LÖVE | Chispa | Por qué / notas |
 |---|---|---|
-| `getJoysticks`, `isGamepadDown`, `getGamepadAxis`… | ⏳ bloque 4 de esta noche | Se hace con los controles táctiles, para que «mando» y «móvil» funcionen igual. |
-| `love.touch.getTouches`, `getPosition` | ⏳ bloque 4 · ✅ un toque ya cuenta como clic del ratón | |
+| `getJoysticks`, `isGamepadDown`, `getGamepadAxis`… | 🆕 módulo `mando` (conectado, ejeX/ejeY, ejeDerechoX/Y, pulsado, sePulso, vibrar) | Además el mando hace de teclado: la cruceta son las flechas y A es espacio. |
+| `love.touch.getTouches`, `getPosition` | 🆕 botones táctiles automáticos en el juego exportado · ✅ un toque cuenta como clic | No hay varios dedos a la vez desde el código: los botones en pantalla cubren lo que se necesita. |
 
 ## love.math (matemáticas)
 
@@ -118,7 +118,7 @@ son **una propiedad de un objeto** (`yo.color`) en vez de una función.
 | contactos (`beginContact`, `endContact`) | ✅ `cuando toco X:`, `cuando dejo de tocar X:` · 🆕 `yo.tocando("X")` | |
 | `getDistance` | ✅ `distancia(a, b)`, `yo.distanciaA(b)` | |
 | `World:queryBoundingBox` | 🆕 `yo.cercanos(radio)`, `yo.masCercano("Tipo")` | |
-| `World:rayCast` | ⏳ bloque 4: `rayo(desde, direccion, distancia)` | |
+| `World:rayCast` | 🆕 `rayo(desde, direccion, largo)` | Objetos con colisión y casillas sólidas. |
 | juntas (`newRevoluteJoint`, `newRopeJoint`, `newWeldJoint`…) | 🆕 (solo la más útil) `yo.pegarA(otro)` | Péndulos, cuerdas y muelles son física avanzada; pegar una cosa a otra (una espada al jugador) es lo que se usa siempre. |
 | rotación física (`setAngularVelocity`, `setFixedRotation`) | ➖ | En Chispa los objetos con física no giran solos: así un personaje nunca se cae de lado. |
 
@@ -198,8 +198,8 @@ sobre este mismo archivo, así que el número no es a ojo:
 
 | | Filas | % |
 |---|---:|---:|
-| ✅ / 🆕 Chispa lo tiene | 65 | 67 % |
-| ⏳ Llega en otro bloque de esta noche (mandos, táctil, rayos) | 3 | 3 % |
+| ✅ / 🆕 Chispa lo tiene | 68 | 70 % |
+| ⏳ Llega en otro bloque de esta noche | 0 | 0 % |
 | ➖ Se deja fuera a propósito (explicado en su fila) | 29 | 30 % |
 
 Casi todo lo que se deja fuera es de bajo nivel, o cosas que un juego web no
