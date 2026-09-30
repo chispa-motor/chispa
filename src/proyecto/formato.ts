@@ -155,6 +155,8 @@ export interface DefProyecto {
   plantillas: Record<string, DefObjeto>;
   escenas: Record<string, DefEscena>;
   escenaInicial: string;
+  /** Los scripts que se ven como bloques en el editor (los demás, como código). */
+  bloques?: string[];
   /** Valores con los que empieza `juego` (puntos, vidas...), puestos en el editor. */
   datos?: Record<string, DatoInicial>;
 }

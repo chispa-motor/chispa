@@ -293,7 +293,7 @@ await prueba('depurar: clic en el número de línea, el juego se para, se ven la
     window.chispa.estado.abrirScript('cuadrado.chs');
   }, codigo);
   await p.waitForTimeout(200);
-  const numero = (n) => p.locator('.zona-codigo .cm-editor:not([style*="none"]) .cm-lineNumbers .cm-gutterElement', { hasText: new RegExp('^' + n + '$') });
+  const numero = (n) => p.locator('.zona-codigo .caja-script:not([style*="none"]) .cm-editor .cm-lineNumbers .cm-gutterElement', { hasText: new RegExp('^' + n + '$') });
   await numero(4).click();
   await p.waitForSelector('.cm-gutter-puntos .cm-gutterElement:not([style*="hidden"]) .punto-parada');
   await p.keyboard.press('F5');
@@ -412,6 +412,36 @@ await prueba('la Arena de Habilidades (el ejemplo grande) se abre, se juega y no
   comprobar(!(await p.$('.consola-editor .mensaje.error')), 'errores en la consola: ' + (await textoDe(p, '.consola-editor')).slice(-300));
 });
 
+await prueba('modo bloques: arrastrar bloques escribe el código, y avisa si el código no se puede pasar', async (p) => {
+  const archivo = await estado(p, () => Object.keys(window.chispa.estado.proyecto.scripts)[0]);
+  await estado(p, (a) => window.chispa.estado.abrirScript(a), archivo);
+  await p.click('.modo-script .modo:has-text("Bloques")');
+  await p.waitForSelector('.editor-bloques .bloque.tipo-evento');
+  await p.click('.categoria-bloques:has-text("Control")');
+  await p.dragAndDrop('.bloque-paleta:has-text("esperar")', '.bloque.tipo-evento .boca-bloque .lista-bloques');
+  let codigo = await estado(p, (a) => window.chispa.estado.proyecto.scripts[a], archivo);
+  comprobar(codigo.includes('    esperar(1)'), 'arrastrar «esperar» no ha escrito esperar(1) dentro del evento');
+  // Cambiar un hueco cambia el código
+  const hueco = p.locator('.bloque.tipo-accion input.campo-bloque').filter({ hasText: '' }).last();
+  await hueco.fill('2');
+  await hueco.press('Enter');
+  await p.waitForTimeout(400);
+  codigo = await estado(p, (a) => window.chispa.estado.proyecto.scripts[a], archivo);
+  comprobar(/esperar\(2\)|mostrar\(2\)/.test(codigo), 'escribir en un hueco no cambia el código');
+  // Borrar con la ✕
+  const antes = await p.locator('.area-bloques .bloque').count();
+  await p.hover('.area-bloques .bloque.tipo-accion .cabeza-bloque');
+  await p.click('.area-bloques .bloque.tipo-accion .quitar-bloque');
+  comprobar((await p.locator('.area-bloques .bloque').count()) === antes - 1, 'la ✕ no quita el bloque');
+  // Volver al código, romperlo y pedir bloques: no se puede y lo explica
+  await p.click('.modo-script .modo:has-text("Código")');
+  await estado(p, (a) => window.chispa.estado.cambiarCodigo(a, 'cuando empieza:\n    mientas 1:\n        mostrar(1)\n'), archivo);
+  await p.click('.modo-script .modo:has-text("Bloques")');
+  await p.waitForSelector('.dialogo:has-text("No se puede pasar a bloques")');
+  comprobar((await textoDe(p, '.dialogo')).includes('línea 2'), 'no dice en qué línea está el error');
+  await p.click('.dialogo button:has-text("Entendido")');
+});
+
 await prueba('los errores se subrayan mientras escribes y bloquean Ejecutar', async (p) => {
   await p.click('.nodo.hijo');
   await p.click('.cm-content');
@@ -431,7 +461,7 @@ await prueba('copiar código de un ejemplo, con o sin los espacios del principio
   for (const conEspacios of [true, false]) {
     const archivo = await estado(p, (n) => window.chispa.estado.crearScriptSuelto(n), conEspacios ? 'con' : 'sin');
     await p.waitForTimeout(150);
-    await p.click('.zona-codigo .cm-editor:not([style*="none"]) .cm-content');
+    await p.click('.zona-codigo .caja-script:not([style*="none"]) .cm-content');
     await p.keyboard.press('Control+a');
     await p.keyboard.press('Delete');
     for (const linea of esperado.split('\n')) {

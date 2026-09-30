@@ -30,6 +30,10 @@ import { fuenteAutocompletado } from './autocompletado';
 import { ayudaAlPasar, posicionEnDocumento, revisionEnVivo } from './ayudaYErrores';
 import { marcarParada, puntosDeParada } from './puntosDeParada';
 import type { Depurador } from '../../chispa/ejecucion/depurador';
+import { EditorBloques } from '../bloques/EditorBloques';
+import { desdeCodigo } from '../bloques/modelo';
+import { h, rellenar } from '../interfaz/dom';
+import { avisar, confirmar } from '../interfaz/dialogos';
 
 /** Los textos de CodeMirror, en español. */
 const FRASES = EditorState.phrases.of({
@@ -94,11 +98,19 @@ interface Pestana {
   vista: EditorView;
   /** Nombre del archivo (puede cambiar si se renombra el script). */
   archivo: { nombre: string };
+  /** Lo que se ve: la barra de arriba (Código / Bloques) y debajo el código o los bloques. */
+  caja: HTMLElement;
+  barra: HTMLElement;
+  cajaCodigo: HTMLElement;
+  /** El editor de bloques (se crea la primera vez que se pasa a bloques). */
+  bloques: EditorBloques | null;
 }
 
 export class EditorCodigo {
   private pestanas = new Map<string, Pestana>();
   private escribiendo = false;
+  /** El código lo están cambiando los bloques (no hay que volver a leerlos). */
+  private desdeBloques = false;
 
   constructor(
     private contenedor: HTMLElement,
@@ -142,7 +154,7 @@ export class EditorCodigo {
       EditorView.contentAttributes.of({ spellcheck: 'false', autocorrect: 'off', autocapitalize: 'off', 'aria-label': 'Código Chispa' }),
       // Cada cambio se guarda en el proyecto (sin entrar en el deshacer general)
       EditorView.updateListener.of((u) => {
-        if (!u.docChanged) return;
+        if (!u.docChanged || this.desdeBloques) return;
         this.escribiendo = true;
         this.estado.cambiarCodigo(archivo.nombre, u.state.doc.toString());
         this.escribiendo = false;
@@ -158,6 +170,7 @@ export class EditorCodigo {
     for (const [nombre, p] of this.pestanas) {
       const aqui = nombre === archivo;
       p.vista.dispatch({ effects: marcarParada.of(aqui ? linea : null) });
+      p.bloques?.resaltarLinea(aqui ? linea : null);
     }
     if (archivo) this.irA(archivo, linea, 1);
   }
@@ -167,19 +180,91 @@ export class EditorCodigo {
     let p = this.pestanas.get(archivo);
     if (!p) {
       const nombre = { nombre: archivo };
+      const caja = h('div', { class: 'caja-script' });
+      const barra = h('div', { class: 'modo-script', role: 'tablist' });
+      // (CodeMirror se pone siempre visible con !important: para esconderlo se esconde su caja)
+      const cajaCodigo = h('div', { class: 'caja-codigo' });
+      caja.append(barra, cajaCodigo);
+      this.contenedor.append(caja);
       const vista = new EditorView({
         state: EditorState.create({ doc: this.estado.proyecto.scripts[archivo] ?? '', extensions: this.extensiones(nombre) }),
-        parent: this.contenedor,
+        parent: cajaCodigo,
       });
-      p = { vista, archivo: nombre };
+      p = { vista, archivo: nombre, caja, barra, cajaCodigo, bloques: null };
       this.pestanas.set(archivo, p);
+      // Si se guardó en modo bloques, se abre en bloques (si todavía se puede)
+      if (this.estado.enBloques(archivo) && !this.aBloques(p)) this.estado.ponerEnBloques(archivo, false);
+      this.dibujarModo(p);
     }
-    for (const [nombre, otra] of this.pestanas) otra.vista.dom.style.display = nombre === archivo ? '' : 'none';
+    for (const [nombre, otra] of this.pestanas) otra.caja.style.display = nombre === archivo ? '' : 'none';
     p.vista.requestMeasure();
   }
 
+  // ───────────────────────── Código o bloques ─────────────────────────
+
+  private dibujarModo(p: Pestana): void {
+    const enBloques = this.estado.enBloques(p.archivo.nombre) && !!p.bloques;
+    const boton = (bloques: boolean, texto: string, ayuda: string) =>
+      h('button', { class: `modo ${enBloques === bloques ? 'activo' : ''}`, role: 'tab', 'aria-selected': String(enBloques === bloques), title: ayuda, onclick: () => this.cambiarModo(p, bloques) }, texto);
+    rellenar(p.barra,
+      boton(false, 'Código', 'Escribir el script como texto'),
+      boton(true, 'Bloques', 'Ver y editar el script con bloques, como en Scratch (el código se escribe solo)'),
+    );
+    p.cajaCodigo.style.display = enBloques ? 'none' : '';
+    if (p.bloques) p.bloques.elemento.style.display = enBloques ? '' : 'none';
+  }
+
+  private async cambiarModo(p: Pestana, bloques: boolean): Promise<void> {
+    if (bloques === this.estado.enBloques(p.archivo.nombre) && (!bloques || p.bloques)) return;
+    if (bloques && !(await this.aBloquesPreguntando(p))) return;
+    this.estado.ponerEnBloques(p.archivo.nombre, bloques);
+    this.dibujarModo(p);
+    if (!bloques) p.vista.requestMeasure();
+  }
+
+  /** Pasa a bloques. Si no se puede, lo explica; si se pierde algo (comentarios al final de una línea), lo pregunta. */
+  private async aBloquesPreguntando(p: Pestana): Promise<boolean> {
+    const lectura = desdeCodigo(this.estado.proyecto.scripts[p.archivo.nombre] ?? '');
+    if (!lectura.ok) {
+      avisar('No se puede pasar a bloques', h('div', {},
+        h('p', {}, lectura.motivo),
+        h('p', {}, `Mira ${lectura.lineas.length === 1 ? 'la línea' : 'las líneas'} ${lectura.lineas.join(', ')} (salen en rojo, y en la pestaña Problemas).`),
+      ));
+      return false;
+    }
+    if (lectura.perdidos.length && !(await confirmar('Pasar a bloques', `En bloques no se puede guardar ${lectura.perdidos.join(', ')}. Si sigues, se perderá${lectura.perdidos.length > 1 ? 'n' : ''} al cambiar algo con los bloques. (Los comentarios en su propia línea sí se conservan, como notas.)`, 'Pasar a bloques igualmente'))) return false;
+    return this.aBloques(p);
+  }
+
+  /** Crea (o actualiza) los bloques a partir del código. Devuelve si ha podido. */
+  private aBloques(p: Pestana): boolean {
+    const lectura = desdeCodigo(this.estado.proyecto.scripts[p.archivo.nombre] ?? '');
+    if (!lectura.ok) return false;
+    if (!p.bloques) {
+      p.bloques = new EditorBloques((codigo) => this.codigoDesdeBloques(p, codigo));
+      p.caja.append(p.bloques.elemento);
+    }
+    p.bloques.cargar(lectura.bloques);
+    return true;
+  }
+
+  /** Los bloques han cambiado: el código se reescribe (en el proyecto y en la vista de código). */
+  private codigoDesdeBloques(p: Pestana, codigo: string): void {
+    this.desdeBloques = true;
+    this.escribiendo = true;
+    try {
+      p.vista.dispatch({ changes: { from: 0, to: p.vista.state.doc.length, insert: codigo } });
+      this.estado.cambiarCodigo(p.archivo.nombre, codigo);
+    } finally {
+      this.desdeBloques = false;
+      this.escribiendo = false;
+    }
+  }
+
   enfocar(archivo: string): void {
-    this.pestanas.get(archivo)?.vista.focus();
+    const p = this.pestanas.get(archivo);
+    if (p?.bloques && this.estado.enBloques(archivo)) p.bloques.elemento.focus();
+    else p?.vista.focus();
   }
 
   /** Ajusta las pestañas a lo que dice el estado (tras deshacer, renombrar, borrar...). */
@@ -203,14 +288,19 @@ export class EditorCodigo {
       const codigo = this.estado.proyecto.scripts[nombre] ?? '';
       if (p.vista.state.doc.toString() !== codigo) {
         p.vista.dispatch({ changes: { from: 0, to: p.vista.state.doc.length, insert: codigo } });
+        // En bloques, se vuelven a leer (y si ya no se puede, se pasa a código)
+        if (this.estado.enBloques(nombre) && p.bloques && !this.aBloques(p)) this.estado.ponerEnBloques(nombre, false);
       }
+      this.dibujarModo(p);
     }
   }
 
   /** Salta a una línea y columna (al hacer clic en un error de la consola). */
   irA(archivo: string, linea: number, columna = 1): void {
     this.mostrar(archivo);
-    const vista = this.pestanas.get(archivo)!.vista;
+    const p = this.pestanas.get(archivo)!;
+    if (p.bloques && this.estado.enBloques(archivo)) return p.bloques.resaltarLinea(linea);
+    const vista = p.vista;
     const pos = posicionEnDocumento(vista.state.doc, linea, columna);
     vista.dispatch({ selection: { anchor: pos }, effects: EditorView.scrollIntoView(pos, { y: 'center' }) });
     vista.focus();

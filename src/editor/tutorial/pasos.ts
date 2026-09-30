@@ -250,7 +250,7 @@ export const PASOS_TUTORIAL: PasoTutorial[] = [
     titulo: 'Escribe el código',
     texto: 'Borra lo que hay y escribe esto. Cada «cuando» es algo que pasa en el juego; lo de debajo (con sangría) es lo que se hace entonces. Mientras escribes, te sugiero palabras: acepta con Intro o Tab.',
     codigo: CODIGO_JUGADOR,
-    objetivo: (r) => r.querySelector('.zona-codigo .cm-editor:not([style*="none"])') ?? r.querySelector('.zona-codigo'),
+    objetivo: (r) => r.querySelector('.zona-codigo .caja-script:not([style*="none"]) .cm-editor') ?? r.querySelector('.zona-codigo'),
     alEmpezar: (c) => {
       const s = objeto(c.estado, llamado('Jugador'))?.script;
       if (s && c.estado.pestanaActiva !== s) c.estado.abrirScript(s);

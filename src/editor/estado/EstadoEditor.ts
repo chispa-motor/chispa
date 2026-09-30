@@ -524,6 +524,20 @@ export class EstadoEditor {
     this.avisar('codigo');
   }
 
+  /** ¿Se ve este script como bloques? */
+  enBloques(archivo: string): boolean {
+    return this.proyecto.bloques?.includes(archivo) ?? false;
+  }
+
+  /** Ver un script como bloques o como código (se recuerda en el proyecto; no se deshace: es solo cómo se ve). */
+  ponerEnBloques(archivo: string, si: boolean): void {
+    const lista = (this.proyecto.bloques ?? []).filter((b) => b !== archivo);
+    if (si) lista.push(archivo);
+    this.proyecto.bloques = lista;
+    this.modificado = true;
+    this.avisar('proyecto');
+  }
+
   asignarScript(ref: RefObjeto, archivo: string | null): void {
     this.cambiarPropiedad(ref, 'script', archivo ?? undefined);
   }
@@ -537,6 +551,7 @@ export class EstadoEditor {
       this.proyecto.scripts[final] = this.proyecto.scripts[viejo];
       delete this.proyecto.scripts[viejo];
       for (const o of this.todosLosObjetos()) if (o.script === viejo) o.script = final;
+      if (this.proyecto.bloques) this.proyecto.bloques = this.proyecto.bloques.map((b) => (b === viejo ? final : b));
     });
     this.pestanas = this.pestanas.map((p) => (p === viejo ? final : p));
     if (this.pestanaActiva === viejo) this.pestanaActiva = final;
@@ -548,6 +563,7 @@ export class EstadoEditor {
     this.cambiar('scripts', () => {
       delete this.proyecto.scripts[archivo];
       for (const o of this.todosLosObjetos()) if (o.script === archivo) delete o.script;
+      if (this.proyecto.bloques) this.proyecto.bloques = this.proyecto.bloques.filter((b) => b !== archivo);
     });
     this.cerrarPestana(archivo);
   }

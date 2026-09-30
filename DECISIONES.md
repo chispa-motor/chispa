@@ -298,3 +298,16 @@ Ver PROBLEMAS_PRINCIPIANTE.md para la lista completa de lo que se encontró.
 | **`sonido.efecto("nombre")`** con una lista fija de efectos generados. | Un juego suena desde el primer minuto, sin buscar archivos. Los nombres son palabras de juego (explosion, moneda, salto…). |
 | **Órdenes en la consola** mientras se juega (una línea de Chispa). | Probar cosas (ir al jefe, darse vida) sin tocar el código ni jugar 10 minutos. Es la consola que ya se mira. |
 | Los objetos de texto hacen **salto de línea con `\n`** y **crecen con la escala**. | Es lo que se espera al escribir `"Linea 1\nLinea 2"` o al animar la escala de un texto. |
+
+### Modo bloques (noche, bloque 5)
+
+| Decisión | Por qué |
+|---|---|
+| Cada script tiene arriba dos botones: **Código** y **Bloques**. En bloques se ve la paleta de colores (Eventos, Control, Movimiento, Apariencia, Sonido, Objetos, Variables, Funciones) y se arrastra, como en Scratch. | Se puede empezar con bloques y pasar a código cuando se quiera, en el mismo script. |
+| **El código es lo que se guarda.** Los bloques lo escriben al momento (con «Ver el código» se ve al lado), y al pasar a bloques se lee el código. | Un juego hecho con bloques es Chispa de verdad: funciona igual, se exporta igual y se puede seguir en código. No hay dos formatos que puedan no coincidir. |
+| Las **órdenes** son bloques; lo que va **dentro de los huecos** (yo.x + 10, "hola", buscar("Jugador")) se escribe como código corto, y el hueco se pone rojo si no tiene sentido (y dice por qué). | Un bloque para cada suma y cada comparación hace los programas enormes. Escribir valores pequeños es el puente natural hacia el código. |
+| Las órdenes más usadas (mostrar, esperar, crear, saltar, sonido...) tienen **bloques con palabras** («saltar con fuerza 600»). Cualquier otra orden sale como un bloque **«hacer»** con su código. | Así cualquier script se puede ver en bloques, aunque use cosas que no tienen bloque propio. |
+| Si el código **tiene errores de escritura, no se puede pasar a bloques**: se explica y se dicen las líneas. Los **comentarios** de una línea se convierten en bloques de **nota**; si hay comentarios al final de una línea (que en bloques no caben), se pregunta antes. | Nunca se pierde nada sin avisar. |
+| Un «si» o un «repetir» **vacío** se deja: en el código sale como un bloque vacío (que da su error, como si se escribiera a mano) y en los bloques pone «Arrastra aquí lo que tiene que hacer». | Es lo mismo que pasa en código; no se inventa una orden «no hacer nada». |
+| Los errores y el depurador **resaltan el bloque** de esa línea. Ctrl+Z deshace dentro de los bloques. | Lo mismo que se puede hacer en código. |
+| Si el script se deja en bloques, se abre en bloques la próxima vez (se guarda en el proyecto). | Quien trabaja con bloques no quiere encontrarse el código cada vez. |
