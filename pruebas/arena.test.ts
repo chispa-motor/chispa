@@ -10,6 +10,7 @@ import { juegoDePrueba } from './ayudantes';
 import { migrarProyecto } from '../src/proyecto/formato';
 import { revisarProyecto } from '../src/proyecto/Revision';
 import { jugarUnRato } from './bot-arena';
+import { Sprite } from '../src/objetos/componentes/Sprite';
 
 const RUTA = 'proyectos/arena-de-habilidades/arena-de-habilidades.chispa.json';
 const cargar = () => migrarProyecto(JSON.parse(readFileSync(RUTA, 'utf8')));
@@ -61,4 +62,47 @@ describe('Arena de Habilidades', () => {
     expect(j.juego.nombreEscena).toBe('Victoria');
     expect(j.juego.datoDelJuego('resultado')).toBe('victoria');
   }, 180000);
+
+  it('se juega con mando: start empieza, la palanca mueve, X lanza el orbe, start pausa', () => {
+    const j = juegoDePrueba({ proyecto: cargar() });
+    const e = j.juego.motor.entrada;
+    const mando = (botones: string[], x = 0, y = 0) => {
+      e.ponerMando(true, new Set(botones), x, y);
+      j.avanzar(1);
+    };
+    j.avanzar(5);
+    mando(['start']);
+    mando([]);
+    j.avanzar(90);
+    expect(j.juego.nombreEscena).toBe('Arena');
+    const jugador = j.buscar('Jugador');
+    const x0 = jugador.posicion.x;
+    for (let i = 0; i < 30; i++) mando([], 1, 0);
+    expect(jugador.posicion.x).toBeGreaterThan(x0 + 100);
+    mando(['x'], 1, 0);
+    mando([], 1, 0);
+    expect(j.juego.escena.objetos.some((o) => o.tipo === 'Orbe')).toBe(true);
+    mando(['start']);
+    mando([]);
+    expect(j.juego.motor.tiempo.escala).toBe(0);
+    mando(['start']);
+    mando([]);
+    expect(j.juego.motor.tiempo.escala).toBe(1);
+    expect(j.errores).toEqual([]);
+  });
+
+  it('el récord se guarda al perder y el menú lo enseña', () => {
+    const j = juegoDePrueba({ proyecto: cargar() });
+    j.avanzar(5);
+    j.juego.ejecutarOrden('escena.cambiar("Arena")');
+    j.avanzar(90);
+    j.juego.ejecutarOrden('buscar("Director").saltarA(3)');
+    j.juego.ejecutarOrden('buscar("Jugador").recibirDano(9999, nulo, 0)');
+    j.avanzar(400);
+    expect(j.juego.nombreEscena).toBe('Derrota');
+    expect(j.almacen.get('chispa:Arena de Habilidades:record')).toBe('3');
+    j.juego.ejecutarOrden('escena.cambiar("Menu")');
+    j.avanzar(3);
+    expect(j.juego.escena.buscar('Record')?.obtener(Sprite)?.texto).toBe('Record: oleada 3');
+  });
 });

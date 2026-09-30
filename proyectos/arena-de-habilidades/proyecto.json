@@ -333,7 +333,7 @@
           "sprite": {
             "forma": "texto",
             "texto": "",
-            "tamano": 48,
+            "tamano": 32,
             "color": "blanco",
             "fijo": true,
             "capa": 41

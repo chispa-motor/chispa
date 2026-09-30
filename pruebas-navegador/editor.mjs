@@ -393,6 +393,25 @@ await prueba('órdenes en la consola mientras se juega: valores, cambios y error
   comprobar((await p.inputValue('.orden-consola')) === 'mostar(1)', 'la flecha arriba no recupera la orden anterior');
 });
 
+await prueba('la Arena de Habilidades (el ejemplo grande) se abre, se juega y no da errores', async (p) => {
+  const [elegir] = await Promise.all([p.waitForEvent('filechooser'), p.click('button[title^="Abrir un proyecto"]')]);
+  await elegir.setFiles('proyectos/arena-de-habilidades/arena-de-habilidades.chispa.json');
+  await p.waitForFunction(() => window.chispa.estado.proyecto.nombre === 'Arena de Habilidades');
+  comprobar((await textoDe(p, '.lista-problemas')).includes('Ningún problema'), 'el proyecto tiene problemas');
+  await p.keyboard.press('F5');
+  await p.waitForFunction(() => document.querySelector('.estado-juego')?.textContent?.startsWith('Jugando'));
+  await p.locator('canvas.lienzo-juego').click();
+  await p.keyboard.press('Enter');
+  await p.waitForFunction(() => document.querySelector('.estado-juego')?.textContent?.includes('Arena'), null, { timeout: 5000 });
+  for (let i = 0; i < 20; i++) {
+    await p.keyboard.down('d');
+    await p.keyboard.press(String((i % 4) + 1));
+    await p.waitForTimeout(80);
+    await p.keyboard.up('d');
+  }
+  comprobar(!(await p.$('.consola-editor .mensaje.error')), 'errores en la consola: ' + (await textoDe(p, '.consola-editor')).slice(-300));
+});
+
 await prueba('los errores se subrayan mientras escribes y bloquean Ejecutar', async (p) => {
   await p.click('.nodo.hijo');
   await p.click('.cm-content');

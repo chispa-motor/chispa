@@ -285,3 +285,16 @@ Ver PROBLEMAS_PRINCIPIANTE.md para la lista completa de lo que se encontró.
 | Mientras hay un diálogo, **el juego se para** (scripts, física y mensajes) y la tecla que lo cierra no llega al juego. Varios diálogos a la vez salen uno tras otro. | Si no, el jugador saltaría al pulsar espacio para pasar el texto, y los enemigos atacarían mientras lees. |
 | El **mando hace de teclado**: cruceta y palanca = flechas, A = espacio, B = x, X = z, Y = c, start = enter, select = escape. Para más control, el módulo `mando` (palancas, botones, vibrar). | Así todos los juegos ya hechos se juegan con mando sin tocar nada. |
 | En el juego exportado, en un **móvil**, salen **botones táctiles solos**: se mira qué teclas usan los scripts y se pone una cruceta y botones redondos para esas. Se pueden quitar en el proyecto («botones en el móvil»). | Configurar controles táctiles a mano es un lío; así un juego hecho en el ordenador se juega en el móvil sin hacer nada. |
+
+### Lo que faltaba (encontrado con la Arena de Habilidades)
+
+| Decisión | Por qué |
+|---|---|
+| **Scripts de funciones**: un script que no está en ningún objeto comparte sus funciones con todos los scripts. Sin `importar`. | Es lo más sencillo: crear el script y no ponerlo en nada. Así el código que usan varios objetos se escribe una vez. Sus variables son solo suyas; dentro no hay `yo` (se le pasa el objeto), y se explica con un error si se usa. |
+| **`aLaVez(funcion, ...)`** en vez de otra forma de hilos. | Cada evento ya es un hilo; esto solo deja empezar otro. Con el nombre de la función (sin paréntesis), igual que se pasa una función en una tabla. |
+| **`rango(desde, hasta, paso)`** devuelve una lista, y se usa con `para cada`. | No hace falta un bucle nuevo: `para cada` ya se conoce. |
+| **`yo.atravesar("Nombre")`** con nombre, tipo o etiqueta (como `cuando toco`). | Lo mismo que ya se sabe usar para tocar sirve para no chocar. Sin «capas de colisión» con números. |
+| **`dibujar.enPantalla`** es un módulo dentro de `dibujar`, con las mismas funciones. | Una sola cosa que aprender: lo mismo, pero fijo en la pantalla. Se dibuja por debajo de los objetos de la interfaz. |
+| **`sonido.efecto("nombre")`** con una lista fija de efectos generados. | Un juego suena desde el primer minuto, sin buscar archivos. Los nombres son palabras de juego (explosion, moneda, salto…). |
+| **Órdenes en la consola** mientras se juega (una línea de Chispa). | Probar cosas (ir al jefe, darse vida) sin tocar el código ni jugar 10 minutos. Es la consola que ya se mira. |
+| Los objetos de texto hacen **salto de línea con `\n`** y **crecen con la escala**. | Es lo que se espera al escribir `"Linea 1\nLinea 2"` o al animar la escala de un texto. |
