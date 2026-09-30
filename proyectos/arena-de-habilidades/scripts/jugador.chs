@@ -294,7 +294,7 @@ funcion tormenta():
     sonido.efecto("rayo", 1, 0.8)
     tiempo.camaraLenta(0.4, 2.5)
     escena.camara.temblar(10, 2.5)
-    pantalla.oscurecer(0.2, "#1e1e3a")
+    pantalla.oscurecer(0.2, "#1e1e3a", 0.45)
     invulnerableHasta = tiempo.total + 1.5
     repetir 14 veces:
         variable enemigos = buscarConEtiqueta("enemigo")

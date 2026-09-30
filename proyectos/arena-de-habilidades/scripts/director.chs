@@ -75,12 +75,15 @@ funcion siguienteOleada():
 funcion aparecerUno():
     apareciendo = verdadero
     variable tipo = pendientes.primero
+    variable deLaOleada = juego.oleada
     pendientes.quitar(1)
     variable p = entradaLejosDe(buscar("Jugador"))
     # Primero un aviso de humo donde va a salir, para que no pille por sorpresa
     particulas({tipo: "humo", color: "#ff6b6b", cantidad: 15}, p.x, p.y)
     esperar(0.35)
-    crear(tipo, p.x, p.y)
+    # (si mientras tanto ha cambiado la oleada, ya no toca)
+    si juego.oleada == deLaOleada:
+        crear(tipo, p.x, p.y)
     apareciendo = falso
 
 funcion oleadaSuperada():
@@ -114,6 +117,16 @@ funcion cambiarPausa():
     sino:
         tiempo.seguir()
         buscar("TextoPausa").texto = ""
+
+# Truco para probar: escribe en la consola del editor, mientras juegas,
+#     buscar("Director").saltarA(10)
+# y empieza esa oleada (la 10 es el jefe). Los enemigos que haya se van.
+funcion saltarA(oleada):
+    pendientes = []
+    para cada e en buscarConEtiqueta("enemigo"):
+        destruir(e)
+    juego.oleada = oleada - 1
+    siguienteOleada()
 
 funcion avisar(texto, color):
     enviar("aviso", {texto: texto, color: color})

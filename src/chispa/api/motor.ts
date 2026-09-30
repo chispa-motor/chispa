@@ -707,7 +707,10 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
           const segundos = Math.max(0, argNumero(a, 0, 'pantalla.oscurecer', p, ej, 1));
           const color = a[1] === undefined ? undefined : argTexto(a, 1, 'pantalla.oscurecer', p, ej);
           if (color !== undefined && !esColorValido(color)) throw new ErrorChispa(p, `no conozco el color "${color}".`, `Ejemplo: ${ej}`);
-          ctx.escena.fundir(1, segundos, color);
+          // cuanto: de 0 a 1 (0.5 = oscurece a medias, se sigue viendo el juego debajo)
+          const cuanto = argNumero(a, 2, 'pantalla.oscurecer', p, 'pantalla.oscurecer(0.3, "negro", 0.5)', 1);
+          if (cuanto < 0 || cuanto > 1) throw new ErrorChispa(p, `cuánto se oscurece va de 0 (nada) a 1 (del todo), y le das ${cuanto}.`, 'Ejemplo: pantalla.oscurecer(0.3, "negro", 0.5)');
+          ctx.escena.fundir(cuanto, segundos, color);
           return null;
         },
         aclarar: (a, p) => {

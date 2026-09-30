@@ -262,6 +262,10 @@ img.pixelado { image-rendering: pixelated; }
 .mensaje.normal { font-family: var(--letra-codigo); font-size: 12.8px; }
 .mensaje .prompt { color: var(--texto-tenue); }
 .mensaje.info { color: var(--texto-suave); }
+.mensaje.info .texto { white-space: pre-wrap; }
+.mensaje.orden { color: var(--acento, #f1c40f); }
+.orden-consola { flex: none; margin: 4px 8px 6px; padding: 6px 10px; border-radius: 6px; border: 1px solid #ffffff22; background: #0006; color: inherit; font: 13px ui-monospace, monospace; }
+.orden-consola:focus { outline: 2px solid var(--acento, #f1c40f); }
 .mensaje.info .icono { margin-top: 2px; }
 .mensaje.error, .mensaje.aviso { cursor: pointer; }
 .mensaje.error { background: #ff6b6b0c; }

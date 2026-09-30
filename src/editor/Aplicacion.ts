@@ -14,7 +14,7 @@
  * el centro se convierte en el editor de código, y el juego, la consola y los
  * objetos siguen a la vista. Así no hay que aprender dos programas.
  */
-import { ErrorCompilacion } from '../chispa/errores/ErrorChispa';
+import { ErrorChispa, ErrorCompilacion } from '../chispa/errores/ErrorChispa';
 import { ErrorMotor } from '../motor/Errores';
 import { prepararPublicacion, type DestinoPublicar } from '../exportar/publicar';
 import { proyectoMinimo } from '../ejemplos/minimo/proyecto';
@@ -85,6 +85,7 @@ export class Aplicacion {
       if (c === 'historial' || c === 'proyecto') this.dibujarBarra();
     });
     this.vistaJuego.alCambiarEstado = () => this.dibujarBarra();
+    this.inferior.alOrden = (codigo) => this.ejecutarOrden(codigo);
     this.inferior.alCambiarProblemas = (n) => {
       if (n !== this.errores) {
         this.errores = n;
@@ -354,6 +355,21 @@ export class Aplicacion {
         for (const x of err.errores) c.diagnostico(x.diagnostico());
         c.mostrarPestana('consola');
       } else this.falloDelMotor(err);
+    }
+  }
+
+  /** Una orden de la consola: se ejecuta en el juego en marcha y se enseña el resultado o el error. */
+  private ejecutarOrden(codigo: string): void {
+    const c = this.inferior;
+    const explicar = (mensaje: string, pista?: string) => c.info(`✖ ${mensaje.charAt(0).toUpperCase()}${mensaje.slice(1)}${pista ? `\n💡 ${pista}` : ''}`);
+    try {
+      const valor = this.vistaJuego.ejecutarOrden(codigo);
+      if (valor !== null) c.mostrar(`= ${valor}`);
+    } catch (err) {
+      if (err instanceof ErrorCompilacion) for (const x of err.errores) explicar(x.mensajeCorto, x.pista);
+      else if (err instanceof ErrorChispa) explicar(err.mensajeCorto, err.pista);
+      else if (err instanceof ErrorMotor) explicar(err.message, err.pista);
+      else this.falloDelMotor(err);
     }
   }
 

@@ -128,6 +128,33 @@ describe('sonido.efecto', () => {
   });
 });
 
+describe('Órdenes en la consola mientras se juega', () => {
+  const juego = () =>
+    juegoDePrueba({
+      scripts: { 'a.chs': 'funcion curar(n):\n    yo.vida += n\n    devolver yo.vida\nfuncion lento():\n    esperar(1)' },
+      escena: [{ nombre: 'A', x: 5, script: 'a.chs', propiedades: { vida: 10 } }],
+    });
+
+  it('cambian datos, llaman a funciones de los objetos y enseñan valores', () => {
+    const j = juego();
+    j.avanzar(1);
+    expect(j.juego.ejecutarOrden('juego.vidas = 3')).toBeNull();
+    expect(j.juego.ejecutarOrden('juego.vidas')).toBe('3');
+    expect(j.juego.ejecutarOrden('buscar("A").curar(5)')).toBe('15');
+    expect(j.juego.ejecutarOrden('buscar("A")')).toBe("el objeto 'A'");
+    expect(j.juego.ejecutarOrden('mostrar(buscar("A").x + 1)')).toBeNull();
+    expect(j.salida).toEqual(['6']);
+  });
+
+  it('errores claros: mal escrita, con cuando, o con esperar', () => {
+    const j = juego();
+    j.avanzar(1);
+    expect(() => j.juego.ejecutarOrden('mostar(1)')).toThrow(ErrorCompilacion);
+    expect(() => j.juego.ejecutarOrden('cuando empieza:\n    mostrar(1)')).toThrow(/una orden no puede tener 'cuando'/);
+    expect(() => j.juego.ejecutarOrden('buscar("A").lento()')).toThrow(/no se puede esperar/);
+  });
+});
+
 describe('Arreglos del motor', () => {
   it('un texto con \\n se dibuja en varias líneas, y la escala agranda la letra', () => {
     const o = new ObjetoJuego('T');

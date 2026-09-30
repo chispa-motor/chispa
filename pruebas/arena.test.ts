@@ -34,4 +34,31 @@ describe('Arena de Habilidades', () => {
     expect(j.errores.map((e) => e.error.message)).toEqual([]);
     expect(j.juego.datoDelJuego('oleada')).toBeGreaterThanOrEqual(2);
   }, 120000);
+
+  it('el jefe: sus 3 fases con diálogos y ataques avisados, y la victoria', () => {
+    const j = juegoDePrueba({ proyecto: cargar() });
+    j.avanzar(5);
+    j.juego.ejecutarOrden('escena.cambiar("Arena")');
+    j.avanzar(90);
+    j.juego.ejecutarOrden('buscar("Director").saltarA(10)');
+    // Para que el bot aguante: mucha vida
+    j.juego.ejecutarOrden('buscar("Jugador").vidaMax = 5000');
+    j.juego.ejecutarOrden('buscar("Jugador").curar(5000)');
+    const fases = new Set<number>();
+    let avisos = 0;
+    for (let s = 0; s < 240 && j.juego.nombreEscena === 'Arena'; s++) {
+      jugarUnRato(j, 60);
+      const jefe = j.juego.escena.buscar('Jefe');
+      if (jefe) fases.add((jefe.propiedades.get('fase') as { valor: number }).valor);
+      avisos += j.juego.escena.objetos.filter((o) => o.tipo === 'Aviso').length;
+      // Ayuda para que no dure una eternidad: el jefe pierde vida poco a poco
+      if (jefe && s % 2 === 0) j.juego.ejecutarOrden('buscar("Jefe").recibirDano(60, nulo, 0)');
+    }
+    expect(j.errores.map((e) => e.error.message)).toEqual([]);
+    expect([...fases].sort()).toEqual([1, 2, 3]);
+    expect(avisos).toBeGreaterThan(0);
+    j.avanzar(200);
+    expect(j.juego.nombreEscena).toBe('Victoria');
+    expect(j.juego.datoDelJuego('resultado')).toBe('victoria');
+  }, 180000);
 });

@@ -13,7 +13,10 @@
 import { DatosJuego, instalarAPIMotor, type ContextoJuego } from '../chispa/api/motor';
 import { Interprete } from '../chispa/ejecucion/interprete';
 import { ScriptChispa } from '../chispa/ScriptChispa';
-import { formatearDiagnostico, type Diagnostico, type ErrorChispa } from '../chispa/errores/ErrorChispa';
+import { ErrorCompilacion, formatearDiagnostico, type Diagnostico, type ErrorChispa } from '../chispa/errores/ErrorChispa';
+import { analizarSintaxis } from '../chispa/sintaxis/parser';
+import { analizar } from '../chispa/analisis/analizador';
+import { valorParaVer } from '../chispa/ejecucion/depurador';
 import { sugerir } from '../chispa/errores/sugerencias';
 import type { Programa } from '../chispa/sintaxis/ast';
 import { ErrorMotor } from '../motor/Errores';
@@ -215,6 +218,42 @@ export class JuegoEnMarcha implements ContextoJuego {
   pedirReinicio(): void {
     // No reiniciamos en mitad de un script: lo hacemos al principio del siguiente fotograma.
     this.pendiente = { tipo: 'reiniciar' };
+  }
+
+  /**
+   * Una ORDEN escrita en la consola del editor mientras se juega: cambia datos
+   * para probar (juego.vidas = 99), llama a funciones de los objetos
+   * (buscar("Director").siguienteOleada()) o enseña un valor (buscar("Jugador").x).
+   * Devuelve el valor si la orden es una sola expresión (para enseñarlo), o null.
+   * Si tiene errores, los lanza (ErrorCompilacion o ErrorChispa).
+   */
+  ejecutarOrden(codigo: string): string | null {
+    const { programa, errores } = analizarSintaxis(codigo, 'orden');
+    if (errores.length) throw new ErrorCompilacion(errores);
+    const i = this.interprete;
+    const solo = programa.sentencias.length === 1 && programa.sentencias[0].tipo === 'ExpresionSuelta' ? programa.sentencias[0] : null;
+    // Una orden que es solo un valor (juego.vidas) está bien: es para verlo. Se revisa como si se guardara en una variable.
+    const revisar = solo ? { ...programa, sentencias: [{ tipo: 'Variable' as const, nombre: 'valor', original: 'valor', valor: solo.expresion, pos: solo.pos, posNombre: solo.pos }] } : programa;
+    const problemas = analizar(revisar, { globales: i.globales }).filter((d) => d.gravedad === 'error');
+    if (programa.sentencias.some((s) => s.tipo === 'Cuando')) problemas.push({ gravedad: 'error', pos: programa.sentencias[0].pos, mensaje: "una orden no puede tener 'cuando': se ejecuta una vez, ahora.", pista: 'Escribe lo que quieres hacer directamente, por ejemplo: juego.vidas = 10' });
+    if (problemas.length) throw new ErrorCompilacion(problemas.map((d) => new ErrorChispaReal(d.pos, d.mensaje, d.pista).conArchivo('orden', programa.lineas)));
+    const entorno = new Entorno(i.globales);
+    const antes = { programa: i.programaActual, objeto: i.objetoActual };
+    i.programaActual = programa;
+    i.objetoActual = null;
+    try {
+      const hilo = solo ? i.evaluar(solo.expresion, entorno) : i.ejecutarBloque(programa.sentencias, entorno);
+      const r = hilo.next();
+      if (!r.done) throw new ErrorChispaReal(programa.sentencias[0].pos, 'en una orden de la consola no se puede esperar.', 'Las órdenes se ejecutan de golpe. Para algo que dura, usa aLaVez desde el script de un objeto.');
+      // Si la orden es un valor (buscar("Jugador").vida), se enseña; una acción que no devuelve nada, no
+      return solo && r.value !== null ? valorParaVer(r.value as Valor) : null;
+    } catch (e) {
+      if (e instanceof ErrorChispaReal) e.conArchivo('orden', programa.lineas);
+      throw e;
+    } finally {
+      i.programaActual = antes.programa;
+      i.objetoActual = antes.objeto;
+    }
   }
 
   aLaVez(funcion: FuncionChispa | FuncionNativa, argumentos: Valor[], pos: Posicion): void {

@@ -40,6 +40,18 @@ export class PanelInferior {
   private numeroProblemas = { errores: 0, avisos: 0 };
   private temporizador = 0;
   private busqueda = '';
+  /** Qué hacer con una orden escrita en la línea de abajo de la consola (la pone la aplicación). */
+  alOrden: (codigo: string) => void = () => {};
+  private ordenes: string[] = [];
+  private posOrden = 0;
+  private lineaOrden = h('input', {
+    class: 'orden-consola',
+    type: 'text',
+    spellcheck: 'false',
+    placeholder: '› Escribe una orden y pulsa Intro mientras juegas. Ejemplo: juego.vidas = 99',
+    'aria-label': 'Orden para el juego en marcha',
+    onkeydown: (e: KeyboardEvent) => this.teclaOrden(e),
+  });
   /** Se llama cuando cambian los problemas (para desactivar Ejecutar si hay errores). */
   alCambiarProblemas: (errores: number) => void = () => {};
 
@@ -52,7 +64,7 @@ export class PanelInferior {
     /** El contenido de la pestaña Depurar (el PanelDepurador). */
     private depurar: HTMLElement = h('div'),
   ) {
-    this.elemento = h('div', { class: 'panel-inferior' }, this.pestanas, this.consola, this.problemas, this.guia, this.depurar);
+    this.elemento = h('div', { class: 'panel-inferior' }, this.pestanas, this.consola, this.lineaOrden, this.problemas, this.guia, this.depurar);
     estado.alCambiar((c) => {
       if (c === 'codigo' || c === 'scripts' || c === 'objetos' || c === 'proyecto' || c === 'recursos' || c === 'escena' || c === 'archivos') this.revisarLuego();
     });
@@ -82,6 +94,7 @@ export class PanelInferior {
       this.pestana === 'consola' ? botonIcono('basura', 'Limpiar la consola', () => this.limpiar(), undefined, 'pequeno') : null,
     );
     this.consola.hidden = this.pestana !== 'consola';
+    this.lineaOrden.hidden = this.pestana !== 'consola';
     this.problemas.hidden = this.pestana !== 'problemas';
     this.guia.hidden = this.pestana !== 'guia';
     this.depurar.hidden = this.pestana !== 'depurar';
@@ -149,6 +162,23 @@ export class PanelInferior {
         d.pista ? h('div', { class: 'pista' }, '💡 ', d.pista) : null,
       ),
     );
+  }
+
+  /** Intro ejecuta la orden; las flechas arriba y abajo recorren las anteriores. */
+  private teclaOrden(e: KeyboardEvent): void {
+    const campo = this.lineaOrden;
+    if (e.key === 'Enter' && campo.value.trim()) {
+      const codigo = campo.value.trim();
+      if (this.ordenes[this.ordenes.length - 1] !== codigo) this.ordenes.push(codigo);
+      this.posOrden = this.ordenes.length;
+      campo.value = '';
+      this.agregar(h('div', { class: 'mensaje orden' }, h('span', { class: 'prompt' }, '»'), h('span', { class: 'texto' }, codigo)));
+      this.alOrden(codigo);
+    } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      this.posOrden = Math.max(0, Math.min(this.ordenes.length, this.posOrden + (e.key === 'ArrowUp' ? -1 : 1)));
+      campo.value = this.ordenes[this.posOrden] ?? '';
+    }
   }
 
   limpiar(): void {

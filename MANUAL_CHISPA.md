@@ -2102,12 +2102,12 @@ cuando se pulsa "f":
     pantalla.completa = no pantalla.completa
 ```
 
-#### `pantalla.oscurecer(segundos, color)`
+#### `pantalla.oscurecer(segundos, color, cuanto)`
 
-Fundido: la pantalla se va poniendo de un color (negro si no se dice) durante esos segundos.
+Fundido: la pantalla se va poniendo de un color (negro si no se dice) durante esos segundos. Cuanto va de 0 a 1: con 0.5 se oscurece a medias y se sigue viendo el juego (1 si no se dice).
 
 ```
-pantalla.oscurecer(1)
+pantalla.oscurecer(0.2, "negro", 0.5)
 ```
 
 #### `pantalla.aclarar(segundos)`

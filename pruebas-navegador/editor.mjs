@@ -375,6 +375,24 @@ await prueba('«Datos del juego» en el inspector: se crean sin código y el jue
   comprobar((await p.getAttribute('.propiedad-propia code', 'title')) === 'En el código: juego.vidas', 'no explica cómo se usa en el código');
 });
 
+await prueba('órdenes en la consola mientras se juega: valores, cambios y errores', async (p) => {
+  await p.keyboard.press('F5');
+  await p.waitForFunction(() => document.querySelector('.estado-juego')?.textContent?.startsWith('Jugando'));
+  const orden = async (t) => {
+    await p.fill('.orden-consola', t);
+    await p.press('.orden-consola', 'Enter');
+    await p.waitForTimeout(100);
+  };
+  await orden('juego.prueba = 2 + 3');
+  await orden('juego.prueba * 2');
+  await orden('mostar(1)');
+  const texto = await textoDe(p, '.consola-editor');
+  comprobar(texto.includes('= 10'), 'no enseña el valor de la orden: ' + texto.slice(-200));
+  comprobar(texto.includes('mostrar'), 'el error de la orden no sugiere mostrar');
+  await p.press('.orden-consola', 'ArrowUp');
+  comprobar((await p.inputValue('.orden-consola')) === 'mostar(1)', 'la flecha arriba no recupera la orden anterior');
+});
+
 await prueba('los errores se subrayan mientras escribes y bloquean Ejecutar', async (p) => {
   await p.click('.nodo.hijo');
   await p.click('.cm-content');

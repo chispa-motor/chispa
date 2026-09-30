@@ -243,7 +243,7 @@ export const DOC_MODULOS: DocModulo[] = [
       d('ancho', 'propiedad', 'pantalla.ancho', 'Ancho de la pantalla del juego en píxeles.', 'yo.x = pantalla.ancho / 2'),
       d('alto', 'propiedad', 'pantalla.alto', 'Alto de la pantalla del juego en píxeles.', 'yo.y = pantalla.alto - 30'),
       d('completa', 'propiedad', 'pantalla.completa', 'Pantalla completa: verdadero para ponerla, falso para quitarla. El navegador solo deja justo después de pulsar una tecla o hacer clic.', 'cuando se pulsa "f":\n    pantalla.completa = no pantalla.completa'),
-      d('oscurecer', 'accion', 'pantalla.oscurecer(segundos, color)', 'Fundido: la pantalla se va poniendo de un color (negro si no se dice) durante esos segundos.', 'pantalla.oscurecer(1)', 'oscurecer(${1:1})'),
+      d('oscurecer', 'accion', 'pantalla.oscurecer(segundos, color, cuanto)', 'Fundido: la pantalla se va poniendo de un color (negro si no se dice) durante esos segundos. Cuanto va de 0 a 1: con 0.5 se oscurece a medias y se sigue viendo el juego (1 si no se dice).', 'pantalla.oscurecer(0.2, "negro", 0.5)', 'oscurecer(${1:1})'),
       d('aclarar', 'accion', 'pantalla.aclarar(segundos)', 'Quita el fundido poco a poco.', 'pantalla.aclarar(1)', 'aclarar(${1:1})'),
     ],
   },

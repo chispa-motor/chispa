@@ -10,6 +10,7 @@
  */
 import { Motor } from '../../motor/Motor';
 import type { DefProyecto } from '../../proyecto/formato';
+import { ErrorMotor } from '../../motor/Errores';
 import { teclasDelJuego } from '../../reproductor/ControlesTactiles';
 import { JuegoEnMarcha, type OpcionesJuego } from '../../proyecto/JuegoEnMarcha';
 import { h, icono } from '../interfaz/dom';
@@ -94,6 +95,12 @@ export class VistaJuego {
     canvas.addEventListener('pointerdown', () => canvas.focus());
     this.cambiarEstado('jugando');
     this.intervalo = window.setInterval(() => this.actualizarBarra(), 500);
+  }
+
+  /** Una orden escrita en la consola mientras se juega (ver JuegoEnMarcha.ejecutarOrden). */
+  ejecutarOrden(codigo: string): string | null {
+    if (!this.juego) throw new ErrorMotor('El juego no está en marcha.', 'Pulsa ▶ Ejecutar (F5) y escribe la orden mientras juegas.');
+    return this.juego.ejecutarOrden(codigo);
   }
 
   /** Da el teclado al juego. */
