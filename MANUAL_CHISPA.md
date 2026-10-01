@@ -1226,6 +1226,46 @@ si yo.arrastrando:
     yo.opacidad = 0.7
 ```
 
+#### `yo.contorno`
+
+Una línea de color alrededor de todo el objeto (nulo la quita). Para resaltar lo que se puede coger o al elegido.
+
+```
+yo.contorno = "blanco"
+```
+
+#### `yo.grosorContorno`
+
+Lo gordo que es el contorno, en píxeles (3).
+
+```
+yo.grosorContorno = 5
+```
+
+#### `yo.brillo`
+
+El brillo del objeto: 1 = normal, 0.5 = más oscuro, 2 = el doble de claro.
+
+```
+yo.brillo = 1.5
+```
+
+#### `yo.grises`
+
+El objeto en escala de grises, de 0 (colores) a 1 (blanco y negro). Para lo que está apagado o no se puede usar.
+
+```
+yo.grises = 1
+```
+
+#### `yo.desenfoque`
+
+El objeto borroso (en píxeles): cosas lejanas, fantasmas...
+
+```
+yo.desenfoque = 3
+```
+
 #### `yo.polvo`
 
 Si es verdadero, levanta polvo al saltar y al caer al suelo (necesita física).
@@ -1735,6 +1775,15 @@ Quita el objeto del juego (igual que destruir(yo)).
 yo.destruir()
 ```
 
+#### `yo.flash(color, segundos)`
+
+El objeto entero de un color (blanco si no se dice) un momento: al recibir un golpe.
+
+```
+cuando toco Bala:
+    yo.flash()
+```
+
 #### `yo.ponerCamino(puntos, cerrado)`
 
 Le da una forma libre: una lista de puntos (vectores, desde su centro). Cerrado (lo normal) se rellena; con falso es una línea.
@@ -2003,9 +2052,9 @@ El color del fondo de la escena.
 escena.colorFondo = "azul"
 ```
 
-#### `escena.cambiar("Nombre", fundido)`
+#### `escena.cambiar("Nombre", segundos, transicion)`
 
-Cambia a otra escena. Los datos de juego (juego.puntos...) se conservan. Con un número, la pantalla se oscurece y se aclara durante esos segundos.
+Cambia a otra escena. Los datos de juego (juego.puntos...) se conservan. Con segundos, una transición: la pantalla se tapa y se destapa. Transiciones: "fundido" (la normal), "barrido", "circulo" y "pixelado".
 
 ```
 escena.cambiar("Nivel2", 1)
@@ -2293,6 +2342,15 @@ Quita la pausa.
 tiempo.seguir()
 ```
 
+#### `tiempo.congelar(segundos)`
+
+Congela el juego un instante (0,08 segundos si no se dice): al dar un golpe fuerte, se nota mucho más.
+
+```
+cuando toco Enemigo:
+    tiempo.congelar(0.1)
+```
+
 #### `tiempo.camaraLenta(velocidad, segundos)`
 
 Cámara lenta durante un rato y luego vuelve sola a la normalidad.
@@ -2482,7 +2540,7 @@ efecto.suave = falso
 
 ### `pantalla`
 
-El tamaño de la pantalla del juego.
+La pantalla del juego: su tamaño, fundidos, un flash y filtros para todo lo que se ve (escala de grises, pixelado, viñeta, tele antigua...). Los filtros duran hasta que se cambian o se cambia de escena.
 
 ```
 yo.x = pantalla.ancho / 2
@@ -2519,6 +2577,86 @@ Fundido: la pantalla se va poniendo de un color (negro si no se dice) durante es
 
 ```
 pantalla.oscurecer(0.2, "negro", 0.5)
+```
+
+#### `pantalla.flash(color, segundos)`
+
+Toda la pantalla de un color (blanco si no se dice) que se apaga enseguida: golpes fuertes, rayos, fotos.
+
+```
+pantalla.flash("blanco", 0.2)
+```
+
+#### `pantalla.normal()`
+
+Quita todos los filtros de pantalla.
+
+```
+pantalla.normal()
+```
+
+#### `pantalla.grises`
+
+Escala de grises: 0 = colores normales, 1 = blanco y negro.
+
+```
+pantalla.grises = 1
+```
+
+#### `pantalla.desenfoque`
+
+Todo borroso (en píxeles). Muy útil detrás de un menú de pausa.
+
+```
+pantalla.desenfoque = 4
+```
+
+#### `pantalla.pixelado`
+
+Todo con «píxeles gordos» de ese tamaño (1 = normal).
+
+```
+pantalla.pixelado = 4
+```
+
+#### `pantalla.brillo`
+
+El brillo de todo: 1 = normal, 0.5 = más oscuro, 1.5 = más claro.
+
+```
+pantalla.brillo = 0.6
+```
+
+#### `pantalla.vineta`
+
+Viñeta: los bordes de la pantalla más oscuros, de 0 a 1. Da ambiente (cuevas, miedo).
+
+```
+pantalla.vineta = 0.7
+```
+
+#### `pantalla.aberracion`
+
+Aberración cromática: los colores se separan un poco (píxeles). Queda bien al recibir un golpe.
+
+```
+pantalla.aberracion = 4
+```
+
+#### `pantalla.crt`
+
+Efecto de tele antigua: rayas, bordes oscuros y colores algo separados.
+
+```
+pantalla.crt = verdadero
+```
+
+#### `pantalla.bloom`
+
+Lo brillante deja un halo de luz alrededor, de 0 a 1 (fuego, neón, magia).
+
+```
+pantalla.bloom = 0.6
 ```
 
 #### `pantalla.aclarar(segundos)`

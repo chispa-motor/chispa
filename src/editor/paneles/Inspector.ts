@@ -78,7 +78,7 @@ export class Inspector {
     const quitarSi = <T,>(porDefecto: T) => (v: T | undefined) => (v === undefined || v === porDefecto ? undefined : v);
     const d = ESTILO_POR_DEFECTO;
     const imagenes = Object.keys(e.proyecto.imagenes);
-    const conEstilo = !!(s.relleno || s.borde || s.sombra || s.resplandor || s.mezcla);
+    const conEstilo = !!(s.relleno || s.borde || s.sombra || s.resplandor || s.mezcla || s.contorno || s.brillo !== undefined || s.grises || s.desenfoque);
     return seccion('Estilo', [
       esTexto || s.imagen ? null : campoLista('relleno', 'sprite.relleno', relleno, [['color', 'Un color'], ['degradado', 'Degradado'], ['radial', 'Degradado redondo'], ['patron', 'Patrón'], ['imagen', 'Imagen repetida']], (v) => cambiar('sprite.relleno')(quitarSi('color')(v)), 'Cómo se rellena la forma por dentro (yo.relleno)'),
       !esTexto && !s.imagen && relleno !== 'color' && relleno !== 'imagen'
@@ -112,6 +112,16 @@ export class Inspector {
         campoColor('color', 'sprite.resplandorColor', s.resplandor, cambiar('sprite.resplandor')),
         campoNumero('tamaño', 'sprite.tamanoResplandor', s.tamanoResplandor ?? d.tamanoResplandor, (v) => cambiar('sprite.tamanoResplandor')(quitarSi(d.tamanoResplandor)(v)), { ...largo, min: 0 }),
       ) : null,
+      h('div', { class: 'dos-columnas' },
+        campoCasilla('contorno', 'sprite.contorno', !!s.contorno, (v) => cambiar('sprite.contorno')(v ? 'blanco' : undefined), 'Una línea de color alrededor de todo el objeto (yo.contorno)'),
+        s.contorno ? campoNumero('grosor', 'sprite.grosorContorno', s.grosorContorno ?? d.grosorContorno, (v) => cambiar('sprite.grosorContorno')(quitarSi(d.grosorContorno)(v)), { ...largo, min: 0 }) : null,
+      ),
+      s.contorno ? campoColor('color contorno', 'sprite.contornoColor', s.contorno, cambiar('sprite.contorno')) : null,
+      h('div', { class: 'tres-columnas' },
+        campoNumero('brillo', 'sprite.brillo', s.brillo ?? 1, (v) => cambiar('sprite.brillo')(quitarSi(1)(v)), { ...largo, paso: 0.1, min: 0, ayuda: '1 = normal, 2 = el doble de claro (yo.brillo)' }),
+        campoNumero('grises', 'sprite.grises', s.grises ?? 0, (v) => cambiar('sprite.grises')(quitarSi(0)(v)), { ...largo, paso: 0.1, min: 0, max: 1, ayuda: '0 = colores, 1 = blanco y negro (yo.grises)' }),
+        campoNumero('borroso', 'sprite.desenfoque', s.desenfoque ?? 0, (v) => cambiar('sprite.desenfoque')(quitarSi(0)(v)), { ...largo, min: 0, ayuda: 'Desenfoque en píxeles (yo.desenfoque)' }),
+      ),
       campoLista('mezcla', 'sprite.mezcla', s.mezcla ?? 'normal', NOMBRES_MEZCLAS.map((m): [string, string] => [m, m]), (v) => cambiar('sprite.mezcla')(quitarSi('normal')(v)), 'Cómo se junta con lo de detrás: «sumar» hace que brille (fuego, magia), «multiplicar» oscurece (sombras)'),
     ], { plegada: !conEstilo, ayuda: 'Degradados, patrones, borde, sombra, resplandor y mezcla' });
   }
@@ -577,6 +587,24 @@ export class Inspector {
           esc.clima ? campoNumero('intensidad', 'escena.climaIntensidad', esc.clima.intensidad ?? 1, (v) => e.cambiarEscenaPropiedad('clima', { tipo: esc.clima!.tipo, intensidad: v ?? 1 }), { paso: 0.5, min: 0, max: 10, ayuda: '1 = normal, 3 = tormenta' }) : null,
         ),
       ]),
+      seccion('Pantalla', [
+        h('div', { class: 'dos-columnas' },
+          campoNumero('grises', 'filtros.grises', esc.filtros?.grises ?? 0, (v) => e.cambiarEscenaPropiedad('filtros.grises', v), { paso: 0.1, min: 0, max: 1, ayuda: '0 = colores, 1 = blanco y negro (pantalla.grises)' }),
+          campoNumero('pixelado', 'filtros.pixelado', esc.filtros?.pixelado ?? 1, (v) => e.cambiarEscenaPropiedad('filtros.pixelado', v), { paso: 1, min: 1, max: 100, ayuda: 'Tamaño de los píxeles gordos (1 = normal)' }),
+        ),
+        h('div', { class: 'dos-columnas' },
+          campoNumero('brillo', 'filtros.brillo', esc.filtros?.brillo ?? 1, (v) => e.cambiarEscenaPropiedad('filtros.brillo', v), { paso: 0.1, min: 0, max: 10, ayuda: '1 = normal, 0.5 = de noche' }),
+          campoNumero('viñeta', 'filtros.vineta', esc.filtros?.vineta ?? 0, (v) => e.cambiarEscenaPropiedad('filtros.vineta', v), { paso: 0.1, min: 0, max: 1, ayuda: 'Bordes oscuros, de 0 a 1' }),
+        ),
+        h('div', { class: 'dos-columnas' },
+          campoNumero('desenfoque', 'filtros.desenfoque', esc.filtros?.desenfoque ?? 0, (v) => e.cambiarEscenaPropiedad('filtros.desenfoque', v), { paso: 1, min: 0, max: 100, ayuda: 'Todo borroso (píxeles)' }),
+          campoNumero('bloom', 'filtros.bloom', esc.filtros?.bloom ?? 0, (v) => e.cambiarEscenaPropiedad('filtros.bloom', v), { paso: 0.1, min: 0, max: 1, ayuda: 'Halo de luz en lo brillante, de 0 a 1' }),
+        ),
+        h('div', { class: 'dos-columnas' },
+          campoNumero('aberración', 'filtros.aberracion', esc.filtros?.aberracion ?? 0, (v) => e.cambiarEscenaPropiedad('filtros.aberracion', v), { paso: 1, min: 0, max: 100, ayuda: 'Los colores se separan (píxeles)' }),
+          campoCasilla('tele antigua', 'filtros.crt', esc.filtros?.crt ?? false, (v) => e.cambiarEscenaPropiedad('filtros.crt', v), 'Rayas, bordes oscuros y colores separados, como una tele de las de antes (pantalla.crt)'),
+        ),
+      ], { plegada: !esc.filtros, ayuda: 'Filtros para todo lo que se ve en esta escena (se ven al jugar)' }),
       seccion('Cámara', [
         campoLista('seguir a', 'camara.seguir', esc.camara?.seguir ?? '', [['', '(nadie)'], ...nombres.map((n): [string, string] => [n, n])], (v) => e.cambiarEscenaPropiedad('camara.seguir', v || undefined), 'La cámara sigue a este objeto (desde el código: escena.camara.seguir(yo))'),
         campoCasilla('no salir del mapa', 'camara.limitarAlMapa', esc.camara?.limitarAlMapa ?? false, (v) => e.cambiarEscenaPropiedad('camara.limitarAlMapa', v), 'La cámara no enseña nada fuera de los mapas de casillas de la escena (no se ve el vacío de los bordes)'),

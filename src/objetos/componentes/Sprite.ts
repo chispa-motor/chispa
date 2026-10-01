@@ -22,6 +22,7 @@ import { Componente } from '../Componente';
 import type { Renderizador } from '../../motor/Renderizador';
 import { ESTILO_POR_DEFECTO, MEZCLAS, esSencillo, pintarConEstilo, type Estilo, type Mezcla, type Patron, type TipoRelleno } from '../../motor/Estilo';
 import { resolverColor } from '../../motor/Color';
+import { siluetaDe } from '../../motor/Filtros';
 import { aLocal, figuraDe, puntoEnFigura, type Figura, type Forma, type Punto, type PuntoCamino } from '../formas/figuras';
 
 export type FormaSprite = Forma;
@@ -65,6 +66,16 @@ export class Sprite extends Componente {
   resplandor: string | null = null;
   tamanoResplandor = ESTILO_POR_DEFECTO.tamanoResplandor;
   mezcla: Mezcla = 'normal';
+  /** Contorno: una línea de color alrededor de todo el dibujo. */
+  contorno: string | null = null;
+  grosorContorno = ESTILO_POR_DEFECTO.grosorContorno;
+  /** Filtros del objeto: brillo (1 = normal), grises (0 a 1) y desenfoque (píxeles). */
+  brillo = 1;
+  grises = 0;
+  desenfoque = 0;
+  /** Flash (yo.flash): el objeto entero de un color, un momento (al recibir un golpe). */
+  private flashColor = 'blanco';
+  private flashQueda = 0;
   /** Orden de dibujo: capas más altas se dibujan encima. */
   capa = 0;
   /** Pegado a la pantalla (interfaz): no se mueve con la cámara ni con el zoom. */
@@ -142,14 +153,39 @@ export class Sprite extends Componente {
    * signo: en el mundo, positivo = contrario a las agujas del reloj; en el
    * Canvas, positivo = a favor.
    */
+  /** El objeto entero de un color durante unos segundos (yo.flash). */
+  flash(color: string, segundos: number): void {
+    this.flashColor = color;
+    this.flashQueda = Math.max(0, segundos);
+  }
+
+  actualizar(dt: number): void {
+    if (this.flashQueda > 0) this.flashQueda = Math.max(0, this.flashQueda - (this.objeto.escena?.motor.tiempo.deltaReal ?? dt));
+  }
+
   dibujarEn(r: Renderizador, x: number, y: number): void {
     this.actualizarTexto();
     if (!this.visible || this.opacidad <= 0) return;
+    // Filtros del objeto (brillo, grises, desenfoque): se ponen al lienzo mientras se dibuja
+    const filtro = this.brillo !== 1 || this.grises > 0 || this.desenfoque > 0;
+    if (filtro) {
+      const antes = r.ctx.filter;
+      const k = Math.hypot(r.ctx.getTransform().a, r.ctx.getTransform().b) || 1;
+      r.ctx.filter = [this.brillo !== 1 ? `brightness(${Math.max(0, this.brillo)})` : '', this.grises > 0 ? `grayscale(${Math.min(1, this.grises)})` : '', this.desenfoque > 0 ? `blur(${this.desenfoque * k}px)` : ''].filter(Boolean).join(' ');
+      try {
+        this.dibujarSinFiltro(r, x, y);
+      } finally {
+        r.ctx.filter = antes || 'none';
+      }
+    } else this.dibujarSinFiltro(r, x, y);
+  }
+
+  private dibujarSinFiltro(r: Renderizador, x: number, y: number): void {
     const rotacion = -this.objeto.transformacion.rotacion;
     const w = this.anchoFinal;
     const h = this.altoFinal;
 
-    if (!esSencillo(this) && this.forma !== 'texto') {
+    if ((!esSencillo(this) || this.flashQueda > 0) && this.forma !== 'texto') {
       this.dibujarConEstilo(r, x, y, rotacion, w, h);
     } else if (this.imagen) {
       const img = this.objeto.escena!.motor.recursos.imagen(this.imagen);
@@ -213,6 +249,9 @@ export class Sprite extends Componente {
       borde: this.borde, colorBorde: this.colorBorde, bordeDiscontinuo: this.bordeDiscontinuo,
       sombra: this.sombra, sombraX: this.sombraX, sombraY: this.sombraY, desenfoqueSombra: this.desenfoqueSombra,
       resplandor: this.resplandor, tamanoResplandor: this.tamanoResplandor, mezcla: this.mezcla,
+      contorno: this.contorno, grosorContorno: this.grosorContorno,
+      // Con flash, todo del color del flash (sin degradados ni patrones)
+      ...(this.flashQueda > 0 ? { relleno: 'color' as const, color: this.flashColor, colorBorde: this.flashColor } : {}),
     };
   }
 
@@ -239,13 +278,29 @@ export class Sprite extends Componente {
         }
       }
     };
+    const flash = this.flashQueda > 0;
     pintarConEstilo(ctx, this.estilo(), w, h, trazar, {
       linea: figura?.trazo ? figura.trazo.grosor : undefined,
       imagen: img
         ? (c) => {
             c.save();
             c.scale(1, -1); // las imágenes van con la Y hacia abajo
-            c.drawImage(img, -w / 2, -h / 2, w, h);
+            // Con flash, la imagen entera de un color (su silueta)
+            c.drawImage((flash && siluetaDe(img, this.flashColor)) || img, -w / 2, -h / 2, w, h);
+            c.restore();
+          }
+        : undefined,
+      contornoImagen: img
+        ? (c, color, grosor) => {
+            // El contorno de una imagen: su silueta, un poco movida hacia los 8 lados
+            const silueta = siluetaDe(img, color);
+            if (!silueta) return;
+            c.save();
+            c.scale(1, -1);
+            for (let i = 0; i < 8; i++) {
+              const a = (Math.PI * i) / 4;
+              c.drawImage(silueta, -w / 2 + Math.cos(a) * grosor, -h / 2 + Math.sin(a) * grosor, w, h);
+            }
             c.restore();
           }
         : undefined,

@@ -63,8 +63,8 @@ describe('Efectos', () => {
     const o = new ObjetoJuego('Antorcha', 'Antorcha');
     o.en(100, 100);
     e.empezar('fuego', RECETAS.fuego, o);
-    e.actualizar(0.5, VISTA);
-    expect(e.particulas.cantidad).toBeGreaterThan(25);
+    e.actualizar(0.2, VISTA); // 70 por segundo: 14 en 0,2 segundos (y ninguna ha muerto todavía)
+    expect(e.particulas.cantidad).toBe(14);
     expect(e.tiene('fuego', o)).toBe(true);
     e.parar('fuego', o);
     expect(e.emisoresActivos).toBe(0);

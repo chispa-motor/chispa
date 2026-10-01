@@ -37,6 +37,8 @@ import { MapaCasillas } from '../../objetos/componentes/MapaCasillas';
 import { TIPOS_PARTICULAS, type ConfigParticulas } from '../../objetos/Particulas';
 import { deserializar, serializar } from './guardado';
 import { crearModuloEfecto } from './efectos';
+import { FILTROS_NORMALES } from '../../motor/Filtros';
+import { TRANSICIONES, type Transicion } from '../../objetos/Escena';
 import { Tabla } from '../ejecucion/valores';
 import { lanzarRayo } from '../../objetos/Rayos';
 import { CajaDialogo } from '../../objetos/Dialogo';
@@ -50,7 +52,7 @@ export interface ContextoJuego {
   nombreEscena: string;
   crearDesdePlantilla(nombre: string, x: number | null, y: number | null): ObjetoJuego;
   pedirReinicio(): void;
-  cambiarEscena(nombre: string, fundido?: number): void;
+  cambiarEscena(nombre: string, fundido?: number, transicion?: Transicion): void;
   /** aLaVez(funcion, ...): empieza a ejecutar la función por su cuenta (como otro evento del objeto que la pide). */
   aLaVez(funcion: FuncionChispa | FuncionNativa, argumentos: Valor[], pos: Posicion): void;
   /** enviar("mensaje", dato): llega a todos los «cuando recibo» al empezar el siguiente fotograma. */
@@ -530,8 +532,20 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
           return null;
         },
         cambiar: (a, p) => {
-          const ej = 'escena.cambiar("Nivel2", 1)';
-          ctx.cambiarEscena(argTexto(a, 0, 'escena.cambiar', p, ej), Math.max(0, argNumero(a, 1, 'escena.cambiar', p, ej, 0)));
+          const ej = 'escena.cambiar("Nivel2", 1, "circulo")';
+          const segundos = Math.max(0, argNumero(a, 1, 'escena.cambiar', p, ej, 0));
+          let transicion: Transicion = 'fundido';
+          if (a[2] !== undefined) {
+            const t = normalizar(argTexto(a, 2, 'escena.cambiar', p, ej));
+            const ok = TRANSICIONES.find((x) => x === t);
+            if (!ok) {
+              const parecida = sugerir(aTexto(a[2]), [...TRANSICIONES]);
+              throw new ErrorChispa(p, `no hay ninguna transición llamada "${aTexto(a[2])}".`, parecida ? `¿Querías decir "${parecida}"?` : `Las transiciones son: ${TRANSICIONES.join(', ')}.`);
+            }
+            transicion = ok;
+            if (segundos === 0) throw new ErrorChispa(p, 'una transición necesita tiempo: pon los segundos que dura antes de su nombre.', `Ejemplo: ${ej}`);
+          }
+          ctx.cambiarEscena(argTexto(a, 0, 'escena.cambiar', p, ej), segundos, transicion);
           return null;
         },
       },
@@ -657,8 +671,20 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
   // ── tiempo, pantalla, juego, delta ──
   // Pausa y cámara lenta: se recuerda la velocidad de antes para volver a ella
   let escalaAntesDePausa = 1;
+  /** Un filtro de pantalla (un número entre mínimo y máximo). */
+  const filtro = (nombre: 'grises' | 'desenfoque' | 'pixelado' | 'brillo' | 'vineta' | 'aberracion' | 'bloom', min: number, max: number) => ({
+    obtener: () => ctx.escena.filtros[nombre],
+    asignar: (v: Valor, p: Posicion) => {
+      const n = comoNumero(v, `pantalla.${nombre}`, p);
+      if (!(n >= min && n <= max)) throw new ErrorChispa(p, `'pantalla.${nombre}' va de ${min} a ${max}, y le das ${n}.`, `Ejemplo: pantalla.${nombre} = ${nombre === 'pixelado' ? 4 : nombre === 'brillo' ? 1.3 : max <= 1 ? 0.5 : 3}`);
+      ctx.escena.filtros[nombre] = n;
+    },
+  });
   let lentaQueda = 0;
   let vigilandoLenta = false;
+  let congeladoQueda = 0;
+  let vigilandoCongelado = false;
+  let escalaAntesDeCongelar = 1;
   const t = () => ctx.motor.tiempo;
   g.declarar(
     'tiempo',
@@ -681,6 +707,24 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
           if (t().escala === 0) t().escala = escalaAntesDePausa || 1;
           return null;
         },
+        congelar: (a, p) => {
+          // tiempo.congelar(0.08): el juego se queda quieto un instante (al dar un golpe fuerte se nota más)
+          const ej = 'tiempo.congelar(0.1)';
+          const segundos = argNumero(a, 0, 'tiempo.congelar', p, ej, 0.08);
+          if (segundos < 0 || segundos > 5) throw new ErrorChispa(p, `congelar dura de 0 a 5 segundos (para algo más largo, tiempo.pausar()), y le das ${segundos}.`, `Ejemplo: ${ej}`);
+          if (congeladoQueda <= 0) escalaAntesDeCongelar = t().escala;
+          t().escala = 0;
+          congeladoQueda = Math.max(congeladoQueda, segundos);
+          if (!vigilandoCongelado) {
+            vigilandoCongelado = true;
+            ctx.motor.alActualizar(() => {
+              if (congeladoQueda <= 0) return;
+              congeladoQueda -= t().deltaReal;
+              if (congeladoQueda <= 0 && t().escala === 0) t().escala = escalaAntesDeCongelar;
+            });
+          }
+          return null;
+        },
         camaralenta: (a, p) => {
           // tiempo.camaraLenta(0.3, 2): durante 2 segundos (de verdad) todo va a 0,3 de su velocidad
           const ej = 'tiempo.camaraLenta(0.3, 2)';
@@ -700,7 +744,7 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
           return null;
         },
       },
-      ['total', 'delta', 'escala', 'pausado', 'fps', 'pausar', 'seguir', 'camaraLenta'],
+      ['total', 'delta', 'escala', 'pausado', 'fps', 'pausar', 'seguir', 'camaraLenta', 'congelar'],
     ),
   );
   g.declarar(
@@ -710,6 +754,18 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
       {
         ancho: { obtener: () => ctx.motor.renderizador.ancho },
         alto: { obtener: () => ctx.motor.renderizador.alto },
+        // Filtros de toda la pantalla (Filtros.ts). Duran hasta que se cambian o se cambia de escena
+        grises: filtro('grises', 0, 1),
+        desenfoque: filtro('desenfoque', 0, 100),
+        pixelado: filtro('pixelado', 1, 100),
+        brillo: filtro('brillo', 0, 10),
+        vineta: filtro('vineta', 0, 1),
+        aberracion: filtro('aberracion', 0, 100),
+        bloom: filtro('bloom', 0, 1),
+        crt: {
+          obtener: () => ctx.escena.filtros.crt,
+          asignar: (v, p) => (ctx.escena.filtros.crt = comoLogico(v, 'pantalla.crt', p)),
+        },
         completa: {
           obtener: () => typeof document !== 'undefined' && !!document.fullscreenElement,
           asignar: (v, p) => {
@@ -723,6 +779,21 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
         },
       },
       {
+        flash: (a, p) => {
+          // pantalla.flash(): toda la pantalla blanca un momento (golpes, rayos, fotos)
+          const ej = 'pantalla.flash("blanco", 0.2)';
+          const color = a[0] === undefined ? 'blanco' : argTexto(a, 0, 'pantalla.flash', p, ej);
+          if (!esColorValido(color)) throw new ErrorChispa(p, `"${color}" no es un color.`, `Ejemplo: ${ej}`);
+          const segundos = argNumero(a, 1, 'pantalla.flash', p, ej, 0.2);
+          if (segundos < 0) throw new ErrorChispa(p, 'los segundos no pueden ser negativos.', `Ejemplo: ${ej}`);
+          ctx.escena.destellar(color, segundos);
+          return null;
+        },
+        normal: () => {
+          // Quita todos los filtros de pantalla
+          ctx.escena.filtros = { ...FILTROS_NORMALES };
+          return null;
+        },
         oscurecer: (a, p) => {
           const ej = 'pantalla.oscurecer(1, "negro")';
           const segundos = Math.max(0, argNumero(a, 0, 'pantalla.oscurecer', p, ej, 1));
@@ -739,7 +810,7 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
           return null;
         },
       },
-      ['ancho', 'alto', 'completa', 'oscurecer', 'aclarar'],
+      ['ancho', 'alto', 'completa', 'oscurecer', 'aclarar', 'flash', 'normal', 'grises', 'desenfoque', 'pixelado', 'brillo', 'vineta', 'aberracion', 'crt', 'bloom'],
     ),
   );
 

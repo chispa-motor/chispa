@@ -2,7 +2,7 @@
 
 > Se genera sola con `npm run manual` (no la cambies a mano). Un test comprueba que no falta ningún comando y que cada ejemplo funciona.
 
-Todos los comandos de Chispa (329), una línea cada uno, para tenerla abierta mientras programas o imprimirla. Para aprender con calma, el [curso](APRENDE_CHISPA.md).
+Todos los comandos de Chispa (346), una línea cada uno, para tenerla abierta mientras programas o imprimirla. Para aprender con calma, el [curso](APRENDE_CHISPA.md).
 
 En los ejemplos se usan estas variables y esta función, como si ya las tuvieras (y en la escena hay un Jugador y un Mapa de casillas):
 
@@ -317,7 +317,7 @@ Las líneas que terminan en `:` empiezan un bloque: lo de dentro va debajo, con 
 | Comando | Qué hace | Ejemplo |
 |---|---|---|
 | `escena.nombre` | El nombre de la escena actual. | `mostrar(escena.nombre)` |
-| `escena.cambiar("Nombre", fundido)` | Cambia a otra escena. | `escena.cambiar("Nivel2")` |
+| `escena.cambiar("Nombre", segundos, transicion)` | Cambia a otra escena. | `escena.cambiar("Nivel2")` |
 | `escena.reiniciar()` | Vuelve a empezar la escena actual desde el principio. | `escena.reiniciar()` |
 | `escena.colorFondo` | El color del fondo de la escena. | `escena.colorFondo = "azul"` |
 
@@ -457,6 +457,28 @@ Las líneas que terminan en `:` empiezan un bloque: lo de dentro va debajo, con 
 | `efecto.suave` | Versión suave para los más pequeños: si es verdadero (lo normal), la sangre sale como tinta de colores. | `efecto.suave = falso` |
 | `yo.polvo` | Si es verdadero, levanta polvo al saltar y al caer al suelo (necesita física). | `yo.polvo = verdadero` |
 | `yo.efecto` | El efecto que lleva siempre puesto: "fuego", "humo", "burbujas" o "estela" (nulo lo quita). | `yo.efecto = "humo"` |
+
+### Efectos de pantalla y de objeto
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `tiempo.congelar(segundos)` | Congela el juego un instante (0,08 segundos si no se dice): al dar un golpe fuerte, se nota mucho más. | `tiempo.congelar(0.08)` |
+| `pantalla.flash(color, segundos)` | Toda la pantalla de un color (blanco si no se dice) que se apaga enseguida: golpes fuertes, rayos, fotos. | `pantalla.flash()` |
+| `pantalla.normal()` | Quita todos los filtros de pantalla. | `pantalla.normal()` |
+| `pantalla.grises` | Escala de grises: 0 = colores normales, 1 = blanco y negro. | `pantalla.grises = 1` |
+| `pantalla.desenfoque` | Todo borroso (en píxeles). | `pantalla.desenfoque = 3` |
+| `pantalla.pixelado` | Todo con «píxeles gordos» de ese tamaño (1 = normal). | `pantalla.pixelado = 3` |
+| `pantalla.brillo` | El brillo de todo: 1 = normal, 0.5 = más oscuro, 1.5 = más claro. | `pantalla.brillo = 1.3` |
+| `pantalla.vineta` | Viñeta: los bordes de la pantalla más oscuros, de 0 a 1. | `pantalla.vineta = 0.5` |
+| `pantalla.aberracion` | Aberración cromática: los colores se separan un poco (píxeles). | `pantalla.aberracion = 4` |
+| `pantalla.crt` | Efecto de tele antigua: rayas, bordes oscuros y colores algo separados. | `pantalla.crt = verdadero` |
+| `pantalla.bloom` | Lo brillante deja un halo de luz alrededor, de 0 a 1 (fuego, neón, magia). | `pantalla.bloom = 0.5` |
+| `yo.contorno` | Una línea de color alrededor de todo el objeto (nulo la quita). | `yo.contorno = "blanco"` |
+| `yo.grosorContorno` | Lo gordo que es el contorno, en píxeles (3). | `yo.grosorContorno = 5` |
+| `yo.brillo` | El brillo del objeto: 1 = normal, 0.5 = más oscuro, 2 = el doble de claro. | `yo.brillo = 1.5` |
+| `yo.grises` | El objeto en escala de grises, de 0 (colores) a 1 (blanco y negro). | `yo.grises = 1` |
+| `yo.desenfoque` | El objeto borroso (en píxeles): cosas lejanas, fantasmas... | `yo.desenfoque = 3` |
+| `yo.flash(color, segundos)` | El objeto entero de un color (blanco si no se dice) un momento: al recibir un golpe. | `yo.flash("rojo", 0.15)` |
 
 ## Nivel 4: Avanzado
 

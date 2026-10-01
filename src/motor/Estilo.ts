@@ -63,6 +63,9 @@ export interface Estilo {
   resplandor: string | null;
   tamanoResplandor: number;
   mezcla: Mezcla;
+  /** Una línea de color alrededor de todo el dibujo (por fuera del borde), o null. */
+  contorno: string | null;
+  grosorContorno: number;
 }
 
 export const ESTILO_POR_DEFECTO: Estilo = {
@@ -82,11 +85,13 @@ export const ESTILO_POR_DEFECTO: Estilo = {
   resplandor: null,
   tamanoResplandor: 16,
   mezcla: 'normal',
+  contorno: null,
+  grosorContorno: 3,
 };
 
 /** ¿Es un estilo sencillo (solo un color)? Entonces se dibuja por el camino rápido de siempre. */
-export function esSencillo(e: Pick<Estilo, 'relleno' | 'borde' | 'sombra' | 'resplandor' | 'mezcla'>): boolean {
-  return e.relleno === 'color' && e.borde <= 0 && !e.sombra && !e.resplandor && e.mezcla === 'normal';
+export function esSencillo(e: Pick<Estilo, 'relleno' | 'borde' | 'sombra' | 'resplandor' | 'mezcla' | 'contorno'>): boolean {
+  return e.relleno === 'color' && e.borde <= 0 && !e.sombra && !e.resplandor && e.mezcla === 'normal' && !e.contorno;
 }
 
 // ───────────────────────── Paletas ─────────────────────────
@@ -268,7 +273,7 @@ export function pintarConEstilo(
   ancho: number,
   alto: number,
   trazar: () => void,
-  opciones: { linea?: number; imagen?: (ctx: CanvasRenderingContext2D) => void } = {},
+  opciones: { linea?: number; imagen?: (ctx: CanvasRenderingContext2D) => void; contornoImagen?: (ctx: CanvasRenderingContext2D, color: string, grosor: number) => void } = {},
 ): void {
   const linea = opciones.linea ?? null;
   ctx.save();
@@ -288,7 +293,19 @@ export function pintarConEstilo(
     pintarCuerpo('negro');
     ctx.restore();
   };
-  const pintarCuerpo = (relleno: string | CanvasGradient | CanvasPattern) => {
+  const pintarCuerpo = (relleno: string | CanvasGradient | CanvasPattern, conContorno = false) => {
+    // El contorno: por fuera de todo (debajo de la forma, una línea más gorda)
+    if (conContorno && e.contorno) {
+      if (opciones.contornoImagen) opciones.contornoImagen(ctx, e.contorno, e.grosorContorno);
+      else {
+        trazar();
+        ctx.strokeStyle = resolverColor(e.contorno);
+        ctx.lineWidth = e.grosorContorno * 2 + Math.max(e.borde, opciones.linea ?? 0);
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.stroke();
+      }
+    }
     // Una imagen: su sombra sigue su dibujo (lo transparente no hace sombra)
     if (opciones.imagen) opciones.imagen(ctx);
     trazar();
@@ -316,7 +333,7 @@ export function pintarConEstilo(
     soloSombra(e.resplandor, 0, 0, e.tamanoResplandor / 2);
   }
   if (e.sombra) soloSombra(e.sombra, e.sombraX, e.sombraY, e.desenfoqueSombra);
-  pintarCuerpo(pintura);
+  pintarCuerpo(pintura, true);
   ctx.restore();
 }
 

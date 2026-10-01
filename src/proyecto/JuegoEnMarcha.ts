@@ -32,7 +32,8 @@ import { ErrorMotor } from '../motor/Errores';
 import { escribirEnConsola, limpiarConsola } from '../motor/Consola';
 import type { Motor } from '../motor/Motor';
 import { Vector2 } from '../motor/Vector2';
-import { Escena } from '../objetos/Escena';
+import { Escena, type Transicion } from '../objetos/Escena';
+import { FILTROS_NORMALES } from '../motor/Filtros';
 import { ObjetoJuego } from '../objetos/ObjetoJuego';
 import { Animador, type DefAnimacion } from '../objetos/componentes/Animador';
 import { Colision } from '../objetos/componentes/Colision';
@@ -210,6 +211,8 @@ export class JuegoEnMarcha implements ContextoJuego {
     this.nombreEscena = nombre;
     this.escena.vaciar();
     this.escena.gravedad = def.gravedad ?? GRAVEDAD_MUNDO;
+    // Los filtros de pantalla son los de esta escena (lo que hubiera puesto el código en la anterior se quita)
+    this.escena.filtros = { ...FILTROS_NORMALES, ...(def.filtros ?? {}) };
     this.motor.colorFondo = def.colorFondo;
 
     // La cámara empieza siempre como diga ESTA escena (nada se queda de la anterior)
@@ -322,7 +325,7 @@ export class JuegoEnMarcha implements ContextoJuego {
   }
 
   /** Cambia de escena. Con `fundido` (segundos), la pantalla se oscurece, cambia y se vuelve a aclarar. */
-  cambiarEscena(nombre: string, fundido = 0): void {
+  cambiarEscena(nombre: string, fundido = 0, transicion: Transicion = 'fundido'): void {
     const n = normalizar(nombre);
     const clave = Object.keys(this.proyecto.escenas).find((k) => normalizar(k) === n);
     if (!clave) {
@@ -331,7 +334,7 @@ export class JuegoEnMarcha implements ContextoJuego {
       throw new ErrorMotor(`No existe ninguna escena llamada "${nombre}".`, parecida ? `¿Querías decir "${parecida}"?` : `Las escenas que hay son: ${hay.join(', ')}.`);
     }
     if (fundido > 0) {
-      this.escena.fundir(1, fundido / 2);
+      this.escena.fundir(1, fundido / 2, undefined, transicion);
       this.pendiente = { tipo: 'cambiar', escena: clave, espera: fundido / 2, fundido };
     } else this.pendiente = { tipo: 'cambiar', escena: clave };
   }

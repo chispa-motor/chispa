@@ -29,6 +29,7 @@ import type { FormaColision } from '../objetos/componentes/Colision';
 import type { Punto, PuntoCamino } from '../objetos/formas/figuras';
 import type { Mezcla, Patron, TipoRelleno } from '../motor/Estilo';
 import type { Clima } from '../objetos/Efectos';
+import type { Filtros } from '../motor/Filtros';
 import type { ConfigParticulas } from '../objetos/Particulas';
 import type { TipoCasilla } from '../objetos/componentes/MapaCasillas';
 import type { DefAnimacion } from '../objetos/componentes/Animador';
@@ -70,6 +71,11 @@ export interface DefSprite {
   resplandor?: string;
   tamanoResplandor?: number;
   mezcla?: Mezcla;
+  contorno?: string;
+  grosorContorno?: number;
+  brillo?: number;
+  grises?: number;
+  desenfoque?: number;
   ancho?: number;
   alto?: number;
   capa?: number;
@@ -184,6 +190,8 @@ export interface DefEscena {
   camara?: DefCamara;
   /** Lluvia, nieve u hojas cayendo por toda la pantalla. */
   clima?: { tipo: Clima; intensidad?: number };
+  /** Filtros de pantalla de esta escena (grises, pixelado, CRT...). */
+  filtros?: Partial<Filtros>;
   objetos: DefObjeto[];
 }
 

@@ -33,6 +33,7 @@ import type { DefAnimacion } from '../objetos/componentes/Animador';
 import type { TipoCasilla } from '../objetos/componentes/MapaCasillas';
 import { NOMBRES_MEZCLAS, PATRONES, TIPOS_RELLENO } from '../motor/Estilo';
 import { CLIMAS, type Clima } from '../objetos/Efectos';
+import type { Filtros } from '../motor/Filtros';
 import { FORMAS_PARTICULA, MAXIMO_PARTICULAS, type ConfigParticulas } from '../objetos/Particulas';
 import { FORMAS, MAX_LADOS, MAX_PUNTOS_CAMINO, type PuntoCamino } from '../objetos/formas/figuras';
 
@@ -195,6 +196,11 @@ function sprite(v: unknown, ruta: Ruta): DefSprite {
     resplandor: color,
     tamanoResplandor: (x, r) => numero(x, r, 0, 1000),
     mezcla: (x, r) => unoDe(x, r, NOMBRES_MEZCLAS),
+    contorno: color,
+    grosorContorno: (x, r) => numero(x, r, 0, 1000),
+    brillo: (x, r) => numero(x, r, 0, 100),
+    grises: (x, r) => numero(x, r, 0, 1),
+    desenfoque: (x, r) => numero(x, r, 0, 1000),
     ancho: (x, r) => numero(x, r, -1e6, 1e6),
     alto: (x, r) => numero(x, r, -1e6, 1e6),
     capa: numero,
@@ -329,6 +335,16 @@ function escena(v: unknown, ruta: Ruta): DefEscena {
       if (!c.tipo) fallo([...r, 'tipo'], 'falta qué clima es (lluvia, nieve u hojas)');
       return { tipo: c.tipo, ...(c.intensidad !== undefined ? { intensidad: c.intensidad } : {}) };
     },
+    filtros: (x, r) => campos<Partial<Filtros>>(objeto(x, r), r, {
+      grises: (n, rn) => numero(n, rn, 0, 1),
+      desenfoque: (n, rn) => numero(n, rn, 0, 100),
+      pixelado: (n, rn) => numero(n, rn, 1, 100),
+      brillo: (n, rn) => numero(n, rn, 0, 10),
+      vineta: (n, rn) => numero(n, rn, 0, 1),
+      aberracion: (n, rn) => numero(n, rn, 0, 100),
+      crt: logico,
+      bloom: (n, rn) => numero(n, rn, 0, 1),
+    }),
     objetos: (x, r) => lista(x, r, LIMITES_PROYECTO.objetosPorEscena, objetoJuego),
   });
   return { ...e, colorFondo: e.colorFondo ?? '#1e2233', objetos: e.objetos ?? [] };

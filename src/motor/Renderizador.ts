@@ -70,7 +70,10 @@ const GRADOS_A_RADIANES = Math.PI / 180;
 const ALINEACIONES = { izquierda: 'left', centro: 'center', derecha: 'right' } as const;
 
 export class Renderizador {
-  readonly ctx: CanvasRenderingContext2D;
+  /** El lienzo donde se dibuja. Con filtros de pantalla, por un momento es un lienzo aparte (ver Filtros.ts). */
+  ctx: CanvasRenderingContext2D;
+  /** El color de fondo del fotograma (lo necesitan los filtros, que dibujan en un lienzo aparte). */
+  fondo = 'negro';
   private observador: ResizeObserver;
 
   constructor(
@@ -137,6 +140,7 @@ export class Renderizador {
 
   /** Pinta toda la pantalla de un color. Se hace al principio de cada fotograma. */
   limpiar(color = 'negro'): void {
+    this.fondo = color;
     this.ctx.fillStyle = resolverColor(color);
     this.ctx.fillRect(0, 0, this.ancho, this.alto);
   }

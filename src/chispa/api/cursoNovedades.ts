@@ -122,4 +122,40 @@ export function agregarNovedades(tema: Tema, c: Comando): void {
     'cuando empieza:\n    yo.polvo = "mucho"', 'Darle un texto: es verdadero o falso.');
   c('objeto:efecto', 'cuando empieza:\n    yo.efecto = "fuego"', 'yo.efecto = "humo"',
     'cuando empieza:\n    yo.efecto = "explosion"', 'Ponerle un efecto de golpe: yo.efecto es uno que dura (fuego, humo, burbujas, estela). Para explotar: efecto.explosion(yo).');
+
+  tema(3, 'Efectos de pantalla y de objeto', 'Para que un juego se SIENTA bien: la pantalla tiembla, se congela un instante al dar un golpe, destella... Y filtros para todo lo que se ve (blanco y negro, pixelado, tele antigua) o para un objeto (contorno, brillo). Al cambiar de escena, una transición: fundido, barrido, círculo o pixelado.');
+  c('tiempo:congelar', 'cuando toco Enemigo:\n    tiempo.congelar(0.1)\n    escena.camara.temblar(8, 0.2)', 'tiempo.congelar(0.08)',
+    'cuando empieza:\n    tiempo.congelar(30)', 'Congelar mucho rato: congelar es un instante (hasta 5 segundos). Para parar el juego, tiempo.pausar().');
+  c('pantalla:flash', 'cuando toco Enemigo:\n    pantalla.flash("blanco", 0.2)', 'pantalla.flash()',
+    'cuando empieza:\n    pantalla.flash("relampago")', 'Darle algo que no es un color: el primer dato es el color.');
+  c('pantalla:normal', 'cuando se pulsa "n":\n    pantalla.normal()', 'pantalla.normal()',
+    'cuando empieza:\n    pantalla.normal', 'Olvidar los paréntesis.');
+  c('pantalla:grises', 'cuando empieza:\n    pantalla.grises = 1', 'pantalla.grises = 1',
+    'cuando empieza:\n    pantalla.grises = 100', 'Darle un porcentaje: va de 0 a 1 (1 = blanco y negro del todo).');
+  c('pantalla:desenfoque', 'cuando se pulsa "p":\n    pantalla.desenfoque = 4', 'pantalla.desenfoque = 3',
+    'cuando empieza:\n    pantalla.desenfoque = -2', 'Darle un número negativo.');
+  c('pantalla:pixelado', 'cuando empieza:\n    pantalla.pixelado = 4', 'pantalla.pixelado = 3',
+    'cuando empieza:\n    pantalla.pixelado = 0', 'Darle 0: el tamaño normal de los píxeles es 1.');
+  c('pantalla:brillo', 'cuando empieza:\n    pantalla.brillo = 0.6', 'pantalla.brillo = 1.3',
+    'cuando empieza:\n    pantalla.brillo = -1', 'Darle un número negativo: 0 ya es todo negro.');
+  c('pantalla:vineta', 'cuando empieza:\n    pantalla.vineta = 0.7', 'pantalla.vineta = 0.5',
+    'cuando empieza:\n    pantalla.vineta = 5', 'Pasarse: va de 0 a 1.');
+  c('pantalla:aberracion', 'cuando toco Enemigo:\n    pantalla.aberracion = 5\n    esperar(0.3)\n    pantalla.aberracion = 0', 'pantalla.aberracion = 4',
+    'cuando empieza:\n    pantalla.aberracion = "mucha"', 'Darle un texto: son píxeles.');
+  c('pantalla:crt', 'cuando empieza:\n    pantalla.crt = verdadero', 'pantalla.crt = verdadero',
+    'cuando empieza:\n    pantalla.crt = "si"', 'Darle un texto: es verdadero o falso.');
+  c('pantalla:bloom', 'cuando empieza:\n    pantalla.bloom = 0.6', 'pantalla.bloom = 0.5',
+    'cuando empieza:\n    pantalla.bloom = 2', 'Pasarse: va de 0 a 1.');
+  c('objeto:contorno', 'cuando cada fotograma:\n    si yo.ratonEncima:\n        yo.contorno = "blanco"\n    sino:\n        yo.contorno = nulo', 'yo.contorno = "blanco"',
+    'cuando empieza:\n    yo.contorno = "blanquito"', 'Inventarse un color: Chispa propone el parecido.');
+  c('objeto:grosorContorno', 'cuando empieza:\n    yo.contorno = "amarillo"\n    yo.grosorContorno = 5', 'yo.grosorContorno = 5',
+    'cuando empieza:\n    yo.grosorContorno = 5', 'Cambiar el grosor sin poner yo.contorno: no hay contorno que engordar.', 'l');
+  c('objeto:brillo', 'cuando cada fotograma:\n    si yo.ratonEncima:\n        yo.brillo = 1.4\n    sino:\n        yo.brillo = 1', 'yo.brillo = 1.5',
+    'cuando empieza:\n    yo.brillo = -1', 'Darle un número negativo: 0 ya es negro.');
+  c('objeto:grises', 'cuando empieza:\n    yo.grises = 1', 'yo.grises = 1',
+    'cuando empieza:\n    yo.grises = 50', 'Darle un porcentaje: va de 0 a 1.');
+  c('objeto:desenfoque', 'cuando empieza:\n    yo.desenfoque = 3', 'yo.desenfoque = 3',
+    'cuando empieza:\n    yo.desenfoque = "poco"', 'Darle un texto: son píxeles.');
+  c('objeto:flash', 'cuando toco Enemigo:\n    yo.flash()\n    tiempo.congelar(0.08)', 'yo.flash("rojo", 0.15)',
+    'cuando empieza:\n    yo.flash("rojo", -1)', 'Darle segundos negativos.');
 }

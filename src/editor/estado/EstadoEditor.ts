@@ -26,6 +26,7 @@ import { FORMAS, FORMAS_DIBUJO, type Forma, type PuntoCamino } from '../../objet
 import { combinarFormas, encajarCamino, esFormaCombinable } from '../recursos/operacionesFormas';
 import { BIBLIOTECA } from '../biblioteca/biblioteca';
 import { CLIMAS } from '../../objetos/Efectos';
+import { FILTROS_NORMALES, type Filtros } from '../../motor/Filtros';
 import type { ConfigParticulas } from '../../objetos/Particulas';
 import type { DefAnimacion } from '../../objetos/componentes/Animador';
 import type { TipoCasilla } from '../../objetos/componentes/MapaCasillas';
@@ -839,10 +840,17 @@ export class EstadoEditor {
     if (this.proyecto.escenas[nombre]) this.cambiar('escena', () => (this.proyecto.escenaInicial = nombre));
   }
 
-  cambiarEscenaPropiedad(ruta: 'colorFondo' | 'gravedad' | 'camara.zoom' | 'camara.seguir' | 'camara.x' | 'camara.y' | 'camara.limitarAlMapa' | 'clima', valor: unknown): void {
+  cambiarEscenaPropiedad(ruta: 'colorFondo' | 'gravedad' | 'camara.zoom' | 'camara.seguir' | 'camara.x' | 'camara.y' | 'camara.limitarAlMapa' | 'clima' | `filtros.${keyof Filtros}`, valor: unknown): void {
     this.cambiar('escena', () => {
       const e = this.escena;
       if (ruta === 'colorFondo') e.colorFondo = String(valor);
+      else if (ruta.startsWith('filtros.')) {
+        const k = ruta.slice(8) as keyof Filtros;
+        const filtros = (e.filtros ??= {}) as Record<string, unknown>;
+        if (valor === undefined || valor === FILTROS_NORMALES[k]) delete filtros[k];
+        else filtros[k] = k === 'crt' ? Boolean(valor) : Number(valor);
+        if (!Object.keys(filtros).length) delete e.filtros;
+      }
       else if (ruta === 'clima') {
         const c = valor as DefEscena['clima'];
         if (c && (CLIMAS as readonly string[]).includes(c.tipo)) e.clima = { tipo: c.tipo, ...(c.intensidad !== undefined && c.intensidad !== 1 ? { intensidad: Math.min(10, Math.max(0, c.intensidad)) } : {}) };

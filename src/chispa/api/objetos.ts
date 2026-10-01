@@ -337,6 +337,31 @@ const PROPIEDADES: Record<string, PropiedadObjeto> = sinPrototipo({
     },
   },
 
+  contorno: {
+    obtener: (o, p) => necesitaSprite(o, 'contorno', p).contorno,
+    asignar: (o, v, p) => (necesitaSprite(o, 'contorno', p).contorno = colorOApagado(v, 'contorno', 'blanco', p)),
+  },
+  grosorcontorno: {
+    obtener: (o, p) => necesitaSprite(o, 'grosorContorno', p).grosorContorno,
+    asignar: (o, v, p) => (necesitaSprite(o, 'grosorContorno', p).grosorContorno = Math.max(0, comoNumero(v, 'grosorContorno', p))),
+  },
+  brillo: {
+    obtener: (o, p) => necesitaSprite(o, 'brillo', p).brillo,
+    asignar: (o, v, p) => {
+      const n = comoNumero(v, 'brillo', p);
+      if (n < 0) throw new ErrorChispa(p, `el brillo no puede ser negativo (0 = negro, 1 = normal, 2 = el doble de claro), y le das ${n}.`, 'Ejemplo: yo.brillo = 1.5');
+      necesitaSprite(o, 'brillo', p).brillo = n;
+    },
+  },
+  grises: {
+    obtener: (o, p) => necesitaSprite(o, 'grises', p).grises,
+    asignar: (o, v, p) => (necesitaSprite(o, 'grises', p).grises = entre0y1(v, 'grises', p, 'yo.grises = 1')),
+  },
+  desenfoque: {
+    obtener: (o, p) => necesitaSprite(o, 'desenfoque', p).desenfoque,
+    asignar: (o, v, p) => (necesitaSprite(o, 'desenfoque', p).desenfoque = Math.max(0, comoNumero(v, 'desenfoque', p))),
+  },
+
   // ── Estilo (ver motor/Estilo.ts) ──
   relleno: {
     obtener: (o, p) => necesitaSprite(o, 'relleno', p).relleno,
@@ -820,6 +845,16 @@ const METODOS: Record<string, (o: ObjetoJuego, args: Valor[], pos: Posicion) => 
   },
   direcciona: (o, a, p) => destino(a[0], 'direccionA', p).restar(o.posicion).normalizado(),
 
+  flash: (o, a, p) => {
+    // yo.flash(): el objeto entero de un color un momento (al recibir un golpe)
+    const ej = 'yo.flash("blanco", 0.1)';
+    const s = necesitaSprite(o, 'flash', p);
+    const color = a[0] === undefined ? 'blanco' : unColor(a[0], 'flash', p);
+    const segundos = argNumero(a, 1, 'flash', p, ej, 0.1);
+    if (segundos < 0) throw new ErrorChispa(p, 'los segundos no pueden ser negativos.', `Ejemplo: ${ej}`);
+    s.flash(color, segundos);
+    return null;
+  },
   ponercamino: (o, a, p) => {
     // Una forma libre con estos puntos (relativos al centro del objeto, en píxeles)
     const ej = 'yo.ponerCamino([vector(-50, -30), vector(0, 40), vector(50, -30)])';
@@ -889,7 +924,7 @@ const NOMBRES_BONITOS = [
   'teletransportar', 'irA', 'anguloA', 'rotarHacia', 'avanzar', 'ocultar', 'aparecer', 'parpadear', 'ponerDelante', 'ponerDetras',
   'tocando', 'cercanos', 'masCercano', 'clonar', 'ponerEtiqueta', 'quitarEtiqueta', 'tieneEtiqueta', 'pegarA', 'soltar',
   'irHacia', 'parar', 'yendo', 'atravesar', 'dejarDeAtravesar',
-  'polvo', 'efecto', 'relleno', 'color2', 'anguloDegradado', 'patron', 'imagenRelleno', 'borde', 'colorBorde', 'bordeDiscontinuo',
+  'polvo', 'efecto', 'contorno', 'grosorContorno', 'brillo', 'grises', 'desenfoque', 'flash', 'relleno', 'color2', 'anguloDegradado', 'patron', 'imagenRelleno', 'borde', 'colorBorde', 'bordeDiscontinuo',
   'sombra', 'sombraX', 'sombraY', 'desenfoqueSombra', 'resplandor', 'tamanoResplandor', 'mezcla',
   'forma', 'lados', 'radioInterior', 'radioEsquina', 'inicioArco', 'finArco', 'grosor', 'formaColision', 'ponerCamino',
 ];

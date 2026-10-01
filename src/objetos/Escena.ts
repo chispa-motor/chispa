@@ -31,6 +31,11 @@ import { Camara, type Limites } from './Camara';
 import { ObjetoJuego } from './ObjetoJuego';
 import type { Particulas } from './Particulas';
 import { Efectos } from './Efectos';
+import { FILTROS_NORMALES, dibujarConFiltros, hayFiltros, type Filtros } from '../motor/Filtros';
+
+/** Cómo se tapa la pantalla al cambiar de escena. */
+export const TRANSICIONES = ['fundido', 'barrido', 'circulo', 'pixelado'] as const;
+export type Transicion = (typeof TRANSICIONES)[number];
 import { SistemaFisico } from './SistemaFisico';
 import { Colision, type Caja } from './componentes/Colision';
 import { GRAVEDAD_MUNDO } from './componentes/Fisica';
@@ -72,8 +77,15 @@ export class Escena implements EscenaActiva {
   readonly animaciones = new AnimadorDeValores();
   /** Lo que se dibuja con dibujar.xxx() en este fotograma. */
   dibujos: DibujoDepuracion[] = [];
-  /** Oscurecer la pantalla (fundido): de 0 (nada) a 1 (todo del color). Sigue igual al cambiar de escena. */
-  readonly fundido = { alfa: 0, objetivo: 0, velocidad: 0, color: 'negro' };
+  /**
+   * Oscurecer la pantalla (fundido, y las transiciones entre escenas): de 0
+   * (nada) a 1 (todo tapado). Sigue igual al cambiar de escena.
+   */
+  readonly fundido: { alfa: number; objetivo: number; velocidad: number; color: string; tipo: Transicion } = { alfa: 0, objetivo: 0, velocidad: 0, color: 'negro', tipo: 'fundido' };
+  /** Los filtros de pantalla (grises, pixelado, CRT...). Al cambiar de escena, los de la escena nueva. */
+  filtros: Filtros = { ...FILTROS_NORMALES };
+  /** Un destello de toda la pantalla (pantalla.flash): se apaga solo. */
+  readonly flash = { alfa: 0, color: 'blanco', velocidad: 0 };
   /** Quien sabe hacer copias de objetos con sus scripts (el juego en marcha). Sin él, clonar() no funciona. */
   clonador: ((o: ObjetoJuego) => ObjetoJuego) | null = null;
   /** El objeto que se está arrastrando con el ratón (y dónde se cogió). */
@@ -273,16 +285,25 @@ export class Escena implements EscenaActiva {
 
   // ───────────────────────── Fundidos ─────────────────────────
 
-  /** Oscurece (hasta = 1) o aclara (hasta = 0) la pantalla en esos segundos. */
-  fundir(hasta: number, segundos: number, color?: string): void {
+  /** Oscurece (hasta = 1) o aclara (hasta = 0) la pantalla en esos segundos, con esa transición. */
+  fundir(hasta: number, segundos: number, color?: string, tipo?: Transicion): void {
     const f = this.fundido;
     if (color) f.color = color;
+    if (tipo) f.tipo = tipo;
     f.objetivo = hasta;
     if (segundos <= 0) f.alfa = hasta;
     f.velocidad = segundos <= 0 ? 0 : Math.abs(hasta - f.alfa) / segundos;
   }
 
+  /** Toda la pantalla de un color de golpe, que se apaga en esos segundos. */
+  destellar(color: string, segundos: number): void {
+    this.flash.color = color;
+    this.flash.alfa = 1;
+    this.flash.velocidad = segundos > 0 ? 1 / segundos : Infinity;
+  }
+
   private actualizarFundido(dt: number): void {
+    if (this.flash.alfa > 0) this.flash.alfa = Math.max(0, this.flash.alfa - this.flash.velocidad * dt);
     const f = this.fundido;
     if (f.alfa === f.objetivo) return;
     const paso = f.velocidad * dt;
@@ -307,6 +328,61 @@ export class Escena implements EscenaActiva {
   }
 
   dibujar(r: Renderizador): void {
+    // Los filtros (y la transición pixelada) se aplican al mundo y a la interfaz; el fundido y el diálogo, encima, nítidos
+    const f = this.fundido;
+    const pixeladoTransicion = f.tipo === 'pixelado' && f.alfa > 0 ? 1 + f.alfa * 28 : 1;
+    const filtros = pixeladoTransicion > 1 ? { ...this.filtros, pixelado: Math.max(this.filtros.pixelado, pixeladoTransicion) } : this.filtros;
+    if (hayFiltros(filtros)) {
+      const principal = r.ctx;
+      dibujarConFiltros(principal, filtros, r.fondo, (otro) => {
+        r.ctx = otro;
+        try {
+          this.dibujarEscena(r);
+        } finally {
+          r.ctx = principal;
+        }
+      });
+    } else this.dibujarEscena(r);
+    this.dibujarTransicion(r);
+    if (this.flash.alfa > 0) {
+      r.ctx.save();
+      r.ctx.globalAlpha = this.flash.alfa;
+      r.ctx.fillStyle = resolverColor(this.flash.color);
+      r.ctx.fillRect(0, 0, r.ancho, r.alto);
+      r.ctx.restore();
+    }
+    // El diálogo, lo último (se tiene que leer aunque la pantalla esté oscura)
+    this.dialogos[0]?.dibujar(r);
+  }
+
+  /** Lo que tapa la pantalla al cambiar de escena (fundido, barrido, círculo o pixelado) o con pantalla.oscurecer. */
+  private dibujarTransicion(r: Renderizador): void {
+    const f = this.fundido;
+    if (f.alfa <= 0) return;
+    const ctx = r.ctx;
+    ctx.save();
+    ctx.fillStyle = resolverColor(f.color);
+    if (f.tipo === 'barrido') {
+      // Se tapa de izquierda a derecha, y se destapa siguiendo hacia la derecha
+      const ancho = r.ancho * f.alfa;
+      ctx.fillRect(f.objetivo >= f.alfa ? 0 : r.ancho - ancho, 0, ancho, r.alto);
+    } else if (f.tipo === 'circulo') {
+      // Un círculo que se cierra hacia el centro (y se vuelve a abrir)
+      const radio = Math.hypot(r.ancho, r.alto) / 2 * (1 - f.alfa);
+      ctx.beginPath();
+      ctx.rect(0, 0, r.ancho, r.alto);
+      ctx.arc(r.ancho / 2, r.alto / 2, Math.max(0, radio), 0, Math.PI * 2, true);
+      ctx.fill('evenodd');
+    } else {
+      // Fundido (y el final del pixelado, que se va apagando)
+      ctx.globalAlpha = f.tipo === 'pixelado' ? f.alfa * f.alfa : f.alfa;
+      ctx.fillRect(0, 0, r.ancho, r.alto);
+    }
+    ctx.restore();
+  }
+
+  /** El mundo (con la cámara) y la interfaz. */
+  private dibujarEscena(r: Renderizador): void {
     const cam = this.camara;
     const ctx = r.ctx;
     const visible = cam.zonaVisible();
@@ -355,17 +431,6 @@ export class Escena implements EscenaActiva {
     this.dibujarDepuracion(r, (x, y) => ({ x, y: r.alto - y }), true);
     interfaz.sort((a, b) => a.capa - b.capa);
     for (const s of interfaz) s.dibujarEn(r, s.objeto.posicion.x, r.alto - s.objeto.posicion.y);
-
-    // 3. El fundido, encima de todo
-    if (this.fundido.alfa > 0) {
-      ctx.save();
-      ctx.globalAlpha = this.fundido.alfa;
-      ctx.fillStyle = resolverColor(this.fundido.color);
-      ctx.fillRect(0, 0, r.ancho, r.alto);
-      ctx.restore();
-    }
-    // 4. El diálogo, lo último (se tiene que leer aunque la pantalla esté oscura)
-    this.dialogos[0]?.dibujar(r);
   }
 
   /** Líneas, círculos, arcos... de dibujar.xxx(): los de este fotograma (se borran al empezar el siguiente). */

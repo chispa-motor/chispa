@@ -326,6 +326,57 @@ await prueba('los comandos nuevos se dibujan en el juego de verdad (animar, fund
   comprobar(r.alfa === 1 && r.escala === 2 && r.color === 'rojo', 'no ha hecho lo que se pedía: ' + JSON.stringify(r));
 });
 
+await prueba('día 2: los filtros de pantalla, el flash y las transiciones se ven de verdad', async (p) => {
+  // Un cuadrado rojo que llena el centro de la pantalla
+  await estado(p, () => {
+    const e = window.chispa.estado;
+    const cuadrado = { tipo: 'escena', escena: 'Principal', indice: 0 };
+    e.cambiarPropiedad(cuadrado, 'sprite.color', '#ff0000');
+    e.cambiarPropiedad(cuadrado, 'sprite.ancho', 400);
+    e.cambiarPropiedad(cuadrado, 'sprite.alto', 300);
+    e.cambiarCodigo('cuadrado.chs', 'cuando empieza:\n    yo.x = 480\n    yo.y = 270');
+  });
+  await p.keyboard.press('F5');
+  await p.waitForFunction(() => document.querySelector('.estado-juego')?.textContent?.startsWith('Jugando'));
+  await p.waitForTimeout(300);
+  /** El color del centro del juego (r, g, b), y si dos píxeles vecinos son iguales. */
+  const centro = () => estado(p, () => {
+    const c = document.querySelector('.lienzo-juego');
+    const ctx = c.getContext('2d');
+    const d = ctx.getImageData(Math.floor(c.width / 2), Math.floor(c.height / 2), 1, 1).data;
+    return [d[0], d[1], d[2]];
+  });
+  const orden = (codigo) => estado(p, (c) => window.chispa.vistaJuego.juego.ejecutarOrden(c), codigo);
+  let c = await centro();
+  comprobar(c[0] > 200 && c[1] < 60, 'el centro no es rojo: ' + c);
+  await orden('pantalla.grises = 1');
+  await p.waitForTimeout(150);
+  c = await centro();
+  comprobar(Math.abs(c[0] - c[1]) < 8 && Math.abs(c[1] - c[2]) < 8, 'con grises el rojo no se ha vuelto gris: ' + c);
+  await orden('pantalla.normal()');
+  await orden('pantalla.flash("blanco", 2)');
+  await p.waitForTimeout(100);
+  c = await centro();
+  comprobar(c[0] > 230 && c[1] > 180 && c[2] > 180, 'el flash no pone la pantalla blanca: ' + c);
+  await p.waitForTimeout(2100);
+  // Tele antigua y pixelado: se dibujan sin errores
+  await orden('pantalla.crt = verdadero');
+  await orden('pantalla.pixelado = 6');
+  await orden('pantalla.bloom = 0.5');
+  await orden('pantalla.aberracion = 4');
+  await p.waitForTimeout(200);
+  // Una transición en círculo: a mitad, el centro se ve y la esquina está tapada (negra)
+  await estado(p, () => window.chispa.vistaJuego.juego.escena.fundir(0.6, 0, 'negro', 'circulo'));
+  await orden('pantalla.normal()');
+  await p.waitForTimeout(120);
+  const esquina = await estado(p, () => {
+    const cv = document.querySelector('.lienzo-juego');
+    return [...cv.getContext('2d').getImageData(2, 2, 1, 1).data].slice(0, 3);
+  });
+  c = await centro();
+  comprobar(esquina.every((v) => v < 10) && c[0] > 200, 'el círculo no tapa los bordes y deja ver el centro: ' + esquina + ' / ' + c);
+});
+
 await prueba('depurar: clic en el número de línea, el juego se para, se ven las variables y se va paso a paso', async (p) => {
   const codigo = 'variable vueltas = 0\ncuando cada fotograma:\n    vueltas += 1\n    variable doble = vueltas * 2\n    yo.x += 1\n';
   await estado(p, (c) => {

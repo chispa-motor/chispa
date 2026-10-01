@@ -127,6 +127,10 @@ export const ACCIONES: Accion[] = [
   { id: 'efTexto', categoria: 'efectos', partes: ['texto que sube', 0, 'en', 1], funcion: 'efecto.texto', porDefecto: ['"+1"', 'yo'] },
   { id: 'efUsar', categoria: 'efectos', partes: ['mi efecto', 0, 'en', 1], funcion: 'efecto.usar', porDefecto: ['"magia"', 'yo'] },
   { id: 'efParar', categoria: 'efectos', partes: ['parar el efecto', 0, 'de', 1], funcion: 'efecto.parar', porDefecto: ['"fuego"', 'yo'] },
+  { id: 'congelar', categoria: 'efectos', partes: ['congelar el juego', 0, 'segundos'], funcion: 'tiempo.congelar', porDefecto: ['0.08'] },
+  { id: 'flashPantalla', categoria: 'efectos', partes: ['flash de pantalla', 0, 'durante', 1, 'segundos'], funcion: 'pantalla.flash', porDefecto: ['"blanco"', '0.2'] },
+  { id: 'pantallaNormal', categoria: 'efectos', partes: ['quitar los filtros de pantalla'], funcion: 'pantalla.normal', porDefecto: [] },
+  { id: 'flashObjeto', categoria: 'efectos', partes: ['flash del objeto', 0, 'durante', 1, 'segundos'], funcion: 'yo.flash', porDefecto: ['"blanco"', '0.1'] },
   { id: 'efecto', categoria: 'sonido', partes: ['sonido', 0], funcion: 'sonido.efecto', porDefecto: ['"moneda"'] },
   { id: 'reproducir', categoria: 'sonido', partes: ['reproducir el sonido', 0], funcion: 'sonido.reproducir', porDefecto: ['"salto"'] },
   { id: 'musica', categoria: 'sonido', partes: ['poner la música', 0], funcion: 'musica.reproducir', porDefecto: ['"tema"'] },
@@ -135,6 +139,7 @@ export const ACCIONES: Accion[] = [
   { id: 'enviar', categoria: 'objetos', partes: ['enviar el mensaje', 0], funcion: 'enviar', porDefecto: ['"empezar"'] },
   { id: 'esperar', categoria: 'control', partes: ['esperar', 0, 'segundos'], funcion: 'esperar', porDefecto: ['1'] },
   { id: 'cambiarEscena', categoria: 'control', partes: ['ir a la escena', 0], funcion: 'escena.cambiar', porDefecto: ['"Nivel2"'] },
+  { id: 'cambiarEscenaTransicion', categoria: 'control', partes: ['ir a la escena', 0, 'con la transición', 2, 'en', 1, 'segundos'], funcion: 'escena.cambiar', porDefecto: ['"Nivel2"', '1', '"circulo"'] },
   { id: 'reiniciar', categoria: 'control', partes: ['reiniciar la escena'], funcion: 'escena.reiniciar', porDefecto: [] },
 ];
 
@@ -182,6 +187,19 @@ export const DATOS_CON_BLOQUE: DatoConBloque[] = [
   { categoria: 'efectos', objetivo: 'yo.polvo', valor: 'verdadero' },
   { categoria: 'efectos', objetivo: 'yo.efecto', valor: '"fuego"' },
   { categoria: 'efectos', objetivo: 'efecto.suave', valor: 'falso' },
+  { categoria: 'efectos', objetivo: 'pantalla.grises', valor: '1' },
+  { categoria: 'efectos', objetivo: 'pantalla.desenfoque', valor: '4' },
+  { categoria: 'efectos', objetivo: 'pantalla.pixelado', valor: '4' },
+  { categoria: 'efectos', objetivo: 'pantalla.brillo', valor: '0.6' },
+  { categoria: 'efectos', objetivo: 'pantalla.vineta', valor: '0.7' },
+  { categoria: 'efectos', objetivo: 'pantalla.aberracion', valor: '4' },
+  { categoria: 'efectos', objetivo: 'pantalla.crt', valor: 'verdadero' },
+  { categoria: 'efectos', objetivo: 'pantalla.bloom', valor: '0.6' },
+  { categoria: 'efectos', objetivo: 'yo.contorno', valor: '"blanco"' },
+  { categoria: 'efectos', objetivo: 'yo.grosorContorno', valor: '5' },
+  { categoria: 'efectos', objetivo: 'yo.brillo', valor: '1.5' },
+  { categoria: 'efectos', objetivo: 'yo.grises', valor: '1' },
+  { categoria: 'efectos', objetivo: 'yo.desenfoque', valor: '3' },
 ];
 
 export const datoPorObjetivo = (objetivo: string) => DATOS_CON_BLOQUE.find((d) => d.objetivo === objetivo.trim());
