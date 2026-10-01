@@ -2,7 +2,7 @@
 
 > Se genera sola con `npm run manual` (no la cambies a mano). Un test comprueba que no falta ningún comando y que cada ejemplo funciona.
 
-Todos los comandos de Chispa (346), una línea cada uno, para tenerla abierta mientras programas o imprimirla. Para aprender con calma, el [curso](APRENDE_CHISPA.md).
+Todos los comandos de Chispa (356), una línea cada uno, para tenerla abierta mientras programas o imprimirla. Para aprender con calma, el [curso](APRENDE_CHISPA.md).
 
 En los ejemplos se usan estas variables y esta función, como si ya las tuvieras (y en la escena hay un Jugador y un Mapa de casillas):
 
@@ -479,6 +479,21 @@ Las líneas que terminan en `:` empiezan un bloque: lo de dentro va debajo, con 
 | `yo.grises` | El objeto en escala de grises, de 0 (colores) a 1 (blanco y negro). | `yo.grises = 1` |
 | `yo.desenfoque` | El objeto borroso (en píxeles): cosas lejanas, fantasmas... | `yo.desenfoque = 3` |
 | `yo.flash(color, segundos)` | El objeto entero de un color (blanco si no se dice) un momento: al recibir un golpe. | `yo.flash("rojo", 0.15)` |
+
+### Luces y oscuridad
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `escena.oscuridad` | Oscuridad de la escena, de 0 (de día: no hacen falta luces) a 1 (negro donde no llega ninguna luz). | `escena.oscuridad = 0.8` |
+| `escena.luzAmbiente` | El color de la oscuridad (negro si no se dice). | `escena.luzAmbiente = "#0a1030"` |
+| `yo.luz` | Si es verdadero, el objeto lleva una luz (se ve cuando la escena tiene oscuridad). | `yo.luz = verdadero` |
+| `yo.tipoLuz` | "punto" (alumbra alrededor, como una antorcha) o "foco" (un cono hacia donde mira el objeto, como una linterna). | `yo.tipoLuz = "foco"` |
+| `yo.colorLuz` | El color de la luz (blanca si no se dice): tiñe un poco lo que ilumina. | `yo.colorLuz = "naranja"` |
+| `yo.radioLuz` | Hasta dónde llega la luz, en píxeles (220). | `yo.radioLuz = 300` |
+| `yo.intensidadLuz` | Lo fuerte que es la luz, de 0 (apagada) a 1 (normal); más de 1 llega más lejos. | `yo.intensidadLuz = 0.6` |
+| `yo.anguloLuz` | En un foco: lo abierto que es el cono, en grados (60). | `yo.anguloLuz = 40` |
+| `yo.luzConSombras` | Si es verdadero, lo sólido tapa la luz y hace sombra (las paredes de un laberinto). | `yo.luzConSombras = verdadero` |
+| `yo.parpadeoLuz` | La luz tiembla como una llama, de 0 (quieta) a 1 (mucho). | `yo.parpadeoLuz = 0.5` |
 
 ## Nivel 4: Avanzado
 

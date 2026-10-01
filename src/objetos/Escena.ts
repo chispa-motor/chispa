@@ -31,6 +31,7 @@ import { Camara, type Limites } from './Camara';
 import { ObjetoJuego } from './ObjetoJuego';
 import type { Particulas } from './Particulas';
 import { Efectos } from './Efectos';
+import { dibujarLuces } from './Luces';
 import { FILTROS_NORMALES, dibujarConFiltros, hayFiltros, type Filtros } from '../motor/Filtros';
 
 /** Cómo se tapa la pantalla al cambiar de escena. */
@@ -82,6 +83,9 @@ export class Escena implements EscenaActiva {
    * (nada) a 1 (todo tapado). Sigue igual al cambiar de escena.
    */
   readonly fundido: { alfa: number; objetivo: number; velocidad: number; color: string; tipo: Transicion } = { alfa: 0, objetivo: 0, velocidad: 0, color: 'negro', tipo: 'fundido' };
+  /** Oscuridad de 0 (nada: no hacen falta luces) a 1 (negro donde no hay luz), y su color (la luz ambiente). */
+  oscuridad = 0;
+  luzAmbiente = 'negro';
   /** Los filtros de pantalla (grises, pixelado, CRT...). Al cambiar de escena, los de la escena nueva. */
   filtros: Filtros = { ...FILTROS_NORMALES };
   /** Un destello de toda la pantalla (pantalla.flash): se apaga solo. */
@@ -421,9 +425,21 @@ export class Escena implements EscenaActiva {
     ctx.translate(r.ancho / 2, r.alto / 2);
     ctx.scale(cam.zoom, cam.zoom);
     for (const m of mundo) m.dibujar();
-    this.efectos.dibujar(r, aLocal);
-    this.dibujarDepuracion(r, aLocal, false);
+    const conLuces = this.oscuridad > 0;
+    this.efectos.dibujar(r, aLocal, conLuces ? 'normal' : 'todo');
+    if (!conLuces) this.dibujarDepuracion(r, aLocal, false);
     ctx.restore();
+
+    // 1b. La oscuridad y las luces, encima del mundo. Lo que da luz (fuego, chispas, rayos) va encima de la oscuridad
+    if (conLuces) {
+      dibujarLuces(r, this, this.oscuridad, this.luzAmbiente);
+      ctx.save();
+      ctx.translate(r.ancho / 2, r.alto / 2);
+      ctx.scale(cam.zoom, cam.zoom);
+      this.efectos.dibujar(r, aLocal, 'luz');
+      this.dibujarDepuracion(r, aLocal, false);
+      ctx.restore();
+    }
 
     // 2. La interfaz, pegada a la pantalla: (0,0) es la esquina inferior izquierda
     //    Primero lo dibujado con dibujar.enPantalla (barras, iconos...) y encima los objetos

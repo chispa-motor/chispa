@@ -377,6 +377,35 @@ await prueba('día 2: los filtros de pantalla, el flash y las transiciones se ve
   comprobar(esquina.every((v) => v < 10) && c[0] > 200, 'el círculo no tapa los bordes y deja ver el centro: ' + esquina + ' / ' + c);
 });
 
+await prueba('día 2: oscuridad, luces y sombras se ven de verdad', async (p) => {
+  // Fondo claro y oscuridad casi total; una luz en el centro y un muro a su derecha que hace sombra
+  await estado(p, () => {
+    const e = window.chispa.estado;
+    e.cambiarEscenaPropiedad('colorFondo', '#c8c8c8');
+    e.cambiarEscenaPropiedad('oscuridad', 0.95);
+    e.crearObjeto('vacio', 480, 270);
+    e.renombrar(e.seleccion, 'Farol');
+    e.cambiarPropiedad(e.seleccion, 'luz', { radio: 400, sombras: true });
+    e.crearObjeto('rectangulo', 560, 270);
+    e.cambiarPropiedad(e.seleccion, 'sprite.alto', 200);
+    e.cambiarPropiedad(e.seleccion, 'sprite.ancho', 20);
+  });
+  await p.keyboard.press('F5');
+  await p.waitForFunction(() => document.querySelector('.estado-juego')?.textContent?.startsWith('Jugando'));
+  await p.waitForTimeout(300);
+  const brillo = (fx, fy) => estado(p, ([fx, fy]) => {
+    const c = document.querySelector('.lienzo-juego');
+    const d = c.getContext('2d').getImageData(Math.floor(c.width * fx), Math.floor(c.height * fy), 1, 1).data;
+    return d[0] + d[1] + d[2];
+  }, [fx, fy]);
+  const cerca = await brillo(0.5 - 60 / 960, 0.5);
+  const lejos = await brillo(0.03, 0.05);
+  const detras = await brillo(0.5 + 140 / 960, 0.5);
+  comprobar(cerca > 300, `junto a la luz no se ve: ${cerca}`);
+  comprobar(lejos < 60, `lejos de la luz no está oscuro: ${lejos}`);
+  comprobar(detras < cerca / 3, `detrás del muro no hay sombra: ${detras} (junto a la luz: ${cerca})`);
+});
+
 await prueba('depurar: clic en el número de línea, el juego se para, se ven las variables y se va paso a paso', async (p) => {
   const codigo = 'variable vueltas = 0\ncuando cada fotograma:\n    vueltas += 1\n    variable doble = vueltas * 2\n    yo.x += 1\n';
   await estado(p, (c) => {

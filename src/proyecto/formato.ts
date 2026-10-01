@@ -126,6 +126,19 @@ export interface DefRecorrido {
   pausa?: number;
 }
 
+export interface DefLuz {
+  tipo?: 'punto' | 'foco';
+  color?: string;
+  radio?: number;
+  intensidad?: number;
+  /** Foco: lo abierto que es el cono, en grados. */
+  angulo?: number;
+  /** ¿Las cosas sólidas tapan esta luz (hacen sombra)? */
+  sombras?: boolean;
+  /** Parpadeo, de 0 a 1 (antorchas). */
+  parpadeo?: number;
+}
+
 export interface DefFisica {
   gravedad?: number;
   estatico?: boolean;
@@ -166,6 +179,8 @@ export interface DefObjeto {
   animacion?: string;
   /** Un efecto que lleva siempre puesto (fuego, humo, burbujas, estela o uno propio). */
   efecto?: string;
+  /** Una luz que lleva encima (se ve cuando la escena tiene oscuridad). */
+  luz?: DefLuz;
   /** Nombre de un script de `proyecto.scripts`. */
   script?: string;
   /** Propiedades propias con su valor inicial (como los Attributes de Roblox): vida = 3... */
@@ -192,6 +207,10 @@ export interface DefEscena {
   clima?: { tipo: Clima; intensidad?: number };
   /** Filtros de pantalla de esta escena (grises, pixelado, CRT...). */
   filtros?: Partial<Filtros>;
+  /** Oscuridad (de 0 a 1): para juegos de cuevas o de noche, con luces. */
+  oscuridad?: number;
+  /** El color de la oscuridad (negro si no se dice; un azul oscuro es de noche). */
+  luzAmbiente?: string;
   objetos: DefObjeto[];
 }
 

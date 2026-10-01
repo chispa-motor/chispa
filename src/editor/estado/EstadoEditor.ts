@@ -656,7 +656,7 @@ export class EstadoEditor {
   }
 
   /** Pone o quita un componente entero: sprite, colision, fisica o mapa. */
-  activarComponente(ref: RefObjeto, componente: 'sprite' | 'colision' | 'fisica' | 'mapa' | 'recorrido' | 'comportamiento', activo: boolean): void {
+  activarComponente(ref: RefObjeto, componente: 'sprite' | 'colision' | 'fisica' | 'mapa' | 'recorrido' | 'comportamiento' | 'luz', activo: boolean): void {
     const porDefecto = {
       sprite: { forma: 'rectangulo', color: '#4aa3ff', ancho: 64, alto: 64 },
       colision: {},
@@ -666,6 +666,8 @@ export class EstadoEditor {
       recorrido: { puntos: [{ x: 200, y: 0 }], rapidez: 100 },
       // Lo más pedido: un enemigo que va a por el jugador
       comportamiento: { tipo: 'perseguir', objetivo: 'Jugador' },
+      // Una luz cálida, como una antorcha
+      luz: { color: '#ffd9a0', radio: 220 },
     };
     this.cambiarPropiedad(ref, componente, activo ? structuredClone(porDefecto[componente]) : undefined);
   }
@@ -840,11 +842,17 @@ export class EstadoEditor {
     if (this.proyecto.escenas[nombre]) this.cambiar('escena', () => (this.proyecto.escenaInicial = nombre));
   }
 
-  cambiarEscenaPropiedad(ruta: 'colorFondo' | 'gravedad' | 'camara.zoom' | 'camara.seguir' | 'camara.x' | 'camara.y' | 'camara.limitarAlMapa' | 'clima' | `filtros.${keyof Filtros}`, valor: unknown): void {
+  cambiarEscenaPropiedad(ruta: 'oscuridad' | 'luzAmbiente' | 'colorFondo' | 'gravedad' | 'camara.zoom' | 'camara.seguir' | 'camara.x' | 'camara.y' | 'camara.limitarAlMapa' | 'clima' | `filtros.${keyof Filtros}`, valor: unknown): void {
     this.cambiar('escena', () => {
       const e = this.escena;
       if (ruta === 'colorFondo') e.colorFondo = String(valor);
-      else if (ruta.startsWith('filtros.')) {
+      else if (ruta === 'oscuridad') {
+        if (!valor) delete e.oscuridad;
+        else e.oscuridad = Math.min(1, Math.max(0, Number(valor)));
+      } else if (ruta === 'luzAmbiente') {
+        if (!valor || valor === 'negro') delete e.luzAmbiente;
+        else e.luzAmbiente = String(valor);
+      } else if (ruta.startsWith('filtros.')) {
         const k = ruta.slice(8) as keyof Filtros;
         const filtros = (e.filtros ??= {}) as Record<string, unknown>;
         if (valor === undefined || valor === FILTROS_NORMALES[k]) delete filtros[k];

@@ -517,6 +517,22 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
         objetos: { obtener: () => ctx.escena.objetos.filter((o) => !o.destruido).map(referencia) },
         nombre: { obtener: () => ctx.nombreEscena },
         gravedad: { obtener: () => ctx.escena.gravedad, asignar: (v, p) => (ctx.escena.gravedad = comoNumero(v, 'gravedad', p)) },
+        oscuridad: {
+          obtener: () => ctx.escena.oscuridad,
+          asignar: (v, p) => {
+            const n = comoNumero(v, 'escena.oscuridad', p);
+            if (!(n >= 0 && n <= 1)) throw new ErrorChispa(p, `la oscuridad va de 0 (de día) a 1 (negro donde no hay luz), y le das ${n}.`, 'Ejemplo: escena.oscuridad = 0.9');
+            ctx.escena.oscuridad = n;
+          },
+        },
+        luzambiente: {
+          obtener: () => ctx.escena.luzAmbiente,
+          asignar: (v, p) => {
+            const c = aTexto(v);
+            if (!esColorValido(c)) throw new ErrorChispa(p, `"${c}" no es un color.`, 'Ejemplo: escena.luzAmbiente = "#0a1030"  (un azul muy oscuro: de noche)');
+            ctx.escena.luzAmbiente = c;
+          },
+        },
         colorfondo: {
           obtener: () => ctx.motor.colorFondo,
           asignar: (v, p) => {
@@ -549,7 +565,7 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
           return null;
         },
       },
-      ['objetos', 'nombre', 'gravedad', 'colorFondo', 'camara', 'reiniciar', 'cambiar'],
+      ['objetos', 'nombre', 'gravedad', 'oscuridad', 'luzAmbiente', 'colorFondo', 'camara', 'reiniciar', 'cambiar'],
     ).agregarSubmodulo('camara', camara),
   );
 

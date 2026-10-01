@@ -288,13 +288,20 @@ export class Efectos {
     });
   }
 
-  dibujar(r: Renderizador, aPantalla: (x: number, y: number) => { x: number; y: number }): void {
+  /**
+   * `parte`: todo, o (cuando hay oscuridad y luces) primero lo normal y,
+   * encima de la oscuridad, lo que da luz (lo que brilla, rayos y destellos).
+   */
+  dibujar(r: Renderizador, aPantalla: (x: number, y: number) => { x: number; y: number }, parte: 'todo' | 'normal' | 'luz' = 'todo'): void {
     const ctx = r.ctx;
-    this.particulas.dibujar(r, aPantalla);
-    if (!this.rayos.length && !this.anillos.length && !this.textos.length) return;
+    this.particulas.dibujar(r, aPantalla, parte === 'todo' ? 'todas' : parte === 'normal' ? 'normales' : 'brillantes');
+    const rayos = parte === 'normal' ? [] : this.rayos;
+    const anillos = parte === 'todo' ? this.anillos : this.anillos.filter((a) => (a.clase === 'destello') === (parte === 'luz'));
+    const textos = parte === 'luz' ? [] : this.textos;
+    if (!rayos.length && !anillos.length && !textos.length) return;
     ctx.save();
     ctx.lineCap = ctx.lineJoin = 'round';
-    for (const a of this.anillos) {
+    for (const a of anillos) {
       const t = 1 - a.vida / a.total; // 0 → 1
       const s = aPantalla(a.x, a.y);
       ctx.globalAlpha = 1 - t;
@@ -319,7 +326,7 @@ export class Efectos {
         ctx.globalCompositeOperation = 'source-over';
       }
     }
-    for (const rayo of this.rayos) {
+    for (const rayo of rayos) {
       const puntos = rayo.puntos.map((p) => aPantalla(p.x, p.y));
       ctx.globalAlpha = Math.min(1, (rayo.vida / rayo.total) * 2);
       // Tres pasadas: brillo ancho, color y el centro blanco
@@ -335,7 +342,7 @@ export class Efectos {
     }
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    for (const t of this.textos) {
+    for (const t of textos) {
       const s = aPantalla(t.x, t.y);
       const k = t.vida / t.total;
       ctx.globalAlpha = Math.min(1, k * 2);

@@ -2,7 +2,7 @@
 
 > Este archivo se genera solo con `npm run manual`, a partir de la API de verdad (no lo cambies a mano: cambia `src/chispa/api/curso.ts`). Un test ejecuta cada ejemplo, cada ejercicio y cada mini proyecto para comprobar que funcionan.
 
-Un curso por niveles para aprender a programar juegos con Chispa, aunque no hayas programado nunca. Salen **todos** los comandos que existen (346), cada uno con qué hace, un ejemplo corto que funciona y el error que más se comete con él.
+Un curso por niveles para aprender a programar juegos con Chispa, aunque no hayas programado nunca. Salen **todos** los comandos que existen (356), cada uno con qué hace, un ejemplo corto que funciona y el error que más se comete con él.
 
 **Cómo usarlo:**
 
@@ -45,6 +45,7 @@ Una regla para todo el curso: en el código **no hacen falta tildes**. Se escrib
   - [Colores y estilo](#colores-y-estilo)
   - [Efectos especiales](#efectos-especiales)
   - [Efectos de pantalla y de objeto](#efectos-de-pantalla-y-de-objeto)
+  - [Luces y oscuridad](#luces-y-oscuridad)
 - [Nivel 4: Avanzado](#nivel-4-avanzado)
   - [Mensajes entre objetos y datos globales](#mensajes-entre-objetos-y-datos-globales)
   - [Ir a sitios esquivando paredes](#ir-a-sitios-esquivando-paredes)
@@ -5471,6 +5472,182 @@ cuando toco Enemigo:
 ```
 cuando empieza:
     yo.flash("rojo", -1)
+```
+
+### Luces y oscuridad
+
+Para cuevas y noches: la escena se oscurece (escena.oscuridad) y los objetos llevan luz (yo.luz). Una luz puede ser de punto (antorcha) o un foco (linterna), de colores, que parpadea, y que hace sombras con las paredes.
+
+#### `escena.oscuridad`
+
+Oscuridad de la escena, de 0 (de día: no hacen falta luces) a 1 (negro donde no llega ninguna luz).
+
+```
+cuando empieza:
+    escena.oscuridad = 0.9
+```
+
+**Error típico:** Darle un porcentaje: va de 0 a 1 (0.9 es casi negro). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    escena.oscuridad = 90
+```
+
+#### `escena.luzAmbiente`
+
+El color de la oscuridad (negro si no se dice).
+
+```
+cuando empieza:
+    escena.oscuridad = 0.8
+    escena.luzAmbiente = "#0a1030"
+```
+
+**Error típico:** Darle algo que no es un color: es el COLOR de la oscuridad. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    escena.luzAmbiente = "noche"
+```
+
+#### `yo.luz`
+
+Si es verdadero, el objeto lleva una luz (se ve cuando la escena tiene oscuridad).
+
+```
+cuando empieza:
+    escena.oscuridad = 0.9
+    yo.luz = verdadero
+```
+
+**Error típico:** Encender una luz sin oscuridad: de día no se nota. Pon también escena.oscuridad = 0.9. Esto no da error: funciona, pero no hace lo que querías.
+
+```
+cuando empieza:
+    yo.luz = verdadero
+```
+
+#### `yo.tipoLuz`
+
+"punto" (alumbra alrededor, como una antorcha) o "foco" (un cono hacia donde mira el objeto, como una linterna).
+
+```
+cuando empieza:
+    yo.luz = verdadero
+    yo.tipoLuz = "foco"
+```
+
+**Error típico:** Inventarse el tipo: es "punto" o "foco". Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    yo.tipoLuz = "linterna"
+```
+
+#### `yo.colorLuz`
+
+El color de la luz (blanca si no se dice): tiñe un poco lo que ilumina.
+
+```
+cuando empieza:
+    yo.luz = verdadero
+    yo.colorLuz = "naranja"
+```
+
+**Error típico:** Darle algo que no es un color. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    yo.colorLuz = "fuego"
+```
+
+#### `yo.radioLuz`
+
+Hasta dónde llega la luz, en píxeles (220).
+
+```
+cuando empieza:
+    yo.luz = verdadero
+    yo.radioLuz = 300
+```
+
+**Error típico:** Leerlo sin luz: primero yo.luz = verdadero. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    mostrar(yo.radioLuz)
+```
+
+#### `yo.intensidadLuz`
+
+Lo fuerte que es la luz, de 0 (apagada) a 1 (normal); más de 1 llega más lejos.
+
+```
+cuando empieza:
+    yo.luz = verdadero
+    yo.intensidadLuz = 0.6
+```
+
+**Error típico:** Darle un porcentaje: va de 0 a 1 (puede pasar un poco de 1, hasta 10). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    yo.intensidadLuz = 50
+```
+
+#### `yo.anguloLuz`
+
+En un foco: lo abierto que es el cono, en grados (60).
+
+```
+cuando empieza:
+    yo.luz = verdadero
+    yo.tipoLuz = "foco"
+    yo.anguloLuz = 40
+```
+
+**Error típico:** Cambiar el ángulo de una luz de punto: solo se nota en un foco (yo.tipoLuz = "foco"). Esto no da error: funciona, pero no hace lo que querías.
+
+```
+cuando empieza:
+    yo.luz = verdadero
+    yo.anguloLuz = 40
+```
+
+#### `yo.luzConSombras`
+
+Si es verdadero, lo sólido tapa la luz y hace sombra (las paredes de un laberinto).
+
+```
+cuando empieza:
+    yo.luz = verdadero
+    yo.luzConSombras = verdadero
+```
+
+**Error típico:** Darle un texto: es verdadero o falso. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    yo.luzConSombras = "si"
+```
+
+#### `yo.parpadeoLuz`
+
+La luz tiembla como una llama, de 0 (quieta) a 1 (mucho).
+
+```
+cuando empieza:
+    yo.luz = verdadero
+    yo.colorLuz = "naranja"
+    yo.parpadeoLuz = 0.5
+```
+
+**Error típico:** Pasarse: va de 0 a 1. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    yo.parpadeoLuz = 3
 ```
 
 ### Ejercicios del nivel 3

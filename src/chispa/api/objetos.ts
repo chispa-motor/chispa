@@ -39,6 +39,7 @@ import { normalizar } from '../../utilidades/texto';
 import { sinPrototipo } from '../../utilidades/seguro';
 import { NOMBRES_MEZCLAS, PATRONES, TIPOS_RELLENO } from '../../motor/Estilo';
 import { EFECTOS_CONTINUOS, RECETAS } from '../../objetos/Efectos';
+import { Luz } from '../../objetos/Luces';
 import { NOMBRES_COLORES, esColorValido } from '../../motor/Color';
 import { FORMAS, MAX_LADOS, MAX_PUNTOS_CAMINO, POR_DEFECTO } from '../../objetos/formas/figuras';
 
@@ -337,6 +338,28 @@ const PROPIEDADES: Record<string, PropiedadObjeto> = sinPrototipo({
     },
   },
 
+  // ── Luz (objetos/Luces.ts): yo.luz = verdadero la enciende, con sus datos ──
+  luz: {
+    obtener: (o) => o.obtener(Luz)?.activo ?? false,
+    asignar: (o, v, p) => {
+      const encender = comoLogico(v, 'luz', p);
+      const l = o.obtener(Luz);
+      if (l) l.activo = encender;
+      else if (encender) o.agregar(new Luz());
+    },
+  },
+  tipoluz: datoDeLuz('tipoLuz', (l) => l.tipo, (l, v, p) => (l.tipo = unaOpcion(v, ['punto', 'foco'] as const, 'tipoLuz', p, 'yo.tipoLuz = "foco"'))),
+  colorluz: datoDeLuz('colorLuz', (l) => l.color, (l, v, p) => (l.color = unColor(v, 'colorLuz', p))),
+  radioluz: datoDeLuz('radioLuz', (l) => l.radio, (l, v, p) => (l.radio = Math.max(0, comoNumero(v, 'radioLuz', p)))),
+  intensidadluz: datoDeLuz('intensidadLuz', (l) => l.intensidad, (l, v, p) => {
+    const n = comoNumero(v, 'intensidadLuz', p);
+    if (!(n >= 0 && n <= 10)) throw new ErrorChispa(p, `la intensidad de la luz va de 0 (apagada) a 10, y le das ${n}.`, 'Ejemplo: yo.intensidadLuz = 0.8');
+    l.intensidad = n;
+  }),
+  anguloluz: datoDeLuz('anguloLuz', (l) => l.angulo, (l, v, p) => (l.angulo = Math.min(360, Math.max(1, comoNumero(v, 'anguloLuz', p))))),
+  luzconsombras: datoDeLuz('luzConSombras', (l) => l.sombras, (l, v, p) => (l.sombras = comoLogico(v, 'luzConSombras', p))),
+  parpadeoluz: datoDeLuz('parpadeoLuz', (l) => l.parpadeo, (l, v, p) => (l.parpadeo = entre0y1(v, 'parpadeoLuz', p, 'yo.parpadeoLuz = 0.5'))),
+
   contorno: {
     obtener: (o, p) => necesitaSprite(o, 'contorno', p).contorno,
     asignar: (o, v, p) => (necesitaSprite(o, 'contorno', p).contorno = colorOApagado(v, 'contorno', 'blanco', p)),
@@ -510,6 +533,18 @@ function colorOApagado(v: Valor, nombre: string, porDefecto: string, p: Posicion
   if (v === null || v === false) return null;
   if (v === true) return porDefecto;
   return unColor(v, nombre, p);
+}
+
+/** Un dato de la luz del objeto: si no tiene luz, se le pone una al cambiarlo (leerlo sin luz es un error claro). */
+function datoDeLuz(nombre: string, leer: (l: Luz) => Valor, escribir: (l: Luz, v: Valor, p: Posicion) => void): PropiedadObjeto {
+  return {
+    obtener: (o, p) => {
+      const l = o.obtener(Luz);
+      if (!l) throw new ErrorChispa(p, `el objeto '${o.nombre}' no tiene luz, así que no tiene '${nombre}'.`, 'Enciéndela primero: yo.luz = verdadero (o en el editor, la sección Luz).');
+      return leer(l);
+    },
+    asignar: (o, v, p) => escribir(o.obtener(Luz) ?? o.agregar(new Luz()), v, p),
+  };
 }
 
 /** Un número de 0 a 1 (da un error claro si no). */
@@ -924,6 +959,7 @@ const NOMBRES_BONITOS = [
   'teletransportar', 'irA', 'anguloA', 'rotarHacia', 'avanzar', 'ocultar', 'aparecer', 'parpadear', 'ponerDelante', 'ponerDetras',
   'tocando', 'cercanos', 'masCercano', 'clonar', 'ponerEtiqueta', 'quitarEtiqueta', 'tieneEtiqueta', 'pegarA', 'soltar',
   'irHacia', 'parar', 'yendo', 'atravesar', 'dejarDeAtravesar',
+  'luz', 'tipoLuz', 'colorLuz', 'radioLuz', 'intensidadLuz', 'anguloLuz', 'luzConSombras', 'parpadeoLuz',
   'polvo', 'efecto', 'contorno', 'grosorContorno', 'brillo', 'grises', 'desenfoque', 'flash', 'relleno', 'color2', 'anguloDegradado', 'patron', 'imagenRelleno', 'borde', 'colorBorde', 'bordeDiscontinuo',
   'sombra', 'sombraX', 'sombraY', 'desenfoqueSombra', 'resplandor', 'tamanoResplandor', 'mezcla',
   'forma', 'lados', 'radioInterior', 'radioEsquina', 'inicioArco', 'finArco', 'grosor', 'formaColision', 'ponerCamino',

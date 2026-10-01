@@ -38,6 +38,7 @@ const OPCIONES_DE_DATOS: [string, string[]][] = [
   ['patron', [...PATRONES]],
   ['mezcla', NOMBRES_MEZCLAS],
   ['formacolision', ['auto', 'caja', 'figura']],
+  ['tipoluz', ['punto', 'foco']],
 ];
 import { nombresDeObjetos, type DefProyecto } from '../../proyecto/formato';
 import { normalizar } from '../../utilidades/texto';
@@ -109,7 +110,7 @@ function listaParaTexto(antesDeComillas: string, p: DefProyecto): { nombres: str
   if (llamada === 'efecto.usar' || llamada === 'efecto.parar') return { nombres: [...Object.keys(p.efectos ?? {}), ...Object.keys(RECETAS).filter((r) => r !== 'humoExplosion')], tipo: 'constant' };
   // Lo que se escribe en un dato de texto con pocas opciones (yo.forma = "…", yo.mezcla = "…"...)
   for (const [dato, opciones] of OPCIONES_DE_DATOS) if (new RegExp(`\\.${dato}\\s*=$`).test(t)) return { nombres: opciones, tipo: 'constant' };
-  if (/\.(colorborde|color2|sombra|resplandor)\s*=$/.test(t)) return { nombres: NOMBRES_COLORES, tipo: 'constant' };
+  if (/\.(colorborde|color2|sombra|resplandor|contorno|colorluz|luzambiente)\s*=$/.test(t)) return { nombres: NOMBRES_COLORES, tipo: 'constant' };
   if (/\.imagenrelleno\s*=$/.test(t)) return { nombres: Object.keys(p.imagenes), tipo: 'constant' };
   if (/\.efecto\s*=$/.test(t)) return { nombres: [...EFECTOS_CONTINUOS], tipo: 'constant' };
   if (final === 'ponercasilla') return { nombres: tiposDeCasilla(p), tipo: 'constant' };

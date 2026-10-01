@@ -43,6 +43,7 @@ import { Recorrido } from '../objetos/componentes/Recorrido';
 import { Comportamiento } from '../objetos/componentes/Comportamiento';
 import { Sprite } from '../objetos/componentes/Sprite';
 import { RECETAS } from '../objetos/Efectos';
+import { Luz } from '../objetos/Luces';
 import type { ConfigParticulas } from '../objetos/Particulas';
 import { normalizar } from '../utilidades/texto';
 import { migrarProyecto, tipoPorNombre, type DefObjeto, type DefProyecto } from './formato';
@@ -213,6 +214,8 @@ export class JuegoEnMarcha implements ContextoJuego {
     this.escena.gravedad = def.gravedad ?? GRAVEDAD_MUNDO;
     // Los filtros de pantalla son los de esta escena (lo que hubiera puesto el código en la anterior se quita)
     this.escena.filtros = { ...FILTROS_NORMALES, ...(def.filtros ?? {}) };
+    this.escena.oscuridad = def.oscuridad ?? 0;
+    this.escena.luzAmbiente = def.luzAmbiente ?? 'negro';
     this.motor.colorFondo = def.colorFondo;
 
     // La cámara empieza siempre como diga ESTA escena (nada se queda de la anterior)
@@ -557,6 +560,10 @@ export function crearObjetoDesdeDefinicion(def: DefObjeto, nombrePorDefecto: str
     f.rebote = def.fisica.rebote ?? 0;
     f.masa = def.fisica.masa ?? 1;
     f.polvo = def.fisica.polvo ?? false;
+  }
+  if (def.luz) {
+    const l = o.agregar(new Luz());
+    Object.assign(l, Object.fromEntries(Object.entries(def.luz).filter(([, v]) => v !== undefined)));
   }
   if (def.mapa) {
     const m = o.agregar(new MapaCasillas());

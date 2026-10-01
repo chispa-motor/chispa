@@ -158,4 +158,26 @@ export function agregarNovedades(tema: Tema, c: Comando): void {
     'cuando empieza:\n    yo.desenfoque = "poco"', 'Darle un texto: son píxeles.');
   c('objeto:flash', 'cuando toco Enemigo:\n    yo.flash()\n    tiempo.congelar(0.08)', 'yo.flash("rojo", 0.15)',
     'cuando empieza:\n    yo.flash("rojo", -1)', 'Darle segundos negativos.');
+
+  tema(3, 'Luces y oscuridad', 'Para cuevas y noches: la escena se oscurece (escena.oscuridad) y los objetos llevan luz (yo.luz). Una luz puede ser de punto (antorcha) o un foco (linterna), de colores, que parpadea, y que hace sombras con las paredes.');
+  c('escena:oscuridad', 'cuando empieza:\n    escena.oscuridad = 0.9', 'escena.oscuridad = 0.8',
+    'cuando empieza:\n    escena.oscuridad = 90', 'Darle un porcentaje: va de 0 a 1 (0.9 es casi negro).');
+  c('escena:luzAmbiente', 'cuando empieza:\n    escena.oscuridad = 0.8\n    escena.luzAmbiente = "#0a1030"', 'escena.luzAmbiente = "#0a1030"',
+    'cuando empieza:\n    escena.luzAmbiente = "noche"', 'Darle algo que no es un color: es el COLOR de la oscuridad.');
+  c('objeto:luz', 'cuando empieza:\n    escena.oscuridad = 0.9\n    yo.luz = verdadero', 'yo.luz = verdadero',
+    'cuando empieza:\n    yo.luz = verdadero', 'Encender una luz sin oscuridad: de día no se nota. Pon también escena.oscuridad = 0.9.', 'l');
+  c('objeto:tipoLuz', 'cuando empieza:\n    yo.luz = verdadero\n    yo.tipoLuz = "foco"', 'yo.tipoLuz = "foco"',
+    'cuando empieza:\n    yo.tipoLuz = "linterna"', 'Inventarse el tipo: es "punto" o "foco".');
+  c('objeto:colorLuz', 'cuando empieza:\n    yo.luz = verdadero\n    yo.colorLuz = "naranja"', 'yo.colorLuz = "naranja"',
+    'cuando empieza:\n    yo.colorLuz = "fuego"', 'Darle algo que no es un color.');
+  c('objeto:radioLuz', 'cuando empieza:\n    yo.luz = verdadero\n    yo.radioLuz = 300', 'yo.radioLuz = 300',
+    'cuando empieza:\n    mostrar(yo.radioLuz)', 'Leerlo sin luz: primero yo.luz = verdadero.');
+  c('objeto:intensidadLuz', 'cuando empieza:\n    yo.luz = verdadero\n    yo.intensidadLuz = 0.6', 'yo.intensidadLuz = 0.6',
+    'cuando empieza:\n    yo.intensidadLuz = 50', 'Darle un porcentaje: va de 0 a 1 (puede pasar un poco de 1, hasta 10).');
+  c('objeto:anguloLuz', 'cuando empieza:\n    yo.luz = verdadero\n    yo.tipoLuz = "foco"\n    yo.anguloLuz = 40', 'yo.anguloLuz = 40',
+    'cuando empieza:\n    yo.luz = verdadero\n    yo.anguloLuz = 40', 'Cambiar el ángulo de una luz de punto: solo se nota en un foco (yo.tipoLuz = "foco").', 'l');
+  c('objeto:luzConSombras', 'cuando empieza:\n    yo.luz = verdadero\n    yo.luzConSombras = verdadero', 'yo.luzConSombras = verdadero',
+    'cuando empieza:\n    yo.luzConSombras = "si"', 'Darle un texto: es verdadero o falso.');
+  c('objeto:parpadeoLuz', 'cuando empieza:\n    yo.luz = verdadero\n    yo.colorLuz = "naranja"\n    yo.parpadeoLuz = 0.5', 'yo.parpadeoLuz = 0.5',
+    'cuando empieza:\n    yo.parpadeoLuz = 3', 'Pasarse: va de 0 a 1.');
 }

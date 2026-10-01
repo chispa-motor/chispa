@@ -180,10 +180,11 @@ export class Particulas {
     }
   }
 
-  dibujar(r: Renderizador, aPantalla: (x: number, y: number) => { x: number; y: number }): void {
+  /** `cuales`: todas, solo las normales o solo las que brillan (con luces, las que brillan van encima de la oscuridad). */
+  dibujar(r: Renderizador, aPantalla: (x: number, y: number) => { x: number; y: number }, cuales: 'todas' | 'normales' | 'brillantes' = 'todas'): void {
     const ctx = r.ctx;
     // Primero las normales y luego las que brillan (cambiar la mezcla cuesta: se hace una vez)
-    for (const sumar of [false, true]) {
+    for (const sumar of cuales === 'todas' ? [false, true] : [cuales === 'brillantes']) {
       let alguna = false;
       for (const p of this.lista) {
         if (p.sumar !== sumar) continue;

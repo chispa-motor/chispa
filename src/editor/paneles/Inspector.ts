@@ -274,6 +274,22 @@ export class Inspector {
       : [];
     partes.push(seccion('Dibujo', aspecto, { activo: !!s, alActivar: (v) => e.activarComponente(ref, 'sprite', v), ayuda: 'Cómo se ve el objeto' }));
     if (s) partes.push(this.seccionEstilo(s, cambiar, largo));
+    // Luz (se ve cuando la escena tiene oscuridad)
+    const l = def.luz;
+    partes.push(seccion('Luz', l ? [
+      e.escena.oscuridad ? null : h('p', { class: 'nota' }, 'La luz solo se ve si la escena tiene oscuridad (ajustes de la escena, sección Luz y oscuridad).'),
+      h('div', { class: 'dos-columnas' },
+        campoLista('tipo', 'luz.tipo', l.tipo ?? 'punto', [['punto', 'De punto (antorcha)'], ['foco', 'Foco (linterna)']], (v) => cambiar('luz.tipo')(v === 'punto' ? undefined : v)),
+        campoNumero('radio', 'luz.radio', l.radio ?? 220, (v) => cambiar('luz.radio')(v), { ...largo, min: 0, paso: 10, ayuda: 'Hasta dónde llega, en píxeles' }),
+      ),
+      campoColor('color', 'luz.color', l.color ?? 'blanco', cambiar('luz.color'), 'El color de la luz (tiñe un poco lo que ilumina)'),
+      h('div', { class: 'dos-columnas' },
+        campoNumero('intensidad', 'luz.intensidad', l.intensidad ?? 1, (v) => cambiar('luz.intensidad')(v === 1 ? undefined : v), { ...largo, paso: 0.1, min: 0, max: 10 }),
+        campoNumero('parpadeo', 'luz.parpadeo', l.parpadeo ?? 0, (v) => cambiar('luz.parpadeo')(v || undefined), { ...largo, paso: 0.1, min: 0, max: 1, ayuda: 'Tiembla como una llama (0 = quieta)' }),
+      ),
+      (l.tipo ?? 'punto') === 'foco' ? campoNumero('ángulo', 'luz.angulo', l.angulo ?? 60, (v) => cambiar('luz.angulo')(v === 60 ? undefined : v), { ...largo, paso: 5, min: 1, max: 360, ayuda: 'Lo abierto que es el cono (mira hacia la rotación del objeto)' }) : null,
+      campoCasilla('hace sombras', 'luz.sombras', l.sombras ?? false, (v) => cambiar('luz.sombras')(v || undefined), 'Lo sólido tapa esta luz (paredes de un laberinto, columnas...)'),
+    ] : [], { activo: !!l, alActivar: (v) => e.activarComponente(ref, 'luz', v), ayuda: 'Una luz que lleva encima (para cuevas y noches)' }));
     // Efecto que lleva puesto (fuego, humo...)
     const propios = Object.keys(e.proyecto.efectos ?? {});
     partes.push(seccion('Efecto', [
@@ -587,6 +603,10 @@ export class Inspector {
           esc.clima ? campoNumero('intensidad', 'escena.climaIntensidad', esc.clima.intensidad ?? 1, (v) => e.cambiarEscenaPropiedad('clima', { tipo: esc.clima!.tipo, intensidad: v ?? 1 }), { paso: 0.5, min: 0, max: 10, ayuda: '1 = normal, 3 = tormenta' }) : null,
         ),
       ]),
+      seccion('Luz y oscuridad', [
+        campoNumero('oscuridad', 'escena.oscuridad', esc.oscuridad ?? 0, (v) => e.cambiarEscenaPropiedad('oscuridad', v), { paso: 0.1, min: 0, max: 1, ayuda: '0 = de día (sin luces), 1 = negro donde no llega ninguna luz. Los objetos llevan luz en su sección Luz' }),
+        esc.oscuridad ? campoColor('color', 'escena.luzAmbiente', esc.luzAmbiente ?? 'negro', (v) => e.cambiarEscenaPropiedad('luzAmbiente', v), 'El color de la oscuridad: negro, o un azul muy oscuro para la noche') : null,
+      ], { plegada: !esc.oscuridad, ayuda: 'Para cuevas y noches: la escena se oscurece y solo se ve lo que alumbran las luces' }),
       seccion('Pantalla', [
         h('div', { class: 'dos-columnas' },
           campoNumero('grises', 'filtros.grises', esc.filtros?.grises ?? 0, (v) => e.cambiarEscenaPropiedad('filtros.grises', v), { paso: 0.1, min: 0, max: 1, ayuda: '0 = colores, 1 = blanco y negro (pantalla.grises)' }),

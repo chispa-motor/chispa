@@ -28,6 +28,7 @@ import { ErrorMotor } from '../motor/Errores';
 import { esColorValido } from '../motor/Color';
 import { esNombreProhibido } from '../utilidades/seguro';
 import { problemaDataURL } from './archivos';
+import type { DefLuz } from './formato';
 import type { DatoInicial, DefCamara, DefColision, DefComportamiento, DefEscena, DefFisica, DefMapa, DefObjeto, DefProyecto, DefRecorrido, DefSprite } from './formato';
 import type { DefAnimacion } from '../objetos/componentes/Animador';
 import type { TipoCasilla } from '../objetos/componentes/MapaCasillas';
@@ -306,6 +307,15 @@ function objetoJuego(v: unknown, ruta: Ruta): DefObjeto {
     comportamiento,
     animacion: nombre,
     efecto: nombre,
+    luz: (x, r) => campos<DefLuz>(objeto(x, r), r, {
+      tipo: (t, rt) => unoDe(t, rt, ['punto', 'foco'] as const),
+      color,
+      radio: (n, rn) => numero(n, rn, 0, 100_000),
+      intensidad: (n, rn) => numero(n, rn, 0, 10),
+      angulo: (n, rn) => numero(n, rn, 0, 360),
+      sombras: logico,
+      parpadeo: (n, rn) => numero(n, rn, 0, 1),
+    }),
     script: nombre,
     propiedades: (x, r) => registro(x, r, LIMITES_PROYECTO.propiedades, dato),
   });
@@ -335,6 +345,8 @@ function escena(v: unknown, ruta: Ruta): DefEscena {
       if (!c.tipo) fallo([...r, 'tipo'], 'falta qué clima es (lluvia, nieve u hojas)');
       return { tipo: c.tipo, ...(c.intensidad !== undefined ? { intensidad: c.intensidad } : {}) };
     },
+    oscuridad: (x, r) => numero(x, r, 0, 1),
+    luzAmbiente: color,
     filtros: (x, r) => campos<Partial<Filtros>>(objeto(x, r), r, {
       grises: (n, rn) => numero(n, rn, 0, 1),
       desenfoque: (n, rn) => numero(n, rn, 0, 100),

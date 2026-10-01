@@ -1226,6 +1226,70 @@ si yo.arrastrando:
     yo.opacidad = 0.7
 ```
 
+#### `yo.luz`
+
+Si es verdadero, el objeto lleva una luz (se ve cuando la escena tiene oscuridad). Falso la apaga.
+
+```
+yo.luz = verdadero
+```
+
+#### `yo.tipoLuz`
+
+"punto" (alumbra alrededor, como una antorcha) o "foco" (un cono hacia donde mira el objeto, como una linterna).
+
+```
+yo.tipoLuz = "foco"
+```
+
+#### `yo.colorLuz`
+
+El color de la luz (blanca si no se dice): tiñe un poco lo que ilumina.
+
+```
+yo.colorLuz = "naranja"
+```
+
+#### `yo.radioLuz`
+
+Hasta dónde llega la luz, en píxeles (220).
+
+```
+yo.radioLuz = 300
+```
+
+#### `yo.intensidadLuz`
+
+Lo fuerte que es la luz, de 0 (apagada) a 1 (normal); más de 1 llega más lejos.
+
+```
+yo.intensidadLuz = 0.6
+```
+
+#### `yo.anguloLuz`
+
+En un foco: lo abierto que es el cono, en grados (60). Mira hacia la rotación del objeto.
+
+```
+yo.anguloLuz = 40
+```
+
+#### `yo.luzConSombras`
+
+Si es verdadero, lo sólido tapa la luz y hace sombra (las paredes de un laberinto).
+
+```
+yo.luzConSombras = verdadero
+```
+
+#### `yo.parpadeoLuz`
+
+La luz tiembla como una llama, de 0 (quieta) a 1 (mucho).
+
+```
+yo.parpadeoLuz = 0.5
+```
+
 #### `yo.contorno`
 
 Una línea de color alrededor de todo el objeto (nulo la quita). Para resaltar lo que se puede coger o al elegido.
@@ -2042,6 +2106,22 @@ La cámara: qué parte del mundo se ve.
 
 ```
 escena.camara.seguir(yo)
+```
+
+#### `escena.oscuridad`
+
+Oscuridad de la escena, de 0 (de día: no hacen falta luces) a 1 (negro donde no llega ninguna luz). Para cuevas y noches, con objetos que llevan luz.
+
+```
+escena.oscuridad = 0.9
+```
+
+#### `escena.luzAmbiente`
+
+El color de la oscuridad (negro si no se dice). Un azul muy oscuro parece de noche.
+
+```
+escena.luzAmbiente = "#0a1030"
 ```
 
 #### `escena.colorFondo`
