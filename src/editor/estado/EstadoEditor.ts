@@ -22,7 +22,8 @@
  * tiene su propio deshacer, letra a letra (como en cualquier editor).
  */
 import { migrarProyecto, proyectoVacio, tipoPorNombre, type DatoInicial, type DefEscena, type DefObjeto, type DefProyecto, type DefSprite } from '../../proyecto/formato';
-import { FORMAS, FORMAS_DIBUJO, type Forma } from '../../objetos/formas/figuras';
+import { FORMAS, FORMAS_DIBUJO, type Forma, type PuntoCamino } from '../../objetos/formas/figuras';
+import { combinarFormas, encajarCamino, esFormaCombinable } from '../recursos/operacionesFormas';
 import type { DefAnimacion } from '../../objetos/componentes/Animador';
 import type { TipoCasilla } from '../../objetos/componentes/MapaCasillas';
 import { normalizar, quitarTildes } from '../../utilidades/texto';
@@ -210,6 +211,73 @@ export class EstadoEditor {
       if (valor === undefined) delete datos[n];
       else datos[n] = valor;
     });
+  }
+
+  /**
+   * Une las formas seleccionadas en una (o le resta a la primera las demás).
+   * Las originales se quitan y se selecciona la nueva. Devuelve falso si no
+   * se puede (menos de dos formas, o no queda nada).
+   */
+  combinarFormas(modo: 'unir' | 'restar'): boolean {
+    const indices = this.indicesSeleccionados().filter((i) => esFormaCombinable(this.escena.objetos[i]));
+    if (indices.length < 2) return false;
+    const defs = indices.map((i) => this.escena.objetos[i]);
+    const nueva = combinarFormas(defs, modo);
+    if (!nueva) return false;
+    let indice = -1;
+    this.cambiar('objetos', () => {
+      const quitar = new Set(indices);
+      const quedan = this.escena.objetos.filter((_, i) => !quitar.has(i));
+      const nombre = this.nombreLibre(modo === 'unir' ? 'Union' : 'Recorte', quedan.map((o) => o.nombre ?? ''));
+      this.escena.objetos = [...quedan, { nombre, ...nueva }];
+      indice = this.escena.objetos.length - 1;
+    });
+    this.seleccionarIndice(indice);
+    return true;
+  }
+
+  /** El camino de la pluma de una forma (la convierte en camino, encajado en su objeto). */
+  cambiarCamino(ref: RefObjeto, puntos: PuntoCamino[], cerrado: boolean): void {
+    const def = this.definicion(ref);
+    if (!def?.sprite || puntos.length < 2) return;
+    const e = encajarCamino(puntos, cerrado, def.sprite.ancho ?? 64, def.sprite.alto ?? 64);
+    this.cambiarObjeto(ref, 'objetos', () => {
+      const s = def.sprite!;
+      s.forma = 'camino';
+      s.puntos = e.puntos;
+      s.ancho = e.ancho;
+      s.alto = e.alto;
+      delete s.figuras;
+      delete s.imagen;
+      if (cerrado) delete s.cerrado;
+      else s.cerrado = false;
+      if (ref.tipo === 'escena') {
+        def.x = (def.x ?? 0) + e.dx;
+        def.y = (def.y ?? 0) + e.dy;
+      }
+    });
+  }
+
+  /**
+   * Convierte una forma en una imagen (un sprite): la dibuja en un PNG, lo
+   * guarda en Imágenes y el objeto pasa a usarlo. Sigue chocando con su forma.
+   */
+  convertirEnImagen(ref: RefObjeto, png: string): string | null {
+    const def = this.definicion(ref);
+    if (!def?.sprite || def.sprite.imagen || def.sprite.forma === 'texto') return null;
+    comprobarRecurso(png, 'imagen', 'forma');
+    const nombre = this.nombreLibre(nombreDeRecurso(def.nombre ?? (ref.tipo === 'plantilla' ? ref.nombre : 'forma')).toLowerCase(), Object.keys(this.proyecto.imagenes));
+    this.cambiar('recursos', () => {
+      this.proyecto.imagenes[nombre] = png;
+      const s = def.sprite!;
+      const esFiguraDeVerdad = (s.forma ?? 'rectangulo') !== 'rectangulo';
+      // El relleno y el borde ya están en la imagen; la sombra, el resplandor y la mezcla se quedan
+      for (const k of ['relleno', 'color2', 'anguloDegradado', 'patron', 'imagenRelleno', 'borde', 'colorBorde', 'bordeDiscontinuo'] as const) delete s[k];
+      s.imagen = nombre;
+      if (def.colision && esFiguraDeVerdad && !def.colision.forma) def.colision.forma = 'figura';
+      this.propagar(ref);
+    });
+    return nombre;
   }
 
   /** «Mis colores» del selector de color (se guardan en el proyecto). Como mucho 40, sin repetir. */

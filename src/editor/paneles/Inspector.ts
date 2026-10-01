@@ -22,6 +22,8 @@ import { leerDatoInicial, tipoPorNombre, type DatoInicial, type DefObjeto, type 
 import { FORMAS_DIBUJO, MAX_LADOS, POR_DEFECTO } from '../../objetos/formas/figuras';
 import { ESTILO_POR_DEFECTO, NOMBRES_MEZCLAS, PATRONES } from '../../motor/Estilo';
 import { misColores } from '../interfaz/SelectorColor';
+import { abrirEditorPluma } from '../recursos/EditorPluma';
+import { esFormaCombinable, formaAPNG } from '../recursos/operacionesFormas';
 import { tieneHuecos } from '../../proyecto/TextosConHuecos';
 import { datosParaTextos, insertarDato } from '../estado/datosTextos';
 import type { EstadoEditor, RefObjeto } from '../estado/EstadoEditor';
@@ -221,6 +223,14 @@ export class Inspector {
             'Qué se dibuja: una forma de color, un texto o una imagen del proyecto'),
           s.imagen ? null : campoColor('color', 'sprite.color', s.color ?? 'blanco', cambiar('sprite.color')),
           ...(s.imagen ? [] : this.datosDeForma(s, cambiar, largo)),
+          s.imagen || s.forma === 'texto' ? null : h('div', { class: 'acciones-forma' },
+            h('button', { class: 'boton-enlace', 'data-accion': 'pluma', title: 'Retocar la forma punto a punto, o dibujar una nueva, con la pluma', onclick: () => abrirEditorPluma(e, ref) }, '✒ Editar con la pluma'),
+            h('button', { class: 'boton-enlace', 'data-accion': 'a-imagen', title: 'Dibuja la forma (con su relleno y su borde) en una imagen y el objeto pasa a usarla. Sigue chocando con su forma.', onclick: () => {
+              const png = formaAPNG(def);
+              const nombre = png ? e.convertirEnImagen(ref, png) : null;
+              notificar(nombre ? `Forma convertida en la imagen «${nombre}» (está en Proyecto > Imágenes).` : 'Esta forma no se puede convertir en imagen.', nombre ? 'ok' : 'error');
+            } }, '🖼 Convertir en imagen'),
+          ),
           h('div', { class: 'dos-columnas' },
             campoNumero('ancho', 'sprite.ancho', s.ancho ?? 64, cambiar('sprite.ancho'), { ...largo, min: 1 }),
             campoNumero('alto', 'sprite.alto', s.alto ?? 64, cambiar('sprite.alto'), { ...largo, min: 1 }),
@@ -323,14 +333,25 @@ export class Inspector {
 
   // ═════════════════════════ Varios objetos ═════════════════════════
 
-  private varios(): HTMLElement[] {
+  private varios(): (HTMLElement | null)[] {
     const e = this.estado;
     const indices = e.indicesSeleccionados();
     const nombres = indices.map((i) => e.escena.objetos[i]?.nombre ?? '(sin nombre)');
+    const formas = indices.filter((i) => e.escena.objetos[i] && esFormaCombinable(e.escena.objetos[i]));
     return [
       h('div', { class: 'inspector-cabecera' }, icono('objeto', 20), h('strong', { class: 'titulo-varios' }, `${indices.length} objetos seleccionados`)),
       h('p', { class: 'nota' }, nombres.join(', ')),
       h('p', { class: 'nota' }, 'Arrastra uno de ellos en la escena para moverlos todos a la vez (o usa las flechas). Ctrl+clic añade o quita uno de la selección.'),
+      formas.length >= 2
+        ? h('div', { class: 'acciones-objeto' },
+            botonIcono('mas', 'Juntar las formas elegidas en una sola (las originales se quitan)', () => {
+              if (!e.combinarFormas('unir')) notificar('No se han podido unir.', 'error');
+            }, 'Unir formas'),
+            botonIcono('cerrar', `A «${e.escena.objetos[formas[0]].nombre}» (el primero que elegiste) le quita lo que tapan las demás`, () => {
+              if (!e.combinarFormas('restar')) notificar('No queda nada: lo que restas tapa la forma entera.', 'error');
+            }, 'Restar formas'),
+          )
+        : null,
       h('div', { class: 'acciones-objeto' },
         botonIcono('copiar', 'Duplicar todos (Ctrl+D)', () => e.duplicarSeleccionado(), 'Duplicar'),
         botonIcono('copiar', 'Copiar todos (Ctrl+C), para pegarlos en otra escena con Ctrl+V', () => {

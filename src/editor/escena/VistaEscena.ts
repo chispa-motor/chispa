@@ -35,6 +35,7 @@ import { crearObjetoDesdeDefinicion } from '../../proyecto/JuegoEnMarcha';
 import type { DefObjeto } from '../../proyecto/formato';
 import type { EstadoEditor, TipoNuevoObjeto } from '../estado/EstadoEditor';
 import { iconoForma } from '../interfaz/iconosFormas';
+import { abrirEditorPluma } from '../recursos/EditorPluma';
 import { FORMAS_DIBUJO, type Forma } from '../../objetos/formas/figuras';
 import { botonIcono, h, icono } from '../interfaz/dom';
 import { notificar } from '../interfaz/dialogos';
@@ -193,6 +194,12 @@ export class VistaEscena {
           this.anadir(o.tipo);
         } }, icono(o.icono, 16), h('span', {}, o.texto)),
       ),
+      h('button', { class: 'opcion-menu', title: 'Dibuja tu propia forma punto a punto (con curvas)', onclick: () => {
+        menu.hidden = true;
+        this.anadir('forma', 'camino');
+        const ref = this.estado.seleccion;
+        if (ref) abrirEditorPluma(this.estado, ref, { vacio: true });
+      } }, h('span', { class: 'icono-pluma' }, '✒'), h('span', {}, 'Dibujar con la pluma')),
       h('div', { class: 'titulo-menu' }, 'Más formas'),
       h('div', { class: 'rejilla-formas' },
         FORMAS_DIBUJO.filter((f) => f.forma !== 'rectangulo' && f.forma !== 'circulo').map((f) =>

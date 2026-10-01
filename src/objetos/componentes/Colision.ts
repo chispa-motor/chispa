@@ -62,7 +62,9 @@ export class Colision extends Componente {
   usaFigura(): boolean {
     if (this.forma === 'caja') return false;
     const s = this.objeto.obtener(Sprite);
-    if (!s || s.imagen || s.forma === 'texto') return false;
+    if (!s || s.forma === 'texto') return false;
+    // Una imagen choca como caja, salvo que se pida «figura» (una forma convertida en imagen recuerda su forma)
+    if (s.imagen) return this.forma === 'figura';
     return this.forma === 'figura' || s.forma !== 'rectangulo';
   }
 

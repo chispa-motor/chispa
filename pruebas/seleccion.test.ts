@@ -287,6 +287,12 @@ describe('Deshacer y rehacer: TODO lo que cambia el proyecto', () => {
     renombrarRecurso: (e) => e.renombrarRecurso('imagen', 'foto', 'retrato'),
     guardarDibujo: (e) => e.guardarDibujo('Gato', [imagenPrueba('a'), imagenPrueba('b')]),
     ponerMisColores: (e) => e.ponerMisColores(['#ff8800', 'rojo']),
+    combinarFormas: (e) => {
+      e.seleccionarVarios([0, 2]);
+      e.combinarFormas('unir');
+    },
+    cambiarCamino: (e) => e.cambiarCamino(obj(0), [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }], true),
+    convertirEnImagen: (e) => e.convertirEnImagen(obj(2), imagenPrueba('forma')),
   };
 
   for (const [nombre, cambio] of Object.entries(cambios)) {

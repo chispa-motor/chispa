@@ -609,3 +609,13 @@ a.boton { text-decoration: none; display: inline-flex; align-items: center; }
 .acerca-de dd { margin: 0; }
 .acerca-de a { color: var(--acento); }
 
+
+/* ── Pluma y operaciones con formas ── */
+.acciones-forma { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 2px 0 6px; }
+.icono-pluma { width: 16px; text-align: center; }
+.dialogo-pluma { max-width: 500px; }
+.editor-pluma { display: flex; flex-direction: column; gap: 8px; }
+.lienzo-pluma { width: 440px; max-width: 100%; aspect-ratio: 1; background: var(--fondo-codigo); border-radius: 6px; cursor: crosshair; touch-action: none; outline: none; }
+.lienzo-pluma:focus-visible { box-shadow: 0 0 0 2px var(--acento); }
+.barra-pluma { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.casilla-pluma { display: flex; align-items: center; gap: 4px; color: var(--texto-suave); font-size: 13px; }
