@@ -31,6 +31,7 @@ import { problemaDataURL } from './archivos';
 import type { DatoInicial, DefCamara, DefColision, DefComportamiento, DefEscena, DefFisica, DefMapa, DefObjeto, DefProyecto, DefRecorrido, DefSprite } from './formato';
 import type { DefAnimacion } from '../objetos/componentes/Animador';
 import type { TipoCasilla } from '../objetos/componentes/MapaCasillas';
+import { NOMBRES_MEZCLAS, PATRONES, TIPOS_RELLENO } from '../motor/Estilo';
 import { FORMAS, MAX_LADOS, MAX_PUNTOS_CAMINO, type PuntoCamino } from '../objetos/formas/figuras';
 
 /** Cuánto puede tener un proyecto como mucho. Mucho más de lo que usa cualquier juego. */
@@ -177,6 +178,21 @@ function sprite(v: unknown, ruta: Ruta): DefSprite {
     cerrado: logico,
     figuras: (x, r) => lista(x, r, 200, (pol, rp) => lista(pol, rp, 200, (anillo, ra) => lista(anillo, ra, 5_000, punto))),
     color,
+    relleno: (x, r) => unoDe(x, r, TIPOS_RELLENO),
+    color2: color,
+    anguloDegradado: (x, r) => numero(x, r, -100_000, 100_000),
+    patron: (x, r) => unoDe(x, r, PATRONES),
+    imagenRelleno: nombre,
+    borde: (x, r) => numero(x, r, 0, 1000),
+    colorBorde: color,
+    bordeDiscontinuo: logico,
+    sombra: color,
+    sombraX: (x, r) => numero(x, r, -10_000, 10_000),
+    sombraY: (x, r) => numero(x, r, -10_000, 10_000),
+    desenfoqueSombra: (x, r) => numero(x, r, 0, 1000),
+    resplandor: color,
+    tamanoResplandor: (x, r) => numero(x, r, 0, 1000),
+    mezcla: (x, r) => unoDe(x, r, NOMBRES_MEZCLAS),
     ancho: (x, r) => numero(x, r, -1e6, 1e6),
     alto: (x, r) => numero(x, r, -1e6, 1e6),
     capa: numero,
@@ -357,5 +373,6 @@ export function validarProyecto(datos: unknown): Partial<DefProyecto> {
     escenaInicial: nombre,
     bloques: (x, r) => lista(x, r, L.scripts, nombre),
     datos: (x, r) => registro(x, r, L.datos, dato),
+    colores: (x, r) => lista(x, r, 200, color),
   });
 }

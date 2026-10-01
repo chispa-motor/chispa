@@ -29,6 +29,7 @@ import { normalizar, quitarTildes } from '../../utilidades/texto';
 import { esNombreProhibido, tiene } from '../../utilidades/seguro';
 import { problemaDataURL, type TipoRecurso as TipoRecursoArchivo } from '../../proyecto/archivos';
 import { ErrorMotor } from '../../motor/Errores';
+import { esColorValido } from '../../motor/Color';
 
 /** A qué objeto se refiere una selección: uno de una escena, o una plantilla. */
 export type RefObjeto = { tipo: 'escena'; escena: string; indice: number } | { tipo: 'plantilla'; nombre: string };
@@ -208,6 +209,15 @@ export class EstadoEditor {
       const datos = (this.proyecto.datos ??= {});
       if (valor === undefined) delete datos[n];
       else datos[n] = valor;
+    });
+  }
+
+  /** «Mis colores» del selector de color (se guardan en el proyecto). Como mucho 40, sin repetir. */
+  ponerMisColores(colores: string[]): void {
+    const lista = [...new Set(colores.map((c) => c.trim()).filter((c) => c && esColorValido(c)))].slice(0, 40);
+    this.cambiar('proyecto', () => {
+      if (lista.length) this.proyecto.colores = lista;
+      else delete this.proyecto.colores;
     });
   }
 

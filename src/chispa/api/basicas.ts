@@ -17,7 +17,10 @@
  * Los nombres oficiales son SIN TILDES (raiz, minimo, numero). Si alguien los
  * escribe con tilde también funcionan, porque se normalizan.
  */
-import { argNumero, sinDemasiados } from './argumentos';
+import { argNumero, argTexto, sinDemasiados } from './argumentos';
+import { NOMBRES_PALETAS, PALETAS, mezclarColores } from '../../motor/Estilo';
+import { enumerar, sugerir } from '../errores/sugerencias';
+import { propio } from '../../utilidades/seguro';
 import { ErrorChispa } from '../errores/ErrorChispa';
 import type { Posicion } from '../lexico/tokens';
 import type { Interprete } from '../ejecucion/interprete';
@@ -41,6 +44,35 @@ export function instalarBasicas(interprete: Interprete): void {
     const s = argNumero(a, 0, 'esperar', p, 'esperar(1)', 0);
     if (s < 0) throw new ErrorChispa(p, 'no se puede esperar un tiempo negativo.');
     return new PeticionEspera(s);
+  });
+
+  // ── Colores ──
+  funcion('paleta', (a, p) => {
+    // paleta("pastel") → sus 8 colores; paleta("pastel", 3) → el tercero
+    const ej = 'paleta("pastel", 3)';
+    const nombre = normalizar(argTexto(a, 0, 'paleta', p, ej));
+    const colores = propio(PALETAS, nombre);
+    if (!colores) {
+      const parecida = sugerir(nombre, NOMBRES_PALETAS);
+      throw new ErrorChispa(p, `no hay ninguna paleta llamada "${aTexto(a[0])}".`, parecida ? `¿Querías decir "${parecida}"?` : `Las paletas son: ${enumerar(NOMBRES_PALETAS)}.`);
+    }
+    if (a[1] === undefined) return [...colores];
+    const n = argNumero(a, 1, 'paleta', p, ej);
+    if (!Number.isInteger(n) || n < 1 || n > colores.length) throw new ErrorChispa(p, `la paleta "${nombre}" tiene ${colores.length} colores, del 1 al ${colores.length}, y pides el ${n}.`, `Ejemplo: ${ej}`);
+    return colores[n - 1];
+  });
+  funcion('mezclarColores', (a, p) => {
+    // mezclarColores("rojo", "azul", 0.5) → el color de en medio
+    const ej = 'mezclarColores("rojo", "amarillo", 0.5)';
+    const c1 = argTexto(a, 0, 'mezclarColores', p, ej);
+    const c2 = argTexto(a, 1, 'mezclarColores', p, ej);
+    const t = argNumero(a, 2, 'mezclarColores', p, ej, 0.5);
+    const r = mezclarColores(c1, c2, t);
+    if (r === null) {
+      const malo = mezclarColores(c1, c1, 0) === null ? c1 : c2;
+      throw new ErrorChispa(p, `"${malo}" no es un color que se pueda mezclar.`, 'Usa un nombre (rojo, azul...) o un código como "#ff8800".');
+    }
+    return r;
   });
 
   // ── Matemáticas ──

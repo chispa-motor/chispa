@@ -66,13 +66,14 @@ describe('Comandos nuevos de Chispa 1.1', () => {
   });
 
   it('cada uno tiene su bloque en el modo bloques', () => {
-    const funciones = new Set(ACCIONES.map((a) => a.funcion));
-    const datos = new Set(DATOS_CON_BLOQUE.map((d) => d.objetivo));
+    // Lo que se escribe con los bloques de la paleta: acciones («funcion(...)») y datos («objetivo = valor»).
+    // Las funciones que dan un valor (paleta, mezclarColores...) salen dentro del valor de un bloque.
+    const codigo = [...ACCIONES.map((a) => `${a.funcion}(`), ...DATOS_CON_BLOQUE.map((d) => `${d.objetivo} = ${d.valor}`)].join('\n');
     const faltan = nuevos.filter((id) => {
       const [grupo, nombre] = id.split(':');
       if (grupo === 'evento') return !EVENTOS.some((e) => e.texto.replace(' …', '').startsWith(nombre.split(' N ')[0]));
       const escrito = `${prefijo(grupo)}${nombre}`;
-      return !funciones.has(escrito) && !datos.has(escrito);
+      return !new RegExp(`(^|[^\\w.])${escrito.replace(/\./g, '\\.')}(\\(| =)`, 'm').test(codigo);
     });
     expect(faltan).toEqual([]);
   });

@@ -20,6 +20,8 @@ import { NOMBRES_COLORES } from '../../motor/Color';
 import { DISTANCIA_POR_DEFECTO } from '../../objetos/componentes/Comportamiento';
 import { leerDatoInicial, tipoPorNombre, type DatoInicial, type DefObjeto, type DefSprite } from '../../proyecto/formato';
 import { FORMAS_DIBUJO, MAX_LADOS, POR_DEFECTO } from '../../objetos/formas/figuras';
+import { ESTILO_POR_DEFECTO, NOMBRES_MEZCLAS, PATRONES } from '../../motor/Estilo';
+import { misColores } from '../interfaz/SelectorColor';
 import { tieneHuecos } from '../../proyecto/TextosConHuecos';
 import { datosParaTextos, insertarDato } from '../estado/datosTextos';
 import type { EstadoEditor, RefObjeto } from '../estado/EstadoEditor';
@@ -42,6 +44,9 @@ export class Inspector {
       if (c !== 'codigo' && c !== 'historial') this.dibujar();
     });
     vista.alCambiarHerramienta = () => this.dibujar();
+    // «Mis colores» del selector de color se guardan en el proyecto
+    misColores.leer = () => estado.proyecto.colores ?? [];
+    misColores.guardar = (colores) => estado.ponerMisColores(colores);
     this.dibujar();
   }
 
@@ -61,6 +66,52 @@ export class Inspector {
     }
     this.elemento.scrollTop = scroll;
     if (enfocado) this.elemento.querySelector<HTMLElement>(`[data-ruta="${CSS.escape(enfocado)}"]`)?.focus();
+  }
+
+  /** Relleno (degradado, patrón, imagen), borde, sombra, resplandor y mezcla. */
+  private seccionEstilo(s: DefSprite, cambiar: (ruta: string) => (v: unknown) => void, largo: { empezar: () => void; terminar: () => void }): HTMLElement {
+    const e = this.estado;
+    const relleno = s.relleno ?? 'color';
+    const esTexto = s.forma === 'texto' && !s.imagen;
+    const quitarSi = <T,>(porDefecto: T) => (v: T | undefined) => (v === undefined || v === porDefecto ? undefined : v);
+    const d = ESTILO_POR_DEFECTO;
+    const imagenes = Object.keys(e.proyecto.imagenes);
+    const conEstilo = !!(s.relleno || s.borde || s.sombra || s.resplandor || s.mezcla);
+    return seccion('Estilo', [
+      esTexto || s.imagen ? null : campoLista('relleno', 'sprite.relleno', relleno, [['color', 'Un color'], ['degradado', 'Degradado'], ['radial', 'Degradado redondo'], ['patron', 'Patrón'], ['imagen', 'Imagen repetida']], (v) => cambiar('sprite.relleno')(quitarSi('color')(v)), 'Cómo se rellena la forma por dentro (yo.relleno)'),
+      !esTexto && !s.imagen && relleno !== 'color' && relleno !== 'imagen'
+        ? campoColor(relleno === 'patron' ? 'dibujo' : 'color 2', 'sprite.color2', s.color2 ?? d.color2, cambiar('sprite.color2'), relleno === 'patron' ? 'El color del dibujo del patrón (yo.color2)' : 'El color donde termina el degradado (yo.color2)')
+        : null,
+      !esTexto && !s.imagen && relleno === 'degradado'
+        ? campoNumero('ángulo', 'sprite.anguloDegradado', s.anguloDegradado ?? d.anguloDegradado, (v) => cambiar('sprite.anguloDegradado')(quitarSi(d.anguloDegradado)(v)), { ...largo, paso: 15, ayuda: 'Hacia dónde va: 0 = de izquierda a derecha, 90 = de abajo arriba' })
+        : null,
+      !esTexto && !s.imagen && relleno === 'patron'
+        ? campoLista('patrón', 'sprite.patron', s.patron ?? 'rayas', PATRONES.map((p): [string, string] => [p, p]), (v) => cambiar('sprite.patron')(quitarSi('rayas')(v)))
+        : null,
+      !esTexto && !s.imagen && relleno === 'imagen'
+        ? imagenes.length
+          ? campoLista('imagen', 'sprite.imagenRelleno', s.imagenRelleno ?? '', [['', '(elige una)'], ...imagenes.map((i): [string, string] => [i, i])], (v) => cambiar('sprite.imagenRelleno')(v || undefined), 'La imagen que se repite dentro de la forma')
+          : h('p', { class: 'nota' }, 'Importa una imagen en Proyecto > Imágenes para rellenar con ella.')
+        : null,
+      esTexto ? null : h('div', { class: 'dos-columnas' },
+        campoNumero('borde', 'sprite.borde', s.borde ?? 0, (v) => cambiar('sprite.borde')(v || undefined), { ...largo, min: 0, ayuda: 'Grosor del borde en píxeles (0 = sin borde)' }),
+        s.borde ? campoCasilla('a rayas', 'sprite.bordeDiscontinuo', s.bordeDiscontinuo ?? false, (v) => cambiar('sprite.bordeDiscontinuo')(v || undefined), 'Borde discontinuo (a rayitas)') : null,
+      ),
+      !esTexto && s.borde ? campoColor('color borde', 'sprite.colorBorde', s.colorBorde ?? d.colorBorde, cambiar('sprite.colorBorde')) : null,
+      campoCasilla('sombra', 'sprite.sombra', !!s.sombra, (v) => cambiar('sprite.sombra')(v ? '#00000088' : undefined), 'Una sombra debajo del objeto'),
+      s.sombra ? campoColor('color sombra', 'sprite.sombraColor', s.sombra, cambiar('sprite.sombra')) : null,
+      s.sombra ? h('div', { class: 'tres-columnas' },
+        campoNumero('x', 'sprite.sombraX', s.sombraX ?? d.sombraX, (v) => cambiar('sprite.sombraX')(quitarSi(d.sombraX)(v)), { ...largo, ayuda: 'Cuánto se aparta a la derecha' }),
+        campoNumero('y', 'sprite.sombraY', s.sombraY ?? d.sombraY, (v) => cambiar('sprite.sombraY')(quitarSi(d.sombraY)(v)), { ...largo, ayuda: 'Cuánto se aparta hacia arriba (negativo: hacia abajo)' }),
+        campoNumero('borrosa', 'sprite.desenfoqueSombra', s.desenfoqueSombra ?? d.desenfoqueSombra, (v) => cambiar('sprite.desenfoqueSombra')(quitarSi(d.desenfoqueSombra)(v)), { ...largo, min: 0, ayuda: 'Lo borrosa que es (0 = bordes duros)' }),
+      ) : null,
+      campoCasilla('resplandor', 'sprite.resplandor', !!s.resplandor, (v) => cambiar('sprite.resplandor')(v ? 'amarillo' : undefined), 'Un brillo alrededor del objeto'),
+      s.resplandor ? h('div', { class: 'dos-columnas' },
+        campoColor('color', 'sprite.resplandorColor', s.resplandor, cambiar('sprite.resplandor')),
+        campoNumero('tamaño', 'sprite.tamanoResplandor', s.tamanoResplandor ?? d.tamanoResplandor, (v) => cambiar('sprite.tamanoResplandor')(quitarSi(d.tamanoResplandor)(v)), { ...largo, min: 0 }),
+      ) : null,
+      campoLista('mezcla', 'sprite.mezcla', s.mezcla ?? 'normal', NOMBRES_MEZCLAS.map((m): [string, string] => [m, m]), (v) => cambiar('sprite.mezcla')(quitarSi('normal')(v)), 'Cómo se junta con lo de detrás: «sumar» hace que brille (fuego, magia), «multiplicar» oscurece (sombras)'),
+    ], { plegada: !conEstilo, ayuda: 'Degradados, patrones, borde, sombra, resplandor y mezcla' });
   }
 
   /** Los datos propios de algunas formas (lados del polígono, hueco del anillo...). */
@@ -202,6 +253,7 @@ export class Inspector {
         ]
       : [];
     partes.push(seccion('Dibujo', aspecto, { activo: !!s, alActivar: (v) => e.activarComponente(ref, 'sprite', v), ayuda: 'Cómo se ve el objeto' }));
+    if (s) partes.push(this.seccionEstilo(s, cambiar, largo));
 
     // Colisión
     const c = def.colision;

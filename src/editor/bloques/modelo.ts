@@ -134,6 +134,23 @@ export interface DatoConBloque {
 }
 
 export const DATOS_CON_BLOQUE: DatoConBloque[] = [
+  { categoria: 'apariencia', objetivo: 'yo.color', valor: 'paleta("pastel", 3)' },
+  { categoria: 'apariencia', objetivo: 'yo.color', valor: 'mezclarColores("rojo", "amarillo", 0.5)' },
+  { categoria: 'apariencia', objetivo: 'yo.relleno', valor: '"degradado"' },
+  { categoria: 'apariencia', objetivo: 'yo.color2', valor: '"azul"' },
+  { categoria: 'apariencia', objetivo: 'yo.anguloDegradado', valor: '0' },
+  { categoria: 'apariencia', objetivo: 'yo.patron', valor: '"rayas"' },
+  { categoria: 'apariencia', objetivo: 'yo.imagenRelleno', valor: '"ladrillo"' },
+  { categoria: 'apariencia', objetivo: 'yo.borde', valor: '3' },
+  { categoria: 'apariencia', objetivo: 'yo.colorBorde', valor: '"negro"' },
+  { categoria: 'apariencia', objetivo: 'yo.bordeDiscontinuo', valor: 'verdadero' },
+  { categoria: 'apariencia', objetivo: 'yo.sombra', valor: 'verdadero' },
+  { categoria: 'apariencia', objetivo: 'yo.sombraX', valor: '10' },
+  { categoria: 'apariencia', objetivo: 'yo.sombraY', valor: '-10' },
+  { categoria: 'apariencia', objetivo: 'yo.desenfoqueSombra', valor: '8' },
+  { categoria: 'apariencia', objetivo: 'yo.resplandor', valor: '"amarillo"' },
+  { categoria: 'apariencia', objetivo: 'yo.tamanoResplandor', valor: '20' },
+  { categoria: 'apariencia', objetivo: 'yo.mezcla', valor: '"sumar"' },
   { categoria: 'apariencia', objetivo: 'yo.forma', valor: '"estrella"' },
   { categoria: 'apariencia', objetivo: 'yo.lados', valor: '6' },
   { categoria: 'apariencia', objetivo: 'yo.radioInterior', valor: '0.5' },

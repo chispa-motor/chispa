@@ -130,6 +130,8 @@ export const DOC_FUNCIONES: Doc[] = [
   d('animar', 'funcion', 'animar(sitio, hasta, segundos, suavizado)', 'Cambia algo POCO A POCO hasta un valor en esos segundos (0.5 si no se dice): la posición, el tamaño, el giro, la opacidad, un color... Suavizados: "suave" (el normal), "lineal", "entrada", "salida", "rebote", "elastico" y "atras".', 'animar(yo.tamano, 2, 0.5)\nanimar(yo.color, "rojo", 1, "lineal")', 'animar(${1:yo.tamano}, ${2:2}, ${3:0.5})'),
   d('longitud', 'funcion', 'longitud(x)', 'Cuántas letras tiene un texto, o cuántos elementos una lista o una tabla.', 'mostrar(longitud(buscarTodos("Moneda")))', 'longitud(${1})'),
   d('texto', 'funcion', 'texto(valor)', 'Convierte cualquier valor en texto.', 'yo.texto = "Puntos: " + texto(juego.puntos)', 'texto(${1})'),
+  d('paleta', 'funcion', 'paleta("nombre", n)', 'Los colores de una paleta lista ("pastel", "retro", "neon", "natural", "oceano", "fuego", "bosque", "caramelo", "grises", "arcoiris"). Con un número, solo ese color (del 1 al 8).', 'yo.color = paleta("neon", 3)', 'paleta("${1:pastel}", ${2:1})'),
+  d('mezclarColores', 'funcion', 'mezclarColores(color1, color2, cuanto)', 'El color que sale de mezclar dos: con 0 da el primero, con 1 el segundo y con 0.5 el de en medio.', 'yo.color = mezclarColores("rojo", "amarillo", 0.5)', 'mezclarColores("${1:rojo}", "${2:amarillo}", ${3:0.5})'),
   d('numero', 'funcion', 'numero(texto)', 'Convierte un texto con un número ("42") en un número de verdad.', 'variable n = numero("42") + 1', 'numero(${1})'),
 ];
 
@@ -405,6 +407,22 @@ export const DOC_OBJETO: Doc[] = [
   d('columnaEn', 'accion', 'mapa.columnaEn(x)', 'Solo en mapas: la columna que hay en esa X del mundo.', 'variable c = mapa.columnaEn(yo.x)', 'columnaEn(${1:yo.x})'),
   d('filaEn', 'accion', 'mapa.filaEn(y)', 'Solo en mapas: la fila que hay en esa Y del mundo.', 'variable f = mapa.filaEn(yo.y)', 'filaEn(${1:yo.y})'),
   d('centroDeCasilla', 'accion', 'mapa.centroDeCasilla(columna, fila)', 'Solo en mapas: el centro de una casilla, en el mundo (vector).', 'yo.posicion = mapa.centroDeCasilla(2, 5)', 'centroDeCasilla(${1:0}, ${2:0})'),
+  // ── Estilo ──
+  d('relleno', 'propiedad', 'yo.relleno', 'Cómo se rellena la forma: "color" (lo normal), "degradado" (de color a color2), "radial" (degradado redondo, del centro hacia fuera), "patron" (rayas, puntos...) o "imagen" (una imagen repetida).', 'yo.relleno = "degradado"\nyo.color2 = "azul"'),
+  d('color2', 'propiedad', 'yo.color2', 'El segundo color: el final de un degradado o el dibujo de un patrón.', 'yo.color2 = "morado"'),
+  d('anguloDegradado', 'propiedad', 'yo.anguloDegradado', 'Hacia dónde va el degradado, en grados: 0 = de izquierda a derecha, 90 = de abajo arriba (lo normal).', 'yo.anguloDegradado = 0'),
+  d('patron', 'propiedad', 'yo.patron', 'El dibujo del relleno "patron": "rayas", "puntos", "cuadros", "rombos", "ondas" o "ladrillos" (con color de fondo y color2 de dibujo).', 'yo.relleno = "patron"\nyo.patron = "cuadros"'),
+  d('imagenRelleno', 'propiedad', 'yo.imagenRelleno', 'La imagen del proyecto que se repite dentro de la forma, con relleno "imagen".', 'yo.relleno = "imagen"\nyo.imagenRelleno = "ladrillo"'),
+  d('borde', 'propiedad', 'yo.borde', 'El grosor del borde en píxeles (0 = sin borde).', 'yo.borde = 3'),
+  d('colorBorde', 'propiedad', 'yo.colorBorde', 'El color del borde (negro si no se dice).', 'yo.colorBorde = "blanco"'),
+  d('bordeDiscontinuo', 'propiedad', 'yo.bordeDiscontinuo', 'Si es verdadero, el borde es a rayitas (como una línea de recortar).', 'yo.bordeDiscontinuo = verdadero'),
+  d('sombra', 'propiedad', 'yo.sombra', 'El color de la sombra (con algo de transparencia queda mejor: "#00000088"). verdadero pone una sombra gris; nulo la quita.', 'yo.sombra = "#00000088"'),
+  d('sombraX', 'propiedad', 'yo.sombraX', 'Cuánto se aparta la sombra hacia la derecha, en píxeles (6).', 'yo.sombraX = 10'),
+  d('sombraY', 'propiedad', 'yo.sombraY', 'Cuánto se aparta la sombra hacia arriba, en píxeles (-6: hacia abajo).', 'yo.sombraY = -10'),
+  d('desenfoqueSombra', 'propiedad', 'yo.desenfoqueSombra', 'Lo borrosa que es la sombra (0 = con bordes duros).', 'yo.desenfoqueSombra = 0'),
+  d('resplandor', 'propiedad', 'yo.resplandor', 'Un brillo alrededor del objeto, de ese color (nulo lo quita). Muy bonito en monedas, poderes y textos.', 'yo.resplandor = "amarillo"'),
+  d('tamanoResplandor', 'propiedad', 'yo.tamanoResplandor', 'Lo grande que es el resplandor, en píxeles (16).', 'yo.tamanoResplandor = 30'),
+  d('mezcla', 'propiedad', 'yo.mezcla', 'Cómo se junta con lo que hay detrás: "normal", "sumar" (luz que se suma: fuego, magia), "multiplicar" (sombras), "pantalla", "superponer", "oscurecer", "aclarar" o "diferencia".', 'yo.mezcla = "sumar"'),
   // ── Formas ──
   d('forma', 'propiedad', 'yo.forma', 'La forma del dibujo: "rectangulo", "circulo", "triangulo", "elipse", "poligono", "estrella", "rombo", "corazon", "flecha", "linea", "capsula", "redondeado", "anillo", "arco", "camino" o "texto". Choca con su forma de verdad.', 'yo.forma = "estrella"'),
   d('lados', 'propiedad', 'yo.lados', 'Cuántos lados tiene un polígono (6 si no se dice) o cuántas puntas una estrella (5). De 3 a 64.', 'yo.forma = "poligono"\nyo.lados = 8'),

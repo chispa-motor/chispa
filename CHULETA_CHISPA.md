@@ -2,7 +2,7 @@
 
 > Se genera sola con `npm run manual` (no la cambies a mano). Un test comprueba que no falta ningún comando y que cada ejemplo funciona.
 
-Todos los comandos de Chispa (289), una línea cada uno, para tenerla abierta mientras programas o imprimirla. Para aprender con calma, el [curso](APRENDE_CHISPA.md).
+Todos los comandos de Chispa (306), una línea cada uno, para tenerla abierta mientras programas o imprimirla. Para aprender con calma, el [curso](APRENDE_CHISPA.md).
 
 En los ejemplos se usan estas variables y esta función, como si ya las tuvieras (y en la escena hay un Jugador y un Mapa de casillas):
 
@@ -407,6 +407,28 @@ Las líneas que terminan en `:` empiezan un bloque: lo de dentro va debajo, con 
 | `yo.grosor` | Lo gorda que es una línea o un camino abierto, en píxeles. | `yo.grosor = 10` |
 | `yo.formaColision` | Cómo choca: "auto" (con su forma, salvo los rectángulos), "caja" (como un rectángulo) o "figura" (con su forma, también girada). | `yo.formaColision = "caja"` |
 | `yo.ponerCamino(puntos, cerrado)` | Le da una forma libre: una lista de puntos (vectores, desde su centro). | `yo.ponerCamino([vector(-50, 0), vector(0, 50), vector(50, 0)])` |
+
+### Colores y estilo
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `yo.relleno` | Cómo se rellena la forma: "color" (lo normal), "degradado" (de color a color2), "radial" (degradado redondo, del centro hacia fuera), "patron" (rayas, puntos...) o "imagen" (una imagen repetida). | `yo.relleno = "degradado"` |
+| `yo.color2` | El segundo color: el final de un degradado o el dibujo de un patrón. | `yo.color2 = "azul"` |
+| `yo.anguloDegradado` | Hacia dónde va el degradado, en grados: 0 = de izquierda a derecha, 90 = de abajo arriba (lo normal). | `yo.anguloDegradado = 45` |
+| `yo.patron` | El dibujo del relleno "patron": "rayas", "puntos", "cuadros", "rombos", "ondas" o "ladrillos" (con color de fondo y color2 de dibujo). | `yo.patron = "puntos"` |
+| `yo.imagenRelleno` | La imagen del proyecto que se repite dentro de la forma, con relleno "imagen". | `yo.imagenRelleno = "jugador"` |
+| `yo.borde` | El grosor del borde en píxeles (0 = sin borde). | `yo.borde = 3` |
+| `yo.colorBorde` | El color del borde (negro si no se dice). | `yo.colorBorde = "blanco"` |
+| `yo.bordeDiscontinuo` | Si es verdadero, el borde es a rayitas (como una línea de recortar). | `yo.bordeDiscontinuo = verdadero` |
+| `yo.sombra` | El color de la sombra (con algo de transparencia queda mejor: "#00000088"). | `yo.sombra = verdadero` |
+| `yo.sombraX` | Cuánto se aparta la sombra hacia la derecha, en píxeles (6). | `yo.sombraX = 12` |
+| `yo.sombraY` | Cuánto se aparta la sombra hacia arriba, en píxeles (-6: hacia abajo). | `yo.sombraY = -12` |
+| `yo.desenfoqueSombra` | Lo borrosa que es la sombra (0 = con bordes duros). | `yo.desenfoqueSombra = 20` |
+| `yo.resplandor` | Un brillo alrededor del objeto, de ese color (nulo lo quita). | `yo.resplandor = "cian"` |
+| `yo.tamanoResplandor` | Lo grande que es el resplandor, en píxeles (16). | `yo.tamanoResplandor = 30` |
+| `yo.mezcla` | Cómo se junta con lo que hay detrás: "normal", "sumar" (luz que se suma: fuego, magia), "multiplicar" (sombras), "pantalla", "superponer", "oscurecer", "aclarar" o "diferencia". | `yo.mezcla = "multiplicar"` |
+| `paleta("nombre", n)` | Los colores de una paleta lista ("pastel", "retro", "neon", "natural", "oceano", "fuego", "bosque", "caramelo", "grises", "arcoiris"). | `yo.color = paleta("pastel", 2)` |
+| `mezclarColores(color1, color2, cuanto)` | El color que sale de mezclar dos: con 0 da el primero, con 1 el segundo y con 0.5 el de en medio. | `yo.color = mezclarColores("rojo", "azul", 0.5)` |
 
 ## Nivel 4: Avanzado
 

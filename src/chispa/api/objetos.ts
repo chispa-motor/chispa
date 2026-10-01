@@ -37,6 +37,8 @@ import { argTexto } from './argumentos';
 import { enumerar } from '../errores/sugerencias';
 import { normalizar } from '../../utilidades/texto';
 import { sinPrototipo } from '../../utilidades/seguro';
+import { NOMBRES_MEZCLAS, PATRONES, TIPOS_RELLENO } from '../../motor/Estilo';
+import { NOMBRES_COLORES, esColorValido } from '../../motor/Color';
 import { FORMAS, MAX_LADOS, MAX_PUNTOS_CAMINO, POR_DEFECTO } from '../../objetos/formas/figuras';
 
 /** Lo que RefObjeto necesita del script de un objeto (ScriptChispa lo cumple). */
@@ -313,6 +315,74 @@ const PROPIEDADES: Record<string, PropiedadObjeto> = sinPrototipo({
   },
   ratonencima: { obtener: (o) => o.escena?.ratonEncima(o) ?? false },
 
+  // ── Estilo (ver motor/Estilo.ts) ──
+  relleno: {
+    obtener: (o, p) => necesitaSprite(o, 'relleno', p).relleno,
+    asignar: (o, v, p) => (necesitaSprite(o, 'relleno', p).relleno = unaOpcion(v, TIPOS_RELLENO, 'relleno', p, 'yo.relleno = "degradado"')),
+  },
+  color2: {
+    obtener: (o, p) => necesitaSprite(o, 'color2', p).color2,
+    asignar: (o, v, p) => (necesitaSprite(o, 'color2', p).color2 = unColor(v, 'color2', p)),
+  },
+  angulodegradado: {
+    obtener: (o, p) => necesitaSprite(o, 'anguloDegradado', p).anguloDegradado,
+    asignar: (o, v, p) => (necesitaSprite(o, 'anguloDegradado', p).anguloDegradado = comoNumero(v, 'anguloDegradado', p)),
+  },
+  patron: {
+    obtener: (o, p) => necesitaSprite(o, 'patron', p).patron,
+    asignar: (o, v, p) => (necesitaSprite(o, 'patron', p).patron = unaOpcion(v, PATRONES, 'patron', p, 'yo.patron = "rayas"')),
+  },
+  imagenrelleno: {
+    obtener: (o, p) => necesitaSprite(o, 'imagenRelleno', p).imagenRelleno,
+    asignar: (o, v, p) => {
+      const s = necesitaSprite(o, 'imagenRelleno', p);
+      if (v === null) return void (s.imagenRelleno = null);
+      const nombre = aTexto(v);
+      o.escena?.motor.recursos.imagen(nombre); // comprueba que existe (da un error amable si no)
+      s.imagenRelleno = nombre;
+    },
+  },
+  borde: {
+    obtener: (o, p) => necesitaSprite(o, 'borde', p).borde,
+    asignar: (o, v, p) => (necesitaSprite(o, 'borde', p).borde = Math.max(0, comoNumero(v, 'borde', p))),
+  },
+  colorborde: {
+    obtener: (o, p) => necesitaSprite(o, 'colorBorde', p).colorBorde,
+    asignar: (o, v, p) => (necesitaSprite(o, 'colorBorde', p).colorBorde = unColor(v, 'colorBorde', p)),
+  },
+  bordediscontinuo: {
+    obtener: (o, p) => necesitaSprite(o, 'bordeDiscontinuo', p).bordeDiscontinuo,
+    asignar: (o, v, p) => (necesitaSprite(o, 'bordeDiscontinuo', p).bordeDiscontinuo = comoLogico(v, 'bordeDiscontinuo', p)),
+  },
+  sombra: {
+    obtener: (o, p) => necesitaSprite(o, 'sombra', p).sombra,
+    asignar: (o, v, p) => (necesitaSprite(o, 'sombra', p).sombra = colorOApagado(v, 'sombra', '#00000088', p)),
+  },
+  sombrax: {
+    obtener: (o, p) => necesitaSprite(o, 'sombraX', p).sombraX,
+    asignar: (o, v, p) => (necesitaSprite(o, 'sombraX', p).sombraX = comoNumero(v, 'sombraX', p)),
+  },
+  sombray: {
+    obtener: (o, p) => necesitaSprite(o, 'sombraY', p).sombraY,
+    asignar: (o, v, p) => (necesitaSprite(o, 'sombraY', p).sombraY = comoNumero(v, 'sombraY', p)),
+  },
+  desenfoquesombra: {
+    obtener: (o, p) => necesitaSprite(o, 'desenfoqueSombra', p).desenfoqueSombra,
+    asignar: (o, v, p) => (necesitaSprite(o, 'desenfoqueSombra', p).desenfoqueSombra = Math.max(0, comoNumero(v, 'desenfoqueSombra', p))),
+  },
+  resplandor: {
+    obtener: (o, p) => necesitaSprite(o, 'resplandor', p).resplandor,
+    asignar: (o, v, p) => (necesitaSprite(o, 'resplandor', p).resplandor = colorOApagado(v, 'resplandor', 'amarillo', p)),
+  },
+  tamanoresplandor: {
+    obtener: (o, p) => necesitaSprite(o, 'tamanoResplandor', p).tamanoResplandor,
+    asignar: (o, v, p) => (necesitaSprite(o, 'tamanoResplandor', p).tamanoResplandor = Math.max(0, comoNumero(v, 'tamanoResplandor', p))),
+  },
+  mezcla: {
+    obtener: (o, p) => necesitaSprite(o, 'mezcla', p).mezcla,
+    asignar: (o, v, p) => (necesitaSprite(o, 'mezcla', p).mezcla = unaOpcion(v, NOMBRES_MEZCLAS, 'mezcla', p, 'yo.mezcla = "sumar"')),
+  },
+
   // ── Formas (ver objetos/formas/figuras.ts) ──
   forma: {
     obtener: (o, p) => necesitaSprite(o, 'forma', p).forma,
@@ -367,6 +437,33 @@ const PROPIEDADES: Record<string, PropiedadObjeto> = sinPrototipo({
   destruido: { obtener: (o) => o.destruido },
   yendo: { obtener: (o) => o.obtener(Comportamiento)?.yendo ?? false },
 });
+
+/** Un texto que tiene que ser una de estas opciones (con sugerencia si se parece a una). */
+function unaOpcion<T extends string>(v: Valor, opciones: readonly T[], nombre: string, p: Posicion, ejemplo: string): T {
+  const t = normalizar(aTexto(v));
+  const ok = opciones.find((x) => normalizar(x) === t);
+  if (ok) return ok;
+  const parecida = sugerir(aTexto(v), [...opciones]);
+  throw new ErrorChispa(p, `'${nombre}' no puede ser "${aTexto(v)}".`, parecida ? `¿Querías decir "${parecida}"? (por ejemplo: ${ejemplo})` : `Puede ser: ${enumerar([...opciones])}. Ejemplo: ${ejemplo}`);
+}
+
+/** Un color de verdad ("rojo", "#ff8800"...). */
+export function unColor(v: Valor, nombre: string, p: Posicion): string {
+  const c = aTexto(v);
+  if (typeof v !== 'string' || !esColorValido(c)) {
+    // "blanquito" → "blanco": por parecido, o porque empieza igual
+    const parecido = sugerir(c, NOMBRES_COLORES) ?? NOMBRES_COLORES.find((n) => normalizar(c).startsWith(n.slice(0, 4)));
+    throw new ErrorChispa(p, `'${nombre}' tiene que ser un color, y "${c}" no lo es.`, parecido ? `¿Querías decir "${parecido}"?` : `Un nombre (${NOMBRES_COLORES.slice(0, 6).join(', ')}...) o un código como "#ff8800".`);
+  }
+  return c;
+}
+
+/** Un color, o nulo/falso para quitarlo (verdadero = el color de siempre). */
+function colorOApagado(v: Valor, nombre: string, porDefecto: string, p: Posicion): string | null {
+  if (v === null || v === false) return null;
+  if (v === true) return porDefecto;
+  return unColor(v, nombre, p);
+}
 
 /** Un número de 0 a 1 (da un error claro si no). */
 function entre0y1(v: Valor, nombre: string, p: Posicion, ejemplo: string): number {
@@ -769,6 +866,8 @@ const NOMBRES_BONITOS = [
   'teletransportar', 'irA', 'anguloA', 'rotarHacia', 'avanzar', 'ocultar', 'aparecer', 'parpadear', 'ponerDelante', 'ponerDetras',
   'tocando', 'cercanos', 'masCercano', 'clonar', 'ponerEtiqueta', 'quitarEtiqueta', 'tieneEtiqueta', 'pegarA', 'soltar',
   'irHacia', 'parar', 'yendo', 'atravesar', 'dejarDeAtravesar',
+  'relleno', 'color2', 'anguloDegradado', 'patron', 'imagenRelleno', 'borde', 'colorBorde', 'bordeDiscontinuo',
+  'sombra', 'sombraX', 'sombraY', 'desenfoqueSombra', 'resplandor', 'tamanoResplandor', 'mezcla',
   'forma', 'lados', 'radioInterior', 'radioEsquina', 'inicioArco', 'finArco', 'grosor', 'formaColision', 'ponerCamino',
 ];
 

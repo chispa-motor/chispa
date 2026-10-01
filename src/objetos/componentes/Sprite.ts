@@ -20,6 +20,8 @@
  */
 import { Componente } from '../Componente';
 import type { Renderizador } from '../../motor/Renderizador';
+import { ESTILO_POR_DEFECTO, MEZCLAS, esSencillo, pintarConEstilo, type Estilo, type Mezcla, type Patron, type TipoRelleno } from '../../motor/Estilo';
+import { resolverColor } from '../../motor/Color';
 import { aLocal, figuraDe, puntoEnFigura, type Figura, type Forma, type Punto, type PuntoCamino } from '../formas/figuras';
 
 export type FormaSprite = Forma;
@@ -46,6 +48,23 @@ export class Sprite extends Componente {
   puntos: PuntoCamino[] | undefined = undefined;
   cerrado: boolean | undefined = undefined;
   figuras: Punto[][][] | undefined = undefined;
+  /** Estilo (ver motor/Estilo.ts): relleno, borde, sombra, resplandor y mezcla. */
+  relleno: TipoRelleno = 'color';
+  color2 = ESTILO_POR_DEFECTO.color2;
+  anguloDegradado = ESTILO_POR_DEFECTO.anguloDegradado;
+  patron: Patron = 'rayas';
+  /** Nombre de una imagen del proyecto para rellenar la forma (repetida). */
+  imagenRelleno: string | null = null;
+  borde = 0;
+  colorBorde = ESTILO_POR_DEFECTO.colorBorde;
+  bordeDiscontinuo = false;
+  sombra: string | null = null;
+  sombraX = ESTILO_POR_DEFECTO.sombraX;
+  sombraY = ESTILO_POR_DEFECTO.sombraY;
+  desenfoqueSombra = ESTILO_POR_DEFECTO.desenfoqueSombra;
+  resplandor: string | null = null;
+  tamanoResplandor = ESTILO_POR_DEFECTO.tamanoResplandor;
+  mezcla: Mezcla = 'normal';
   /** Orden de dibujo: capas más altas se dibujan encima. */
   capa = 0;
   /** Pegado a la pantalla (interfaz): no se mueve con la cámara ni con el zoom. */
@@ -121,7 +140,9 @@ export class Sprite extends Componente {
     const w = this.anchoFinal;
     const h = this.altoFinal;
 
-    if (this.imagen) {
+    if (!esSencillo(this) && this.forma !== 'texto') {
+      this.dibujarConEstilo(r, x, y, rotacion, w, h);
+    } else if (this.imagen) {
       const img = this.objeto.escena!.motor.recursos.imagen(this.imagen);
       r.imagen(img, x, y, { ancho: w, alto: h, rotacion, opacidad: this.opacidad, voltearX: this.voltearX, voltearY: this.voltearY });
     } else if (this.forma !== 'texto') {
@@ -143,6 +164,16 @@ export class Sprite extends Componente {
       const tamano = this.tamano * Math.abs(this.objeto.transformacion.escala.y);
       const lineas = this.texto.split('\n');
       const alto = tamano * 1.25;
+      // Un texto también puede brillar y mezclarse (sus colores de relleno son para las formas)
+      const conEstilo = this.mezcla !== 'normal' || (this.resplandor && esTexto);
+      if (conEstilo) {
+        r.ctx.save();
+        r.ctx.globalCompositeOperation = MEZCLAS[this.mezcla] ?? 'source-over';
+      }
+      if (this.resplandor && esTexto) {
+        r.ctx.shadowColor = resolverColor(this.resplandor);
+        r.ctx.shadowBlur = this.tamanoResplandor * Math.hypot(r.ctx.getTransform().a, r.ctx.getTransform().b);
+      }
       lineas.forEach((linea, i) =>
         r.texto(linea, x, y + (i - (lineas.length - 1) / 2) * alto, {
           color: esTexto ? this.color : this.colorTexto,
@@ -153,7 +184,63 @@ export class Sprite extends Componente {
           vertical: 'medio',
         }),
       );
+      if (conEstilo) r.ctx.restore();
       r.ctx.globalAlpha = 1;
     }
+  }
+
+  /** El estilo para pintar (relleno, borde, sombra...), con la imagen de relleno ya cargada. */
+  estilo(): Estilo {
+    let imagenRelleno: CanvasImageSource | null = null;
+    if (this.relleno === 'imagen' && this.imagenRelleno) {
+      try {
+        imagenRelleno = this.objeto.escena?.motor.recursos.imagen(this.imagenRelleno) ?? null;
+      } catch {
+        imagenRelleno = null; // una imagen que ya no está: se rellena con el color
+      }
+    }
+    return {
+      color: this.color, relleno: this.relleno, color2: this.color2, anguloDegradado: this.anguloDegradado, patron: this.patron, imagenRelleno,
+      borde: this.borde, colorBorde: this.colorBorde, bordeDiscontinuo: this.bordeDiscontinuo,
+      sombra: this.sombra, sombraX: this.sombraX, sombraY: this.sombraY, desenfoqueSombra: this.desenfoqueSombra,
+      resplandor: this.resplandor, tamanoResplandor: this.tamanoResplandor, mezcla: this.mezcla,
+    };
+  }
+
+  /** Dibujo con relleno especial, borde, sombra, resplandor o mezcla (el camino lento, pero completo). */
+  private dibujarConEstilo(r: Renderizador, x: number, y: number, rotacion: number, w: number, h: number): void {
+    const ctx = r.ctx;
+    const figura = this.esFigura ? this.figura(w, h) : null;
+    const img = this.imagen ? this.objeto.escena!.motor.recursos.imagen(this.imagen) : null;
+    ctx.save();
+    ctx.globalAlpha = this.opacidad;
+    ctx.translate(x, y);
+    if (rotacion) ctx.rotate((rotacion * Math.PI) / 180);
+    ctx.scale(this.voltearX ? -1 : 1, this.voltearY ? 1 : -1); // la Y hacia arriba, como el mundo
+    const trazar = () => {
+      ctx.beginPath();
+      if (img || this.forma === 'rectangulo') ctx.rect(-w / 2, -h / 2, w, h);
+      else if (figura?.trazo) figura.trazo.puntos.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+      else if (figura) {
+        for (const pol of figura.anillos) {
+          for (const anillo of pol) {
+            anillo.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+            ctx.closePath();
+          }
+        }
+      }
+    };
+    pintarConEstilo(ctx, this.estilo(), w, h, trazar, {
+      linea: figura?.trazo ? figura.trazo.grosor : undefined,
+      imagen: img
+        ? (c) => {
+            c.save();
+            c.scale(1, -1); // las imágenes van con la Y hacia abajo
+            c.drawImage(img, -w / 2, -h / 2, w, h);
+            c.restore();
+          }
+        : undefined,
+    });
+    ctx.restore();
   }
 }

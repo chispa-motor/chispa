@@ -20,6 +20,7 @@
  * derecha, como en Unity y Godot.
  */
 import { resolverColor } from '../../motor/Color';
+import { abrirSelectorColor } from '../interfaz/SelectorColor';
 import { h } from '../interfaz/dom';
 
 export interface OpcionesNumero {
@@ -111,11 +112,22 @@ export function aHex(color: string): string {
   return '#ffffff';
 }
 
-/** Color: un cuadrado para elegirlo con el ratón y un texto para escribir "rojo" o "#ff0000". */
+/**
+ * Color: un cuadrado que abre el selector de color (rueda, cuentagotas,
+ * paletas...) y un texto para escribir "rojo" o "#ff0000".
+ */
 export function campoColor(etiqueta: string, ruta: string, valor: string, alCambiar: (v: string) => void, ayuda = 'Un nombre (rojo, azul...) o un código como #ff8800'): HTMLElement {
   const texto = h('input', { type: 'text', class: 'campo', value: valor, spellcheck: 'false', 'data-ruta': ruta, onchange: () => texto.value.trim() && alCambiar(texto.value.trim()) });
-  const selector = h('input', { type: 'color', class: 'selector-color', value: aHex(valor), title: 'Elegir un color' });
-  selector.addEventListener('change', () => alCambiar(selector.value));
+  // Mientras se arrastra por la rueda llegan muchos cambios: se aplican juntos, cuando para un momento
+  let pendiente: ReturnType<typeof setTimeout> | null = null;
+  const selector = h('button', { type: 'button', class: 'selector-color', style: `background: ${resolverColor(valor)}`, title: 'Elegir un color (rueda, cuentagotas, paletas...)', 'aria-label': `Elegir el color de ${etiqueta}`, 'data-ruta-color': ruta, onclick: () => {
+    abrirSelectorColor(selector, texto.value || valor, (c) => {
+      texto.value = c;
+      selector.style.background = resolverColor(c);
+      if (pendiente) clearTimeout(pendiente);
+      pendiente = setTimeout(() => alCambiar(c), 120);
+    });
+  } });
   return fila(etiqueta, h('span', { class: 'campo-color' }, selector, texto), ayuda);
 }
 

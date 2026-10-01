@@ -27,6 +27,7 @@
 import type { FormaSprite } from '../objetos/componentes/Sprite';
 import type { FormaColision } from '../objetos/componentes/Colision';
 import type { Punto, PuntoCamino } from '../objetos/formas/figuras';
+import type { Mezcla, Patron, TipoRelleno } from '../motor/Estilo';
 import type { TipoCasilla } from '../objetos/componentes/MapaCasillas';
 import type { DefAnimacion } from '../objetos/componentes/Animador';
 import type { Limites } from '../objetos/Camara';
@@ -49,6 +50,24 @@ export interface DefSprite {
   cerrado?: boolean;
   figuras?: Punto[][][];
   color?: string;
+  /** Estilo: ver motor/Estilo.ts. Lo que no se dice, como siempre (relleno de un color, sin borde ni sombra). */
+  relleno?: TipoRelleno;
+  color2?: string;
+  anguloDegradado?: number;
+  patron?: Patron;
+  imagenRelleno?: string;
+  borde?: number;
+  colorBorde?: string;
+  bordeDiscontinuo?: boolean;
+  /** Color de la sombra (sin sombra si no se dice). */
+  sombra?: string;
+  sombraX?: number;
+  sombraY?: number;
+  desenfoqueSombra?: number;
+  /** Color del resplandor (brillo de alrededor). */
+  resplandor?: string;
+  tamanoResplandor?: number;
+  mezcla?: Mezcla;
   ancho?: number;
   alto?: number;
   capa?: number;
@@ -189,6 +208,8 @@ export interface DefProyecto {
   bloques?: string[];
   /** Valores con los que empieza `juego` (puntos, vidas...), puestos en el editor. */
   datos?: Record<string, DatoInicial>;
+  /** «Mis colores»: los colores que se guardan en el selector de color del editor. */
+  colores?: string[];
 }
 
 /** Un valor inicial (de `juego` o de una propiedad propia): un número, un texto o verdadero/falso. */
@@ -260,6 +281,7 @@ function completar(p: DefProyecto): DefProyecto {
     escenaInicial: p.escenaInicial && Object.prototype.hasOwnProperty.call(escenas, p.escenaInicial) ? p.escenaInicial : Object.keys(escenas)[0],
     ...(p.bloques ? { bloques: p.bloques } : {}),
     datos: p.datos ?? {},
+    ...(p.colores ? { colores: p.colores } : {}),
   };
 }
 

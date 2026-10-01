@@ -836,6 +836,22 @@ Convierte cualquier valor en texto.
 yo.texto = "Puntos: " + texto(juego.puntos)
 ```
 
+#### `paleta("nombre", n)`
+
+Los colores de una paleta lista ("pastel", "retro", "neon", "natural", "oceano", "fuego", "bosque", "caramelo", "grises", "arcoiris"). Con un número, solo ese color (del 1 al 8).
+
+```
+yo.color = paleta("neon", 3)
+```
+
+#### `mezclarColores(color1, color2, cuanto)`
+
+El color que sale de mezclar dos: con 0 da el primero, con 1 el segundo y con 0.5 el de en medio.
+
+```
+yo.color = mezclarColores("rojo", "amarillo", 0.5)
+```
+
 #### `numero(texto)`
 
 Convierte un texto con un número ("42") en un número de verdad.
@@ -1208,6 +1224,129 @@ Verdadero mientras se está arrastrando con el ratón (solo se lee).
 ```
 si yo.arrastrando:
     yo.opacidad = 0.7
+```
+
+#### `yo.relleno`
+
+Cómo se rellena la forma: "color" (lo normal), "degradado" (de color a color2), "radial" (degradado redondo, del centro hacia fuera), "patron" (rayas, puntos...) o "imagen" (una imagen repetida).
+
+```
+yo.relleno = "degradado"
+yo.color2 = "azul"
+```
+
+#### `yo.color2`
+
+El segundo color: el final de un degradado o el dibujo de un patrón.
+
+```
+yo.color2 = "morado"
+```
+
+#### `yo.anguloDegradado`
+
+Hacia dónde va el degradado, en grados: 0 = de izquierda a derecha, 90 = de abajo arriba (lo normal).
+
+```
+yo.anguloDegradado = 0
+```
+
+#### `yo.patron`
+
+El dibujo del relleno "patron": "rayas", "puntos", "cuadros", "rombos", "ondas" o "ladrillos" (con color de fondo y color2 de dibujo).
+
+```
+yo.relleno = "patron"
+yo.patron = "cuadros"
+```
+
+#### `yo.imagenRelleno`
+
+La imagen del proyecto que se repite dentro de la forma, con relleno "imagen".
+
+```
+yo.relleno = "imagen"
+yo.imagenRelleno = "ladrillo"
+```
+
+#### `yo.borde`
+
+El grosor del borde en píxeles (0 = sin borde).
+
+```
+yo.borde = 3
+```
+
+#### `yo.colorBorde`
+
+El color del borde (negro si no se dice).
+
+```
+yo.colorBorde = "blanco"
+```
+
+#### `yo.bordeDiscontinuo`
+
+Si es verdadero, el borde es a rayitas (como una línea de recortar).
+
+```
+yo.bordeDiscontinuo = verdadero
+```
+
+#### `yo.sombra`
+
+El color de la sombra (con algo de transparencia queda mejor: "#00000088"). verdadero pone una sombra gris; nulo la quita.
+
+```
+yo.sombra = "#00000088"
+```
+
+#### `yo.sombraX`
+
+Cuánto se aparta la sombra hacia la derecha, en píxeles (6).
+
+```
+yo.sombraX = 10
+```
+
+#### `yo.sombraY`
+
+Cuánto se aparta la sombra hacia arriba, en píxeles (-6: hacia abajo).
+
+```
+yo.sombraY = -10
+```
+
+#### `yo.desenfoqueSombra`
+
+Lo borrosa que es la sombra (0 = con bordes duros).
+
+```
+yo.desenfoqueSombra = 0
+```
+
+#### `yo.resplandor`
+
+Un brillo alrededor del objeto, de ese color (nulo lo quita). Muy bonito en monedas, poderes y textos.
+
+```
+yo.resplandor = "amarillo"
+```
+
+#### `yo.tamanoResplandor`
+
+Lo grande que es el resplandor, en píxeles (16).
+
+```
+yo.tamanoResplandor = 30
+```
+
+#### `yo.mezcla`
+
+Cómo se junta con lo que hay detrás: "normal", "sumar" (luz que se suma: fuego, magia), "multiplicar" (sombras), "pantalla", "superponer", "oscurecer", "aclarar" o "diferencia".
+
+```
+yo.mezcla = "sumar"
 ```
 
 #### `yo.forma`

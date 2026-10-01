@@ -286,6 +286,7 @@ describe('Deshacer y rehacer: TODO lo que cambia el proyecto', () => {
     cambiarImagen: (e) => e.cambiarImagen('foto', imagenPrueba('CCCC')),
     renombrarRecurso: (e) => e.renombrarRecurso('imagen', 'foto', 'retrato'),
     guardarDibujo: (e) => e.guardarDibujo('Gato', [imagenPrueba('a'), imagenPrueba('b')]),
+    ponerMisColores: (e) => e.ponerMisColores(['#ff8800', 'rojo']),
   };
 
   for (const [nombre, cambio] of Object.entries(cambios)) {

@@ -2,7 +2,7 @@
 
 > Este archivo se genera solo con `npm run manual`, a partir de la API de verdad (no lo cambies a mano: cambia `src/chispa/api/curso.ts`). Un test ejecuta cada ejemplo, cada ejercicio y cada mini proyecto para comprobar que funcionan.
 
-Un curso por niveles para aprender a programar juegos con Chispa, aunque no hayas programado nunca. Salen **todos** los comandos que existen (289), cada uno con qué hace, un ejemplo corto que funciona y el error que más se comete con él.
+Un curso por niveles para aprender a programar juegos con Chispa, aunque no hayas programado nunca. Salen **todos** los comandos que existen (306), cada uno con qué hace, un ejemplo corto que funciona y el error que más se comete con él.
 
 **Cómo usarlo:**
 
@@ -42,6 +42,7 @@ Una regla para todo el curso: en el código **no hacen falta tildes**. Se escrib
   - [Tiempo y temporizadores](#tiempo-y-temporizadores)
   - [Animaciones y partículas](#animaciones-y-particulas)
   - [Formas](#formas)
+  - [Colores y estilo](#colores-y-estilo)
 - [Nivel 4: Avanzado](#nivel-4-avanzado)
   - [Mensajes entre objetos y datos globales](#mensajes-entre-objetos-y-datos-globales)
   - [Ir a sitios esquivando paredes](#ir-a-sitios-esquivando-paredes)
@@ -4509,6 +4510,301 @@ cuando empieza:
 ```
 cuando empieza:
     yo.ponerCamino(vector(-50, 0), vector(50, 0))
+```
+
+### Colores y estilo
+
+Además de un color, una forma puede tener un degradado, un patrón o una imagen por dentro, un borde, sombra y resplandor. Y se puede elegir cómo se mezcla con lo de detrás (sumar luz queda genial en fuegos y poderes). Hay paletas de colores listas que quedan bien juntos.
+
+#### `yo.relleno`
+
+Cómo se rellena la forma: "color" (lo normal), "degradado" (de color a color2), "radial" (degradado redondo, del centro hacia fuera), "patron" (rayas, puntos...) o "imagen" (una imagen repetida).
+
+```
+cuando empieza:
+    yo.relleno = "degradado"
+    yo.color = "amarillo"
+    yo.color2 = "rojo"
+```
+
+**Error típico:** Escribirlo mal: Chispa te dice el parecido ("degradado"). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    yo.relleno = "degradao"
+```
+
+#### `yo.color2`
+
+El segundo color: el final de un degradado o el dibujo de un patrón.
+
+```
+cuando empieza:
+    yo.relleno = "radial"
+    yo.color2 = "azul"
+```
+
+**Error típico:** Ponerlo con el relleno normal: color2 solo se ve en degradados y patrones. Esto no da error: funciona, pero no hace lo que querías.
+
+```
+cuando empieza:
+    yo.color2 = "azul"
+```
+
+#### `yo.anguloDegradado`
+
+Hacia dónde va el degradado, en grados: 0 = de izquierda a derecha, 90 = de abajo arriba (lo normal).
+
+```
+cuando empieza:
+    yo.relleno = "degradado"
+    yo.anguloDegradado = 0
+```
+
+**Error típico:** Darle un texto: son grados (0 = horizontal). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    yo.relleno = "degradado"
+    yo.anguloDegradado = "horizontal"
+```
+
+#### `yo.patron`
+
+El dibujo del relleno "patron": "rayas", "puntos", "cuadros", "rombos", "ondas" o "ladrillos" (con color de fondo y color2 de dibujo).
+
+```
+cuando empieza:
+    yo.relleno = "patron"
+    yo.patron = "cuadros"
+    yo.color2 = "negro"
+```
+
+**Error típico:** Olvidar yo.relleno = "patron": sin eso el patrón no se ve. Esto no da error: funciona, pero no hace lo que querías.
+
+```
+cuando empieza:
+    yo.patron = "cuadros"
+```
+
+#### `yo.imagenRelleno`
+
+La imagen del proyecto que se repite dentro de la forma, con relleno "imagen".
+
+```
+cuando empieza:
+    yo.relleno = "imagen"
+    yo.imagenRelleno = "jugador"
+```
+
+**Error típico:** Usar una imagen que no existe: Chispa dice cuáles hay. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    yo.relleno = "imagen"
+    yo.imagenRelleno = "ladrilloo"
+```
+
+#### `yo.borde`
+
+El grosor del borde en píxeles (0 = sin borde).
+
+```
+cuando empieza:
+    yo.borde = 4
+    yo.colorBorde = "blanco"
+```
+
+**Error típico:** Darle un texto: el borde son píxeles. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    yo.borde = "gordo"
+```
+
+#### `yo.colorBorde`
+
+El color del borde (negro si no se dice).
+
+```
+cuando empieza:
+    yo.borde = 3
+    yo.colorBorde = "negro"
+```
+
+**Error típico:** Inventarse un color: Chispa avisa y propone el parecido. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    yo.borde = 3
+    yo.colorBorde = "blanquito"
+```
+
+#### `yo.bordeDiscontinuo`
+
+Si es verdadero, el borde es a rayitas (como una línea de recortar).
+
+```
+cuando empieza:
+    yo.borde = 2
+    yo.bordeDiscontinuo = verdadero
+```
+
+**Error típico:** Olvidar el grosor: sin yo.borde no hay borde que cortar. Esto no da error: funciona, pero no hace lo que querías.
+
+```
+cuando empieza:
+    yo.bordeDiscontinuo = verdadero
+```
+
+#### `yo.sombra`
+
+El color de la sombra (con algo de transparencia queda mejor: "#00000088").
+
+```
+cuando empieza:
+    yo.sombra = "#00000088"
+```
+
+**Error típico:** Darle un texto que no es un color: la sombra es un color (o verdadero). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    yo.sombra = "sombra"
+```
+
+#### `yo.sombraX`
+
+Cuánto se aparta la sombra hacia la derecha, en píxeles (6).
+
+```
+cuando empieza:
+    yo.sombra = verdadero
+    yo.sombraX = 12
+```
+
+**Error típico:** Moverla sin poner yo.sombra: no hay sombra que mover. Esto no da error: funciona, pero no hace lo que querías.
+
+```
+cuando empieza:
+    yo.sombraX = 12
+```
+
+#### `yo.sombraY`
+
+Cuánto se aparta la sombra hacia arriba, en píxeles (-6: hacia abajo).
+
+```
+cuando empieza:
+    yo.sombra = verdadero
+    yo.sombraY = -12
+```
+
+**Error típico:** Ponerla en positivo para bajarla: en Chispa la Y va hacia ARRIBA, así que la sombra sube. Esto no da error: funciona, pero no hace lo que querías.
+
+```
+cuando empieza:
+    yo.sombra = verdadero
+    yo.sombraY = 12
+```
+
+#### `yo.desenfoqueSombra`
+
+Lo borrosa que es la sombra (0 = con bordes duros).
+
+```
+cuando empieza:
+    yo.sombra = verdadero
+    yo.desenfoqueSombra = 0
+```
+
+**Error típico:** Darle un texto: son píxeles. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    yo.sombra = verdadero
+    yo.desenfoqueSombra = "mucho"
+```
+
+#### `yo.resplandor`
+
+Un brillo alrededor del objeto, de ese color (nulo lo quita).
+
+```
+cuando empieza:
+    yo.resplandor = "amarillo"
+```
+
+**Error típico:** Darle un texto que no es un color. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    yo.resplandor = "brillante"
+```
+
+#### `yo.tamanoResplandor`
+
+Lo grande que es el resplandor, en píxeles (16).
+
+```
+cuando empieza:
+    yo.resplandor = "amarillo"
+    yo.tamanoResplandor = 30
+```
+
+**Error típico:** Cambiar el tamaño sin poner yo.resplandor: no hay brillo. Esto no da error: funciona, pero no hace lo que querías.
+
+```
+cuando empieza:
+    yo.tamanoResplandor = 30
+```
+
+#### `yo.mezcla`
+
+Cómo se junta con lo que hay detrás: "normal", "sumar" (luz que se suma: fuego, magia), "multiplicar" (sombras), "pantalla", "superponer", "oscurecer", "aclarar" o "diferencia".
+
+```
+cuando empieza:
+    yo.mezcla = "sumar"
+```
+
+**Error típico:** Escribirlo mal: es "sumar" (Chispa propone el parecido). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    yo.mezcla = "suma"
+```
+
+#### `paleta("nombre", n)`
+
+Los colores de una paleta lista ("pastel", "retro", "neon", "natural", "oceano", "fuego", "bosque", "caramelo", "grises", "arcoiris").
+
+```
+cuando empieza:
+    yo.color = paleta("neon", 3)
+```
+
+**Error típico:** Pedir un color que no hay: cada paleta tiene 8 (del 1 al 8). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    yo.color = paleta("neon", 9)
+```
+
+#### `mezclarColores(color1, color2, cuanto)`
+
+El color que sale de mezclar dos: con 0 da el primero, con 1 el segundo y con 0.5 el de en medio.
+
+```
+cuando empieza:
+    yo.color = mezclarColores("rojo", "amarillo", 0.5)
+```
+
+**Error típico:** Escribir mal un color: no se puede mezclar. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    yo.color = mezclarColores("rojo", "amarilo", 0.5)
 ```
 
 ### Ejercicios del nivel 3
