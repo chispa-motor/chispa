@@ -22,13 +22,14 @@ import { h, icono, rellenar } from '../interfaz/dom';
 import { analizarSintaxis } from '../../chispa/sintaxis/parser';
 import { ACCIONES, DATOS_CON_BLOQUE, EVENTOS, accionPorId, aCodigo, datoPorObjetivo, type Accion, type Bloque, type ClaseEvento } from './modelo';
 
-type Categoria = 'eventos' | 'control' | 'movimiento' | 'apariencia' | 'sonido' | 'objetos' | 'variables' | 'funciones';
+type Categoria = 'eventos' | 'control' | 'movimiento' | 'apariencia' | 'efectos' | 'sonido' | 'objetos' | 'variables' | 'funciones';
 
 const CATEGORIAS: { id: Categoria; nombre: string; color: string }[] = [
   { id: 'eventos', nombre: 'Eventos', color: '#e6a817' },
   { id: 'control', nombre: 'Control', color: '#e08a1e' },
   { id: 'movimiento', nombre: 'Movimiento', color: '#4c8bf5' },
   { id: 'apariencia', nombre: 'Apariencia', color: '#9966ff' },
+  { id: 'efectos', nombre: 'Efectos', color: '#e8590c' },
   { id: 'sonido', nombre: 'Sonido', color: '#cf63cf' },
   { id: 'objetos', nombre: 'Objetos', color: '#2eb872' },
   { id: 'variables', nombre: 'Variables', color: '#ff8c1a' },

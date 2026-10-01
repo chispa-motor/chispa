@@ -79,6 +79,7 @@ function contextoDe(proyecto: DefProyecto, globales: Entorno) {
     sonidos: Object.keys(proyecto.sonidos ?? {}),
     escenas: Object.keys(proyecto.escenas),
     animaciones: Object.keys(proyecto.animaciones),
+    efectos: Object.keys(proyecto.efectos ?? {}),
     objetosEscena: nombresDeObjetos(proyecto),
   };
 }

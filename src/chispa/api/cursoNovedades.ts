@@ -74,4 +74,52 @@ export function agregarNovedades(tema: Tema, c: Comando): void {
     'cuando empieza:\n    yo.color = paleta("neon", 9)', 'Pedir un color que no hay: cada paleta tiene 8 (del 1 al 8).');
   c('funcion:mezclarColores', 'cuando empieza:\n    yo.color = mezclarColores("rojo", "amarillo", 0.5)', 'yo.color = mezclarColores("rojo", "azul", 0.5)',
     'cuando empieza:\n    yo.color = mezclarColores("rojo", "amarilo", 0.5)', 'Escribir mal un color: no se puede mezclar.');
+
+  tema(3, 'Efectos especiales', 'Con un solo comando: explosiones, fuego, humo, rayos, lluvia... Están todos en efecto. El sitio puede ser un objeto (el efecto lo sigue), un vector, dos números o nada (donde está este objeto). Los que duran (fuego, humo, lluvia...) siguen hasta que los paras.');
+  c('efecto:explosion', 'cuando toco Enemigo:\n    efecto.explosion(otro)\n    destruir(otro)', 'efecto.explosion(yo, 2)',
+    'cuando empieza:\n    efecto.explosion(yo, 0)', 'Darle tamaño 0: una explosión tiene que tener algo de tamaño.');
+  c('efecto:fuego', 'cuando empieza:\n    efecto.fuego(yo)', 'efecto.fuego(yo, 3)',
+    'cuando empieza:\n    efecto.fuego(yo, 0)', 'Darle 0 segundos: el fuego no duraría nada. Sin segundos, dura siempre.');
+  c('efecto:humo', 'cuando empieza:\n    efecto.humo(yo, 3)', 'efecto.humo(yo)',
+    'cuando empieza:\n    efecto.humo("yo")', 'Poner yo entre comillas: es el objeto, no un texto.');
+  c('efecto:chispas', 'cuando toco Enemigo:\n    efecto.chispas(otro)', 'efecto.chispas(yo)',
+    'cuando empieza:\n    efecto.chispas(nulo)', 'Darle un objeto que no existe (nulo).');
+  c('efecto:rayo', 'cuando se pulsa "espacio":\n    efecto.rayo(yo, buscar("Enemigo"))', 'efecto.rayo(yo, jugador)',
+    'cuando empieza:\n    efecto.rayo(yo)', 'Darle un solo sitio: un rayo va de un sitio a otro.');
+  c('efecto:estela', 'cuando empieza:\n    efecto.estela(yo)', 'efecto.estela(yo, 2)',
+    'cuando empieza:\n    efecto.estela(100, 200)', 'Darle un punto: la estela va detrás de un objeto.');
+  c('efecto:onda', 'cuando toco Enemigo:\n    efecto.onda(yo, 200)', 'efecto.onda(yo, 150)',
+    'cuando empieza:\n    efecto.onda(yo, "grande")', 'Darle un texto: el radio son píxeles.');
+  c('efecto:destello', 'cuando toco Moneda:\n    efecto.destello(otro, 100)', 'efecto.destello(yo)',
+    'cuando empieza:\n    efecto.destello(yo, "mucho")', 'Darle un texto: el tamaño son píxeles.');
+  c('efecto:lluvia', 'cuando empieza:\n    efecto.lluvia(2)', 'efecto.lluvia()',
+    'cuando empieza:\n    efecto.lluvia(50)', 'Pasarse de intensidad: va de 0 a 10 (3 ya es una tormenta).');
+  c('efecto:nieve', 'cuando empieza:\n    efecto.nieve()', 'efecto.nieve(2)',
+    'cuando empieza:\n    efecto.nieve(0)', 'Ponerle 0 pensando que empieza poco a poco: con 0 la nieve se PARA.', 'l');
+  c('efecto:hojas', 'cuando empieza:\n    efecto.hojas()', 'efecto.hojas(2)',
+    'cuando empieza:\n    efecto.hojas(-1)', 'Darle una intensidad negativa: va de 0 a 10.');
+  c('efecto:burbujas', 'cuando empieza:\n    efecto.burbujas(yo)', 'efecto.burbujas(yo, 5)',
+    'cuando empieza:\n    efecto.burbujas(yo, -2)', 'Darle segundos negativos.');
+  c('efecto:confeti', 'cuando toco Meta:\n    efecto.confeti(otro)', 'efecto.confeti(yo)',
+    'cuando empieza:\n    efecto.confeti("fiesta")', 'Darle un texto: el sitio es un objeto o una posición.');
+  c('efecto:sangre', 'cuando toco Enemigo:\n    efecto.sangre(yo)', 'efecto.sangre(yo)',
+    'cuando empieza:\n    efecto.sangre(yo)\n    # y esperar que salga roja', 'Esperar que salga roja: con efecto.suave (lo normal) sale tinta de colores. Para que sea roja: efecto.suave = falso.', 'l');
+  c('efecto:tinta', 'cuando toco Enemigo:\n    efecto.tinta(otro)', 'efecto.tinta(yo)',
+    'cuando empieza:\n    efecto.tinta(nulo)', 'Darle un objeto que no existe (nulo).');
+  c('efecto:polvo', 'cuando se pulsa "espacio":\n    si yo.saltar(600):\n        efecto.polvo(yo)', 'efecto.polvo(yo)',
+    'cuando empieza:\n    efecto.polvo(100, 50)', 'Darle un punto: el polvo sale de los pies de un objeto.');
+  c('efecto:golpe', 'cuando toco Enemigo:\n    efecto.golpe(otro, 25)', 'efecto.golpe(jugador, 10)',
+    'cuando empieza:\n    efecto.golpe(25)', 'Olvidar a quién se golpea: primero el objeto, luego el daño.');
+  c('efecto:texto', 'cuando toco Moneda:\n    efecto.texto("+1", otro, "amarillo")', 'efecto.texto("+1", yo, "amarillo")',
+    'cuando empieza:\n    efecto.texto("+1", yo, "dorado")', 'Inventarse el color: "dorado" no es un color de Chispa (usa "amarillo" o "#ffd700").');
+  c('efecto:usar', 'cuando empieza:\n    efecto.usar("fuego", yo)', 'efecto.usar("chispas", yo)',
+    'cuando empieza:\n    efecto.usar("magia", yo)', 'Usar un efecto que no has hecho: los propios se hacen en Proyecto > Efectos.');
+  c('efecto:parar', 'cuando empieza:\n    efecto.fuego(yo)\n    esperar(2)\n    efecto.parar("fuego", yo)', 'efecto.parar("fuego", yo)',
+    'cuando empieza:\n    efecto.parar("fuegos")', 'Escribir mal el nombre: Chispa propone el parecido.');
+  c('efecto:suave', 'cuando empieza:\n    efecto.suave = falso', 'efecto.suave = falso',
+    'cuando empieza:\n    efecto.suave = "si"', 'Darle un texto: es verdadero o falso.');
+  c('objeto:polvo', 'cuando empieza:\n    yo.polvo = verdadero', 'yo.polvo = verdadero',
+    'cuando empieza:\n    yo.polvo = "mucho"', 'Darle un texto: es verdadero o falso.');
+  c('objeto:efecto', 'cuando empieza:\n    yo.efecto = "fuego"', 'yo.efecto = "humo"',
+    'cuando empieza:\n    yo.efecto = "explosion"', 'Ponerle un efecto de golpe: yo.efecto es uno que dura (fuego, humo, burbujas, estela). Para explotar: efecto.explosion(yo).');
 }

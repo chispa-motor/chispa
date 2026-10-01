@@ -25,6 +25,8 @@ import { migrarProyecto, proyectoVacio, tipoPorNombre, type DatoInicial, type De
 import { FORMAS, FORMAS_DIBUJO, type Forma, type PuntoCamino } from '../../objetos/formas/figuras';
 import { combinarFormas, encajarCamino, esFormaCombinable } from '../recursos/operacionesFormas';
 import { BIBLIOTECA } from '../biblioteca/biblioteca';
+import { CLIMAS } from '../../objetos/Efectos';
+import type { ConfigParticulas } from '../../objetos/Particulas';
 import type { DefAnimacion } from '../../objetos/componentes/Animador';
 import type { TipoCasilla } from '../../objetos/componentes/MapaCasillas';
 import { normalizar, quitarTildes } from '../../utilidades/texto';
@@ -330,6 +332,33 @@ export class EstadoEditor {
     if (nuevos.length > 1) this.seleccionarVarios(nuevos);
     else if (nuevos.length === 1) this.seleccionarIndice(nuevos[0]);
     return nuevos;
+  }
+
+  /** Guarda un efecto del editor de partículas (si se le cambia el nombre, se quita el de antes y se cambia donde se use). */
+  guardarEfecto(nombre: string, config: ConfigParticulas, anterior?: string): string | null {
+    const n = nombre.trim();
+    if (!/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ_][A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9_ ]{0,39}$/.test(n) || esNombreProhibido(n)) return null;
+    const limpio = migrarProyecto({ ...proyectoVacio(), efectos: { [n]: config } }).efectos?.[n];
+    if (!limpio) return null;
+    this.cambiar('recursos', () => {
+      const efectos = (this.proyecto.efectos ??= {});
+      if (anterior && anterior !== n && tiene(efectos, anterior)) {
+        delete efectos[anterior];
+        for (const o of this.todosLosObjetos()) if (o.efecto === anterior) o.efecto = n;
+      }
+      efectos[n] = limpio;
+    });
+    return n;
+  }
+
+  /** Borra un efecto propio (y se lo quita a los objetos que lo llevaban). */
+  borrarEfecto(nombre: string): void {
+    if (!tiene(this.proyecto.efectos ?? {}, nombre)) return;
+    this.cambiar('recursos', () => {
+      delete this.proyecto.efectos![nombre];
+      if (!Object.keys(this.proyecto.efectos!).length) delete this.proyecto.efectos;
+      for (const o of this.todosLosObjetos()) if (o.efecto === nombre) delete o.efecto;
+    });
   }
 
   /** «Mis colores» del selector de color (se guardan en el proyecto). Como mucho 40, sin repetir. */
@@ -810,10 +839,15 @@ export class EstadoEditor {
     if (this.proyecto.escenas[nombre]) this.cambiar('escena', () => (this.proyecto.escenaInicial = nombre));
   }
 
-  cambiarEscenaPropiedad(ruta: 'colorFondo' | 'gravedad' | 'camara.zoom' | 'camara.seguir' | 'camara.x' | 'camara.y' | 'camara.limitarAlMapa', valor: unknown): void {
+  cambiarEscenaPropiedad(ruta: 'colorFondo' | 'gravedad' | 'camara.zoom' | 'camara.seguir' | 'camara.x' | 'camara.y' | 'camara.limitarAlMapa' | 'clima', valor: unknown): void {
     this.cambiar('escena', () => {
       const e = this.escena;
       if (ruta === 'colorFondo') e.colorFondo = String(valor);
+      else if (ruta === 'clima') {
+        const c = valor as DefEscena['clima'];
+        if (c && (CLIMAS as readonly string[]).includes(c.tipo)) e.clima = { tipo: c.tipo, ...(c.intensidad !== undefined && c.intensidad !== 1 ? { intensidad: Math.min(10, Math.max(0, c.intensidad)) } : {}) };
+        else delete e.clima;
+      }
       else if (ruta === 'gravedad') {
         if (valor === undefined) delete e.gravedad;
         else e.gravedad = Number(valor);

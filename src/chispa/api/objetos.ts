@@ -38,6 +38,7 @@ import { enumerar } from '../errores/sugerencias';
 import { normalizar } from '../../utilidades/texto';
 import { sinPrototipo } from '../../utilidades/seguro';
 import { NOMBRES_MEZCLAS, PATRONES, TIPOS_RELLENO } from '../../motor/Estilo';
+import { EFECTOS_CONTINUOS, RECETAS } from '../../objetos/Efectos';
 import { NOMBRES_COLORES, esColorValido } from '../../motor/Color';
 import { FORMAS, MAX_LADOS, MAX_PUNTOS_CAMINO, POR_DEFECTO } from '../../objetos/formas/figuras';
 
@@ -315,6 +316,27 @@ const PROPIEDADES: Record<string, PropiedadObjeto> = sinPrototipo({
   },
   ratonencima: { obtener: (o) => o.escena?.ratonEncima(o) ?? false },
 
+  polvo: {
+    obtener: (o, p) => necesitaFisica(o, 'polvo', p).polvo,
+    asignar: (o, v, p) => (necesitaFisica(o, 'polvo', p).polvo = comoLogico(v, 'polvo', p)),
+  },
+  efecto: {
+    obtener: (o) => o.escena?.efectos.nombreEn(o) ?? null,
+    asignar: (o, v, p) => {
+      const escena = o.escena;
+      if (!escena) return;
+      if (v === null || v === false) return escena.efectos.parar(undefined, o);
+      const nombre = normalizar(aTexto(v));
+      const ok = (EFECTOS_CONTINUOS as readonly string[]).includes(nombre);
+      if (!ok) {
+        const parecido = sugerir(aTexto(v), [...EFECTOS_CONTINUOS]);
+        throw new ErrorChispa(p, `'efecto' de un objeto es uno que dura: ${enumerar([...EFECTOS_CONTINUOS])}, y le das "${aTexto(v)}".`, parecido ? `¿Querías decir "${parecido}"?` : 'Para un efecto de golpe usa efecto.explosion(yo), efecto.chispas(yo)...');
+      }
+      escena.efectos.parar(undefined, o);
+      escena.efectos.empezar(nombre, RECETAS[nombre], o);
+    },
+  },
+
   // ── Estilo (ver motor/Estilo.ts) ──
   relleno: {
     obtener: (o, p) => necesitaSprite(o, 'relleno', p).relleno,
@@ -488,6 +510,7 @@ const METODOS: Record<string, (o: ObjetoJuego, args: Valor[], pos: Posicion) => 
     if (!f.enSuelo) return false;
     f.velocidad.y = Math.abs(fuerza); // positivo = hacia ARRIBA
     f.enSuelo = false;
+    if (f.polvo) o.escena?.efectos.polvo(o);
     return true;
   },
   mover: (o, a, p) => {
@@ -866,7 +889,7 @@ const NOMBRES_BONITOS = [
   'teletransportar', 'irA', 'anguloA', 'rotarHacia', 'avanzar', 'ocultar', 'aparecer', 'parpadear', 'ponerDelante', 'ponerDetras',
   'tocando', 'cercanos', 'masCercano', 'clonar', 'ponerEtiqueta', 'quitarEtiqueta', 'tieneEtiqueta', 'pegarA', 'soltar',
   'irHacia', 'parar', 'yendo', 'atravesar', 'dejarDeAtravesar',
-  'relleno', 'color2', 'anguloDegradado', 'patron', 'imagenRelleno', 'borde', 'colorBorde', 'bordeDiscontinuo',
+  'polvo', 'efecto', 'relleno', 'color2', 'anguloDegradado', 'patron', 'imagenRelleno', 'borde', 'colorBorde', 'bordeDiscontinuo',
   'sombra', 'sombraX', 'sombraY', 'desenfoqueSombra', 'resplandor', 'tamanoResplandor', 'mezcla',
   'forma', 'lados', 'radioInterior', 'radioEsquina', 'inicioArco', 'finArco', 'grosor', 'formaColision', 'ponerCamino',
 ];

@@ -36,6 +36,7 @@ import { normalizar } from '../../utilidades/texto';
 import { MapaCasillas } from '../../objetos/componentes/MapaCasillas';
 import { TIPOS_PARTICULAS, type ConfigParticulas } from '../../objetos/Particulas';
 import { deserializar, serializar } from './guardado';
+import { crearModuloEfecto } from './efectos';
 import { Tabla } from '../ejecucion/valores';
 import { lanzarRayo } from '../../objetos/Rayos';
 import { CajaDialogo } from '../../objetos/Dialogo';
@@ -60,18 +61,20 @@ export interface ContextoJuego {
   borrarDato(clave: string): void;
   /** sistema.abrirWeb(url). En el editor pregunta antes (el juego puede ser de otra persona). */
   abrirWeb?(url: string): void;
+  /** Los efectos hechos con el editor de partículas. */
+  efectosPropios?(): Record<string, ConfigParticulas>;
 }
 
 // ═════════════════════════ Módulo genérico ═════════════════════════
 
-interface Propiedad {
+export interface Propiedad {
   obtener: () => Valor;
   asignar?: (v: Valor, pos: Posicion) => void;
 }
-type Metodo = (args: Valor[], pos: Posicion) => Valor | PeticionEspera;
+export type Metodo = (args: Valor[], pos: Posicion) => Valor | PeticionEspera;
 
 /** Un objeto del motor con propiedades y métodos: teclado, sonido, tiempo... */
-class Modulo extends Anfitrion {
+export class Modulo extends Anfitrion {
   constructor(
     private nombre: string,
     private props: Record<string, Propiedad>,
@@ -616,10 +619,13 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
     ),
   );
 
+  // ── efectos especiales (efectos.ts) ──
+  g.declarar('efecto', crearModuloEfecto({ efectos: () => ctx.escena.efectos, aqui, propios: () => ctx.efectosPropios?.() ?? {} }));
+
   // ── partículas ──
   funcion('particulas', (a, p) => {
     const ej = 'particulas("explosion", yo.x, yo.y)';
-    const config = configParticulas(a[0], p);
+    const config = configParticulas(a[0], p, ctx.efectosPropios?.() ?? {});
     // Sin posición: donde está el objeto que las pide
     const x = a[1] === undefined && aqui() ? aqui()!.x : argNumero(a, 1, 'particulas', p, ej);
     const y = a[2] === undefined && aqui() ? aqui()!.y : argNumero(a, 2, 'particulas', p, ej);
@@ -817,10 +823,10 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
  *   - un texto con un tipo preparado: "explosion", "humo", "chispas", "polvo", "confeti", "estrellas"
  *   - una tabla con lo que quieras cambiar: {tipo: "humo", color: "verde", cantidad: 50}
  */
-function configParticulas(v: Valor | undefined, p: Posicion): ConfigParticulas {
-  const tipos = Object.keys(TIPOS_PARTICULAS);
+function configParticulas(v: Valor | undefined, p: Posicion, propios: Record<string, ConfigParticulas> = {}): ConfigParticulas {
+  const tipos = [...Object.keys(TIPOS_PARTICULAS), ...Object.keys(propios)];
   const porTipo = (nombre: string): ConfigParticulas => {
-    const t = TIPOS_PARTICULAS[normalizar(nombre)];
+    const t = TIPOS_PARTICULAS[normalizar(nombre)] ?? propio(propios, nombre);
     if (t) return { ...t };
     const parecido = sugerir(nombre, tipos);
     throw new ErrorChispa(p, `no hay ningún tipo de partículas llamado "${nombre}".`, parecido ? `¿Querías decir "${parecido}"?` : `Los tipos son: ${tipos.join(', ')}.`);

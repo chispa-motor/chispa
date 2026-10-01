@@ -393,3 +393,18 @@ Ver PROBLEMAS_PRINCIPIANTE.md para la lista completa de lo que se encontró.
 | Si un script de la biblioteca ya existe con el mismo nombre pero otro código (porque lo cambiaste), el nuevo se guarda con otro nombre (`moneda2.chs`). | Nunca se pisa lo que has escrito. |
 | Los círculos chocan como círculos de verdad (no como polígonos de 48 lados), y la física mira una sola vez por fotograma qué objetos chocan con su figura. | Con 1000 círculos amontonados, chocar como polígonos hacía el juego 20 veces más lento. Así cuesta casi lo mismo que antes. |
 | El panel izquierdo tiene ahora tres pestañas; si no caben sus nombres, las que no están elegidas se quedan solo con su icono. | Para que quepan en pantallas pequeñas sin cortarse. |
+
+## Chispa 1.1 · Día 2: efectos especiales y comandos
+
+| Decisión | Por qué |
+|---|---|
+| Los efectos están en un módulo, `efecto` (`efecto.explosion(yo)`, `efecto.fuego(yo)`, `efecto.lluvia()`...), y no en un comando con un texto (`efecto("explosion")`). | Al escribir `efecto.` el autocompletado enseña todos, cada uno con su ayuda; y Chispa avisa al momento si uno está mal escrito. |
+| El sitio de un efecto se escribe como en el resto de Chispa: un objeto, un vector, dos números o nada (donde está quien lo pide). Con un objeto, el efecto lo SIGUE. | Una sola forma de decir «dónde», que ya se conoce de `yo.irA` y compañía. Un fuego pegado a una antorcha que se mueve se mueve con ella. |
+| Tres clases de efecto: de golpe (partículas a la vez), que duran (un emisor, en un sitio, en un objeto o por toda la pantalla) y dibujos especiales (rayo en zigzag que cambia cada fotograma, onda, destello, números que suben). Todos en `src/objetos/Efectos.ts`, con las recetas en un solo sitio (`RECETAS`). | Las mismas recetas sirven al código, al editor (efecto de un objeto, clima de la escena) y al editor de partículas como punto de partida. |
+| Las partículas ganan forma (círculo, cuadrado, línea, estrella, anillo, hoja, chispa), color final, tamaño final, giro, vaivén, rozamiento del aire, «brillo» (mezcla sumar) y área de salida. Lo que no se dice, como antes. | Con eso salen lluvia (líneas), nieve y hojas (vaivén), confeti (cuadrados que giran) y fuego (brilla y pasa de amarillo a rojo). Los juegos de antes no cambian. |
+| Las que brillan se dibujan todas juntas con la mezcla «sumar», después de las normales. | Cambiar la mezcla del lienzo cuesta: así se cambia una vez por fotograma, no una por partícula. |
+| Como mucho 3000 partículas y 200 efectos que duran a la vez. | Más no se distingue y el juego iría lento (o se congelaría con un efecto en un bucle sin fin). |
+| `efecto.suave` (verdadero por defecto): la sangre sale como tinta de colores con estrellitas. Para que sea roja hay que pedirlo (`efecto.suave = falso`). | Se pidió sangre opcional con versión suave. Chispa es para todas las edades: lo suave es lo normal. |
+| Polvo al saltar y al caer: `yo.polvo = verdadero` (o la casilla en Física). Al caer solo levanta polvo si llega con fuerza. | Así no salen nubecitas al bajar una cuesta andando. |
+| Desde el editor, sin código: el «Efecto» de un objeto (fuego, humo, burbujas, estela o uno propio) y el «clima» de una escena (lluvia, nieve, hojas). | Se pidió poder usarlos también desde el editor. |
+| Editor de partículas: se empieza desde un efecto listo, se cambia con deslizadores viéndolo en marcha y se guarda con un nombre en el proyecto (`efectos`). Se usa con `efecto.usar("nombre", yo)`, con `particulas("nombre")` o en la sección Efecto. No puede llamarse como uno de Chispa. | Empezar desde algo que ya funciona es más fácil que desde cero. El nombre no puede tapar a uno de Chispa para que no haya dudas de cuál sale. |

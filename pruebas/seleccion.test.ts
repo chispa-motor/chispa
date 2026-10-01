@@ -233,6 +233,7 @@ describe('Deshacer y rehacer: TODO lo que cambia el proyecto', () => {
     e.crearAnimacion('andar', ['foto']);
     e.crearEscena('Nivel2');
     e.cambiarEscenaActual('Principal');
+    e.guardarEfecto('magia', { cantidad: 10, colores: ['rosa'], velocidad: 100, vida: 1, tamano: 5, gravedad: 0, dispersion: 360, direccion: 90, encoger: true });
     e.seleccionarVarios([0, 2]);
     e.copiarSeleccionado();
     e.seleccionarIndice(0);
@@ -294,6 +295,8 @@ describe('Deshacer y rehacer: TODO lo que cambia el proyecto', () => {
     cambiarCamino: (e) => e.cambiarCamino(obj(0), [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }], true),
     convertirEnImagen: (e) => e.convertirEnImagen(obj(2), imagenPrueba('forma')),
     insertarDeBiblioteca: (e) => e.insertarDeBiblioteca('nave', 0, 0),
+    guardarEfecto: (e) => e.guardarEfecto('aura', { cantidad: 10, colores: ['rosa'], velocidad: 100, vida: 1, tamano: 5, gravedad: 0, dispersion: 360, direccion: 90, encoger: true }),
+    borrarEfecto: (e) => e.borrarEfecto('magia'),
   };
 
   for (const [nombre, cambio] of Object.entries(cambios)) {

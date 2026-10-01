@@ -2,7 +2,7 @@
 
 > Se genera sola con `npm run manual` (no la cambies a mano). Un test comprueba que no falta ningún comando y que cada ejemplo funciona.
 
-Todos los comandos de Chispa (306), una línea cada uno, para tenerla abierta mientras programas o imprimirla. Para aprender con calma, el [curso](APRENDE_CHISPA.md).
+Todos los comandos de Chispa (329), una línea cada uno, para tenerla abierta mientras programas o imprimirla. Para aprender con calma, el [curso](APRENDE_CHISPA.md).
 
 En los ejemplos se usan estas variables y esta función, como si ya las tuvieras (y en la escena hay un Jugador y un Mapa de casillas):
 
@@ -429,6 +429,34 @@ Las líneas que terminan en `:` empiezan un bloque: lo de dentro va debajo, con 
 | `yo.mezcla` | Cómo se junta con lo que hay detrás: "normal", "sumar" (luz que se suma: fuego, magia), "multiplicar" (sombras), "pantalla", "superponer", "oscurecer", "aclarar" o "diferencia". | `yo.mezcla = "multiplicar"` |
 | `paleta("nombre", n)` | Los colores de una paleta lista ("pastel", "retro", "neon", "natural", "oceano", "fuego", "bosque", "caramelo", "grises", "arcoiris"). | `yo.color = paleta("pastel", 2)` |
 | `mezclarColores(color1, color2, cuanto)` | El color que sale de mezclar dos: con 0 da el primero, con 1 el segundo y con 0.5 el de en medio. | `yo.color = mezclarColores("rojo", "azul", 0.5)` |
+
+### Efectos especiales
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `efecto.explosion(sitio, tamaño)` | Una explosión: fuego, humo, un destello y una onda. | `efecto.explosion(yo, 2)` |
+| `efecto.fuego(sitio, segundos)` | Fuego que no se apaga (o que dura esos segundos). | `efecto.fuego(yo, 3)` |
+| `efecto.humo(sitio, segundos)` | Humo que sube y se deshace. | `efecto.humo(yo)` |
+| `efecto.chispas(sitio)` | Un puñado de chispas que brillan. | `efecto.chispas(yo)` |
+| `efecto.rayo(desde, hasta, color)` | Un rayo eléctrico en zigzag entre dos sitios (si son objetos, los sigue). | `efecto.rayo(yo, jugador)` |
+| `efecto.estela(objeto, segundos)` | Una estela detrás del objeto: copias de él que se apagan (para cosas que van rápido). | `efecto.estela(yo, 2)` |
+| `efecto.onda(sitio, radio)` | Una onda expansiva: un anillo que crece y se apaga. | `efecto.onda(yo, 150)` |
+| `efecto.destello(sitio, tamaño)` | Un destello de luz redondo, muy rápido. | `efecto.destello(yo)` |
+| `efecto.lluvia(intensidad)` | Lluvia por toda la pantalla. | `efecto.lluvia()` |
+| `efecto.nieve(intensidad)` | Nieve cayendo por toda la pantalla (0 la para). | `efecto.nieve(2)` |
+| `efecto.hojas(intensidad)` | Hojas de otoño cayendo y girando (0 las para). | `efecto.hojas(2)` |
+| `efecto.burbujas(sitio, segundos)` | Burbujas que suben haciendo eses. | `efecto.burbujas(yo, 5)` |
+| `efecto.confeti(sitio)` | Confeti de colores, para celebrar. | `efecto.confeti(yo)` |
+| `efecto.sangre(sitio)` | Gotas de sangre. | `efecto.sangre(yo)` |
+| `efecto.tinta(sitio)` | Una salpicadura de tinta de colores. | `efecto.tinta(yo)` |
+| `efecto.polvo(objeto)` | Polvo a los pies del objeto (al saltar o al caer). | `efecto.polvo(yo)` |
+| `efecto.golpe(objeto, daño)` | Un golpe: chispitas y el número de daño, que sube y se desvanece. | `efecto.golpe(jugador, 10)` |
+| `efecto.texto("texto", sitio, color)` | Un texto que sube y se desvanece: "+1", "¡Bien!"... | `efecto.texto("+1", yo, "amarillo")` |
+| `efecto.usar("nombre", sitio, segundos)` | Un efecto hecho por ti en el editor de partículas (Proyecto > Efectos). | `efecto.usar("chispas", yo)` |
+| `efecto.parar("nombre", sitio)` | Para los efectos que duran: los de ese nombre (y de ese objeto, si se dice), o todos si no se dice nada. | `efecto.parar("fuego", yo)` |
+| `efecto.suave` | Versión suave para los más pequeños: si es verdadero (lo normal), la sangre sale como tinta de colores. | `efecto.suave = falso` |
+| `yo.polvo` | Si es verdadero, levanta polvo al saltar y al caer al suelo (necesita física). | `yo.polvo = verdadero` |
+| `yo.efecto` | El efecto que lleva siempre puesto: "fuego", "humo", "burbujas" o "estela" (nulo lo quita). | `yo.efecto = "humo"` |
 
 ## Nivel 4: Avanzado
 

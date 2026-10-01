@@ -27,6 +27,18 @@ import { DOC_ESPECIALES, DOC_EVENTOS, DOC_PALABRAS, docsGlobales, miembrosDe, ty
 import { NOMBRES_TECLAS } from '../../motor/Entrada';
 import { NOMBRES_COLORES } from '../../motor/Color';
 import { TIPOS_PARTICULAS } from '../../objetos/Particulas';
+import { EFECTOS_CONTINUOS, RECETAS } from '../../objetos/Efectos';
+import { FORMAS } from '../../objetos/formas/figuras';
+import { NOMBRES_MEZCLAS, PATRONES, TIPOS_RELLENO } from '../../motor/Estilo';
+
+/** Datos de texto con pocas opciones: lo que se sugiere al escribir yo.forma = "…". */
+const OPCIONES_DE_DATOS: [string, string[]][] = [
+  ['forma', [...FORMAS]],
+  ['relleno', [...TIPOS_RELLENO]],
+  ['patron', [...PATRONES]],
+  ['mezcla', NOMBRES_MEZCLAS],
+  ['formacolision', ['auto', 'caja', 'figura']],
+];
 import { nombresDeObjetos, type DefProyecto } from '../../proyecto/formato';
 import { normalizar } from '../../utilidades/texto';
 
@@ -93,7 +105,13 @@ function listaParaTexto(antesDeComillas: string, p: DefProyecto): { nombres: str
   if (llamada === 'escena.cambiar') return { nombres: Object.keys(p.escenas), tipo: 'constant' };
   if (llamada === 'sonido.reproducir' || llamada === 'sonido.parar' || llamada === 'musica.reproducir') return { nombres: Object.keys(p.sonidos), tipo: 'constant' };
   if (final === 'animar') return { nombres: Object.keys(p.animaciones), tipo: 'constant' };
-  if (llamada === 'particulas') return { nombres: Object.keys(TIPOS_PARTICULAS), tipo: 'constant' };
+  if (llamada === 'particulas') return { nombres: [...Object.keys(TIPOS_PARTICULAS), ...Object.keys(p.efectos ?? {})], tipo: 'constant' };
+  if (llamada === 'efecto.usar' || llamada === 'efecto.parar') return { nombres: [...Object.keys(p.efectos ?? {}), ...Object.keys(RECETAS).filter((r) => r !== 'humoExplosion')], tipo: 'constant' };
+  // Lo que se escribe en un dato de texto con pocas opciones (yo.forma = "…", yo.mezcla = "…"...)
+  for (const [dato, opciones] of OPCIONES_DE_DATOS) if (new RegExp(`\\.${dato}\\s*=$`).test(t)) return { nombres: opciones, tipo: 'constant' };
+  if (/\.(colorborde|color2|sombra|resplandor)\s*=$/.test(t)) return { nombres: NOMBRES_COLORES, tipo: 'constant' };
+  if (/\.imagenrelleno\s*=$/.test(t)) return { nombres: Object.keys(p.imagenes), tipo: 'constant' };
+  if (/\.efecto\s*=$/.test(t)) return { nombres: [...EFECTOS_CONTINUOS], tipo: 'constant' };
   if (final === 'ponercasilla') return { nombres: tiposDeCasilla(p), tipo: 'constant' };
   if (/\.color\s*=$/.test(t) || /\.colortexto\s*=$/.test(t)) return { nombres: NOMBRES_COLORES, tipo: 'constant' };
   if (/\.imagen\s*=$/.test(t)) return { nombres: Object.keys(p.imagenes), tipo: 'constant' };

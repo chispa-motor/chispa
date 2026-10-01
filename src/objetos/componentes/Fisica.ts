@@ -37,6 +37,8 @@ export class Fisica extends Componente {
   rebote = 0;
   /** Cuánto pesa. Al chocar dos objetos con física, el que pesa más empuja al otro. */
   masa = 1;
+  /** Levanta polvo al saltar y al caer al suelo (ver Efectos.polvo). */
+  polvo = false;
   /** Velocidad máxima de caída, para que no atraviese el suelo al caer desde muy alto. */
   velocidadMaximaCaida = 1500;
   /** Un objeto estático no se mueve nunca: es como una pared (masa infinita). */

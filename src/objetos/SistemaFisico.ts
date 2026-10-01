@@ -127,6 +127,8 @@ interface Contacto {
 
 export class SistemaFisico {
   private acumulador = 0;
+  /** La escena que se está moviendo (para levantar polvo al caer). */
+  private escena: Escena | null = null;
   private contactos = new Map<number | string, Contacto>();
   private apoyados = new WeakMap<ObjetoJuego, boolean>();
   /** Sobre qué está apoyado cada cuerpo (para moverse con él si se mueve: plataformas). */
@@ -136,6 +138,7 @@ export class SistemaFisico {
 
   actualizar(escena: Escena, dt: number): void {
     const { cuerpos, solidos, moviles, recorridos, colisionadores, mapas } = this.clasificar(escena);
+    this.escena = escena;
 
     // Rejilla con los sólidos quietos (se consulta en cada paso). Los que tienen
     // recorrido se mueven durante los pasos: van aparte y se miran siempre.
@@ -262,6 +265,7 @@ export class SistemaFisico {
 
     // 5. Eje Y
     const piesAntes = choca ? cajaDeCuerpo(c).abajo : 0;
+    const caia = f.velocidad.y;
     pos.y += f.velocidad.y * PASO;
     if (choca) {
       for (const { caja: b, objeto: soporte, soloArriba, piezas } of cercanos) {
@@ -285,6 +289,8 @@ export class SistemaFisico {
       if (exacto) this.chocarFiguras(c, cercanos, piesAntes);
       else if (cercanos.some((s) => s.piezas)) this.chocarFiguras(c, cercanos.filter((s) => s.piezas), piesAntes);
     }
+    // Polvo al caer al suelo (si cae con fuerza: no al bajar una cuesta)
+    if (f.polvo && f.enSuelo && !c.apoyado && caia < -350) this.escena?.efectos.polvo(c.objeto);
     c.apoyado = f.enSuelo;
   }
 

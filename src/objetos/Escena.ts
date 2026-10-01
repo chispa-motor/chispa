@@ -29,7 +29,8 @@ import { Vector2 } from '../motor/Vector2';
 import { normalizar } from '../utilidades/texto';
 import { Camara, type Limites } from './Camara';
 import { ObjetoJuego } from './ObjetoJuego';
-import { Particulas } from './Particulas';
+import type { Particulas } from './Particulas';
+import { Efectos } from './Efectos';
 import { SistemaFisico } from './SistemaFisico';
 import { Colision, type Caja } from './componentes/Colision';
 import { GRAVEDAD_MUNDO } from './componentes/Fisica';
@@ -56,7 +57,12 @@ export type DibujoDepuracion = (
 export class Escena implements EscenaActiva {
   objetos: ObjetoJuego[] = [];
   readonly camara: Camara;
-  readonly particulas = new Particulas();
+  /** Efectos especiales: partículas, emisores (fuego, lluvia...), rayos, ondas, destellos y números de daño. */
+  readonly efectos = new Efectos();
+  /** Las partículas de los efectos (particulas("explosion", x, y)). */
+  get particulas(): Particulas {
+    return this.efectos.particulas;
+  }
   /** Gravedad de esta escena en píxeles/segundo² (0 = sin gravedad, para juegos vistos desde arriba). */
   gravedad = GRAVEDAD_MUNDO;
   iniciada = false;
@@ -169,7 +175,7 @@ export class Escena implements EscenaActiva {
     this.animaciones.actualizar(dt);
     this.moverHijos();
     this.seguirArrastre();
-    this.particulas.actualizar(dt);
+    this.efectos.actualizar(dt, this.camara.zonaVisible());
     this.camara.actualizar(dt);
     this.actualizarFundido(this.motor.tiempo.deltaReal);
     this.quitarDestruidos();
@@ -339,7 +345,7 @@ export class Escena implements EscenaActiva {
     ctx.translate(r.ancho / 2, r.alto / 2);
     ctx.scale(cam.zoom, cam.zoom);
     for (const m of mundo) m.dibujar();
-    this.particulas.dibujar(r, aLocal);
+    this.efectos.dibujar(r, aLocal);
     this.dibujarDepuracion(r, aLocal, false);
     ctx.restore();
 
@@ -419,7 +425,7 @@ export class Escena implements EscenaActiva {
     for (const o of this.objetos) if (!o.destruido) this.destruir(o);
     this.quitarDestruidos();
     this.fisica.reiniciar();
-    this.particulas.vaciar();
+    this.efectos.vaciar();
     this.animaciones.vaciar();
     this.dibujos = [];
     this.arrastre = null;
@@ -436,7 +442,10 @@ export class Escena implements EscenaActiva {
     if (this.porDestruir.length === 0) return;
     const fuera = new Set(this.porDestruir);
     this.objetos = this.objetos.filter((o) => !fuera.has(o));
-    for (const o of fuera) o.escena = null;
+    for (const o of fuera) {
+      o.escena = null;
+      this.efectos.olvidar(o);
+    }
     this.porDestruir = [];
   }
 }

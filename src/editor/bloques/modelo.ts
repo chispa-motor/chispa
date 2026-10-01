@@ -81,7 +81,7 @@ export const EVENTOS: { clase: ClaseEvento; texto: string; dato?: { nombre: stri
  */
 export interface Accion {
   id: string;
-  categoria: 'movimiento' | 'apariencia' | 'sonido' | 'objetos' | 'control';
+  categoria: 'movimiento' | 'apariencia' | 'efectos' | 'sonido' | 'objetos' | 'control';
   /** Texto y huecos: ['mostrar', 0] */
   partes: (string | number)[];
   /** Lo que se escribe: el nombre de la función (con su «yo.» si es de yo) */
@@ -107,6 +107,26 @@ export const ACCIONES: Accion[] = [
   { id: 'particulas', categoria: 'apariencia', partes: ['partículas de', 0], funcion: 'particulas', porDefecto: ['"explosion"'] },
   { id: 'dialogo', categoria: 'apariencia', partes: ['diálogo:', 0, 'dice', 1], funcion: 'dialogo', porDefecto: ['"Ana"', '"¡Hola!"'] },
   { id: 'temblar', categoria: 'apariencia', partes: ['temblar la pantalla', 0, 'durante', 1, 'segundos'], funcion: 'escena.camara.temblar', porDefecto: ['8', '0.3'] },
+  { id: 'efExplosion', categoria: 'efectos', partes: ['explosión en', 0, 'de tamaño', 1], funcion: 'efecto.explosion', porDefecto: ['yo', '1'] },
+  { id: 'efFuego', categoria: 'efectos', partes: ['fuego en', 0], funcion: 'efecto.fuego', porDefecto: ['yo'] },
+  { id: 'efHumo', categoria: 'efectos', partes: ['humo en', 0], funcion: 'efecto.humo', porDefecto: ['yo'] },
+  { id: 'efChispas', categoria: 'efectos', partes: ['chispas en', 0], funcion: 'efecto.chispas', porDefecto: ['yo'] },
+  { id: 'efRayo', categoria: 'efectos', partes: ['rayo de', 0, 'a', 1], funcion: 'efecto.rayo', porDefecto: ['yo', 'buscar("Enemigo")'] },
+  { id: 'efEstela', categoria: 'efectos', partes: ['estela detrás de', 0], funcion: 'efecto.estela', porDefecto: ['yo'] },
+  { id: 'efOnda', categoria: 'efectos', partes: ['onda en', 0, 'de radio', 1], funcion: 'efecto.onda', porDefecto: ['yo', '150'] },
+  { id: 'efDestello', categoria: 'efectos', partes: ['destello en', 0], funcion: 'efecto.destello', porDefecto: ['yo'] },
+  { id: 'efLluvia', categoria: 'efectos', partes: ['lluvia de intensidad', 0], funcion: 'efecto.lluvia', porDefecto: ['1'] },
+  { id: 'efNieve', categoria: 'efectos', partes: ['nieve de intensidad', 0], funcion: 'efecto.nieve', porDefecto: ['1'] },
+  { id: 'efHojas', categoria: 'efectos', partes: ['hojas cayendo, intensidad', 0], funcion: 'efecto.hojas', porDefecto: ['1'] },
+  { id: 'efBurbujas', categoria: 'efectos', partes: ['burbujas en', 0], funcion: 'efecto.burbujas', porDefecto: ['yo'] },
+  { id: 'efConfeti', categoria: 'efectos', partes: ['confeti en', 0], funcion: 'efecto.confeti', porDefecto: ['yo'] },
+  { id: 'efSangre', categoria: 'efectos', partes: ['salpicadura (sangre o tinta) en', 0], funcion: 'efecto.sangre', porDefecto: ['otro'] },
+  { id: 'efTinta', categoria: 'efectos', partes: ['tinta en', 0], funcion: 'efecto.tinta', porDefecto: ['otro'] },
+  { id: 'efPolvo', categoria: 'efectos', partes: ['polvo a los pies de', 0], funcion: 'efecto.polvo', porDefecto: ['yo'] },
+  { id: 'efGolpe', categoria: 'efectos', partes: ['golpe a', 0, 'con daño', 1], funcion: 'efecto.golpe', porDefecto: ['otro', '10'] },
+  { id: 'efTexto', categoria: 'efectos', partes: ['texto que sube', 0, 'en', 1], funcion: 'efecto.texto', porDefecto: ['"+1"', 'yo'] },
+  { id: 'efUsar', categoria: 'efectos', partes: ['mi efecto', 0, 'en', 1], funcion: 'efecto.usar', porDefecto: ['"magia"', 'yo'] },
+  { id: 'efParar', categoria: 'efectos', partes: ['parar el efecto', 0, 'de', 1], funcion: 'efecto.parar', porDefecto: ['"fuego"', 'yo'] },
   { id: 'efecto', categoria: 'sonido', partes: ['sonido', 0], funcion: 'sonido.efecto', porDefecto: ['"moneda"'] },
   { id: 'reproducir', categoria: 'sonido', partes: ['reproducir el sonido', 0], funcion: 'sonido.reproducir', porDefecto: ['"salto"'] },
   { id: 'musica', categoria: 'sonido', partes: ['poner la música', 0], funcion: 'musica.reproducir', porDefecto: ['"tema"'] },
@@ -159,6 +179,9 @@ export const DATOS_CON_BLOQUE: DatoConBloque[] = [
   { categoria: 'apariencia', objetivo: 'yo.finArco', valor: '270' },
   { categoria: 'apariencia', objetivo: 'yo.grosor', valor: '8' },
   { categoria: 'objetos', objetivo: 'yo.formaColision', valor: '"caja"' },
+  { categoria: 'efectos', objetivo: 'yo.polvo', valor: 'verdadero' },
+  { categoria: 'efectos', objetivo: 'yo.efecto', valor: '"fuego"' },
+  { categoria: 'efectos', objetivo: 'efecto.suave', valor: 'falso' },
 ];
 
 export const datoPorObjetivo = (objetivo: string) => DATOS_CON_BLOQUE.find((d) => d.objetivo === objetivo.trim());

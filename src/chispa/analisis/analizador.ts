@@ -68,6 +68,8 @@ export interface ContextoAnalisis {
   sonidos?: string[];
   animaciones?: string[];
   objetosEscena?: string[];
+  /** Los efectos hechos con el editor de partículas. */
+  efectos?: string[];
 }
 
 interface Simbolo {
@@ -420,8 +422,8 @@ class Analizador {
       return;
     }
     if (nombre === 'particulas') {
-      const tipos = Object.keys(TIPOS_PARTICULAS);
-      if (!tipos.includes(normalizar(primero.valor))) {
+      const tipos = [...Object.keys(TIPOS_PARTICULAS), ...(this.ctx.efectos ?? [])];
+      if (!tipos.some((t) => normalizar(t) === normalizar(primero.valor))) {
         const parecido = sugerir(primero.valor, tipos);
         this.error(primero.pos, `no hay ningún tipo de partículas llamado "${primero.valor}".`, parecido ? `¿Querías decir "${parecido}"?` : `Los tipos son: ${enumerar(tipos)}.`);
       }

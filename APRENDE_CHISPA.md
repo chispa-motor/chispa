@@ -2,7 +2,7 @@
 
 > Este archivo se genera solo con `npm run manual`, a partir de la API de verdad (no lo cambies a mano: cambia `src/chispa/api/curso.ts`). Un test ejecuta cada ejemplo, cada ejercicio y cada mini proyecto para comprobar que funcionan.
 
-Un curso por niveles para aprender a programar juegos con Chispa, aunque no hayas programado nunca. Salen **todos** los comandos que existen (306), cada uno con qué hace, un ejemplo corto que funciona y el error que más se comete con él.
+Un curso por niveles para aprender a programar juegos con Chispa, aunque no hayas programado nunca. Salen **todos** los comandos que existen (329), cada uno con qué hace, un ejemplo corto que funciona y el error que más se comete con él.
 
 **Cómo usarlo:**
 
@@ -43,6 +43,7 @@ Una regla para todo el curso: en el código **no hacen falta tildes**. Se escrib
   - [Animaciones y partículas](#animaciones-y-particulas)
   - [Formas](#formas)
   - [Colores y estilo](#colores-y-estilo)
+  - [Efectos especiales](#efectos-especiales)
 - [Nivel 4: Avanzado](#nivel-4-avanzado)
   - [Mensajes entre objetos y datos globales](#mensajes-entre-objetos-y-datos-globales)
   - [Ir a sitios esquivando paredes](#ir-a-sitios-esquivando-paredes)
@@ -4805,6 +4806,383 @@ cuando empieza:
 ```
 cuando empieza:
     yo.color = mezclarColores("rojo", "amarilo", 0.5)
+```
+
+### Efectos especiales
+
+Con un solo comando: explosiones, fuego, humo, rayos, lluvia... Están todos en efecto. El sitio puede ser un objeto (el efecto lo sigue), un vector, dos números o nada (donde está este objeto). Los que duran (fuego, humo, lluvia...) siguen hasta que los paras.
+
+#### `efecto.explosion(sitio, tamaño)`
+
+Una explosión: fuego, humo, un destello y una onda.
+
+```
+cuando toco Enemigo:
+    efecto.explosion(otro)
+    destruir(otro)
+```
+
+**Error típico:** Darle tamaño 0: una explosión tiene que tener algo de tamaño. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    efecto.explosion(yo, 0)
+```
+
+#### `efecto.fuego(sitio, segundos)`
+
+Fuego que no se apaga (o que dura esos segundos).
+
+```
+cuando empieza:
+    efecto.fuego(yo)
+```
+
+**Error típico:** Darle 0 segundos: el fuego no duraría nada. Sin segundos, dura siempre. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    efecto.fuego(yo, 0)
+```
+
+#### `efecto.humo(sitio, segundos)`
+
+Humo que sube y se deshace.
+
+```
+cuando empieza:
+    efecto.humo(yo, 3)
+```
+
+**Error típico:** Poner yo entre comillas: es el objeto, no un texto. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    efecto.humo("yo")
+```
+
+#### `efecto.chispas(sitio)`
+
+Un puñado de chispas que brillan.
+
+```
+cuando toco Enemigo:
+    efecto.chispas(otro)
+```
+
+**Error típico:** Darle un objeto que no existe (nulo). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    efecto.chispas(nulo)
+```
+
+#### `efecto.rayo(desde, hasta, color)`
+
+Un rayo eléctrico en zigzag entre dos sitios (si son objetos, los sigue).
+
+```
+cuando se pulsa "espacio":
+    efecto.rayo(yo, buscar("Enemigo"))
+```
+
+**Error típico:** Darle un solo sitio: un rayo va de un sitio a otro. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    efecto.rayo(yo)
+```
+
+#### `efecto.estela(objeto, segundos)`
+
+Una estela detrás del objeto: copias de él que se apagan (para cosas que van rápido).
+
+```
+cuando empieza:
+    efecto.estela(yo)
+```
+
+**Error típico:** Darle un punto: la estela va detrás de un objeto. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    efecto.estela(100, 200)
+```
+
+#### `efecto.onda(sitio, radio)`
+
+Una onda expansiva: un anillo que crece y se apaga.
+
+```
+cuando toco Enemigo:
+    efecto.onda(yo, 200)
+```
+
+**Error típico:** Darle un texto: el radio son píxeles. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    efecto.onda(yo, "grande")
+```
+
+#### `efecto.destello(sitio, tamaño)`
+
+Un destello de luz redondo, muy rápido.
+
+```
+cuando toco Moneda:
+    efecto.destello(otro, 100)
+```
+
+**Error típico:** Darle un texto: el tamaño son píxeles. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    efecto.destello(yo, "mucho")
+```
+
+#### `efecto.lluvia(intensidad)`
+
+Lluvia por toda la pantalla.
+
+```
+cuando empieza:
+    efecto.lluvia(2)
+```
+
+**Error típico:** Pasarse de intensidad: va de 0 a 10 (3 ya es una tormenta). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    efecto.lluvia(50)
+```
+
+#### `efecto.nieve(intensidad)`
+
+Nieve cayendo por toda la pantalla (0 la para).
+
+```
+cuando empieza:
+    efecto.nieve()
+```
+
+**Error típico:** Ponerle 0 pensando que empieza poco a poco: con 0 la nieve se PARA. Esto no da error: funciona, pero no hace lo que querías.
+
+```
+cuando empieza:
+    efecto.nieve(0)
+```
+
+#### `efecto.hojas(intensidad)`
+
+Hojas de otoño cayendo y girando (0 las para).
+
+```
+cuando empieza:
+    efecto.hojas()
+```
+
+**Error típico:** Darle una intensidad negativa: va de 0 a 10. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    efecto.hojas(-1)
+```
+
+#### `efecto.burbujas(sitio, segundos)`
+
+Burbujas que suben haciendo eses.
+
+```
+cuando empieza:
+    efecto.burbujas(yo)
+```
+
+**Error típico:** Darle segundos negativos. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    efecto.burbujas(yo, -2)
+```
+
+#### `efecto.confeti(sitio)`
+
+Confeti de colores, para celebrar.
+
+```
+cuando toco Meta:
+    efecto.confeti(otro)
+```
+
+**Error típico:** Darle un texto: el sitio es un objeto o una posición. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    efecto.confeti("fiesta")
+```
+
+#### `efecto.sangre(sitio)`
+
+Gotas de sangre.
+
+```
+cuando toco Enemigo:
+    efecto.sangre(yo)
+```
+
+**Error típico:** Esperar que salga roja: con efecto.suave (lo normal) sale tinta de colores. Para que sea roja: efecto.suave = falso. Esto no da error: funciona, pero no hace lo que querías.
+
+```
+cuando empieza:
+    efecto.sangre(yo)
+    # y esperar que salga roja
+```
+
+#### `efecto.tinta(sitio)`
+
+Una salpicadura de tinta de colores.
+
+```
+cuando toco Enemigo:
+    efecto.tinta(otro)
+```
+
+**Error típico:** Darle un objeto que no existe (nulo). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    efecto.tinta(nulo)
+```
+
+#### `efecto.polvo(objeto)`
+
+Polvo a los pies del objeto (al saltar o al caer).
+
+```
+cuando se pulsa "espacio":
+    si yo.saltar(600):
+        efecto.polvo(yo)
+```
+
+**Error típico:** Darle un punto: el polvo sale de los pies de un objeto. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    efecto.polvo(100, 50)
+```
+
+#### `efecto.golpe(objeto, daño)`
+
+Un golpe: chispitas y el número de daño, que sube y se desvanece.
+
+```
+cuando toco Enemigo:
+    efecto.golpe(otro, 25)
+```
+
+**Error típico:** Olvidar a quién se golpea: primero el objeto, luego el daño. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    efecto.golpe(25)
+```
+
+#### `efecto.texto("texto", sitio, color)`
+
+Un texto que sube y se desvanece: "+1", "¡Bien!"...
+
+```
+cuando toco Moneda:
+    efecto.texto("+1", otro, "amarillo")
+```
+
+**Error típico:** Inventarse el color: "dorado" no es un color de Chispa (usa "amarillo" o "#ffd700"). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    efecto.texto("+1", yo, "dorado")
+```
+
+#### `efecto.usar("nombre", sitio, segundos)`
+
+Un efecto hecho por ti en el editor de partículas (Proyecto > Efectos).
+
+```
+cuando empieza:
+    efecto.usar("fuego", yo)
+```
+
+**Error típico:** Usar un efecto que no has hecho: los propios se hacen en Proyecto > Efectos. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    efecto.usar("magia", yo)
+```
+
+#### `efecto.parar("nombre", sitio)`
+
+Para los efectos que duran: los de ese nombre (y de ese objeto, si se dice), o todos si no se dice nada.
+
+```
+cuando empieza:
+    efecto.fuego(yo)
+    esperar(2)
+    efecto.parar("fuego", yo)
+```
+
+**Error típico:** Escribir mal el nombre: Chispa propone el parecido. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    efecto.parar("fuegos")
+```
+
+#### `efecto.suave`
+
+Versión suave para los más pequeños: si es verdadero (lo normal), la sangre sale como tinta de colores.
+
+```
+cuando empieza:
+    efecto.suave = falso
+```
+
+**Error típico:** Darle un texto: es verdadero o falso. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    efecto.suave = "si"
+```
+
+#### `yo.polvo`
+
+Si es verdadero, levanta polvo al saltar y al caer al suelo (necesita física).
+
+```
+cuando empieza:
+    yo.polvo = verdadero
+```
+
+**Error típico:** Darle un texto: es verdadero o falso. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    yo.polvo = "mucho"
+```
+
+#### `yo.efecto`
+
+El efecto que lleva siempre puesto: "fuego", "humo", "burbujas" o "estela" (nulo lo quita).
+
+```
+cuando empieza:
+    yo.efecto = "fuego"
+```
+
+**Error típico:** Ponerle un efecto de golpe: yo.efecto es uno que dura (fuego, humo, burbujas, estela). Para explotar: efecto.explosion(yo). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    yo.efecto = "explosion"
 ```
 
 ### Ejercicios del nivel 3

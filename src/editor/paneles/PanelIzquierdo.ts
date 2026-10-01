@@ -23,6 +23,7 @@ import type { DefObjeto } from '../../proyecto/formato';
 import { OBJETOS_NUEVOS, type VistaEscena } from '../escena/VistaEscena';
 import { CATEGORIAS_BIBLIOTECA, buscarEnBiblioteca, type CategoriaBiblioteca } from '../biblioteca/biblioteca';
 import { miniatura } from '../interfaz/iconosFormas';
+import { abrirEditorParticulas } from '../recursos/EditorParticulas';
 import { botonIcono, h, icono, rellenar } from '../interfaz/dom';
 import { confirmar, notificar, pedirTexto } from '../interfaz/dialogos';
 import { tiene } from '../../utilidades/seguro';
@@ -78,7 +79,7 @@ export class PanelIzquierdo {
     if (this.pestana === 'escena') {
       return JSON.stringify([comun, Object.keys(p.escenas), p.escenaInicial, e.escena.objetos.map((o) => [o.nombre, o.script, o.script && o.script in p.scripts, iconoDe(o), o.sprite?.fijo, o.plantilla])]);
     }
-    return JSON.stringify([comun, Object.keys(p.escenas), p.escenaInicial, Object.keys(p.scripts), Object.keys(p.plantillas), Object.keys(p.imagenes), Object.keys(p.sonidos), Object.entries(p.animaciones).map(([n, a]) => [n, a.fotogramas.length]), e.todosLosObjetos().map((o) => o.script)]);
+    return JSON.stringify([comun, Object.keys(p.efectos ?? {}), Object.keys(p.escenas), p.escenaInicial, Object.keys(p.scripts), Object.keys(p.plantillas), Object.keys(p.imagenes), Object.keys(p.sonidos), Object.entries(p.animaciones).map(([n, a]) => [n, a.fotogramas.length]), e.todosLosObjetos().map((o) => o.script)]);
   }
 
   /** Enseña la pestaña Proyecto (por ejemplo, después de importar algo, para verlo). */
@@ -345,6 +346,16 @@ export class PanelIzquierdo {
         const n = await pedirTexto('Nueva animación', 'Nombre (por ejemplo: andar, saltar):', 'andar');
         if (n) abrirEditorAnimacion(e, e.crearAnimacion(n));
       }, undefined, 'pequeno')], animaciones, 'Una animación es una lista de imágenes que se van cambiando. También se pueden dibujar con varios fotogramas en el editor de píxeles.'),
+      this.grupo('Efectos', 'estrella', [botonIcono('mas', 'Nuevo efecto de partículas (fuego, magia, polvo de estrellas...)', () => abrirEditorParticulas(e), undefined, 'pequeno')],
+        Object.keys(p.efectos ?? {}).map((n) =>
+          this.fila('estrella', n, [
+            botonIcono('pincel', 'Cambiar el efecto', () => abrirEditorParticulas(e, n), undefined, 'pequeno'),
+            botonIcono('basura', 'Borrar el efecto', async () => {
+              if (await confirmar('Borrar efecto', `¿Borrar el efecto «${n}»? Los objetos que lo llevan se quedan sin él.`, 'Borrar', true)) e.borrarEfecto(n);
+            }, undefined, 'pequeno peligro'),
+          ], { title: `En el código: efecto.usar("${n}", yo)` }),
+        ),
+        'Tus efectos de partículas: hazlos moviendo deslizadores y úsalos con efecto.usar("nombre", yo).'),
     ];
   }
 

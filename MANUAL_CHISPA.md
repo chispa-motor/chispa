@@ -1226,6 +1226,22 @@ si yo.arrastrando:
     yo.opacidad = 0.7
 ```
 
+#### `yo.polvo`
+
+Si es verdadero, levanta polvo al saltar y al caer al suelo (necesita física).
+
+```
+yo.polvo = verdadero
+```
+
+#### `yo.efecto`
+
+El efecto que lleva siempre puesto: "fuego", "humo", "burbujas" o "estela" (nulo lo quita).
+
+```
+yo.efecto = "fuego"
+```
+
 #### `yo.relleno`
 
 Cómo se rellena la forma: "color" (lo normal), "degradado" (de color a color2), "radial" (degradado redondo, del centro hacia fuera), "patron" (rayas, puntos...) o "imagen" (una imagen repetida).
@@ -2284,6 +2300,184 @@ Cámara lenta durante un rato y luego vuelve sola a la normalidad.
 ```
 cuando toco Enemigo:
     tiempo.camaraLenta(0.3, 1)
+```
+
+### `efecto`
+
+Efectos especiales listos con un comando. El sitio puede ser un objeto (el efecto lo sigue), un vector, dos números (x, y) o nada (donde está este objeto). Los que duran (fuego, humo, burbujas, estela, lluvia, nieve, hojas) siguen hasta que se paran con efecto.parar o se acaban sus segundos.
+
+```
+cuando toco Bomba:
+    efecto.explosion(otro)
+    destruir(otro)
+```
+
+#### `efecto.explosion(sitio, tamaño)`
+
+Una explosión: fuego, humo, un destello y una onda. Con tamaño 2, el doble de grande.
+
+```
+efecto.explosion(yo, 2)
+```
+
+#### `efecto.fuego(sitio, segundos)`
+
+Fuego que no se apaga (o que dura esos segundos). Si el sitio es un objeto, el fuego va con él.
+
+```
+efecto.fuego(yo)
+```
+
+#### `efecto.humo(sitio, segundos)`
+
+Humo que sube y se deshace.
+
+```
+efecto.humo(yo, 3)
+```
+
+#### `efecto.chispas(sitio)`
+
+Un puñado de chispas que brillan.
+
+```
+efecto.chispas(otro)
+```
+
+#### `efecto.rayo(desde, hasta, color)`
+
+Un rayo eléctrico en zigzag entre dos sitios (si son objetos, los sigue). Dura un momento.
+
+```
+efecto.rayo(yo, buscar("Enemigo"))
+```
+
+#### `efecto.estela(objeto, segundos)`
+
+Una estela detrás del objeto: copias de él que se apagan (para cosas que van rápido).
+
+```
+efecto.estela(yo)
+```
+
+#### `efecto.onda(sitio, radio)`
+
+Una onda expansiva: un anillo que crece y se apaga.
+
+```
+efecto.onda(yo, 200)
+```
+
+#### `efecto.destello(sitio, tamaño)`
+
+Un destello de luz redondo, muy rápido.
+
+```
+efecto.destello(yo, 150)
+```
+
+#### `efecto.lluvia(intensidad)`
+
+Lluvia por toda la pantalla. Intensidad: 1 normal, 3 tormenta, 0 la para.
+
+```
+efecto.lluvia(2)
+```
+
+#### `efecto.nieve(intensidad)`
+
+Nieve cayendo por toda la pantalla (0 la para).
+
+```
+efecto.nieve()
+```
+
+#### `efecto.hojas(intensidad)`
+
+Hojas de otoño cayendo y girando (0 las para).
+
+```
+efecto.hojas()
+```
+
+#### `efecto.burbujas(sitio, segundos)`
+
+Burbujas que suben haciendo eses.
+
+```
+efecto.burbujas(yo)
+```
+
+#### `efecto.confeti(sitio)`
+
+Confeti de colores, para celebrar.
+
+```
+efecto.confeti(yo)
+```
+
+#### `efecto.sangre(sitio)`
+
+Gotas de sangre. Con efecto.suave (lo normal) sale tinta de colores con estrellitas.
+
+```
+efecto.sangre(otro)
+```
+
+#### `efecto.tinta(sitio)`
+
+Una salpicadura de tinta de colores.
+
+```
+efecto.tinta(otro)
+```
+
+#### `efecto.polvo(objeto)`
+
+Polvo a los pies del objeto (al saltar o al caer). Con yo.polvo = verdadero sale solo.
+
+```
+efecto.polvo(yo)
+```
+
+#### `efecto.golpe(objeto, daño)`
+
+Un golpe: chispitas y el número de daño, que sube y se desvanece. Con un texto, sale el texto.
+
+```
+efecto.golpe(otro, 25)
+```
+
+#### `efecto.texto("texto", sitio, color)`
+
+Un texto que sube y se desvanece: "+1", "¡Bien!"...
+
+```
+efecto.texto("+1", yo, "amarillo")
+```
+
+#### `efecto.usar("nombre", sitio, segundos)`
+
+Un efecto hecho por ti en el editor de partículas (Proyecto > Efectos).
+
+```
+efecto.usar("magia", yo)
+```
+
+#### `efecto.parar("nombre", sitio)`
+
+Para los efectos que duran: los de ese nombre (y de ese objeto, si se dice), o todos si no se dice nada.
+
+```
+efecto.parar("fuego", yo)
+```
+
+#### `efecto.suave`
+
+Versión suave para los más pequeños: si es verdadero (lo normal), la sangre sale como tinta de colores.
+
+```
+efecto.suave = falso
 ```
 
 ### `pantalla`

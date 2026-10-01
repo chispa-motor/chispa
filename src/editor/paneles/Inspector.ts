@@ -264,6 +264,12 @@ export class Inspector {
       : [];
     partes.push(seccion('Dibujo', aspecto, { activo: !!s, alActivar: (v) => e.activarComponente(ref, 'sprite', v), ayuda: 'Cómo se ve el objeto' }));
     if (s) partes.push(this.seccionEstilo(s, cambiar, largo));
+    // Efecto que lleva puesto (fuego, humo...)
+    const propios = Object.keys(e.proyecto.efectos ?? {});
+    partes.push(seccion('Efecto', [
+      campoLista('efecto', 'efecto', def.efecto ?? '', [['', '(ninguno)'], ['fuego', 'Fuego'], ['humo', 'Humo'], ['burbujas', 'Burbujas'], ['estela', 'Estela'], ...propios.map((n): [string, string] => [n, `${n} (tuyo)`])], (v) => cambiar('efecto')(v || undefined), 'Un efecto que lleva siempre puesto mientras juegas (desde el código: yo.efecto = "fuego")'),
+      h('p', { class: 'nota' }, 'Para hacer tus propios efectos: Proyecto > Efectos > Nuevo efecto.'),
+    ], { plegada: !def.efecto, ayuda: 'Fuego, humo, burbujas o una estela que lleva siempre puesta' }));
 
     // Colisión
     const c = def.colision;
@@ -295,6 +301,7 @@ export class Inspector {
         campoNumero('rozamiento', 'fisica.rozamiento', f.rozamiento ?? 0.5, cambiar('fisica.rozamiento'), { ...largo, paso: 0.1, min: 0, max: 1, ayuda: '0 = resbala como en hielo, 1 = frena en seco' }),
         campoNumero('rebote', 'fisica.rebote', f.rebote ?? 0, (v) => cambiar('fisica.rebote')(v || undefined), { ...largo, paso: 0.1, min: 0, max: 1, ayuda: '0 = no rebota, 1 = rebota sin perder fuerza' }),
       ),
+      campoCasilla('polvo al saltar y caer', 'fisica.polvo', f.polvo ?? false, (v) => cambiar('fisica.polvo')(v || undefined), 'Levanta una nubecita de polvo al saltar (con yo.saltar) y al caer al suelo'),
     ] : [], { activo: !!f, alActivar: (v) => {
       e.activarComponente(ref, 'fisica', v);
       if (v && !def.colision) e.activarComponente(ref, 'colision', true);
@@ -565,6 +572,10 @@ export class Inspector {
         campoColor('fondo', 'escena.colorFondo', esc.colorFondo, (v) => e.cambiarEscenaPropiedad('colorFondo', v), 'Color del fondo de la escena'),
         campoNumero('gravedad', 'escena.gravedad', esc.gravedad, (v) => e.cambiarEscenaPropiedad('gravedad', v), { vacio: '1500', ayuda: 'Gravedad del mundo en píxeles/segundo². 0 = juego visto desde arriba. Vacío = 1500' }),
         campoCasilla('escena inicial', 'escena.inicial', e.proyecto.escenaInicial === e.escenaActual, (v) => v && e.ponerEscenaInicial(e.escenaActual), 'La escena con la que empieza el juego'),
+        h('div', { class: 'dos-columnas' },
+          campoLista('clima', 'escena.clima', esc.clima?.tipo ?? '', [['', '(nada)'], ['lluvia', 'Lluvia'], ['nieve', 'Nieve'], ['hojas', 'Hojas cayendo']], (v) => e.cambiarEscenaPropiedad('clima', v ? { tipo: v, intensidad: esc.clima?.intensidad } : undefined), 'Lluvia, nieve u hojas cayendo por toda la pantalla (desde el código: efecto.lluvia())'),
+          esc.clima ? campoNumero('intensidad', 'escena.climaIntensidad', esc.clima.intensidad ?? 1, (v) => e.cambiarEscenaPropiedad('clima', { tipo: esc.clima!.tipo, intensidad: v ?? 1 }), { paso: 0.5, min: 0, max: 10, ayuda: '1 = normal, 3 = tormenta' }) : null,
+        ),
       ]),
       seccion('Cámara', [
         campoLista('seguir a', 'camara.seguir', esc.camara?.seguir ?? '', [['', '(nadie)'], ...nombres.map((n): [string, string] => [n, n])], (v) => e.cambiarEscenaPropiedad('camara.seguir', v || undefined), 'La cámara sigue a este objeto (desde el código: escena.camara.seguir(yo))'),

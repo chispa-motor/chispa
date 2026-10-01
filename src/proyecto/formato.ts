@@ -28,6 +28,8 @@ import type { FormaSprite } from '../objetos/componentes/Sprite';
 import type { FormaColision } from '../objetos/componentes/Colision';
 import type { Punto, PuntoCamino } from '../objetos/formas/figuras';
 import type { Mezcla, Patron, TipoRelleno } from '../motor/Estilo';
+import type { Clima } from '../objetos/Efectos';
+import type { ConfigParticulas } from '../objetos/Particulas';
 import type { TipoCasilla } from '../objetos/componentes/MapaCasillas';
 import type { DefAnimacion } from '../objetos/componentes/Animador';
 import type { Limites } from '../objetos/Camara';
@@ -124,6 +126,8 @@ export interface DefFisica {
   rozamiento?: number;
   rebote?: number;
   masa?: number;
+  /** Levanta polvo al saltar y al caer al suelo. */
+  polvo?: boolean;
 }
 
 export interface DefMapa {
@@ -154,6 +158,8 @@ export interface DefObjeto {
   comportamiento?: DefComportamiento;
   /** Animación con la que empieza. */
   animacion?: string;
+  /** Un efecto que lleva siempre puesto (fuego, humo, burbujas, estela o uno propio). */
+  efecto?: string;
   /** Nombre de un script de `proyecto.scripts`. */
   script?: string;
   /** Propiedades propias con su valor inicial (como los Attributes de Roblox): vida = 3... */
@@ -176,6 +182,8 @@ export interface DefEscena {
   /** Gravedad en píxeles/segundo² (0 = vista desde arriba). Por defecto 1500. */
   gravedad?: number;
   camara?: DefCamara;
+  /** Lluvia, nieve u hojas cayendo por toda la pantalla. */
+  clima?: { tipo: Clima; intensidad?: number };
   objetos: DefObjeto[];
 }
 
@@ -210,6 +218,8 @@ export interface DefProyecto {
   datos?: Record<string, DatoInicial>;
   /** «Mis colores»: los colores que se guardan en el selector de color del editor. */
   colores?: string[];
+  /** Efectos hechos con el editor de partículas (nombre → configuración). */
+  efectos?: Record<string, ConfigParticulas>;
 }
 
 /** Un valor inicial (de `juego` o de una propiedad propia): un número, un texto o verdadero/falso. */
@@ -282,6 +292,7 @@ function completar(p: DefProyecto): DefProyecto {
     ...(p.bloques ? { bloques: p.bloques } : {}),
     datos: p.datos ?? {},
     ...(p.colores ? { colores: p.colores } : {}),
+    ...(p.efectos && Object.keys(p.efectos).length ? { efectos: p.efectos } : {}),
   };
 }
 

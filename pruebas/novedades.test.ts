@@ -77,4 +77,13 @@ describe('Comandos nuevos de Chispa 1.1', () => {
     });
     expect(faltan).toEqual([]);
   });
+
+  it('dentro de las comillas sugiere las opciones de los datos nuevos', () => {
+    expect(sugerencias('yo.forma = "')).toEqual(expect.arrayContaining(['estrella', 'corazon', 'camino']));
+    expect(sugerencias('yo.mezcla = "')).toContain('sumar');
+    expect(sugerencias('yo.relleno = "')).toContain('degradado');
+    expect(sugerencias('yo.colorBorde = "')).toContain('rojo');
+    expect(sugerencias('efecto.usar("')).toContain('fuego');
+    expect(sugerencias('yo.efecto = "')).toEqual(['fuego', 'humo', 'burbujas', 'estela']);
+  });
 });

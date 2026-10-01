@@ -32,6 +32,8 @@ import type { DatoInicial, DefCamara, DefColision, DefComportamiento, DefEscena,
 import type { DefAnimacion } from '../objetos/componentes/Animador';
 import type { TipoCasilla } from '../objetos/componentes/MapaCasillas';
 import { NOMBRES_MEZCLAS, PATRONES, TIPOS_RELLENO } from '../motor/Estilo';
+import { CLIMAS, type Clima } from '../objetos/Efectos';
+import { FORMAS_PARTICULA, MAXIMO_PARTICULAS, type ConfigParticulas } from '../objetos/Particulas';
 import { FORMAS, MAX_LADOS, MAX_PUNTOS_CAMINO, type PuntoCamino } from '../objetos/formas/figuras';
 
 /** Cuánto puede tener un proyecto como mucho. Mucho más de lo que usa cualquier juego. */
@@ -235,7 +237,7 @@ function puntoCamino(v: unknown, ruta: Ruta): PuntoCamino {
 }
 
 function fisica(v: unknown, ruta: Ruta): DefFisica {
-  return campos<DefFisica>(objeto(v, ruta), ruta, { gravedad: numero, estatico: logico, rozamiento: numero, rebote: numero, masa: numero });
+  return campos<DefFisica>(objeto(v, ruta), ruta, { gravedad: numero, estatico: logico, rozamiento: numero, rebote: numero, masa: numero, polvo: logico });
 }
 
 function tipoCasilla(v: unknown, ruta: Ruta): TipoCasilla {
@@ -297,6 +299,7 @@ function objetoJuego(v: unknown, ruta: Ruta): DefObjeto {
     recorrido,
     comportamiento,
     animacion: nombre,
+    efecto: nombre,
     script: nombre,
     propiedades: (x, r) => registro(x, r, LIMITES_PROYECTO.propiedades, dato),
   });
@@ -321,6 +324,11 @@ function escena(v: unknown, ruta: Ruta): DefEscena {
     colorFondo: color,
     gravedad: numero,
     camara,
+    clima: (x, r) => {
+      const c = campos<{ tipo?: Clima; intensidad?: number }>(objeto(x, r), r, { tipo: (t, rt) => unoDe(t, rt, CLIMAS), intensidad: (n, rn) => numero(n, rn, 0, 10) });
+      if (!c.tipo) fallo([...r, 'tipo'], 'falta qué clima es (lluvia, nieve u hojas)');
+      return { tipo: c.tipo, ...(c.intensidad !== undefined ? { intensidad: c.intensidad } : {}) };
+    },
     objetos: (x, r) => lista(x, r, LIMITES_PROYECTO.objetosPorEscena, objetoJuego),
   });
   return { ...e, colorFondo: e.colorFondo ?? '#1e2233', objetos: e.objetos ?? [] };
@@ -333,6 +341,33 @@ function animacion(v: unknown, ruta: Ruta): DefAnimacion {
     velocidad: o.velocidad === undefined ? 8 : numero(o.velocidad, [...ruta, 'velocidad'], 0, 1000),
     repetir: o.repetir === undefined ? true : logico(o.repetir, [...ruta, 'repetir']),
   };
+}
+
+/** Un efecto del editor de partículas: los números, con límites (para no congelar el navegador). */
+function efecto(v: unknown, ruta: Ruta): ConfigParticulas {
+  const n = (min: number, max: number) => (x: unknown, r: Ruta) => numero(x, r, min, max);
+  const c = campos<Partial<ConfigParticulas>>(objeto(v, ruta), ruta, {
+    cantidad: n(0, MAXIMO_PARTICULAS),
+    porSegundo: n(0, 1000),
+    colores: (x, r) => lista(x, r, 20, color),
+    colorFinal: color,
+    velocidad: n(-10_000, 10_000),
+    vida: n(0.01, 60),
+    tamano: n(0, 1000),
+    tamanoFinal: n(0, 50),
+    gravedad: n(-50, 50),
+    dispersion: n(0, 360),
+    direccion: n(-100_000, 100_000),
+    encoger: logico,
+    forma: (x, r) => unoDe(x, r, FORMAS_PARTICULA),
+    giro: n(-100_000, 100_000),
+    vaiven: n(0, 1000),
+    rozamiento: n(0, 50),
+    mezcla: (x, r) => unoDe(x, r, ['normal', 'sumar'] as const),
+    area: n(0, 10_000),
+    opacidad: n(0, 1),
+  });
+  return { cantidad: 0, colores: ['blanco'], velocidad: 100, vida: 1, tamano: 8, gravedad: 0, dispersion: 360, direccion: 90, encoger: false, ...c };
 }
 
 const recurso = (tipo: 'imagen' | 'sonido') => (v: unknown, ruta: Ruta): string => {
@@ -374,5 +409,6 @@ export function validarProyecto(datos: unknown): Partial<DefProyecto> {
     bloques: (x, r) => lista(x, r, L.scripts, nombre),
     datos: (x, r) => registro(x, r, L.datos, dato),
     colores: (x, r) => lista(x, r, 200, color),
+    efectos: (x, r) => registro(x, r, 500, efecto),
   });
 }

@@ -41,6 +41,8 @@ import { MapaCasillas } from '../objetos/componentes/MapaCasillas';
 import { Recorrido } from '../objetos/componentes/Recorrido';
 import { Comportamiento } from '../objetos/componentes/Comportamiento';
 import { Sprite } from '../objetos/componentes/Sprite';
+import { RECETAS } from '../objetos/Efectos';
+import type { ConfigParticulas } from '../objetos/Particulas';
 import { normalizar } from '../utilidades/texto';
 import { migrarProyecto, tipoPorNombre, type DefObjeto, type DefProyecto } from './formato';
 import { comprobarRevision, revisarProyecto } from './Revision';
@@ -219,6 +221,7 @@ export class JuegoEnMarcha implements ContextoJuego {
     // Primero creamos todos y DESPUÉS los iniciamos: así en "cuando empieza"
     // cualquier script puede buscar("...") a otro objeto de la escena.
     for (const o of def.objetos) this.instanciar(o, o.nombre ?? o.tipo ?? 'Objeto');
+    if (def.clima) this.escena.efectos.empezar(def.clima.tipo, RECETAS[def.clima.tipo], 'pantalla', Infinity, def.clima.intensidad ?? 1);
     if (def.camara?.limitarAlMapa) cam.limites = this.escena.limitesDeLosMapas();
     if (def.camara?.seguir) {
       const objetivo = this.escena.buscar(def.camara.seguir);
@@ -366,6 +369,10 @@ export class JuegoEnMarcha implements ContextoJuego {
   private get almacen() {
     return this.opciones.almacen ?? (typeof localStorage !== 'undefined' ? localStorage : null);
   }
+  efectosPropios(): Record<string, ConfigParticulas> {
+    return this.proyecto.efectos ?? {};
+  }
+
   abrirWeb(url: string): void {
     if (this.opciones.abrirWeb) this.opciones.abrirWeb(url);
     else if (typeof window !== 'undefined') window.open(url, '_blank', 'noopener,noreferrer');
@@ -428,6 +435,11 @@ export class JuegoEnMarcha implements ContextoJuego {
   private instanciar(def: DefObjeto, nombrePorDefecto: string): ObjetoJuego {
     const o = crearObjetoDesdeDefinicion(def, nombrePorDefecto, this.proyecto);
     o.definicion = def;
+    // El efecto que lleva puesto (fuego, humo...): uno de los listos o uno propio del proyecto
+    if (def.efecto) {
+      const config = propio(this.proyecto.efectos ?? {}, def.efecto) ?? propio(RECETAS, def.efecto);
+      if (config) this.escena.efectos.empezar(def.efecto, config, o);
+    }
     return this.agregarConScript(o, def);
   }
 
@@ -541,6 +553,7 @@ export function crearObjetoDesdeDefinicion(def: DefObjeto, nombrePorDefecto: str
     f.rozamiento = def.fisica.rozamiento ?? f.rozamiento;
     f.rebote = def.fisica.rebote ?? 0;
     f.masa = def.fisica.masa ?? 1;
+    f.polvo = def.fisica.polvo ?? false;
   }
   if (def.mapa) {
     const m = o.agregar(new MapaCasillas());
