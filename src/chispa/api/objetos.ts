@@ -25,6 +25,7 @@ import { Anfitrion, FuncionNativa, aTexto, copiarSiVector, nombreTipo, type Func
 import { Vector2 } from '../../motor/Vector2';
 import type { ObjetoJuego } from '../../objetos/ObjetoJuego';
 import { Colision } from '../../objetos/componentes/Colision';
+import { tocanDeVerdad } from '../../objetos/SistemaFisico';
 import { Fisica } from '../../objetos/componentes/Fisica';
 import { Sprite } from '../../objetos/componentes/Sprite';
 import { Animador } from '../../objetos/componentes/Animador';
@@ -36,6 +37,7 @@ import { argTexto } from './argumentos';
 import { enumerar } from '../errores/sugerencias';
 import { normalizar } from '../../utilidades/texto';
 import { sinPrototipo } from '../../utilidades/seguro';
+import { FORMAS, MAX_LADOS, MAX_PUNTOS_CAMINO, POR_DEFECTO } from '../../objetos/formas/figuras';
 
 /** Lo que RefObjeto necesita del script de un objeto (ScriptChispa lo cumple). */
 interface ScriptDeObjeto {
@@ -310,9 +312,68 @@ const PROPIEDADES: Record<string, PropiedadObjeto> = sinPrototipo({
     },
   },
   ratonencima: { obtener: (o) => o.escena?.ratonEncima(o) ?? false },
+
+  // ── Formas (ver objetos/formas/figuras.ts) ──
+  forma: {
+    obtener: (o, p) => necesitaSprite(o, 'forma', p).forma,
+    asignar: (o, v, p) => {
+      const s = necesitaSprite(o, 'forma', p);
+      const nombre = normalizar(aTexto(v));
+      const forma = FORMAS.find((f) => f === nombre);
+      if (!forma) {
+        const parecida = sugerir(aTexto(v), [...FORMAS]);
+        throw new ErrorChispa(p, `no hay ninguna forma llamada "${aTexto(v)}".`, parecida ? `¿Querías decir "${parecida}"?` : `Las formas son: ${enumerar([...FORMAS])}.`);
+      }
+      s.forma = forma;
+      s.imagen = null; // una forma se ve como forma, no con su imagen
+    },
+  },
+  lados: {
+    obtener: (o, p) => necesitaSprite(o, 'lados', p).lados ?? (necesitaSprite(o, 'lados', p).forma === 'estrella' ? POR_DEFECTO.puntas : POR_DEFECTO.lados),
+    asignar: (o, v, p) => {
+      const n = comoNumero(v, 'lados', p);
+      if (!(n >= 3 && n <= MAX_LADOS)) throw new ErrorChispa(p, `una forma tiene de 3 a ${MAX_LADOS} lados (o puntas), y le das ${n}.`, 'Ejemplo: yo.lados = 6 (un hexágono)');
+      necesitaSprite(o, 'lados', p).lados = Math.round(n);
+    },
+  },
+  radiointerior: {
+    obtener: (o, p) => necesitaSprite(o, 'radioInterior', p).radioInterior ?? (necesitaSprite(o, 'radioInterior', p).forma === 'estrella' ? POR_DEFECTO.radioInteriorEstrella : POR_DEFECTO.radioInteriorAnillo),
+    asignar: (o, v, p) => (necesitaSprite(o, 'radioInterior', p).radioInterior = entre0y1(v, 'radioInterior', p, 'yo.radioInterior = 0.4')),
+  },
+  radioesquina: {
+    obtener: (o, p) => necesitaSprite(o, 'radioEsquina', p).radioEsquina ?? Math.min(necesitaSprite(o, 'radioEsquina', p).ancho, necesitaSprite(o, 'radioEsquina', p).alto) * 0.2,
+    asignar: (o, v, p) => (necesitaSprite(o, 'radioEsquina', p).radioEsquina = Math.max(0, comoNumero(v, 'radioEsquina', p))),
+  },
+  inicioarco: {
+    obtener: (o, p) => necesitaSprite(o, 'inicioArco', p).inicioArco ?? POR_DEFECTO.desde,
+    asignar: (o, v, p) => (necesitaSprite(o, 'inicioArco', p).inicioArco = comoNumero(v, 'inicioArco', p)),
+  },
+  finarco: {
+    obtener: (o, p) => necesitaSprite(o, 'finArco', p).finArco ?? POR_DEFECTO.hasta,
+    asignar: (o, v, p) => (necesitaSprite(o, 'finArco', p).finArco = comoNumero(v, 'finArco', p)),
+  },
+  grosor: {
+    obtener: (o, p) => necesitaSprite(o, 'grosor', p).grosor ?? POR_DEFECTO.grosor,
+    asignar: (o, v, p) => (necesitaSprite(o, 'grosor', p).grosor = Math.max(1, comoNumero(v, 'grosor', p))),
+  },
+  formacolision: {
+    obtener: (o, p) => necesitaColision(o, 'formaColision', p).forma,
+    asignar: (o, v, p) => {
+      const t = normalizar(aTexto(v));
+      if (t !== 'auto' && t !== 'caja' && t !== 'figura') throw new ErrorChispa(p, `la forma de la colisión es "auto", "caja" o "figura", y le das "${aTexto(v)}".`, 'Ejemplo: yo.formaColision = "caja" (choca como un rectángulo, aunque se vea como una estrella)');
+      necesitaColision(o, 'formaColision', p).forma = t;
+    },
+  },
   destruido: { obtener: (o) => o.destruido },
   yendo: { obtener: (o) => o.obtener(Comportamiento)?.yendo ?? false },
 });
+
+/** Un número de 0 a 1 (da un error claro si no). */
+function entre0y1(v: Valor, nombre: string, p: Posicion, ejemplo: string): number {
+  const n = comoNumero(v, nombre, p);
+  if (!(n >= 0 && n <= 1)) throw new ErrorChispa(p, `'${nombre}' va de 0 a 1, y le das ${n}.`, `Ejemplo: ${ejemplo}`);
+  return n;
+}
 
 /** yo.moviendo solo existe si el objeto tiene un recorrido (se pone en el editor). */
 function necesitaRecorrido(o: ObjetoJuego, pos: Posicion): Recorrido {
@@ -464,7 +525,9 @@ const METODOS: Record<string, (o: ObjetoJuego, args: Valor[], pos: Posicion) => 
       }
       if (nombre !== null && !candidatos(o, nombre).includes(x)) continue;
       const b = escena.cajaDe(x);
-      if (b && x.obtener(Colision) && toca(b)) return true;
+      const mia = o.obtener(Colision);
+      const suya = x.obtener(Colision);
+      if (b && suya && toca(b) && (!mia || tocanDeVerdad(mia, suya))) return true;
     }
     return false;
   },
@@ -637,6 +700,33 @@ const METODOS: Record<string, (o: ObjetoJuego, args: Valor[], pos: Posicion) => 
   },
   direcciona: (o, a, p) => destino(a[0], 'direccionA', p).restar(o.posicion).normalizado(),
 
+  ponercamino: (o, a, p) => {
+    // Una forma libre con estos puntos (relativos al centro del objeto, en píxeles)
+    const ej = 'yo.ponerCamino([vector(-50, -30), vector(0, 40), vector(50, -30)])';
+    const s = necesitaSprite(o, 'ponerCamino', p);
+    const lista = a[0];
+    if (!Array.isArray(lista) || lista.length < 2) throw new ErrorChispa(p, 'ponerCamino necesita una lista de al menos 2 puntos (vectores).', `Ejemplo: ${ej}`);
+    if (lista.length > MAX_PUNTOS_CAMINO) throw new ErrorChispa(p, `un camino puede tener como mucho ${MAX_PUNTOS_CAMINO} puntos, y le das ${lista.length}.`);
+    const puntos = lista.map((v, i) => {
+      if (!(v instanceof Vector2)) throw new ErrorChispa(p, `el punto ${i + 1} del camino no es un vector, es ${nombreTipo(v)}.`, `Ejemplo: ${ej}`);
+      return v;
+    });
+    const cerrado = a[1] === undefined ? true : comoLogico(a[1], 'ponerCamino', p);
+    // El tamaño del objeto pasa a ser lo que ocupa el camino; los puntos se guardan en unidades de ese tamaño
+    const xs = puntos.map((v) => v.x);
+    const ys = puntos.map((v) => v.y);
+    const ancho = Math.max(1, Math.max(...xs.map(Math.abs)) * 2);
+    const alto = Math.max(1, Math.max(...ys.map(Math.abs)) * 2);
+    s.forma = 'camino';
+    s.imagen = null;
+    s.figuras = undefined;
+    s.cerrado = cerrado;
+    s.ancho = ancho;
+    s.alto = alto;
+    s.puntos = puntos.map((v) => ({ x: v.x / ancho, y: v.y / alto }));
+    return null;
+  },
+
   // ── Mapas de casillas ──
   casilla: (o, a, p) => {
     const ej = 'mapa.casilla(3, 0)';
@@ -679,6 +769,7 @@ const NOMBRES_BONITOS = [
   'teletransportar', 'irA', 'anguloA', 'rotarHacia', 'avanzar', 'ocultar', 'aparecer', 'parpadear', 'ponerDelante', 'ponerDetras',
   'tocando', 'cercanos', 'masCercano', 'clonar', 'ponerEtiqueta', 'quitarEtiqueta', 'tieneEtiqueta', 'pegarA', 'soltar',
   'irHacia', 'parar', 'yendo', 'atravesar', 'dejarDeAtravesar',
+  'forma', 'lados', 'radioInterior', 'radioEsquina', 'inicioArco', 'finArco', 'grosor', 'formaColision', 'ponerCamino',
 ];
 
 interface PropiedadPropia {

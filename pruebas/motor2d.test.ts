@@ -17,7 +17,7 @@ import { describe, expect, it } from 'vitest';
 import { juegoDePrueba, unObjeto } from './ayudantes';
 import { Camara } from '../src/objetos/Camara';
 import { Vector2 } from '../src/motor/Vector2';
-import { migrarProyecto } from '../src/proyecto/formato';
+import { migrarProyecto, VERSION_PROYECTO } from '../src/proyecto/formato';
 import { ErrorChispa } from '../src/chispa/errores/ErrorChispa';
 import type { DefObjeto } from '../src/proyecto/formato';
 import { Fisica } from '../src/objetos/componentes/Fisica';
@@ -470,7 +470,7 @@ describe('Objetos: movimiento y propiedades iniciales', () => {
 describe('Formato de proyecto', () => {
   it('un proyecto antiguo (v1) se convierte al formato nuevo', () => {
     const p = migrarProyecto({ formato: 'chispa-proyecto', version: 1, nombre: 'Viejo', colorFondo: 'rojo', escena: [{ nombre: 'A' }], scripts: {}, plantillas: {}, imagenes: {} });
-    expect(p.version).toBe(2);
+    expect(p.version).toBe(VERSION_PROYECTO);
     expect(p.escenaInicial).toBe('Principal');
     expect(p.escenas.Principal.objetos[0].nombre).toBe('A');
     expect(p.escenas.Principal.colorFondo).toBe('rojo');

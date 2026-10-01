@@ -108,7 +108,7 @@ describe('El curso y la chuleta', () => {
     const curso = COMANDOS_CURSO.map((c) => c.id).sort();
     expect(curso).toEqual(api);
     expect(TEMAS_CURSO.flatMap((t) => t.ids).sort()).toEqual(api);
-    expect(api.length).toBe(280);
+    expect(api.length).toBe(fichasDeLaApi().length);
   });
 
   it('la chuleta tiene una línea por cada comando', () => {

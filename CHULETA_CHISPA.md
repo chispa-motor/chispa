@@ -2,7 +2,7 @@
 
 > Se genera sola con `npm run manual` (no la cambies a mano). Un test comprueba que no falta ningún comando y que cada ejemplo funciona.
 
-Todos los comandos de Chispa (280), una línea cada uno, para tenerla abierta mientras programas o imprimirla. Para aprender con calma, el [curso](APRENDE_CHISPA.md).
+Todos los comandos de Chispa (289), una línea cada uno, para tenerla abierta mientras programas o imprimirla. Para aprender con calma, el [curso](APRENDE_CHISPA.md).
 
 En los ejemplos se usan estas variables y esta función, como si ya las tuvieras (y en la escena hay un Jugador y un Mapa de casillas):
 
@@ -393,6 +393,20 @@ Las líneas que terminan en `:` empiezan un bloque: lo de dentro va debajo, con 
 | `yo.pararAnimacion()` | Para la animación (se queda en el fotograma actual). | `yo.pararAnimacion()` |
 | `cuando termina la animacion` | Se ejecuta cuando termina una animación que no se repite. | `cuando termina la animacion:` |
 | `particulas("tipo", x, y)` | Crea un efecto de partículas. | `particulas("explosion", yo.x, yo.y)` |
+
+### Formas
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `yo.forma` | La forma del dibujo: "rectangulo", "circulo", "triangulo", "elipse", "poligono", "estrella", "rombo", "corazon", "flecha", "linea", "capsula", "redondeado", "anillo", "arco", "camino" o "texto". | `yo.forma = "corazon"` |
+| `yo.lados` | Cuántos lados tiene un polígono (6 si no se dice) o cuántas puntas una estrella (5). | `yo.lados = 6` |
+| `yo.radioInterior` | Lo grande que es el hueco de una estrella, un anillo o un arco, de 0 a 1 (0,5 en la estrella y 0,6 en el anillo). | `yo.radioInterior = 0.4` |
+| `yo.radioEsquina` | En un rectángulo redondeado, el radio de las esquinas en píxeles. | `yo.radioEsquina = 12` |
+| `yo.inicioArco` | Dónde empieza un arco, en grados (0 = derecha, 90 = arriba). | `yo.inicioArco = 0` |
+| `yo.finArco` | Dónde termina un arco, en grados (180 si no se dice: medio anillo). | `yo.finArco = 270` |
+| `yo.grosor` | Lo gorda que es una línea o un camino abierto, en píxeles. | `yo.grosor = 10` |
+| `yo.formaColision` | Cómo choca: "auto" (con su forma, salvo los rectángulos), "caja" (como un rectángulo) o "figura" (con su forma, también girada). | `yo.formaColision = "caja"` |
+| `yo.ponerCamino(puntos, cerrado)` | Le da una forma libre: una lista de puntos (vectores, desde su centro). | `yo.ponerCamino([vector(-50, 0), vector(0, 50), vector(50, 0)])` |
 
 ## Nivel 4: Avanzado
 

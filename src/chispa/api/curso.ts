@@ -21,6 +21,7 @@
  * evento, funcion, especial, objeto, los módulos (teclado, raton, escena,
  * escena.camara, sonido...) y los tipos de valor (lista, texto, tabla, vector).
  */
+import { agregarNovedades } from './cursoNovedades';
 import type { DefObjeto } from '../../proyecto/formato';
 
 /** Un comando en el curso. */
@@ -872,6 +873,9 @@ export const NIVELES_CURSO: readonly NivelCurso[] = [
     },
   },
 ];
+
+// Lo nuevo de Chispa 1.1 (formas, efectos, sonido, interfaz...), en su propio archivo
+agregarNovedades(tema, c);
 
 export const COMANDOS_CURSO: readonly ComandoCurso[] = C;
 export const TEMAS_CURSO: readonly TemaCurso[] = T;

@@ -32,6 +32,7 @@
  */
 import { resolverColor } from './Color';
 import { Vector2 } from './Vector2';
+import type { Figura } from '../objetos/formas/figuras';
 
 export interface EstiloForma {
   /** true = forma rellena (por defecto). false = solo el borde. */
@@ -165,6 +166,40 @@ export class Renderizador {
       ctx.fillStyle = resolverColor(color);
       ctx.fill();
     }
+  }
+
+  /**
+   * Una figura (estrella, corazón, camino...) con su centro en (x, y). Sus
+   * puntos tienen la Y hacia ARRIBA (como el mundo), así que se da la vuelta
+   * al dibujarla. Los agujeros (anillo, formas restadas) se quedan vacíos.
+   */
+  figura(f: Figura, x: number, y: number, rotacion: number, color = 'blanco', opciones: { voltearX?: boolean; voltearY?: boolean } = {}): void {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.translate(x, y);
+    if (rotacion) ctx.rotate(rotacion * GRADOS_A_RADIANES);
+    ctx.scale(opciones.voltearX ? -1 : 1, opciones.voltearY ? 1 : -1);
+    if (f.anillos.length) {
+      ctx.beginPath();
+      for (const pol of f.anillos) {
+        for (const anillo of pol) {
+          anillo.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+          ctx.closePath();
+        }
+      }
+      ctx.fillStyle = resolverColor(color);
+      ctx.fill('evenodd');
+    }
+    if (f.trazo && f.trazo.puntos.length > 1) {
+      ctx.beginPath();
+      f.trazo.puntos.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+      ctx.strokeStyle = resolverColor(color);
+      ctx.lineWidth = f.trazo.grosor;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   linea(x1: number, y1: number, x2: number, y2: number, color = 'blanco', grosor = 2): void {

@@ -9,10 +9,10 @@ lo permiten todas: solo piden que su aviso de copyright viaje con el código.
 
 ## Resumen
 
-- **110 paquetes** en total (contando los que usan los que usamos).
+- **114 paquetes** en total (contando los que usan los que usamos).
 - **Todos son compatibles con la MPL 2.0.**
-- Por licencia: MIT (103), Apache-2.0 (4), BSD-2-Clause (1), ISC (1), BSD-3-Clause (1).
-- **Dentro del editor** van 14 (el editor de código, CodeMirror, y sus piezas). Sus avisos de licencia van con el editor, en `public/licencias-de-terceros.txt`.
+- Por licencia: MIT (105), Apache-2.0 (4), ISC (2), BSD-2-Clause (1), Unlicense (1), BSD-3-Clause (1).
+- **Dentro del editor** van 18 (el editor de código, CodeMirror, y sus piezas). Sus avisos de licencia van con el editor, en `public/licencias-de-terceros.txt`.
 - **Dentro de los juegos exportados no va ninguno**: el reproductor es solo código de Chispa.
 - Los demás (96) solo sirven para **desarrollar y probar** Chispa (compilar, tests, navegador de pruebas). No se reparten con el editor ni con los juegos.
 
@@ -25,6 +25,7 @@ lo permiten todas: solo piden que su aviso de copyright viaje con el código.
 | BSD-3-Clause | Sí | Permisiva: guardar su aviso y no usar su nombre para anunciarse. |
 | ISC | Sí | Permisiva, casi igual que la MIT. |
 | MIT | Sí | Permisiva: se puede usar en cualquier proyecto guardando su aviso de copyright. |
+| Unlicense | Sí | Dominio público: se puede usar sin ninguna condición. |
 
 ## Dentro del editor
 
@@ -42,6 +43,10 @@ lo permiten todas: solo piden que su aviso de copyright viaje con el código.
 | @lezer/lr | 1.4.10 | MIT | Sí |
 | @marijn/find-cluster-break | 1.0.4 | MIT | Sí |
 | crelt | 1.0.7 | MIT | Sí |
+| earcut | 3.2.4 | ISC | Sí |
+| polygon-clipping | 0.15.7 | MIT | Sí |
+| robust-predicates | 3.0.3 | Unlicense | Sí |
+| splaytree | 3.2.3 | MIT | Sí |
 | style-mod | 4.1.4 | MIT | Sí |
 | w3c-keyname | 2.2.8 | MIT | Sí |
 

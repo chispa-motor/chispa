@@ -8,7 +8,7 @@ import cuadrado from './cuadrado.chs?raw';
 
 export const proyectoMinimo: DefProyecto = {
   formato: 'chispa-proyecto',
-  version: 2,
+  version: 3,
   nombre: 'Ejemplo mínimo',
   ancho: 960,
   alto: 540,

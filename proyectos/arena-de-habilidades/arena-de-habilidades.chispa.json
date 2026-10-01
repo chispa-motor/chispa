@@ -1,6 +1,6 @@
 {
   "formato": "chispa-proyecto",
-  "version": 2,
+  "version": 3,
   "id": "arena-de-habilidades-0001",
   "nombre": "Arena de Habilidades",
   "ancho": 1280,
@@ -253,7 +253,9 @@
             "alto": 34,
             "capa": 5
           },
-          "colision": {},
+          "colision": {
+            "forma": "caja"
+          },
           "fisica": {
             "gravedad": 0,
             "rozamiento": 0,
@@ -498,7 +500,9 @@
         "alto": 30,
         "capa": 2
       },
-      "colision": {},
+      "colision": {
+        "forma": "caja"
+      },
       "fisica": {
         "gravedad": 0,
         "rozamiento": 0,
@@ -544,7 +548,9 @@
         "alto": 36,
         "capa": 2
       },
-      "colision": {},
+      "colision": {
+        "forma": "caja"
+      },
       "fisica": {
         "gravedad": 0,
         "rozamiento": 0,
@@ -590,7 +596,9 @@
         "alto": 96,
         "capa": 3
       },
-      "colision": {},
+      "colision": {
+        "forma": "caja"
+      },
       "fisica": {
         "gravedad": 0,
         "rozamiento": 0,
@@ -614,7 +622,8 @@
         "capa": 6
       },
       "colision": {
-        "solido": false
+        "solido": false,
+        "forma": "caja"
       },
       "fisica": {
         "gravedad": 0,
@@ -639,7 +648,8 @@
         "capa": 6
       },
       "colision": {
-        "solido": false
+        "solido": false,
+        "forma": "caja"
       },
       "script": "bala.chs",
       "propiedades": {

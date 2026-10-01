@@ -31,6 +31,13 @@
  *   - Fantasmas: con Colisión NO sólida. No se choca con ellos, pero avisan con "cuando toco".
  *   - Casillas de mapas: sólidas o fantasma según su tipo.
  *
+ * ── DECISIÓN 4: las figuras (círculos, triángulos, estrellas...) chocan con su forma ──
+ * Entre cajas se usa lo de arriba (eje a eje). Si una de las dos es una
+ * figura, el choque se calcula con su forma real (formas/sat.ts) y se separa
+ * por donde menos se meten. Una rampa (triángulo, línea) que hace de SUELO
+ * empuja hacia arriba, no en diagonal: así un personaje no resbala cuesta
+ * abajo al estar quieto (salvo que rebote: una pelota sí rueda).
+ *
  * Recuerda: en el mundo la Y crece hacia ARRIBA. Caer = velocidad.y negativa.
  */
 import type { Escena } from './Escena';
@@ -41,6 +48,8 @@ import { Fisica } from './componentes/Fisica';
 import { MapaCasillas } from './componentes/MapaCasillas';
 import { Recorrido } from './componentes/Recorrido';
 import { propio } from '../utilidades/seguro';
+import type { Poligono } from './formas/figuras';
+import { cajaComoPieza, choqueFiguras, seTocanFiguras } from './formas/sat';
 
 const PASO = 1 / 120;
 /**
@@ -92,7 +101,14 @@ interface SolidoCercano {
   caja: Caja;
   objeto: ObjetoJuego;
   soloArriba: boolean;
+  /** Si choca con su figura: sus piezas en el mundo. */
+  piezas?: Poligono[];
 }
+
+/** Una normal más vertical que esto (hacia arriba) es un suelo; hacia abajo, un techo. */
+const NORMAL_SUELO = 0.6;
+/** Vueltas para sacar un cuerpo de las figuras en las que se ha metido. */
+const VUELTAS_FIGURAS = 4;
 
 /** Margen para las plataformas que se atraviesan desde abajo: si los pies estaban a esta distancia de la superficie, cuenta como "encima". */
 const MARGEN_ENCIMA = 4;
@@ -213,6 +229,7 @@ export class SistemaFisico {
     }
 
     const choca = c.colision?.solido;
+    const exacto = !!choca && c.colision!.usaFigura();
 
     // 3. Si algo que se mueve (una plataforma, un ascensor) se ha metido en el
     //    cuerpo antes de que este se mueva, lo sacamos por el lado más corto.
@@ -226,8 +243,8 @@ export class SistemaFisico {
     // 4. Eje X: mover y, si nos metemos en un sólido, salir por el lado por el que entramos
     pos.x += f.velocidad.x * PASO;
     if (choca) {
-      for (const { caja: b, soloArriba } of cercanos) {
-        if (soloArriba) continue; // las plataformas de "solo desde arriba" no son paredes
+      for (const { caja: b, soloArriba, piezas } of cercanos) {
+        if (soloArriba || piezas || exacto) continue; // las plataformas de "solo desde arriba" no son paredes; las figuras, después
         const a = c.colision!.caja();
         if (!solapanDeVerdad(a, b)) continue;
         const haciaDerecha = f.velocidad.x > 0 || (f.velocidad.x === 0 && centroX(a) < centroX(b));
@@ -241,7 +258,8 @@ export class SistemaFisico {
     const piesAntes = choca ? c.colision!.caja().abajo : 0;
     pos.y += f.velocidad.y * PASO;
     if (choca) {
-      for (const { caja: b, objeto: soporte, soloArriba } of cercanos) {
+      for (const { caja: b, objeto: soporte, soloArriba, piezas } of cercanos) {
+        if (piezas || exacto) continue;
         const a = c.colision!.caja();
         if (!solapanDeVerdad(a, b)) continue;
         const haciaAbajo = f.velocidad.y < 0 || (f.velocidad.y === 0 && centroY(a) > centroY(b));
@@ -257,8 +275,55 @@ export class SistemaFisico {
         }
         f.velocidad.y = rebotar(f.velocidad.y, f.rebote);
       }
+      // 6. Figuras: con su forma de verdad
+      this.chocarFiguras(c, exacto ? cercanos : cercanos.filter((s) => s.piezas), piesAntes);
     }
     c.apoyado = f.enSuelo;
+  }
+
+  /**
+   * Saca al cuerpo de las figuras en las que se ha metido (o, si el cuerpo es
+   * una figura, de todo), por donde menos se mete, y quita la velocidad que
+   * lleva contra ellas.
+   */
+  private chocarFiguras(c: Cuerpo, solidos: SolidoCercano[], piesAntes: number): void {
+    if (!solidos.length) return;
+    const f = c.fisica;
+    const pos = c.objeto.transformacion.posicion;
+    for (let vuelta = 0; vuelta < VUELTAS_FIGURAS; vuelta++) {
+      const mias = c.colision!.piezas();
+      let peor: { s: SolidoCercano; profundidad: number; nx: number; ny: number } | null = null;
+      for (const s of solidos) {
+        const ch = choqueFiguras(mias, s.piezas ?? [cajaComoPieza(s.caja)]);
+        if (!ch || ch.profundidad <= EPSILON) continue;
+        // Plataforma de "solo desde arriba": solo si cae sobre ella y los pies estaban encima
+        if (s.soloArriba && (ch.ny < NORMAL_SUELO || f.velocidad.y > 0 || piesAntes < s.caja.arriba - MARGEN_ENCIMA)) continue;
+        if (!peor || ch.profundidad > peor.profundidad) peor = { s, ...ch };
+      }
+      if (!peor) return;
+      const { nx, ny, profundidad } = peor;
+      const suelo = ny > NORMAL_SUELO;
+      if (suelo && f.rebote === 0) pos.y += profundidad / ny; // en una rampa, hacia arriba (no resbala)
+      else {
+        pos.x += nx * profundidad;
+        pos.y += ny * profundidad;
+      }
+      if (suelo) {
+        f.enSuelo = true;
+        this.apoyarEn(c.objeto, peor.s.objeto);
+      } else if (ny < -NORMAL_SUELO) f.tocaTecho = true;
+      else f.tocaPared = true;
+      // La velocidad que va CONTRA la figura se quita (o rebota)
+      const contra = f.velocidad.x * nx + f.velocidad.y * ny;
+      if (contra < 0) {
+        if (suelo && f.rebote === 0) f.velocidad.y = Math.max(0, f.velocidad.y);
+        else {
+          const r = Math.abs(contra) * f.rebote < REBOTE_MINIMO ? 1 : 1 + f.rebote;
+          f.velocidad.x -= r * contra * nx;
+          f.velocidad.y -= r * contra * ny;
+        }
+      }
+    }
   }
 
   /** Apunta sobre qué está apoyado un cuerpo, y dónde está eso ahora (para llevarlo si se mueve). */
@@ -301,7 +366,9 @@ export class SistemaFisico {
     const caja = margen ? { izquierda: k.izquierda - margen, derecha: k.derecha + margen, abajo: k.abajo - margen, arriba: k.arriba + margen } : k;
     const res: SolidoCercano[] = [];
     const meter = (s: Colisionador) => {
-      if (s.objeto !== c.objeto && !c.objeto.atraviesaA(s.objeto)) res.push({ caja: s.colision.caja(), objeto: s.objeto, soloArriba: s.colision.soloDesdeArriba });
+      if (s.objeto === c.objeto || c.objeto.atraviesaA(s.objeto)) return;
+      const figura = s.colision.usaFigura();
+      res.push({ caja: s.colision.caja(), objeto: s.objeto, soloArriba: s.colision.soloDesdeArriba, piezas: figura ? s.colision.piezas() : undefined });
     };
     for (const s of cerca.rejilla.consultarConGrandes(caja)) meter(s);
     for (const s of cerca.moviles) meter(s);
@@ -355,6 +422,7 @@ export class SistemaFisico {
   }
 
   private resolverPareja(a: Cuerpo, b: Cuerpo): boolean {
+    if (a.colision!.usaFigura() || b.colision!.usaFigura()) return this.resolverParejaFiguras(a, b);
     const ca = cajaRapida(a, cajaA);
     const cb = cajaRapida(b, cajaB);
     if (!solapanDeVerdad(ca, cb)) return false;
@@ -396,10 +464,50 @@ export class SistemaFisico {
     return true;
   }
 
+  /** Dos cuerpos con física que se meten uno en otro, y al menos uno es una figura. */
+  private resolverParejaFiguras(a: Cuerpo, b: Cuerpo): boolean {
+    const ch = choqueFiguras(a.colision!.piezas(), b.colision!.piezas());
+    if (!ch || ch.profundidad <= EPSILON) return false;
+    const invA = 1 / Math.max(0.001, a.fisica.masa);
+    const invB = 1 / Math.max(0.001, b.fisica.masa);
+    const suma = invA + invB;
+    const { nx, ny, profundidad } = ch; // hacia dónde sale a
+    a.objeto.posicion.x += nx * profundidad * (invA / suma);
+    a.objeto.posicion.y += ny * profundidad * (invA / suma);
+    b.objeto.posicion.x -= nx * profundidad * (invB / suma);
+    b.objeto.posicion.y -= ny * profundidad * (invB / suma);
+    const relativa = (a.fisica.velocidad.x - b.fisica.velocidad.x) * nx + (a.fisica.velocidad.y - b.fisica.velocidad.y) * ny;
+    if (relativa < 0) {
+      const e = Math.max(a.fisica.rebote, b.fisica.rebote);
+      const j = (-(1 + e) * relativa) / suma;
+      a.fisica.velocidad.x += j * invA * nx;
+      a.fisica.velocidad.y += j * invA * ny;
+      b.fisica.velocidad.x -= j * invB * nx;
+      b.fisica.velocidad.y -= j * invB * ny;
+    }
+    if (ny > NORMAL_SUELO) {
+      a.fisica.enSuelo = a.apoyado = true;
+      b.fisica.tocaTecho = true;
+    } else if (ny < -NORMAL_SUELO) {
+      b.fisica.enSuelo = b.apoyado = true;
+      a.fisica.tocaTecho = true;
+    } else a.fisica.tocaPared = b.fisica.tocaPared = true;
+    return true;
+  }
+
   /** Saca un cuerpo de las paredes por el lado más corto (sin rebotes). */
   private sacarDeSolidos(c: Cuerpo, cerca: Cerca): void {
-    for (const { caja: b, soloArriba } of this.solidosCerca(c, cerca)) {
-      if (soloArriba) continue;
+    const cercanos = this.solidosCerca(c, cerca);
+    if (c.colision!.usaFigura() || cercanos.some((s) => s.piezas)) {
+      // Con figuras, como al moverse (sin rebotar)
+      const rebote = c.fisica.rebote;
+      c.fisica.rebote = 0;
+      this.chocarFiguras(c, c.colision!.usaFigura() ? cercanos.filter((s) => !s.soloArriba) : cercanos.filter((s) => s.piezas && !s.soloArriba), -Infinity);
+      c.fisica.rebote = rebote;
+      if (c.colision!.usaFigura()) return;
+    }
+    for (const { caja: b, soloArriba, piezas } of cercanos) {
+      if (soloArriba || piezas) continue;
       const a = c.colision!.caja();
       if (!solapanDeVerdad(a, b)) continue;
       const izq = b.izquierda - a.derecha;
@@ -444,13 +552,14 @@ export class SistemaFisico {
         const clave = claveContacto(a.objeto, b.objeto);
         if (nuevos.has(clave)) continue;
         // margen 1: si estás apoyado en el suelo, lo sigues "tocando" aunque no te hundas en él
-        if (seSolapan(cajaA, b.colision.caja(), 1)) nuevos.set(clave, { a: a.objeto, b: b.objeto });
+        if (seSolapan(cajaA, b.colision.caja(), 1) && tocanDeVerdad(a.colision, b.colision)) nuevos.set(clave, { a: a.objeto, b: b.objeto });
       }
       // Con casillas de mapas (un contacto por cada TIPO de casilla)
       for (const m of mapas) {
         if (m.objeto === a.objeto) continue;
         for (const casilla of m.casillasEn(cajaA, 1)) {
           if (!seSolapan(cajaA, casilla.caja, 1)) continue;
+          if (a.colision.usaFigura() && !seTocanFiguras(a.colision.piezas(), [cajaComoPieza(casilla.caja)], 1)) continue;
           const clave = `${a.objeto.id}-m${m.objeto.id}:${casilla.tipo}`;
           if (!nuevos.has(clave)) nuevos.set(clave, { a: a.objeto, b: m.objeto, casilla: casilla.tipo });
         }
@@ -470,6 +579,12 @@ export class SistemaFisico {
       avisar(c.b, c.a, 'alDejarDeTocar', c.casilla);
     }
   }
+}
+
+/** Si alguno de los dos es una figura, ¿se tocan de verdad? (sus cajas ya se tocan) */
+export function tocanDeVerdad(a: Colision, b: Colision, margen = 1): boolean {
+  if (!a.usaFigura() && !b.usaFigura()) return true;
+  return seTocanFiguras(a.piezas(), b.piezas(), margen);
 }
 
 /** ¿Tiene este objeto quien escuche sus contactos? (si ninguno de los dos escucha, a nadie le importa que se toquen) */

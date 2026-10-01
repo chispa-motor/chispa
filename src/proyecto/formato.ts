@@ -25,17 +25,29 @@
  * izquierda de la pantalla al empezar.
  */
 import type { FormaSprite } from '../objetos/componentes/Sprite';
+import type { FormaColision } from '../objetos/componentes/Colision';
+import type { Punto, PuntoCamino } from '../objetos/formas/figuras';
 import type { TipoCasilla } from '../objetos/componentes/MapaCasillas';
 import type { DefAnimacion } from '../objetos/componentes/Animador';
 import type { Limites } from '../objetos/Camara';
 import { ErrorMotor } from '../motor/Errores';
 import { validarProyecto } from './validar';
 
-export const VERSION_PROYECTO = 2;
+export const VERSION_PROYECTO = 3;
 
 export interface DefSprite {
   imagen?: string;
   forma?: FormaSprite;
+  /** Datos de algunas formas: ver DatosFigura en objetos/formas/figuras.ts. */
+  lados?: number;
+  radioInterior?: number;
+  radioEsquina?: number;
+  inicioArco?: number;
+  finArco?: number;
+  grosor?: number;
+  puntos?: PuntoCamino[];
+  cerrado?: boolean;
+  figuras?: Punto[][][];
   color?: string;
   ancho?: number;
   alto?: number;
@@ -60,6 +72,8 @@ export interface DefColision {
   desplazamientoY?: number;
   /** Plataforma que se atraviesa desde abajo (solo para a lo que cae encima). */
   soloDesdeArriba?: boolean;
+  /** Cómo choca: con su figura (auto, lo normal), como una caja, o con su figura aunque sea un rectángulo. */
+  forma?: FormaColision;
 }
 
 /** Se mueve solo según otro objeto: lo sigue, lo persigue si está cerca o huye de él. */
@@ -213,7 +227,16 @@ export function migrarProyecto(datos: unknown): DefProyecto {
     };
   }
   // Antes de usar NADA del archivo, se comprueba entero (validar.ts)
-  return completar(validarProyecto(actual) as DefProyecto);
+  const valido = validarProyecto(actual) as DefProyecto;
+  // v2 → v3: los círculos chocaban como cajas; ahora chocan como círculos. Los
+  // juegos que ya existían siguen igual (sus círculos siguen chocando como cajas)
+  if (version <= 2) for (const o of objetosDe(valido)) if (o.sprite?.forma === 'circulo' && o.colision && !o.colision.forma) o.colision.forma = 'caja';
+  return completar(valido);
+}
+
+/** Todos los objetos de un proyecto (los de todas las escenas y las plantillas). */
+export function objetosDe(p: DefProyecto): DefObjeto[] {
+  return [...Object.values(p.escenas ?? {}).flatMap((e) => e.objetos ?? []), ...Object.values(p.plantillas ?? {})];
 }
 
 /** Rellena lo que falte con valores por defecto (así nunca hay "undefined" sueltos). */

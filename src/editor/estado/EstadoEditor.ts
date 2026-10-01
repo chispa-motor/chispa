@@ -21,10 +21,11 @@
  * El código de los scripts NO entra en este historial: el editor de código
  * tiene su propio deshacer, letra a letra (como en cualquier editor).
  */
-import { migrarProyecto, proyectoVacio, tipoPorNombre, type DatoInicial, type DefEscena, type DefObjeto, type DefProyecto } from '../../proyecto/formato';
+import { migrarProyecto, proyectoVacio, tipoPorNombre, type DatoInicial, type DefEscena, type DefObjeto, type DefProyecto, type DefSprite } from '../../proyecto/formato';
+import { FORMAS, FORMAS_DIBUJO, type Forma } from '../../objetos/formas/figuras';
 import type { DefAnimacion } from '../../objetos/componentes/Animador';
 import type { TipoCasilla } from '../../objetos/componentes/MapaCasillas';
-import { normalizar } from '../../utilidades/texto';
+import { normalizar, quitarTildes } from '../../utilidades/texto';
 import { esNombreProhibido, tiene } from '../../utilidades/seguro';
 import { problemaDataURL, type TipoRecurso as TipoRecursoArchivo } from '../../proyecto/archivos';
 import { ErrorMotor } from '../../motor/Errores';
@@ -35,7 +36,25 @@ export type RefObjeto = { tipo: 'escena'; escena: string; indice: number } | { t
 /** Qué ha cambiado (para que cada panel sepa si tiene que redibujarse). */
 export type TipoCambio = 'proyecto' | 'seleccion' | 'objetos' | 'escena' | 'recursos' | 'scripts' | 'codigo' | 'historial' | 'archivos';
 
-export type TipoNuevoObjeto = 'rectangulo' | 'circulo' | 'texto' | 'boton' | 'imagen' | 'mapa' | 'vacio';
+export type TipoNuevoObjeto = 'rectangulo' | 'circulo' | 'texto' | 'boton' | 'imagen' | 'mapa' | 'vacio' | 'forma';
+
+/** Tamaño (y datos) con los que aparece cada forma nueva. */
+const DATOS_FORMA_NUEVA: Partial<Record<Forma, DefSprite>> & Record<string, DefSprite | undefined> = {
+  linea: { ancho: 160, alto: 60, grosor: 8 },
+  capsula: { ancho: 96, alto: 48 },
+  flecha: { ancho: 96, alto: 64 },
+  elipse: { ancho: 96, alto: 64 },
+  redondeado: { ancho: 96, alto: 64 },
+  arco: { ancho: 96, alto: 96 },
+  camino: { ancho: 96, alto: 64, puntos: [{ x: -0.5, y: -0.5 }, { x: 0.5, y: -0.5 }, { x: 0.2, y: 0.5, entrada: { x: 0.5, y: 0.2 } }, { x: -0.2, y: 0.5 }] },
+};
+for (const f of FORMAS) DATOS_FORMA_NUEVA[f] = { ancho: 64, alto: 64, ...DATOS_FORMA_NUEVA[f] };
+
+/** "Corazón" → "Corazon": el nombre del objeto (sin tildes, como los nombres de Chispa). */
+export function nombreDeForma(forma: Forma): string {
+  const texto = FORMAS_DIBUJO.find((f) => f.forma === forma)?.texto.split(' ')[0] ?? 'Forma';
+  return quitarTildes(texto);
+}
 
 const MAXIMO_HISTORIAL = 100;
 /** Lo que cada copia de una plantilla tiene suyo. Todo lo demás es igual en todas las copias. */
@@ -270,7 +289,7 @@ export class EstadoEditor {
   }
 
   /** Crea un objeto nuevo en la escena actual y lo selecciona. Devuelve su posición en la lista. */
-  crearObjeto(tipo: TipoNuevoObjeto, x: number, y: number, imagen?: string): number {
+  crearObjeto(tipo: TipoNuevoObjeto, x: number, y: number, imagen?: string, forma: Forma = 'estrella'): number {
     const color = COLORES_NUEVOS[this.colorSiguiente++ % COLORES_NUEVOS.length];
     const base: Record<TipoNuevoObjeto, [string, DefObjeto]> = {
       rectangulo: ['Cuadrado', { sprite: { forma: 'rectangulo', color, ancho: 64, alto: 64 }, colision: {} }],
@@ -281,6 +300,7 @@ export class EstadoEditor {
       imagen: [imagen ?? 'Imagen', { sprite: { imagen, ancho: 64, alto: 64 }, colision: {} }],
       mapa: ['Mapa', { mapa: { tamano: 48, tipos: { suelo: { color: '#5ad17a', solida: true } }, celdas: {} } }],
       vacio: ['Objeto', {}],
+      forma: [nombreDeForma(forma), { sprite: { forma, color, ...DATOS_FORMA_NUEVA[forma] }, colision: {} }],
     };
     const [nombre, def] = base[tipo];
     // Los mapas empiezan en la esquina (0, 0); lo demás, donde se ha pedido

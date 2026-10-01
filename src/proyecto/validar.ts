@@ -31,6 +31,7 @@ import { problemaDataURL } from './archivos';
 import type { DatoInicial, DefCamara, DefColision, DefComportamiento, DefEscena, DefFisica, DefMapa, DefObjeto, DefProyecto, DefRecorrido, DefSprite } from './formato';
 import type { DefAnimacion } from '../objetos/componentes/Animador';
 import type { TipoCasilla } from '../objetos/componentes/MapaCasillas';
+import { FORMAS, MAX_LADOS, MAX_PUNTOS_CAMINO, type PuntoCamino } from '../objetos/formas/figuras';
 
 /** Cuánto puede tener un proyecto como mucho. Mucho más de lo que usa cualquier juego. */
 export const LIMITES_PROYECTO = {
@@ -165,7 +166,16 @@ const nombre = (v: unknown, r: Ruta) => texto(v, r);
 function sprite(v: unknown, ruta: Ruta): DefSprite {
   return campos<DefSprite>(objeto(v, ruta), ruta, {
     imagen: nombre,
-    forma: (x, r) => unoDe(x, r, ['rectangulo', 'circulo', 'texto'] as const),
+    forma: (x, r) => unoDe(x, r, FORMAS),
+    lados: (x, r) => numero(x, r, 3, MAX_LADOS),
+    radioInterior: (x, r) => numero(x, r, 0, 1),
+    radioEsquina: (x, r) => numero(x, r, 0, 1e6),
+    inicioArco: (x, r) => numero(x, r, -100_000, 100_000),
+    finArco: (x, r) => numero(x, r, -100_000, 100_000),
+    grosor: (x, r) => numero(x, r, 0, 10_000),
+    puntos: (x, r) => lista(x, r, MAX_PUNTOS_CAMINO, puntoCamino),
+    cerrado: logico,
+    figuras: (x, r) => lista(x, r, 200, (pol, rp) => lista(pol, rp, 200, (anillo, ra) => lista(anillo, ra, 5_000, punto))),
     color,
     ancho: (x, r) => numero(x, r, -1e6, 1e6),
     alto: (x, r) => numero(x, r, -1e6, 1e6),
@@ -189,7 +199,23 @@ function colision(v: unknown, ruta: Ruta): DefColision {
     desplazamientoX: numero,
     desplazamientoY: numero,
     soloDesdeArriba: logico,
+    forma: (x, r) => unoDe(x, r, ['auto', 'caja', 'figura'] as const),
   });
+}
+
+/** Un punto de un camino: unidades del tamaño (de -0,5 a 0,5, aunque puede salirse un poco). */
+function punto(v: unknown, ruta: Ruta): { x: number; y: number } {
+  const o = objeto(v, ruta);
+  return { x: numero(o.x, [...ruta, 'x'], -100, 100), y: numero(o.y, [...ruta, 'y'], -100, 100) };
+}
+
+function puntoCamino(v: unknown, ruta: Ruta): PuntoCamino {
+  const o = objeto(v, ruta);
+  const p: PuntoCamino = punto(o, ruta);
+  if (o.entrada !== undefined) p.entrada = punto(o.entrada, [...ruta, 'entrada']);
+  if (o.salida !== undefined) p.salida = punto(o.salida, [...ruta, 'salida']);
+  for (const k of Object.keys(o)) if (!['x', 'y', 'entrada', 'salida'].includes(k)) fallo([...ruta, k], 'no es un dato de un punto');
+  return p;
 }
 
 function fisica(v: unknown, ruta: Ruta): DefFisica {

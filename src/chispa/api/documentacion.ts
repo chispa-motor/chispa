@@ -405,6 +405,16 @@ export const DOC_OBJETO: Doc[] = [
   d('columnaEn', 'accion', 'mapa.columnaEn(x)', 'Solo en mapas: la columna que hay en esa X del mundo.', 'variable c = mapa.columnaEn(yo.x)', 'columnaEn(${1:yo.x})'),
   d('filaEn', 'accion', 'mapa.filaEn(y)', 'Solo en mapas: la fila que hay en esa Y del mundo.', 'variable f = mapa.filaEn(yo.y)', 'filaEn(${1:yo.y})'),
   d('centroDeCasilla', 'accion', 'mapa.centroDeCasilla(columna, fila)', 'Solo en mapas: el centro de una casilla, en el mundo (vector).', 'yo.posicion = mapa.centroDeCasilla(2, 5)', 'centroDeCasilla(${1:0}, ${2:0})'),
+  // ── Formas ──
+  d('forma', 'propiedad', 'yo.forma', 'La forma del dibujo: "rectangulo", "circulo", "triangulo", "elipse", "poligono", "estrella", "rombo", "corazon", "flecha", "linea", "capsula", "redondeado", "anillo", "arco", "camino" o "texto". Choca con su forma de verdad.', 'yo.forma = "estrella"'),
+  d('lados', 'propiedad', 'yo.lados', 'Cuántos lados tiene un polígono (6 si no se dice) o cuántas puntas una estrella (5). De 3 a 64.', 'yo.forma = "poligono"\nyo.lados = 8'),
+  d('radioInterior', 'propiedad', 'yo.radioInterior', 'Lo grande que es el hueco de una estrella, un anillo o un arco, de 0 a 1 (0,5 en la estrella y 0,6 en el anillo).', 'yo.forma = "anillo"\nyo.radioInterior = 0.8'),
+  d('radioEsquina', 'propiedad', 'yo.radioEsquina', 'En un rectángulo redondeado, el radio de las esquinas en píxeles.', 'yo.forma = "redondeado"\nyo.radioEsquina = 12'),
+  d('inicioArco', 'propiedad', 'yo.inicioArco', 'Dónde empieza un arco, en grados (0 = derecha, 90 = arriba).', 'yo.forma = "arco"\nyo.inicioArco = 0'),
+  d('finArco', 'propiedad', 'yo.finArco', 'Dónde termina un arco, en grados (180 si no se dice: medio anillo).', 'yo.forma = "arco"\nyo.finArco = 270'),
+  d('grosor', 'propiedad', 'yo.grosor', 'Lo gorda que es una línea o un camino abierto, en píxeles.', 'yo.forma = "linea"\nyo.grosor = 10'),
+  d('formaColision', 'propiedad', 'yo.formaColision', 'Cómo choca: "auto" (con su forma, salvo los rectángulos), "caja" (como un rectángulo) o "figura" (con su forma, también girada).', 'yo.formaColision = "caja"'),
+  d('ponerCamino', 'accion', 'yo.ponerCamino(puntos, cerrado)', 'Le da una forma libre: una lista de puntos (vectores, desde su centro). Cerrado (lo normal) se rellena; con falso es una línea.', 'yo.ponerCamino([vector(-50, -30), vector(0, 40), vector(50, -30)])', 'ponerCamino([${1:vector(-50, -30), vector(0, 40), vector(50, -30)}])'),
 ];
 
 // ═════════════════════════ Listas, textos, tablas y vectores ═════════════════════════

@@ -100,6 +100,7 @@ export const ACCIONES: Accion[] = [
   { id: 'mirarA', categoria: 'movimiento', partes: ['mirar hacia', 0], funcion: 'yo.mirarA', porDefecto: ['raton.posicion'] },
   { id: 'mostrar', categoria: 'apariencia', partes: ['mostrar', 0], funcion: 'mostrar', porDefecto: ['"¡Hola!"'] },
   { id: 'animar', categoria: 'apariencia', partes: ['poner la animación', 0], funcion: 'yo.animar', porDefecto: ['"correr"'] },
+  { id: 'ponerCamino', categoria: 'apariencia', partes: ['dibujarme con los puntos', 0], funcion: 'yo.ponerCamino', porDefecto: ['[vector(-50, -30), vector(0, 40), vector(50, -30)]'] },
   { id: 'parpadear', categoria: 'apariencia', partes: ['parpadear', 0, 'segundos'], funcion: 'yo.parpadear', porDefecto: ['1'] },
   { id: 'ocultar', categoria: 'apariencia', partes: ['esconderme'], funcion: 'yo.ocultar', porDefecto: [] },
   { id: 'aparecer', categoria: 'apariencia', partes: ['aparecer'], funcion: 'yo.aparecer', porDefecto: [] },
@@ -118,6 +119,32 @@ export const ACCIONES: Accion[] = [
 ];
 
 export const accionPorId = (id: string) => ACCIONES.find((a) => a.id === id);
+
+/**
+ * DATOS CON BLOQUE: propiedades que tienen su bloque «poner … a …» en la
+ * paleta de su categoría (yo.forma = "estrella"). Son bloques de asignar
+ * normales: al leer código, cualquier asignación se ve igual.
+ */
+export interface DatoConBloque {
+  categoria: Accion['categoria'];
+  /** Lo que se cambia: yo.forma */
+  objetivo: string;
+  /** Con qué valor aparece en la paleta */
+  valor: string;
+}
+
+export const DATOS_CON_BLOQUE: DatoConBloque[] = [
+  { categoria: 'apariencia', objetivo: 'yo.forma', valor: '"estrella"' },
+  { categoria: 'apariencia', objetivo: 'yo.lados', valor: '6' },
+  { categoria: 'apariencia', objetivo: 'yo.radioInterior', valor: '0.5' },
+  { categoria: 'apariencia', objetivo: 'yo.radioEsquina', valor: '12' },
+  { categoria: 'apariencia', objetivo: 'yo.inicioArco', valor: '0' },
+  { categoria: 'apariencia', objetivo: 'yo.finArco', valor: '270' },
+  { categoria: 'apariencia', objetivo: 'yo.grosor', valor: '8' },
+  { categoria: 'objetos', objetivo: 'yo.formaColision', valor: '"caja"' },
+];
+
+export const datoPorObjetivo = (objetivo: string) => DATOS_CON_BLOQUE.find((d) => d.objetivo === objetivo.trim());
 
 // ───────────────────────── Código → bloques ─────────────────────────
 

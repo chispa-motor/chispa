@@ -518,6 +518,7 @@ export function crearObjetoDesdeDefinicion(def: DefObjeto, nombrePorDefecto: str
     c.desplazamiento.x = def.colision.desplazamientoX ?? 0;
     c.desplazamiento.y = def.colision.desplazamientoY ?? 0;
     c.soloDesdeArriba = def.colision.soloDesdeArriba ?? false;
+    c.forma = def.colision.forma ?? 'auto';
   }
   if (def.recorrido && def.recorrido.puntos.length) {
     const r = o.agregar(new Recorrido());

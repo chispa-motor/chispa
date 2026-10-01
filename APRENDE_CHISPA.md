@@ -2,7 +2,7 @@
 
 > Este archivo se genera solo con `npm run manual`, a partir de la API de verdad (no lo cambies a mano: cambia `src/chispa/api/curso.ts`). Un test ejecuta cada ejemplo, cada ejercicio y cada mini proyecto para comprobar que funcionan.
 
-Un curso por niveles para aprender a programar juegos con Chispa, aunque no hayas programado nunca. Salen **todos** los comandos que existen (280), cada uno con qué hace, un ejemplo corto que funciona y el error que más se comete con él.
+Un curso por niveles para aprender a programar juegos con Chispa, aunque no hayas programado nunca. Salen **todos** los comandos que existen (289), cada uno con qué hace, un ejemplo corto que funciona y el error que más se comete con él.
 
 **Cómo usarlo:**
 
@@ -41,6 +41,7 @@ Una regla para todo el curso: en el código **no hacen falta tildes**. Se escrib
   - [Sonido y música](#sonido-y-musica)
   - [Tiempo y temporizadores](#tiempo-y-temporizadores)
   - [Animaciones y partículas](#animaciones-y-particulas)
+  - [Formas](#formas)
 - [Nivel 4: Avanzado](#nivel-4-avanzado)
   - [Mensajes entre objetos y datos globales](#mensajes-entre-objetos-y-datos-globales)
   - [Ir a sitios esquivando paredes](#ir-a-sitios-esquivando-paredes)
@@ -4347,6 +4348,167 @@ cuando empieza:
 ```
 cuando empieza:
     particulas("explocion", yo.x, yo.y)
+```
+
+### Formas
+
+Un objeto puede tener muchas formas: rectángulo, círculo, triángulo, estrella, corazón, flecha... y choca con su forma de verdad (una pelota rueda por una rampa). Algunas formas tienen datos propios: los lados de un polígono, el hueco de un anillo...
+
+#### `yo.forma`
+
+La forma del dibujo: "rectangulo", "circulo", "triangulo", "elipse", "poligono", "estrella", "rombo", "corazon", "flecha", "linea", "capsula", "redondeado", "anillo", "arco", "camino" o "texto".
+
+```
+cuando empieza:
+    yo.forma = "estrella"
+```
+
+**Error típico:** Inventarse una forma: un hexágono es un "poligono" con yo.lados = 6. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    yo.forma = "hexagono"
+```
+
+#### `yo.lados`
+
+Cuántos lados tiene un polígono (6 si no se dice) o cuántas puntas una estrella (5).
+
+```
+cuando empieza:
+    yo.forma = "poligono"
+    yo.lados = 8
+```
+
+**Error típico:** Darle menos de 3 lados: con 2 no hay forma. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    yo.forma = "poligono"
+    yo.lados = 2
+```
+
+#### `yo.radioInterior`
+
+Lo grande que es el hueco de una estrella, un anillo o un arco, de 0 a 1 (0,5 en la estrella y 0,6 en el anillo).
+
+```
+cuando empieza:
+    yo.forma = "anillo"
+    yo.radioInterior = 0.8
+```
+
+**Error típico:** Darlo en píxeles: va de 0 (sin hueco) a 1 (hueco del todo). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    yo.forma = "anillo"
+    yo.radioInterior = 30
+```
+
+#### `yo.radioEsquina`
+
+En un rectángulo redondeado, el radio de las esquinas en píxeles.
+
+```
+cuando empieza:
+    yo.forma = "redondeado"
+    yo.radioEsquina = 12
+```
+
+**Error típico:** Ponerlo en un rectángulo normal: solo se nota con yo.forma = "redondeado". Esto no da error: funciona, pero no hace lo que querías.
+
+```
+cuando empieza:
+    yo.radioEsquina = 12
+```
+
+#### `yo.inicioArco`
+
+Dónde empieza un arco, en grados (0 = derecha, 90 = arriba).
+
+```
+cuando empieza:
+    yo.forma = "arco"
+    yo.inicioArco = 90
+```
+
+**Error típico:** Darle un texto: son grados (90 = arriba). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    yo.forma = "arco"
+    yo.inicioArco = "arriba"
+```
+
+#### `yo.finArco`
+
+Dónde termina un arco, en grados (180 si no se dice: medio anillo).
+
+```
+cuando empieza:
+    yo.forma = "arco"
+    yo.finArco = 270
+```
+
+**Error típico:** Poner el mismo ángulo al principio y al final: el arco no tiene nada que dibujar. Esto no da error: funciona, pero no hace lo que querías.
+
+```
+cuando empieza:
+    yo.forma = "arco"
+    yo.inicioArco = 180
+    yo.finArco = 180
+```
+
+#### `yo.grosor`
+
+Lo gorda que es una línea o un camino abierto, en píxeles.
+
+```
+cuando empieza:
+    yo.forma = "linea"
+    yo.grosor = 10
+```
+
+**Error típico:** Darle un texto: son píxeles. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    yo.forma = "linea"
+    yo.grosor = "gordo"
+```
+
+#### `yo.formaColision`
+
+Cómo choca: "auto" (con su forma, salvo los rectángulos), "caja" (como un rectángulo) o "figura" (con su forma, también girada).
+
+```
+cuando empieza:
+    yo.forma = "estrella"
+    yo.formaColision = "caja"
+```
+
+**Error típico:** Inventarse el valor: es "auto", "caja" o "figura". Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    yo.formaColision = "cuadrado"
+```
+
+#### `yo.ponerCamino(puntos, cerrado)`
+
+Le da una forma libre: una lista de puntos (vectores, desde su centro).
+
+```
+cuando empieza:
+    yo.ponerCamino([vector(-50, -30), vector(0, 40), vector(50, -30)])
+```
+
+**Error típico:** Olvidar los corchetes: los puntos van en UNA lista. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    yo.ponerCamino(vector(-50, 0), vector(50, 0))
 ```
 
 ### Ejercicios del nivel 3

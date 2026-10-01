@@ -10,8 +10,9 @@
 /**
  * Sprite: CÓMO se ve el objeto.
  *
- * Puede ser una imagen o, si no tiene imagen, una forma simple (rectángulo,
- * círculo) o un texto. Las formas y las imágenes también pueden llevar un
+ * Puede ser una imagen o, si no tiene imagen, una forma (rectángulo, círculo,
+ * estrella, corazón, un camino hecho con la pluma... ver formas/figuras.ts)
+ * o un texto. Las formas y las imágenes también pueden llevar un
  * texto encima (una "etiqueta"), que sirve para hacer botones.
  *
  * fijo = verdadero → se dibuja pegado a la PANTALLA, sin moverse con la
@@ -19,8 +20,9 @@
  */
 import { Componente } from '../Componente';
 import type { Renderizador } from '../../motor/Renderizador';
+import { aLocal, figuraDe, puntoEnFigura, type Figura, type Forma, type Punto, type PuntoCamino } from '../formas/figuras';
 
-export type FormaSprite = 'rectangulo' | 'circulo' | 'texto';
+export type FormaSprite = Forma;
 
 export class Sprite extends Componente {
   /** Nombre de una imagen cargada en Recursos. Si hay imagen, se ignora la forma. */
@@ -34,6 +36,16 @@ export class Sprite extends Componente {
   voltearX = false;
   /** Boca abajo (como en un espejo, pero de arriba abajo). */
   voltearY = false;
+  /** Datos de algunas formas (ver DatosFigura en formas/figuras.ts). */
+  lados: number | undefined = undefined;
+  radioInterior: number | undefined = undefined;
+  radioEsquina: number | undefined = undefined;
+  inicioArco: number | undefined = undefined;
+  finArco: number | undefined = undefined;
+  grosor: number | undefined = undefined;
+  puntos: PuntoCamino[] | undefined = undefined;
+  cerrado: boolean | undefined = undefined;
+  figuras: Punto[][][] | undefined = undefined;
   /** Orden de dibujo: capas más altas se dibujan encima. */
   capa = 0;
   /** Pegado a la pantalla (interfaz): no se mueve con la cámara ni con el zoom. */
@@ -58,6 +70,33 @@ export class Sprite extends Componente {
     const t = this.textoVivo();
     if (t === null) this.textoVivo = null;
     else this.texto = t;
+  }
+
+  private ultimaFigura: { claves: unknown[]; figura: Figura } | null = null;
+
+  /** La figura de su forma con ese tamaño (si nada ha cambiado, la misma de antes, sin recalcular). */
+  figura(ancho = this.anchoFinal, alto = this.altoFinal): Figura {
+    const claves = [this.forma, ancho, alto, this.lados, this.radioInterior, this.radioEsquina, this.inicioArco, this.finArco, this.grosor, this.puntos, this.cerrado, this.figuras];
+    const u = this.ultimaFigura;
+    if (u && u.claves.every((c, i) => c === claves[i])) return u.figura;
+    const figura = figuraDe({
+      forma: this.forma, ancho, alto, lados: this.lados, radioInterior: this.radioInterior, radioEsquina: this.radioEsquina,
+      inicioArco: this.inicioArco, finArco: this.finArco, grosor: this.grosor, puntos: this.puntos, cerrado: this.cerrado, figuras: this.figuras,
+    });
+    this.ultimaFigura = { claves, figura };
+    return figura;
+  }
+
+  /** ¿Se dibuja con una figura (y no como un rectángulo, una imagen o un texto)? */
+  get esFigura(): boolean {
+    return !this.imagen && this.forma !== 'rectangulo' && this.forma !== 'texto';
+  }
+
+  /** ¿Está ese punto (del mundo, o de la pantalla si es fijo) dentro de lo que se ve? Solo para figuras. */
+  contiene(p: Punto): boolean {
+    const t = this.objeto.transformacion;
+    const local = aLocal(p, t.posicion.x, t.posicion.y, t.rotacion, this.voltearX !== t.escala.x < 0, this.voltearY !== t.escala.y < 0);
+    return puntoEnFigura(this.figura(), local);
   }
 
   /** Tamaño real (incluyendo la escala de la Transformación). */
@@ -87,8 +126,9 @@ export class Sprite extends Componente {
       r.imagen(img, x, y, { ancho: w, alto: h, rotacion, opacidad: this.opacidad, voltearX: this.voltearX, voltearY: this.voltearY });
     } else if (this.forma !== 'texto') {
       r.ctx.globalAlpha = this.opacidad;
-      if (this.forma === 'circulo') r.circulo(x, y, w / 2, this.color);
-      else r.rectangulo(x - w / 2, y - h / 2, w, h, this.color, { rotacion });
+      if (this.forma === 'circulo' && w === h) r.circulo(x, y, w / 2, this.color);
+      else if (this.forma === 'rectangulo') r.rectangulo(x - w / 2, y - h / 2, w, h, this.color, { rotacion });
+      else r.figura(this.figura(w, h), x, y, rotacion, this.color, { voltearX: this.voltearX, voltearY: this.voltearY });
       r.ctx.globalAlpha = 1;
     }
 

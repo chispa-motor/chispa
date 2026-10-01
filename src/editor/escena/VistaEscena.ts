@@ -34,6 +34,8 @@ import { MapaCasillas } from '../../objetos/componentes/MapaCasillas';
 import { crearObjetoDesdeDefinicion } from '../../proyecto/JuegoEnMarcha';
 import type { DefObjeto } from '../../proyecto/formato';
 import type { EstadoEditor, TipoNuevoObjeto } from '../estado/EstadoEditor';
+import { iconoForma } from '../interfaz/iconosFormas';
+import { FORMAS_DIBUJO, type Forma } from '../../objetos/formas/figuras';
 import { botonIcono, h, icono } from '../interfaz/dom';
 import { notificar } from '../interfaz/dialogos';
 import { importarArchivos, resumenImportar, tipoDeArchivo } from '../recursos/importar';
@@ -191,6 +193,15 @@ export class VistaEscena {
           this.anadir(o.tipo);
         } }, icono(o.icono, 16), h('span', {}, o.texto)),
       ),
+      h('div', { class: 'titulo-menu' }, 'Más formas'),
+      h('div', { class: 'rejilla-formas' },
+        FORMAS_DIBUJO.filter((f) => f.forma !== 'rectangulo' && f.forma !== 'circulo').map((f) =>
+          h('button', { class: 'boton-forma', title: `${f.texto} (choca con su forma de verdad)`, 'aria-label': `Añadir: ${f.texto}`, 'data-forma': f.forma, onclick: () => {
+            menu.hidden = true;
+            this.anadir('forma', f.forma);
+          } }, iconoForma(f.forma, 22)),
+        ),
+      ),
     );
     const boton = botonIcono('mas', 'Añadir un objeto a la escena', () => {
       menu.hidden = !menu.hidden;
@@ -202,7 +213,7 @@ export class VistaEscena {
   }
 
   /** Crea un objeto nuevo en el centro de lo que se ve. */
-  anadir(tipo: TipoNuevoObjeto): void {
+  anadir(tipo: TipoNuevoObjeto, forma?: Forma): void {
     const m = this.marco();
     const centro = { x: this.camara.x, y: this.camara.y };
     // Los botones son de interfaz: su posición es en la pantalla del juego
@@ -215,7 +226,7 @@ export class VistaEscena {
     // Si ya hay algo justo ahí, lo ponemos un poco a la derecha (para que no queden uno encima del otro)
     const ocupado = (px: number) => this.estado.escena.objetos.some((o) => !o.mapa && o.x === px && o.y === y);
     for (let i = 0; i < 20 && ocupado(x); i++) x += 80;
-    this.estado.crearObjeto(tipo, x, y);
+    this.estado.crearObjeto(tipo, x, y, undefined, forma);
     if (tipo === 'mapa') this.ponerHerramienta('pincel');
     this.canvas.focus();
   }

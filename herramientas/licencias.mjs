@@ -30,6 +30,7 @@ export const COMPATIBLES = {
   'Apache-2.0': 'Permisiva: guardar su aviso (y su archivo NOTICE, si tiene). Aquí solo la usan herramientas para desarrollar, que no se reparten.',
   '0BSD': 'Permisiva, sin condiciones.',
   'CC0-1.0': 'Dominio público.',
+  Unlicense: 'Dominio público: se puede usar sin ninguna condición.',
   'MPL-2.0': 'La misma licencia que Chispa.',
 };
 

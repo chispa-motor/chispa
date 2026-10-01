@@ -20,7 +20,7 @@
  */
 import { h, icono, rellenar } from '../interfaz/dom';
 import { analizarSintaxis } from '../../chispa/sintaxis/parser';
-import { ACCIONES, EVENTOS, accionPorId, aCodigo, type Accion, type Bloque, type ClaseEvento } from './modelo';
+import { ACCIONES, DATOS_CON_BLOQUE, EVENTOS, accionPorId, aCodigo, datoPorObjetivo, type Accion, type Bloque, type ClaseEvento } from './modelo';
 
 type Categoria = 'eventos' | 'control' | 'movimiento' | 'apariencia' | 'sonido' | 'objetos' | 'variables' | 'funciones';
 
@@ -52,6 +52,8 @@ function categoriaDe(b: Bloque): Categoria {
     case 'funcion':
     case 'devolver':
       return 'funciones';
+    case 'asignar':
+      return datoPorObjetivo(b.objetivo)?.categoria ?? 'variables';
     default:
       return 'variables';
   }
@@ -89,7 +91,7 @@ function paleta(c: Categoria): Bloque[] {
         { tipo: 'hacer', codigo: 'curar(10)' },
       ];
     default:
-      return acciones(c);
+      return [...acciones(c), ...DATOS_CON_BLOQUE.filter((d) => d.categoria === c).map((d): Bloque => ({ tipo: 'asignar', objetivo: d.objetivo, operador: '=', valor: d.valor }))];
   }
 }
 

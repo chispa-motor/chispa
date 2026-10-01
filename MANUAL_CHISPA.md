@@ -1210,6 +1210,76 @@ si yo.arrastrando:
     yo.opacidad = 0.7
 ```
 
+#### `yo.forma`
+
+La forma del dibujo: "rectangulo", "circulo", "triangulo", "elipse", "poligono", "estrella", "rombo", "corazon", "flecha", "linea", "capsula", "redondeado", "anillo", "arco", "camino" o "texto". Choca con su forma de verdad.
+
+```
+yo.forma = "estrella"
+```
+
+#### `yo.lados`
+
+Cuántos lados tiene un polígono (6 si no se dice) o cuántas puntas una estrella (5). De 3 a 64.
+
+```
+yo.forma = "poligono"
+yo.lados = 8
+```
+
+#### `yo.radioInterior`
+
+Lo grande que es el hueco de una estrella, un anillo o un arco, de 0 a 1 (0,5 en la estrella y 0,6 en el anillo).
+
+```
+yo.forma = "anillo"
+yo.radioInterior = 0.8
+```
+
+#### `yo.radioEsquina`
+
+En un rectángulo redondeado, el radio de las esquinas en píxeles.
+
+```
+yo.forma = "redondeado"
+yo.radioEsquina = 12
+```
+
+#### `yo.inicioArco`
+
+Dónde empieza un arco, en grados (0 = derecha, 90 = arriba).
+
+```
+yo.forma = "arco"
+yo.inicioArco = 0
+```
+
+#### `yo.finArco`
+
+Dónde termina un arco, en grados (180 si no se dice: medio anillo).
+
+```
+yo.forma = "arco"
+yo.finArco = 270
+```
+
+#### `yo.grosor`
+
+Lo gorda que es una línea o un camino abierto, en píxeles.
+
+```
+yo.forma = "linea"
+yo.grosor = 10
+```
+
+#### `yo.formaColision`
+
+Cómo choca: "auto" (con su forma, salvo los rectángulos), "caja" (como un rectángulo) o "figura" (con su forma, también girada).
+
+```
+yo.formaColision = "caja"
+```
+
 ### Acciones
 
 #### `yo.saltar(fuerza)`
@@ -1508,6 +1578,14 @@ Quita el objeto del juego (igual que destruir(yo)).
 
 ```
 yo.destruir()
+```
+
+#### `yo.ponerCamino(puntos, cerrado)`
+
+Le da una forma libre: una lista de puntos (vectores, desde su centro). Cerrado (lo normal) se rellena; con falso es una línea.
+
+```
+yo.ponerCamino([vector(-50, -30), vector(0, 40), vector(50, -30)])
 ```
 
 ## 7. Mapas de casillas

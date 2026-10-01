@@ -18,7 +18,8 @@
  */
 import { NOMBRES_COLORES } from '../../motor/Color';
 import { DISTANCIA_POR_DEFECTO } from '../../objetos/componentes/Comportamiento';
-import { leerDatoInicial, tipoPorNombre, type DatoInicial, type DefObjeto } from '../../proyecto/formato';
+import { leerDatoInicial, tipoPorNombre, type DatoInicial, type DefObjeto, type DefSprite } from '../../proyecto/formato';
+import { FORMAS_DIBUJO, MAX_LADOS, POR_DEFECTO } from '../../objetos/formas/figuras';
 import { tieneHuecos } from '../../proyecto/TextosConHuecos';
 import { datosParaTextos, insertarDato } from '../estado/datosTextos';
 import type { EstadoEditor, RefObjeto } from '../estado/EstadoEditor';
@@ -60,6 +61,37 @@ export class Inspector {
     }
     this.elemento.scrollTop = scroll;
     if (enfocado) this.elemento.querySelector<HTMLElement>(`[data-ruta="${CSS.escape(enfocado)}"]`)?.focus();
+  }
+
+  /** Los datos propios de algunas formas (lados del polígono, hueco del anillo...). */
+  private datosDeForma(s: DefSprite, cambiar: (ruta: string) => (v: unknown) => void, largo: { empezar: () => void; terminar: () => void }): (HTMLElement | null)[] {
+    const forma = s.forma ?? 'rectangulo';
+    const sinValor = (porDefecto: number) => (v: number | undefined) => (v === undefined || v === porDefecto ? undefined : v);
+    const res: (HTMLElement | null)[] = [];
+    if (forma === 'poligono' || forma === 'estrella') {
+      const porDefecto = forma === 'estrella' ? POR_DEFECTO.puntas : POR_DEFECTO.lados;
+      res.push(campoNumero(forma === 'estrella' ? 'puntas' : 'lados', 'sprite.lados', s.lados ?? porDefecto, (v) => cambiar('sprite.lados')(sinValor(porDefecto)(v)), { ...largo, min: 3, max: MAX_LADOS, ayuda: forma === 'estrella' ? 'Cuántas puntas tiene la estrella' : 'Cuántos lados tiene: 3 = triángulo, 6 = hexágono...' }));
+    }
+    if (forma === 'estrella' || forma === 'anillo' || forma === 'arco') {
+      const porDefecto = forma === 'estrella' ? POR_DEFECTO.radioInteriorEstrella : POR_DEFECTO.radioInteriorAnillo;
+      res.push(campoNumero('hueco', 'sprite.radioInterior', s.radioInterior ?? porDefecto, (v) => cambiar('sprite.radioInterior')(sinValor(porDefecto)(v)), { ...largo, paso: 0.05, min: 0, max: 1, ayuda: 'Lo grande que es el hueco de dentro: 0 = nada, 1 = todo (yo.radioInterior)' }));
+    }
+    if (forma === 'redondeado') {
+      res.push(campoNumero('esquinas', 'sprite.radioEsquina', s.radioEsquina, (v) => cambiar('sprite.radioEsquina')(v), { ...largo, min: 0, vacio: 'auto', ayuda: 'Radio de las esquinas en píxeles (vacío: un 20 % del lado corto)' }));
+    }
+    if (forma === 'arco') {
+      res.push(h('div', { class: 'dos-columnas' },
+        campoNumero('desde', 'sprite.inicioArco', s.inicioArco ?? POR_DEFECTO.desde, (v) => cambiar('sprite.inicioArco')(sinValor(POR_DEFECTO.desde)(v)), { ...largo, paso: 15, ayuda: 'Dónde empieza, en grados (0 = derecha, 90 = arriba)' }),
+        campoNumero('hasta', 'sprite.finArco', s.finArco ?? POR_DEFECTO.hasta, (v) => cambiar('sprite.finArco')(sinValor(POR_DEFECTO.hasta)(v)), { ...largo, paso: 15, ayuda: 'Dónde termina, en grados' }),
+      ));
+    }
+    if (forma === 'linea' || (forma === 'camino' && s.cerrado === false)) {
+      res.push(campoNumero('grosor', 'sprite.grosor', s.grosor ?? POR_DEFECTO.grosor, (v) => cambiar('sprite.grosor')(sinValor(POR_DEFECTO.grosor)(v)), { ...largo, min: 1, ayuda: 'Lo gorda que es la línea, en píxeles' }));
+    }
+    if (forma === 'camino') {
+      res.push(campoCasilla('cerrado (relleno)', 'sprite.cerrado', s.cerrado ?? true, (v) => cambiar('sprite.cerrado')(v ? undefined : false), 'Cerrado se rellena; abierto es una línea'));
+    }
+    return res;
   }
 
   // ═════════════════════════ Un objeto ═════════════════════════
@@ -122,7 +154,7 @@ export class Inspector {
     const aspecto = s
       ? [
           campoLista('dibujo', 'sprite.dibujo', s.imagen ? `imagen:${s.imagen}` : s.forma ?? 'rectangulo',
-            [['rectangulo', 'Rectángulo'], ['circulo', 'Círculo'], ['texto', 'Texto'], ...imagenes.map((i): [string, string] => [`imagen:${i}`, `Imagen: ${i}`])],
+            [...FORMAS_DIBUJO.map((f): [string, string] => [f.forma, f.texto]), ['texto', 'Texto'], ...imagenes.map((i): [string, string] => [`imagen:${i}`, `Imagen: ${i}`])],
             (v) => {
               e.empezarCambioLargo();
               if (v.startsWith('imagen:')) {
@@ -137,6 +169,7 @@ export class Inspector {
             },
             'Qué se dibuja: una forma de color, un texto o una imagen del proyecto'),
           s.imagen ? null : campoColor('color', 'sprite.color', s.color ?? 'blanco', cambiar('sprite.color')),
+          ...(s.imagen ? [] : this.datosDeForma(s, cambiar, largo)),
           h('div', { class: 'dos-columnas' },
             campoNumero('ancho', 'sprite.ancho', s.ancho ?? 64, cambiar('sprite.ancho'), { ...largo, min: 1 }),
             campoNumero('alto', 'sprite.alto', s.alto ?? 64, cambiar('sprite.alto'), { ...largo, min: 1 }),
@@ -174,6 +207,9 @@ export class Inspector {
     const c = def.colision;
     partes.push(seccion('Colisión', c ? [
       campoCasilla('sólido', 'colision.solido', c.solido ?? true, (v) => cambiar('colision.solido')(v ? undefined : false), 'Sólido: los objetos chocan con él. Si lo quitas es un "fantasma": se atraviesa, pero avisa con "cuando toco"'),
+      s && !s.imagen && s.forma !== 'texto'
+        ? campoLista('forma', 'colision.forma', c.forma ?? 'auto', [['auto', s.forma === 'rectangulo' ? 'Caja (rectángulo)' : 'Su forma de verdad'], ['caja', 'Una caja (rectángulo)'], ['figura', 'Su forma, también girada']], (v) => cambiar('colision.forma')(v === 'auto' ? undefined : v), 'Con qué forma choca: con la del dibujo o con una caja. Las formas chocan con su forma de verdad (una pelota rueda por una rampa)')
+        : null,
       (c.solido ?? true) ? campoCasilla('solo desde arriba', 'colision.soloDesdeArriba', c.soloDesdeArriba ?? false, (v) => cambiar('colision.soloDesdeArriba')(v || undefined), 'Plataforma que se atraviesa desde abajo: se puede saltar a través de ella, y solo para a lo que cae encima') : null,
       h('div', { class: 'dos-columnas' },
         campoNumero('ancho', 'colision.ancho', c.ancho, cambiar('colision.ancho'), { ...largo, min: 1, vacio: 'igual', ayuda: 'Vacío = igual que el dibujo' }),

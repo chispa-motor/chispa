@@ -138,7 +138,10 @@ export class Escena implements EscenaActiva {
   ratonEncima(o: ObjetoJuego): boolean {
     const caja = this.cajaDe(o);
     if (!caja) return false;
-    const p = o.obtener(Sprite)?.fijo ? this.ratonEnPantalla() : this.ratonEnMundo();
+    const s = o.obtener(Sprite);
+    const p = s?.fijo ? this.ratonEnPantalla() : this.ratonEnMundo();
+    // Una figura (corazón, estrella...): solo encima de lo que se ve, no de su caja
+    if (s?.esFigura && s.visible) return s.contiene(p);
     return p.x >= caja.izquierda && p.x <= caja.derecha && p.y >= caja.abajo && p.y <= caja.arriba;
   }
 

@@ -10,10 +10,15 @@
 /**
  * Colisión: una CAJA invisible alrededor del objeto para detectar choques.
  *
- * DECISIÓN (versión simple): cajas alineadas con los ejes, sin girar
- * (en inglés AABB, "Axis-Aligned Bounding Box"). Aunque el sprite rote,
- * la caja no. Es lo que usan la mayoría de juegos de plataformas clásicos
- * porque es rapidísimo y muy predecible.
+ * DECISIÓN: los rectángulos chocan como cajas alineadas con los ejes, sin
+ * girar (en inglés AABB, "Axis-Aligned Bounding Box"): aunque el sprite
+ * rote, la caja no. Es lo que usan la mayoría de juegos de plataformas
+ * clásicos porque es rapidísimo y muy predecible.
+ *
+ * Las demás formas (círculo, triángulo, estrella, corazón, caminos de la
+ * pluma...) chocan con su FIGURA de verdad, girada y volteada como se ve
+ * (forma = "auto"). Con forma = "caja" chocan como una caja, y con
+ * forma = "figura" también un rectángulo choca girado.
  *
  * solido = verdadero → los objetos con Física chocan con él y no lo atraviesan (suelos, paredes).
  * solido = falso     → se puede atravesar, pero avisa cuando algo lo toca
@@ -22,6 +27,11 @@
 import { Componente } from '../Componente';
 import { Vector2 } from '../../motor/Vector2';
 import { Sprite } from './Sprite';
+import { aMundo, type Figura, type Poligono } from '../formas/figuras';
+import { cajaComoPieza, cajaDePiezas } from '../formas/sat';
+
+/** Cómo choca: auto = con su figura si no es un rectángulo; caja = siempre como una caja; figura = siempre con su figura (girada). */
+export type FormaColision = 'auto' | 'caja' | 'figura';
 
 /**
  * Caja en coordenadas del MUNDO, donde la Y crece hacia ARRIBA:
@@ -46,9 +56,41 @@ export class Colision extends Componente {
   soloDesdeArriba = false;
   /** Mueve la caja respecto al centro del objeto (útil si el dibujo no está centrado). */
   desplazamiento = new Vector2(0, 0);
+  forma: FormaColision = 'auto';
 
-  /** Calcula la caja en coordenadas del mundo. */
+  /** ¿Choca con su figura de verdad (y no con una caja)? */
+  usaFigura(): boolean {
+    if (this.forma === 'caja') return false;
+    const s = this.objeto.obtener(Sprite);
+    if (!s || s.imagen || s.forma === 'texto') return false;
+    return this.forma === 'figura' || s.forma !== 'rectangulo';
+  }
+
+  private ultimas: { figura: Figura; x: number; y: number; rot: number; vx: boolean; vy: boolean; piezas: Poligono[] } | null = null;
+
+  /**
+   * La figura en el mundo, partida en piezas convexas (ya girada, volteada y
+   * en su sitio). Si choca como una caja, la caja como una sola pieza.
+   */
+  piezas(): Poligono[] {
+    if (!this.usaFigura()) return [cajaComoPieza(this.caja())];
+    const s = this.objeto.obtener(Sprite)!;
+    const t = this.objeto.transformacion;
+    const figura = s.figura((this.ancho ?? s.ancho) * Math.abs(t.escala.x), (this.alto ?? s.alto) * Math.abs(t.escala.y));
+    const x = t.posicion.x + this.desplazamiento.x;
+    const y = t.posicion.y + this.desplazamiento.y;
+    const vx = s.voltearX !== t.escala.x < 0;
+    const vy = s.voltearY !== t.escala.y < 0;
+    const u = this.ultimas;
+    if (u && u.figura === figura && u.x === x && u.y === y && u.rot === t.rotacion && u.vx === vx && u.vy === vy) return u.piezas;
+    const piezas = figura.piezas.map((p) => aMundo(p, x, y, t.rotacion, vx, vy));
+    this.ultimas = { figura, x, y, rot: t.rotacion, vx, vy, piezas };
+    return piezas;
+  }
+
+  /** Calcula la caja en coordenadas del mundo (la que rodea a la figura, si choca con su figura). */
   caja(): Caja {
+    if (this.usaFigura()) return cajaDePiezas(this.piezas());
     const t = this.objeto.transformacion;
     const sprite = this.objeto.obtener(Sprite);
     const ancho = (this.ancho ?? sprite?.ancho ?? 32) * Math.abs(t.escala.x);
