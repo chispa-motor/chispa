@@ -387,6 +387,9 @@ img.pixelado { image-rendering: pixelated; }
 .guia { padding: 0 12px 12px; }
 .cabecera-guia { position: sticky; top: 0; display: flex; align-items: center; gap: 8px; padding: 8px 0; background: var(--fondo-panel); color: var(--texto-suave); z-index: 1; }
 .buscador { height: 30px; }
+.aprender-guia { display: flex; gap: 6px; flex-shrink: 0; }
+.aprender-guia a { padding: 4px 8px; border-radius: 6px; border: 1px solid var(--borde); color: var(--acento); text-decoration: none; font-size: 12.5px; white-space: nowrap; }
+.aprender-guia a:hover { background: var(--fondo); }
 .resultados-guia { columns: 360px; column-gap: 20px; }
 .grupo-guia h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--acento); margin: 12px 0 6px; break-after: avoid; }
 .ficha-guia { break-inside: avoid; margin-bottom: 10px; padding: 8px 10px; border-radius: 6px; background: var(--fondo); border: 1px solid var(--borde); }

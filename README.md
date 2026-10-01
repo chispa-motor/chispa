@@ -67,7 +67,9 @@ llevártelos a otro sitio o guardar una copia, usa el botón **Guardar**:
 descarga un archivo `.chispa.json` que luego abres con **Abrir**.
 
 **¿Es tu primera vez? Lee [EMPIEZA_AQUI.md](EMPIEZA_AQUI.md).** En 10 minutos
-tienes un personaje que anda, salta y recoge monedas.
+tienes un personaje que anda, salta y recoge monedas. Después, para aprender
+de verdad, sigue el curso **[Aprende Chispa](APRENDE_CHISPA.md)** (4 niveles,
+con ejercicios y mini proyectos) y ten a mano la **[chuleta](CHULETA_CHISPA.md)**.
 
 ### Si quieres modificar el propio Chispa
 
@@ -148,6 +150,8 @@ enseñar su código si no quieres. Más detalles en
 | Archivo | Qué hay |
 |---|---|
 | [EMPIEZA_AQUI.md](EMPIEZA_AQUI.md) | Tu primer juego, paso a paso |
+| [APRENDE_CHISPA.md](APRENDE_CHISPA.md) | Curso desde cero por niveles: cada comando con un ejemplo y su error típico, ejercicios y mini proyectos |
+| [CHULETA_CHISPA.md](CHULETA_CHISPA.md) | Hoja resumen: todos los comandos, una línea cada uno |
 | [MANUAL_CHISPA.md](MANUAL_CHISPA.md) | Todo el lenguaje y los comandos, con un ejemplo de cada cosa, y las recetas |
 | [ESPECIFICACION_CHISPA.md](ESPECIFICACION_CHISPA.md) | Las reglas del lenguaje |
 | [DECISIONES.md](DECISIONES.md) | Por qué Chispa es como es |
@@ -169,7 +173,7 @@ Para quien programa en Chispa:
 npm run pruebas             tests automáticos (lenguaje, motor, editor, seguridad...)
 npm run pruebas:navegador   el editor en un Chromium de verdad, usado como una persona
 npm run build               compila el editor en dist/ (con su política de seguridad)
-npm run manual              regenera MANUAL_CHISPA.md desde la ayuda del editor
+npm run manual              regenera MANUAL_CHISPA.md, APRENDE_CHISPA.md y CHULETA_CHISPA.md
 npm run licencias           revisa las licencias de las dependencias
 npm run cabeceras           pone la cabecera de la licencia a los archivos nuevos
 npm run capturas            hace las capturas y el GIF de este README

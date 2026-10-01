@@ -1,0 +1,464 @@
+# Chuleta de Chispa
+
+> Se genera sola con `npm run manual` (no la cambies a mano). Un test comprueba que no falta ningún comando y que cada ejemplo funciona.
+
+Todos los comandos de Chispa (280), una línea cada uno, para tenerla abierta mientras programas o imprimirla. Para aprender con calma, el [curso](APRENDE_CHISPA.md).
+
+En los ejemplos se usan estas variables y esta función, como si ya las tuvieras (y en la escena hay un Jugador y un Mapa de casillas):
+
+```
+variable vida = 3
+variable puntos = 0
+variable lista = [3, 1, 2]
+variable frase = "hola mundo"
+variable tabla = {vida: 3, nombre: "Ana"}
+variable v = vector(3, 4)
+variable jugador = buscar("Jugador")
+variable mapa = buscar("Mapa")
+juego.puntos = 0
+
+funcion lluvia(veces):
+    repetir veces veces:
+        crear("Gota", aleatorio(0, 900), 540)
+        esperar(0.2)
+```
+
+Las líneas que terminan en `:` empiezan un bloque: lo de dentro va debajo, con 4 espacios. `yo` es el objeto del script. En el código no hacen falta tildes.
+
+## Nivel 1: Lo básico del lenguaje
+
+### Mostrar y guardar datos
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `mostrar(valor, ...)` | Escribe en la consola. | `mostrar("Vidas:", vida)` |
+| `variable nombre = valor` | Crea una variable nueva: una caja con nombre donde guardar un valor. | `variable nivel = 1` |
+| `verdadero` | El valor lógico «sí». | `variable vivo = verdadero` |
+| `falso` | El valor lógico «no». | `variable pausado = falso` |
+| `nulo` | Nada, vacío. | `si jugador == nulo:` |
+
+### Números y operaciones
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `aleatorio(min, max)` | Un número entero al azar entre min y max (los dos incluidos). | `variable dado = aleatorio(1, 6)` |
+| `aleatorioDecimal(min, max)` | Un número CON DECIMALES al azar entre min y max (aleatorio() da enteros). | `yo.tamano = aleatorioDecimal(0.5, 1.5)` |
+| `redondear(numero, decimales)` | Redondea un número. | `mostrar(redondear(3.14159, 2))` |
+| `redondearAbajo(numero)` | Quita los decimales hacia abajo: redondearAbajo(3.9) es 3. | `variable columna = redondearAbajo(yo.x / 32)` |
+| `redondearArriba(numero)` | Redondea hacia arriba: redondearArriba(3.1) es 4. | `variable paginas = redondearArriba(25 / 10)` |
+| `absoluto(numero)` | El número sin signo: absoluto(-5) es 5. | `si absoluto(yo.velocidad.x) > 100:` |
+| `signo(numero)` | 1 si es positivo, -1 si es negativo, 0 si es cero. | `yo.voltear = signo(yo.velocidad.x) < 0` |
+| `raiz(numero)` | La raíz cuadrada. | `mostrar(raiz(16))` |
+| `potencia(base, exponente)` | Multiplica un número por sí mismo varias veces: potencia(2, 3) = 2 × 2 × 2 = 8. | `mostrar(potencia(2, 10))` |
+| `minimo(a, b, ...)` | El más pequeño de varios números. | `yo.vida = minimo(vida + 1, 10)` |
+| `maximo(a, b, ...)` | El más grande de varios números. | `vida = maximo(vida - 1, 0)` |
+| `limitar(valor, min, max)` | Deja el número entre min y max: si se pasa, da max; si no llega, da min. | `vida = limitar(vida, 0, 100)` |
+| `numero(texto)` | Convierte un texto con un número ("42") en un número de verdad. | `variable n = numero("42")` |
+| `texto(valor)` | Convierte cualquier valor en texto. | `yo.texto = "Puntos: " + texto(puntos)` |
+| `probabilidad(porcentaje)` | Verdadero ese porcentaje de las veces. | `si probabilidad(10):` |
+
+### Decidir: si y sino
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `si condicion` | Ejecuta el bloque de dentro solo si la condición es verdadera. | `si vida <= 0:` |
+| `sino:  /  sino si condicion` | Va después de un 'si'. | `sino:` |
+| `a y b` | Verdadero solo si las DOS cosas son verdaderas. | `si vida > 0 y puntos >= 10:` |
+| `a o b` | Verdadero si AL MENOS UNA de las dos es verdadera. | `si vida == 0 o puntos < 0:` |
+| `no a` | Lo contrario: verdadero pasa a falso y al revés. | `si no yo.enSuelo:` |
+
+### Repetir: bucles
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `repetir N veces` | Repite el bloque de dentro un número de veces. | `repetir 3 veces:` |
+| `mientras condicion` | Repite el bloque de dentro mientras la condición sea verdadera. | `mientras vida > 0:` |
+| `para cada x en lista` | Recorre una lista, un texto (letra a letra) o una tabla. | `para cada x en lista:` |
+| `para cada x en lista:  /  cuando cada fotograma` | Se usa en 'para cada' y en los eventos 'cuando cada fotograma' y 'cuando cada N segundos'. | `para cada n en [1, 2, 3]:` |
+| `x en lista  /  "clave" en tabla` | Dos usos: en 'para cada x en lista', y para comprobar si algo está dentro de otra cosa (una clave en una tabla, un elemento en una lista, un trozo en un texto). | `si "vida" en tabla:` |
+| `rango(desde, hasta, paso)` | Una lista de numeros seguidos, de desde a hasta (los dos incluidos). | `para cada i en rango(1, 10):` |
+| `romper` | Sale del bucle (mientras, repetir o para cada) en el que está. | `romper` |
+| `continuar` | Salta a la siguiente vuelta del bucle, sin terminar esta. | `continuar` |
+
+### Textos
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `texto.longitud` | Cuántas letras tiene el texto. | `mostrar(frase.longitud)` |
+| `texto.mayusculas` | El mismo texto en MAYÚSCULAS. | `mostrar(frase.mayusculas)` |
+| `texto.minusculas` | El mismo texto en minúsculas. | `si frase.minusculas == "hola mundo":` |
+| `texto.dividir(separador)` | Corta el texto en trozos y da una lista. | `variable palabras = frase.dividir(" ")` |
+| `texto.reemplazar(buscar, cambiarPor)` | Un texto nuevo en el que se cambia cada trozo buscado por otro. | `mostrar(frase.reemplazar("hola", "adios"))` |
+| `texto.contiene(trozo)` | Verdadero si el texto tiene ese trozo dentro. | `si frase.contiene("hola"):` |
+| `texto.empiezaPor(trozo)` | Verdadero si el texto empieza así. | `si frase.empiezaPor("hola"):` |
+| `texto.terminaPor(trozo)` | Verdadero si el texto termina así. | `si frase.terminaPor("mundo"):` |
+| `texto.recortar()` | El mismo texto sin los espacios del principio y del final. | `variable limpio = frase.recortar()` |
+| `texto.trozo(desde, hasta)` | Un trozo del texto: de la letra desde a la hasta (las dos incluidas; la primera es la 1). | `variable inicial = frase.trozo(1, 1)` |
+| `texto.posicion(trozo)` | En qué letra empieza un trozo dentro del texto (la primera es la 1), o 0 si no está. | `mostrar(frase.posicion("mundo"))` |
+| `longitud(x)` | Cuántas letras tiene un texto, o cuántos elementos una lista o una tabla. | `mostrar(longitud(lista))` |
+
+### Listas
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `lista.longitud` | Cuántos elementos tiene la lista. | `mostrar(lista.longitud)` |
+| `lista.añadir(valor)` | Pone un valor al final de la lista. | `lista.añadir(4)` |
+| `lista.quitar(posicion)` | Quita el elemento de esa posición (la primera es la 1) y lo devuelve. | `variable primero = lista.quitar(1)` |
+| `lista.primero` | El primer elemento (o nulo si está vacía). | `mostrar(lista.primero)` |
+| `lista.ultimo` | El último elemento (o nulo si está vacía). | `mostrar(lista.ultimo)` |
+| `lista.insertar(posicion, valor)` | Mete un valor en esa posición; los que había de ahí en adelante se corren un sitio. | `lista.insertar(1, 0)` |
+| `lista.ordenar()` | Ordena la lista de menor a mayor (números) o por orden alfabético (textos). | `lista.ordenar()` |
+| `lista.mezclar()` | Desordena la lista al azar (como barajar cartas). | `lista.mezclar()` |
+| `lista.invertir()` | Le da la vuelta: el último pasa a ser el primero. | `lista.invertir()` |
+| `lista.posicion(valor)` | En qué posición está un valor (la primera es la 1), o 0 si no está. | `variable donde = lista.posicion(2)` |
+| `lista.contiene(valor)` | Verdadero si el valor está en la lista. | `si lista.contiene(3):` |
+| `lista.sublista(desde, hasta)` | Una lista nueva con un trozo: de la posición desde a la hasta (las dos incluidas). | `variable mejores = lista.sublista(1, 2)` |
+| `lista.unir(separador)` | Junta los elementos en un texto, con el separador entre medias (", " si no se dice). | `mostrar(lista.unir(", "))` |
+| `lista.vaciar()` | Quita todos los elementos. | `lista.vaciar()` |
+| `elegir(lista)` | Un elemento al azar de una lista. | `yo.color = elegir(["rojo", "azul"])` |
+| `unir(lista, separador)` | Junta los elementos de una lista en un texto, con el separador entre medias (por defecto ", "). | `mostrar(unir(lista, " - "))` |
+
+### Tablas
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `tabla.claves` | Una lista con los nombres de todas las claves, en el orden en que se añadieron. | `mostrar(tabla.claves)` |
+| `tabla.quitar("clave")` | Quita una clave de la tabla y devuelve su valor. | `tabla.quitar("nombre")` |
+
+### Funciones
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `funcion nombre(a, b)` | Crea una función: un trozo de código con nombre que se puede usar muchas veces. | `funcion saludar(nombre):` |
+| `devolver valor` | Termina la función y da un resultado. | `devolver n * 2` |
+
+## Nivel 2: Objetos y eventos
+
+### Eventos: cuándo pasa cada cosa
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `cuando evento` | Empieza un evento: código que se ejecuta cuando pasa algo (al empezar, al pulsar una tecla, al tocar otro objeto...). | `cuando empieza:` |
+| `cuando empieza` | Se ejecuta una vez, cuando el objeto aparece en la escena. | `cuando empieza:` |
+| `cuando cada fotograma` | Se ejecuta unas 60 veces por segundo. | `cuando cada fotograma:` |
+| `delta` | Segundos desde el fotograma anterior (unos 0.016). | `yo.x += 200 * delta` |
+| `tiempo.delta` | Segundos desde el fotograma anterior (igual que delta). | `yo.x += 100 * tiempo.delta` |
+
+### yo: el objeto y sus datos
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `yo` | El objeto al que pertenece este script. | `yo.x += 10` |
+| `yo.nombre` | El nombre del objeto. | `mostrar(yo.nombre)` |
+| `yo.tipo` | El tipo del objeto (normalmente, la plantilla de la que salió). | `si jugador.tipo == "Jugador":` |
+| `yo.x` | Posición horizontal del centro del objeto. | `yo.x = 100` |
+| `yo.y` | Posición vertical del centro del objeto. | `yo.y += 50 * delta` |
+| `yo.posicion` | Posición como vector. | `yo.posicion = vector(100, 200)` |
+| `vector(x, y)` | Un vector: dos números juntos (una posición, una velocidad...). | `variable v = vector(3, 4)` |
+| `vector.x` | El número horizontal. | `mostrar(v.x)` |
+| `vector.y` | El número vertical (positivo = hacia arriba). | `mostrar(v.y)` |
+| `vector.longitud` | Lo largo que es (por ejemplo, la rapidez de una velocidad). | `mostrar(v.longitud)` |
+| `vector.normalizado` | Un vector con la misma dirección pero de largo 1. | `variable dir = v.normalizado` |
+| `yo.rotacion` | Giro en grados (positivo = contrario a las agujas del reloj). | `yo.rotacion = 45` |
+| `yo.escala` | Tamaño: 1 normal, 2 el doble. | `yo.escala = 2` |
+| `yo.color` | El color de la forma (o del texto). | `yo.color = "rojo"` |
+| `yo.visible` | Si es falso, el objeto no se dibuja (pero sigue existiendo). | `yo.visible = falso` |
+| `yo.ancho` | Ancho del dibujo en píxeles. | `yo.ancho = 100` |
+| `yo.alto` | Alto del dibujo en píxeles. | `yo.alto = 20` |
+| `yo.opacidad` | De 0 (invisible) a 1 (normal). | `yo.opacidad = 0.5` |
+| `yo.transparencia` | Lo contrario de la opacidad: 0 = se ve normal, 1 = invisible, 0.5 = medio transparente. | `yo.transparencia = 0.5` |
+| `yo.capa` | Orden de dibujo: los de capa más alta se ven por encima. | `yo.capa = 10` |
+| `yo.voltear` | Si es verdadero, el dibujo se ve al revés (como en un espejo). | `yo.voltear = verdadero` |
+| `yo.voltearVertical` | Si es verdadero, la imagen se ve boca abajo. | `yo.voltearVertical = verdadero` |
+| `yo.imagen` | La imagen que se dibuja (nombre de una imagen del proyecto). | `yo.imagen = "jugador"` |
+| `yo.texto` | El texto de un objeto de texto, o la etiqueta de un botón. | `yo.texto = "Puntos: {juego.puntos}"` |
+| `yo.tamaño` | Lo grande que es: 1 = normal, 2 = el doble, 0.5 = la mitad. | `yo.tamano = 2` |
+| `yo.tamanoLetra` | El tamaño de la letra de un texto o de la etiqueta de un botón. | `yo.tamanoLetra = 40` |
+| `yo.colorTexto` | Color de la letra de las etiquetas (botones). | `yo.colorTexto = "negro"` |
+
+### El teclado
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `cuando se pulsa "tecla"` | Se ejecuta al pulsar una tecla (una vez por pulsación). | `cuando se pulsa "espacio":` |
+| `cuando se mantiene "tecla"` | Se ejecuta en cada fotograma mientras la tecla esté pulsada. | `cuando se mantiene "derecha":` |
+| `cuando se suelta "tecla"` | Se ejecuta al soltar una tecla. | `cuando se suelta "espacio":` |
+| `teclado.pulsada("tecla")` | Verdadero MIENTRAS la tecla esté pulsada. | `si teclado.pulsada("izquierda"):` |
+| `teclado.sePulso("tecla")` | Verdadero solo en el fotograma en que se pulsa la tecla. | `si teclado.sePulso("espacio"):` |
+| `teclado.seSolto("tecla")` | Verdadero solo en el fotograma en que se suelta la tecla. | `si teclado.seSolto("espacio"):` |
+| `teclado.algunaSePulso()` | Verdadero en el fotograma en que se pulsa CUALQUIER tecla. | `si teclado.algunaSePulso():` |
+| `teclado.ultima` | La última tecla que se ha pulsado (su nombre: "a", "espacio"...), o nulo si todavía ninguna. | `mostrar(teclado.ultima)` |
+| `teclado.pulsadas` | Una lista con las teclas que están pulsadas ahora mismo. | `mostrar(teclado.pulsadas)` |
+
+### El ratón
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `cuando hago clic` | Se ejecuta al hacer clic en cualquier sitio de la pantalla del juego. | `cuando hago clic:` |
+| `cuando hago clic encima` | Se ejecuta al hacer clic ENCIMA de este objeto. | `cuando hago clic encima:` |
+| `raton.x` | Posición horizontal del ratón en el mundo. | `yo.x = raton.x` |
+| `raton.y` | Posición vertical del ratón en el mundo (hacia arriba). | `yo.y = raton.y` |
+| `raton.posicion` | Posición del ratón como vector. | `yo.posicion = raton.posicion` |
+| `raton.rueda` | Cuánto se ha girado la rueda en este fotograma (positivo = hacia abajo). | `escena.camara.zoom -= raton.rueda * 0.001` |
+| `raton.objeto` | El objeto que hay debajo del ratón (el de más arriba), o nulo si no hay ninguno. | `si raton.objeto != nulo:` |
+| `raton.visible` | Si es falso, la flecha del ratón no se ve encima del juego (para poner tu propia mira). | `raton.visible = falso` |
+| `raton.pulsado("izquierdo")` | Verdadero mientras el botón esté pulsado ("izquierdo", "derecho" o "medio"). | `si raton.pulsado("izquierdo"):` |
+| `raton.sePulso("izquierdo")` | Verdadero solo en el fotograma en que se pulsa el botón. | `si raton.sePulso():` |
+| `raton.seSolto("izquierdo")` | Verdadero solo en el fotograma en que se suelta el botón (por ejemplo, para soltar algo que arrastras). | `si raton.seSolto():` |
+| `yo.ratonEncima` | Verdadero si el ratón está encima del objeto (para resaltar botones). | `si yo.ratonEncima:` |
+| `yo.arrastrable` | Si es verdadero, se puede coger con el ratón y moverlo (puzles, inventarios, juegos de ordenar). | `yo.arrastrable = verdadero` |
+| `yo.arrastrando` | Verdadero mientras se está arrastrando con el ratón (solo se lee). | `si yo.arrastrando:` |
+
+### Moverse
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `yo.mover(x, y)` | Mueve el objeto esa cantidad de píxeles. | `yo.mover(10, 0)` |
+| `yo.moverConFlechas(rapidez)` | Mueve el objeto con las flechas (o W A S D) a esa rapidez en píxeles por segundo. | `yo.moverConFlechas(300)` |
+| `yo.rotar(grados)` | Gira el objeto esos grados. | `yo.rotar(90 * delta)` |
+| `yo.avanzar(pasos)` | Se mueve hacia donde mira (según su rotación), como «mover pasos» de Scratch. | `yo.avanzar(10)` |
+| `yo.moverHacia(destino, rapidez)` | Avanza hacia otro objeto o posición a esa rapidez (píxeles/segundo), sin pasarse. | `yo.moverHacia(jugador, 80)` |
+| `yo.irA(destino, segundos)` | Va SUAVEMENTE hasta un sitio en esos segundos (1 si no se dice). | `yo.irA(400, 300, 2)` |
+| `yo.teletransportar(destino)` | Se va DE GOLPE a otro sitio (un objeto, una posición o dos números), sin la velocidad que llevaba. | `yo.teletransportar(100, 300)` |
+| `yo.mirarA(destino)` | Gira el objeto para que mire hacia otro objeto o posición. | `yo.mirarA(jugador)` |
+| `yo.rotarHacia(destino, gradosPorSegundo)` | Gira POCO A POCO hasta mirar hacia algo (180 grados por segundo si no se dice). | `yo.rotarHacia(jugador, 90)` |
+| `yo.anguloA(destino)` | El ángulo (en grados) hacia otro objeto o posición: 0 = derecha, 90 = arriba. | `variable a = yo.anguloA(jugador)` |
+| `yo.direccionA(destino)` | Un vector de largo 1 que apunta hacia otro objeto o posición. | `variable d = yo.direccionA(jugador)` |
+| `yo.distanciaA(destino)` | Distancia en píxeles hasta otro objeto o una posición (también con dos números: x, y). | `si yo.distanciaA(jugador) < 50:` |
+| `distancia(a, b)` | Distancia en píxeles entre dos objetos o dos posiciones. | `si distancia(yo, jugador) < 100:` |
+| `angulo(desde, hasta)` | El ángulo en grados de la flecha que va de un objeto (o posición) a otro: 0 = derecha, 90 = arriba. | `yo.rotacion = angulo(yo, raton.posicion)` |
+| `seno(grados)` | El seno de un ángulo EN GRADOS. | `yo.y = 200 + seno(tiempo.total * 90) * 50` |
+| `coseno(grados)` | El coseno de un ángulo EN GRADOS. | `yo.x = 400 + coseno(tiempo.total * 90) * 50` |
+| `tangente(grados)` | La tangente de un ángulo EN GRADOS. | `mostrar(tangente(45))` |
+| `pi` | El número pi (3.14159...): lo que mide una vuelta entera dividido entre su ancho. | `variable vuelta = 2 * pi * 10` |
+
+### Choques: tocar cosas
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `cuando toco Nombre` | Se ejecuta al EMPEZAR a tocar un objeto con ese nombre o tipo, o una casilla de ese tipo. | `cuando toco Moneda:` |
+| `cuando dejo de tocar Nombre` | Se ejecuta cuando deja de tocar un objeto o casilla. | `cuando dejo de tocar Jugador:` |
+| `otro` | Dentro de 'cuando toco': el objeto que has tocado. | `destruir(otro)` |
+| `cuando salgo de la pantalla` | Se ejecuta cuando el objeto sale de lo que se ve (por un borde de la pantalla). | `cuando salgo de la pantalla:` |
+| `yo.tocando("Nombre")` | Verdadero si AHORA MISMO está tocando algo con ese nombre, tipo, etiqueta o tipo de casilla. | `si yo.tocando("Lava"):` |
+| `yo.solido` | Si es verdadero, los demás chocan con él. | `yo.solido = falso` |
+| `yo.fantasma` | Si es verdadero, se atraviesa, pero sigue avisando con "cuando toco" (zonas, monedas, metas). | `yo.fantasma = verdadero` |
+| `casilla` | Dentro de 'cuando toco': si has tocado una casilla de un mapa, su tipo (si no, nulo). | `si casilla == "agua":` |
+
+## Nivel 3: Hacer juegos
+
+### Crear, buscar y destruir objetos
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `crear("Plantilla", x, y)` | Crea un objeto nuevo a partir de una plantilla, en la posición (x, y). | `crear("Bala", yo.x, yo.y)` |
+| `destruir(objeto)` | Quita un objeto del juego. | `destruir(otro)` |
+| `yo.destruir()` | Quita el objeto del juego (igual que destruir(yo)). | `yo.destruir()` |
+| `yo.destruido` | Verdadero si el objeto ya se ha destruido. | `si jugador.destruido:` |
+| `buscar("Nombre")` | Busca un objeto por su nombre o su tipo. | `variable j = buscar("Jugador")` |
+| `buscarTodos("Tipo")` | Da una lista con todos los objetos de ese nombre o tipo. | `buscarTodos("Enemigo")` |
+| `contar("Tipo")` | Cuántos objetos hay con ese nombre o tipo. | `si contar("Enemigo") == 0:` |
+| `clonar(objeto)` | Hace una copia del objeto tal como está ahora (sitio, color, tamaño, propiedades), con su script. | `variable copia = clonar(jugador)` |
+| `yo.clonar()` | Hace una copia de este objeto tal como está ahora, con su script. | `variable copia = jugador.clonar()` |
+| `yo.ponerEtiqueta("etiqueta")` | Le pone una etiqueta. | `yo.ponerEtiqueta("peligro")` |
+| `yo.quitarEtiqueta("etiqueta")` | Le quita una etiqueta. | `yo.quitarEtiqueta("peligro")` |
+| `yo.tieneEtiqueta("etiqueta")` | Verdadero si tiene esa etiqueta. | `si otro.tieneEtiqueta("peligro"):` |
+| `yo.etiquetas` | La lista de sus etiquetas. | `mostrar(yo.etiquetas)` |
+| `buscarConEtiqueta("etiqueta")` | Una lista con los objetos que tienen esa etiqueta (ver yo.ponerEtiqueta). | `buscarConEtiqueta("malo")` |
+| `yo.cercanos(radio, "Tipo")` | Una lista con los objetos a menos de esos píxeles (de ese tipo, si se dice), del más cercano al más lejano. | `yo.cercanos(150, "Enemigo")` |
+| `yo.masCercano("Tipo", radio)` | El objeto más cercano (de ese tipo, y a menos de esos píxeles si se dice), o nulo si no hay. | `variable m = yo.masCercano("Moneda")` |
+| `escena.objetos` | Lista con todos los objetos de la escena. | `mostrar(escena.objetos.longitud)` |
+
+### Física: gravedad, velocidad y saltos
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `yo.velocidad` | Velocidad en píxeles por segundo (necesita física). | `yo.velocidad.x = 200` |
+| `yo.gravedad` | Cuánto le afecta la gravedad: 1 normal, 0 flota, 0.5 como en la luna. | `yo.gravedad = 0` |
+| `escena.gravedad` | La gravedad de la escena (1500 normal, 0 para juegos vistos desde arriba). | `escena.gravedad = 0` |
+| `yo.rozamiento` | Cuánto frena en el suelo, de 0 (hielo) a 1 (se para en seco). | `yo.rozamiento = 0` |
+| `yo.rebote` | Cuánto rebota al chocar, de 0 (nada) a 1 (pelota perfecta). | `yo.rebote = 0.8` |
+| `yo.masa` | Cuánto pesa. | `yo.masa = 10` |
+| `yo.estatico` | Si es verdadero, el objeto no se mueve nunca (como una pared). | `yo.estatico = verdadero` |
+| `yo.saltar(fuerza)` | Salta, pero solo si está en el suelo. | `yo.saltar(600)` |
+| `yo.enSuelo` | Verdadero si está apoyado en el suelo (solo se lee). | `si yo.enSuelo:` |
+| `yo.tocaPared` | Verdadero si ha chocado con una pared (solo se lee). | `si yo.tocaPared:` |
+| `yo.tocaTecho` | Verdadero si se ha dado con la cabeza en un techo (solo se lee). | `si yo.tocaTecho:` |
+| `yo.empujar(x, y)` | Da un golpe: cambia la velocidad según la masa (los pesados se mueven menos). | `otro.empujar(500, 200)` |
+| `yo.moviendo` | Solo en objetos con recorrido (plataformas que se mueven solas): si es falso, se para donde está; si es verdadero, sigue su camino. | `buscar("Plataforma").moviendo = falso` |
+
+### Mapas de casillas
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `mapa.casilla(columna, fila)` | Solo en mapas de casillas: el tipo de la casilla (o nulo si está vacía). | `mostrar(mapa.casilla(3, 0))` |
+| `mapa.ponerCasilla(columna, fila, "tipo")` | Solo en mapas: pone una casilla. | `mapa.ponerCasilla(3, 0, "suelo")` |
+| `mapa.quitarCasilla(columna, fila)` | Solo en mapas: quita una casilla. | `mapa.quitarCasilla(3, 0)` |
+| `mapa.casillaEn(x, y)` | Solo en mapas: el tipo de la casilla que hay en un punto del mundo. | `si mapa.casillaEn(yo.x, yo.y - 30) == "hielo":` |
+| `mapa.columnaEn(x)` | Solo en mapas: la columna que hay en esa X del mundo. | `variable c = mapa.columnaEn(yo.x)` |
+| `mapa.filaEn(y)` | Solo en mapas: la fila que hay en esa Y del mundo. | `variable f = mapa.filaEn(yo.y)` |
+| `mapa.centroDeCasilla(columna, fila)` | Solo en mapas: el centro de una casilla, en el mundo (vector). | `yo.posicion = mapa.centroDeCasilla(2, 5)` |
+
+### La cámara
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `escena.camara` | La cámara: qué parte del mundo se ve. | `escena.camara.seguir(yo)` |
+| `escena.camara.seguir(objeto)` | La cámara sigue a un objeto (suavemente). | `escena.camara.seguir(yo)` |
+| `escena.camara.limites(izquierda, abajo, derecha, arriba)` | La cámara no enseña nada fuera de esta zona. | `escena.camara.limites(mapa)` |
+| `escena.camara.temblar(intensidad, segundos)` | Hace temblar la pantalla (explosiones, golpes). | `escena.camara.temblar(10, 0.3)` |
+| `escena.camara.zoom` | 1 = normal, 2 = más cerca (todo el doble de grande), 0.5 = más lejos. | `escena.camara.zoom = 2` |
+| `escena.camara.x` | Centro de la cámara (horizontal). | `escena.camara.x = 480` |
+| `escena.camara.y` | Centro de la cámara (vertical). | `escena.camara.y = 270` |
+| `escena.camara.suavizado` | Lo rápido que alcanza al objeto que sigue (8 por defecto; más alto = más rápido). | `escena.camara.suavizado = 3` |
+
+### Escenas
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `escena.nombre` | El nombre de la escena actual. | `mostrar(escena.nombre)` |
+| `escena.cambiar("Nombre", fundido)` | Cambia a otra escena. | `escena.cambiar("Nivel2")` |
+| `escena.reiniciar()` | Vuelve a empezar la escena actual desde el principio. | `escena.reiniciar()` |
+| `escena.colorFondo` | El color del fondo de la escena. | `escena.colorFondo = "azul"` |
+
+### Interfaz y dibujo en la pantalla
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `yo.fijo` | Si es verdadero, se queda pegado a la pantalla (interfaz: vida, puntos, botones). | `yo.fijo = verdadero` |
+| `pantalla.ancho` | Ancho de la pantalla del juego en píxeles. | `yo.x = pantalla.ancho / 2` |
+| `pantalla.alto` | Alto de la pantalla del juego en píxeles. | `yo.y = pantalla.alto - 30` |
+| `pantalla.completa` | Pantalla completa: verdadero para ponerla, falso para quitarla. | `pantalla.completa = verdadero` |
+| `dibujar.linea(x1, y1, x2, y2, color, grosor)` | Una línea de un punto a otro. | `dibujar.linea(0, 0, 100, 100, "rojo")` |
+| `dibujar.circulo(x, y, radio, color, relleno)` | Un círculo (solo el borde; con verdadero al final, relleno). | `dibujar.circulo(yo.x, yo.y, 50, "verde")` |
+| `dibujar.rectangulo(x, y, ancho, alto, color, relleno)` | Un rectángulo con su centro en (x, y), como los objetos. | `dibujar.rectangulo(yo.x, yo.y, 64, 64, "azul")` |
+| `dibujar.texto(texto, x, y, color, tamano)` | Un texto en ese sitio del mundo (por ejemplo, encima de un enemigo). | `dibujar.texto("Hola", yo.x, yo.y + 40)` |
+| `dibujar.arco(x, y, radio, desde, hasta, color, relleno, grosor)` | Un trozo de circulo de un angulo a otro, en grados (0 = derecha, 90 = arriba, y se cuenta al reves que las agujas del reloj). | `dibujar.arco(yo.x, yo.y, 30, 90, 180, "blanco", verdadero)` |
+| `dibujar.enPantalla` | Lo mismo, pero en la PANTALLA, como la interfaz: (0, 0) es la esquina de abajo a la izquierda y no se mueve con la camara. | `dibujar.enPantalla.rectangulo(120, 500, 200, 16, "rojo", verdadero)` |
+| `dibujar.enPantalla.linea(x1, y1, x2, y2, color, grosor)` | Una linea en la pantalla. | `dibujar.enPantalla.linea(0, 270, 960, 270, "blanco")` |
+| `dibujar.enPantalla.circulo(x, y, radio, color, relleno)` | Un circulo en la pantalla. | `dibujar.enPantalla.circulo(60, 60, 30, "blanco")` |
+| `dibujar.enPantalla.rectangulo(x, y, ancho, alto, color, relleno)` | Un rectangulo con el centro en (x, y) de la pantalla. | `dibujar.enPantalla.rectangulo(110, 500, 200, 16, "rojo", verdadero)` |
+| `dibujar.enPantalla.texto(texto, x, y, color, tamano)` | Un texto en la pantalla. | `dibujar.enPantalla.texto("Vida", 20, 500, "blanco")` |
+| `dibujar.enPantalla.arco(x, y, radio, desde, hasta, color, relleno, grosor)` | Un trozo de circulo en la pantalla (quesito si relleno = verdadero). | `dibujar.enPantalla.arco(60, 60, 30, 90, 270, "gris", verdadero)` |
+| `yo.ponerDelante()` | Se dibuja por encima de todos los demás (cambia su capa). | `yo.ponerDelante()` |
+| `yo.ponerDetras()` | Se dibuja por debajo de todos los demás. | `yo.ponerDetras()` |
+| `yo.ocultar()` | Deja de verse (sigue existiendo y chocando). | `yo.ocultar()` |
+| `yo.aparecer()` | Vuelve a verse. | `yo.aparecer()` |
+| `yo.parpadear(segundos, vecesPorSegundo)` | Se enciende y se apaga durante esos segundos (1 si no se dice) y al final se queda visible. | `yo.parpadear(1)` |
+| `yo.pegarA(otro)` | Se pega a otro objeto (su «padre»): a partir de ahora se mueve con él. | `otro.pegarA(yo)` |
+| `yo.soltar()` | Se despega de su padre y vuelve a moverse solo. | `yo.soltar()` |
+| `yo.padre` | El objeto al que está pegado (o nulo). | `si yo.padre != nulo:` |
+| `yo.hijos` | La lista de los objetos pegados a este. | `para cada h en yo.hijos:` |
+
+### Sonido y música
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `sonido.reproducir("nombre", volumen, tono)` | Reproduce un sonido del proyecto. | `sonido.reproducir("salto", 0.5)` |
+| `sonido.bucle("nombre", volumen)` | Reproduce un sonido una y otra vez, hasta que se pare con sonido.parar("nombre"). | `sonido.bucle("motor", 0.4)` |
+| `sonido.parar("nombre")` | Para un sonido (o todos, sin nombre). | `sonido.parar("motor")` |
+| `sonido.sonando("nombre")` | Verdadero si ese sonido está sonando ahora. | `si sonido.sonando("motor"):` |
+| `sonido.pausar()` | Congela TODO el sonido (efectos y música) sin perder por dónde iba. | `sonido.pausar()` |
+| `sonido.seguir()` | Sigue el sonido que se había pausado con sonido.pausar(). | `sonido.seguir()` |
+| `sonido.tono(frecuencia, segundos)` | Un pitido generado, sin archivos. | `sonido.tono(440, 0.2)` |
+| `sonido.volumen` | Volumen de los efectos, de 0 a 1. | `sonido.volumen = 0.5` |
+| `musica.reproducir("nombre", fundido)` | Pone una música en bucle (para la anterior). | `musica.reproducir("tema")` |
+| `musica.parar(fundido)` | Para la música. | `musica.parar(2)` |
+| `musica.pausar()` | Pone la música en pausa (recuerda por dónde iba). | `musica.pausar()` |
+| `musica.seguir()` | Sigue la música por donde iba. | `musica.seguir()` |
+| `musica.volumen` | Volumen de la música, de 0 a 1. | `musica.volumen = 0.3` |
+| `musica.actual` | El nombre de la música que suena (o nulo). | `si musica.actual == nulo:` |
+
+### Tiempo y temporizadores
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `cuando cada 2 segundos` | Se ejecuta una y otra vez, cada cierto tiempo. | `cuando cada 2 segundos:` |
+| `cuando pasen 3 segundos` | Se ejecuta UNA sola vez, ese tiempo después de que aparezca el objeto. | `cuando pasen 3 segundos:` |
+| `esperar(segundos)` | Pausa ESTE evento un rato, sin parar el juego. | `esperar(1)` |
+| `cronometro()` | Un cronómetro nuevo, que empieza a contar ya. | `variable crono = cronometro()` |
+| `tiempo.total` | Segundos que lleva funcionando el juego. | `mostrar(tiempo.total)` |
+| `tiempo.escala` | La velocidad del tiempo: 1 = normal, 0.5 = cámara lenta, 2 = el doble de rápido, 0 = pausa. | `tiempo.escala = 0.5` |
+| `tiempo.pausado` | Verdadero si el juego está en pausa (tiempo.pausar()). | `si tiempo.pausado:` |
+| `tiempo.pausar()` | Pone el juego en pausa: todo se para (física, animaciones, cronómetros), pero las teclas siguen funcionando para poder quitarla. | `tiempo.pausar()` |
+| `tiempo.seguir()` | Quita la pausa. | `tiempo.seguir()` |
+| `tiempo.fps` | Fotogramas por segundo: cuántas veces por segundo se dibuja el juego (60 es lo normal). | `mostrar(tiempo.fps)` |
+
+### Animaciones y partículas
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `yo.animar("nombre")` | Empieza una animación del proyecto. | `yo.animar("correr")` |
+| `yo.animacion` | La animación que suena ahora (o nulo). | `yo.animacion = "correr"` |
+| `yo.pararAnimacion()` | Para la animación (se queda en el fotograma actual). | `yo.pararAnimacion()` |
+| `cuando termina la animacion` | Se ejecuta cuando termina una animación que no se repite. | `cuando termina la animacion:` |
+| `particulas("tipo", x, y)` | Crea un efecto de partículas. | `particulas("explosion", yo.x, yo.y)` |
+
+## Nivel 4: Avanzado
+
+### Mensajes entre objetos y datos globales
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `enviar("mensaje", dato)` | Avisa a todos los objetos que tengan 'cuando recibo "mensaje"'. | `enviar("abrir_puerta")` |
+| `cuando recibo "mensaje"` | Se ejecuta cuando alguien hace enviar("mensaje") en cualquier script (le llega a TODOS los que lo escuchen, al empezar el siguiente fotograma). | `cuando recibo "abrir_puerta":` |
+| `dato` | Dentro de 'cuando recibo': lo que se envio junto al mensaje con enviar("mensaje", dato). | `yo.vida -= dato` |
+| `juego` | Datos compartidos por todos los scripts (puntos, vidas...). | `juego.puntos += 1` |
+| `aLaVez(funcion, valores...)` | Empieza a ejecutar una funcion POR SU CUENTA, como si fuera otro evento: quien la llama sigue sin esperar a que acabe. | `aLaVez(lluvia, 10)` |
+
+### Ir a sitios esquivando paredes
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `yo.irHacia(destino, rapidez)` | Va hasta un sitio o detras de un objeto (lo sigue aunque se mueva), RODEANDO las paredes del mapa de casillas si el juego se ve desde arriba. | `yo.irHacia(jugador, 120)` |
+| `yo.parar()` | Deja de ir a donde iba (irHacia, irA) y se queda quieto. | `yo.parar()` |
+| `yo.yendo` | Verdadero mientras va hacia el sitio de yo.irHacia(). | `si no yo.yendo:` |
+| `yo.atravesar("Nombre")` | Deja de chocar con los objetos de ese nombre, tipo o etiqueta: pasa a traves de ellos. | `yo.atravesar("Enemigo")` |
+| `yo.dejarDeAtravesar("Nombre")` | Vuelve a chocar con los objetos de ese nombre, tipo o etiqueta. | `yo.dejarDeAtravesar("Enemigo")` |
+
+### Rayos y diálogos
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `rayo(desde, direccion, largo)` | Lanza una linea invisible y dice lo primero que toca (un objeto con colision o una casilla solida), o nulo. | `variable r = rayo(yo, jugador, 400)` |
+| `dialogo("quien", "texto", opciones)` | Una caja de dialogo abajo de la pantalla: el texto sale letra a letra y se pasa con espacio, intro o clic. | `dialogo("Ana", "Hola")` |
+
+### Animar valores
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `animar(sitio, hasta, segundos, suavizado)` | Cambia algo POCO A POCO hasta un valor en esos segundos (0.5 si no se dice): la posición, el tamaño, el giro, la opacidad, un color... | `animar(yo.x, 300, 1)` |
+| `interpolar(desde, hasta, cuanto)` | Un valor entre dos: con 0 da el primero, con 1 el segundo, con 0.5 el de en medio. | `yo.x = interpolar(yo.x, raton.x, 0.1)` |
+| `ruido(x, y)` | Un número entre 0 y 1 «al azar pero suave»: cambia poco a poco al cambiar x. | `yo.y = 200 + ruido(tiempo.total) * 100` |
+
+### Efectos: fundidos, sonidos y cámara lenta
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `pantalla.oscurecer(segundos, color, cuanto)` | Fundido: la pantalla se va poniendo de un color (negro si no se dice) durante esos segundos. | `pantalla.oscurecer(1)` |
+| `pantalla.aclarar(segundos)` | Quita el fundido poco a poco. | `pantalla.aclarar(1)` |
+| `sonido.efecto("nombre", volumen, tono)` | Un efecto de sonido que se GENERA solo, sin archivos: disparo, laser, explosion, golpe, salto, moneda, poder, dash, escudo, hielo, fuego, rayo, subir, perder, clic, alarma, dano. | `sonido.efecto("explosion")` |
+| `tiempo.camaraLenta(velocidad, segundos)` | Cámara lenta durante un rato y luego vuelve sola a la normalidad. | `tiempo.camaraLenta(0.3, 1)` |
+
+### Mando, móvil y web
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `mando.conectado` | Verdadero si hay un mando conectado. | `si mando.conectado:` |
+| `mando.ejeX` | La palanca izquierda de lado: de -1 (izquierda) a 1 (derecha). | `yo.x += mando.ejeX * 300 * delta` |
+| `mando.ejeY` | La palanca izquierda de arriba abajo: de -1 (abajo) a 1 (arriba). | `yo.y += mando.ejeY * 300 * delta` |
+| `mando.ejeDerechoX` | La palanca derecha de lado (de -1 a 1). | `mostrar(mando.ejeDerechoX)` |
+| `mando.ejeDerechoY` | La palanca derecha de arriba abajo (de -1 a 1). | `mostrar(mando.ejeDerechoY)` |
+| `mando.pulsado("boton")` | Verdadero mientras el boton esta pulsado. | `si mando.pulsado("a"):` |
+| `mando.sePulso("boton")` | Verdadero solo en el fotograma en que se pulsa el boton. | `si mando.sePulso("a"):` |
+| `mando.vibrar(segundos, fuerza)` | Hace vibrar el mando (fuerza de 0 a 1). | `mando.vibrar(0.3)` |
+| `sistema.movil` | Verdadero si se está jugando en un móvil o una tableta (con pantalla táctil). | `si sistema.movil:` |
+| `sistema.abrirWeb("direccion")` | Abre una página web en otra pestaña (por ejemplo, la de tu juego en itch.io). | `sistema.abrirWeb("https://itch.io")` |
+
+### Guardar datos
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `guardar("clave", valor)` | Guarda un dato del jugador en el navegador (se conserva al cerrar el juego): récords, niveles, opciones... | `guardar("record", puntos)` |
+| `cargar("clave", porDefecto)` | Lee un dato guardado con guardar(). | `variable record = cargar("record", 0)` |
+| `borrarGuardado("clave")` | Borra un dato guardado. | `borrarGuardado("record")` |

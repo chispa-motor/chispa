@@ -240,6 +240,12 @@ quieras de ellos en tus juegos, sin pedir permiso.
   lo hace, la licencia y los créditos) y **Apoya Chispa**, por si quieres
   ayudar a que siga creciendo.
 
+¿Quieres aprender de verdad, paso a paso? Sigue el curso
+**[APRENDE_CHISPA.md](APRENDE_CHISPA.md)**: 4 niveles, cada comando con un
+ejemplo y el error que más se comete, ejercicios y un mini proyecto por nivel.
+Para buscar algo rápido, la **[chuleta](CHULETA_CHISPA.md)** (una línea por
+comando; también hay botones para los dos arriba de la pestaña **Guía**).
+
 Todo el lenguaje, con un ejemplo de cada cosa, está en **MANUAL_CHISPA.md**
 (y en la pestaña **Guía** del editor). Un juego grande hecho solo con Chispa,
 para ver hasta dónde se puede llegar, está en

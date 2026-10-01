@@ -167,6 +167,7 @@ el error de siempre.
 | Crear 900 000 objetos | 12 segundos congelado | máximo 10 000 objetos en una escena |
 | 900 000 `aLaVez` | 14 segundos congelado | máximo 5 000 cosas a la vez por objeto |
 | 900 000 `enviar` | 4 segundos congelado | máximo 10 000 mensajes por fotograma |
+| `clonar(yo)` (o una plantilla que se crea a sí misma) en «cuando empieza» | error de JavaScript («Maximum call stack size exceeded») y el juego se rompía | «Al aparecer, «X» crea otro objeto en su «cuando empieza», y ese otro crea otro... sin parar» (máximo 40 seguidos) |
 
 Todos los límites están en un solo sitio cada uno y dan un error en español
 con una pista: «¿Hay un bucle que va juntando texto sin parar?». La pila de

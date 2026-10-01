@@ -348,3 +348,13 @@ Ver PROBLEMAS_PRINCIPIANTE.md para la lista completa de lo que se encontró.
 | La **versión 1.0.0**, con versionado semántico (explicado en `src/version.ts`). Sale en la Ayuda, en «Acerca de Chispa» y en cada juego exportado (`<meta name="generator">`). Un test vigila que sea la misma que en package.json. | Así quien avisa de un fallo puede decir con qué versión le pasa, y un juego exportado dice con qué Chispa se hizo. |
 | «Acerca de Chispa» y «Apoya Chispa» están **dentro de la ventana de Ayuda**, en una fila al final (con la versión), y no en la barra de arriba. | La barra es para hacer juegos. Quien busca información la busca en la Ayuda. |
 | «Apoya Chispa» **solo** hace algo al pulsarlo. Con enlace, lo abre en otra pestaña; **sin enlace todavía**, da las gracias y cuenta otras formas de ayudar (en vez de esconder el botón). Nunca hay avisos de donación que salten solos, ni en el editor ni en los juegos exportados (un test lo vigila). | Se pidió así. Esconder el botón haría pensar que falta; así se ve dónde irá el enlace. |
+
+## Curso y chuleta
+
+| Decisión | Por qué |
+|---|---|
+| APRENDE_CHISPA.md y CHULETA_CHISPA.md **se generan** (como el manual) desde `src/chispa/api/curso.ts` y la API de verdad (`documentacion.ts`), con `npm run manual`. | Así nunca se quedan atrás: un test falla si se añade un comando a la API y no está en el curso, o si alguien cambia el .md a mano. La frase de «qué hace» sale de la propia ficha de la API. |
+| Un test **ejecuta** cada ejemplo, cada línea de la chuleta, cada solución de ejercicio y cada mini proyecto en un juego de prueba, y exige cero errores. | Se pidió que los ejemplos funcionen de verdad, no que lo parezcan. |
+| Cada «error típico» dice si Chispa avisa (error) o si es de lógica (funciona, pero hace otra cosa), y el test lo comprueba en los dos sentidos. | Varios errores que «parecían» errores no lo eran (Chispa acepta `empiece`, por ejemplo); el curso no puede prometer un aviso que no sale. |
+| Los ejemplos de la chuleta usan unas variables comunes (`vida`, `lista`, `jugador`...) que se enseñan una vez al principio. | Una línea por comando no da para declararlo todo; así cada ejemplo cabe en una línea y sigue funcionando. |
+| Arreglado de paso: un objeto que se clona a sí mismo (o una plantilla que se crea a sí misma) en «cuando empieza» ya no rompe el juego con un desbordamiento: a los 40 niveles de creaciones una dentro de otra, Chispa para con un error que lo explica. | Lo encontró el test del curso. Antes el navegador se quedaba sin pila y el juego moría sin decir nada útil. |

@@ -74,6 +74,16 @@ export interface OpcionesJuego {
 }
 
 /** Lo que hay que hacer al empezar el siguiente fotograma. `espera`: segundos que faltan (mientras se oscurece la pantalla). */
+/** Objetos creados uno dentro del «cuando empieza» del anterior, seguidos (ver agregarConScript). */
+export const LIMITE_CREAR_DENTRO = 40;
+
+function errorCrearSinFin(nombre: string): ErrorMotor {
+  return new ErrorMotor(
+    `Al aparecer, «${nombre}» crea otro objeto en su «cuando empieza», y ese otro crea otro... sin parar (más de ${LIMITE_CREAR_DENTRO} seguidos).`,
+    '¿Hay un clonar(yo), o un crear() de su misma plantilla, dentro de «cuando empieza»? Cada copia vuelve a hacerlo. Si quieres muchas copias, créalas desde otro objeto con un bucle, o con «cuando cada 1 segundo».',
+  );
+}
+
 /** Mensajes (enviar) que se pueden mandar en un fotograma. */
 export const LIMITE_MENSAJES = 10_000;
 
@@ -436,8 +446,23 @@ export class JuegoEnMarcha implements ContextoJuego {
     this.textoConHuecos(o, def);
     // agregar() a la escena al final: si la escena ya está en marcha, esto
     // arranca el script (y lanza su "cuando empieza") con todo ya montado.
-    return this.escena.agregar(o);
+    // Si ese «cuando empieza» crea otro objeto igual (clonar(yo), o crear su
+    // misma plantilla), ese otro crea otro... sin fin: se corta con un error claro.
+    if (this.creandoDentro >= LIMITE_CREAR_DENTRO) throw errorCrearSinFin(o.nombre);
+    this.creandoDentro++;
+    try {
+      return this.escena.agregar(o);
+    } catch (e) {
+      // La pila de JavaScript se llenó antes del límite (pasa en algunos navegadores)
+      if (e instanceof RangeError && /stack|recursion/i.test(e.message)) throw errorCrearSinFin(o.nombre);
+      throw e;
+    } finally {
+      this.creandoDentro--;
+    }
   }
+
+  /** Objetos que se están creando uno dentro del «cuando empieza» de otro, ahora mismo. */
+  private creandoDentro = 0;
 
   /**
    * Si el texto del objeto tiene huecos ("Puntos: {juego.puntos}"), se

@@ -20,6 +20,7 @@
  *   - DEPURAR: dónde está parado el juego y lo que valen las variables.
  */
 import { DOC_ESPECIALES, DOC_EVENTOS, DOC_FUNCIONES, DOC_MODULOS, DOC_OBJETO, DOC_PALABRAS, DOC_VALORES, RECETAS, type Doc, type Receta } from '../../chispa/api/documentacion';
+import { enlaceAlRepositorio } from '../acerca';
 import { explicarPila, type Diagnostico } from '../../chispa/errores/ErrorChispa';
 import { revisarProyecto } from '../../proyecto/Revision';
 import { normalizar } from '../../utilidades/texto';
@@ -251,7 +252,14 @@ export class PanelInferior {
       pintar();
     });
     pintar();
-    rellenar(this.guia, h('div', { class: 'cabecera-guia' }, icono('lupa', 16), buscador), resultados);
+    // Para aprender con calma: el curso por niveles y la chuleta (se abren en otra pestaña)
+    const enlace = (texto: string, archivo: string, titulo: string) =>
+      h('a', { class: 'enlace-guia', href: enlaceAlRepositorio(archivo), target: '_blank', rel: 'noopener noreferrer', title: titulo }, texto);
+    const aprender = h('div', { class: 'aprender-guia' },
+      enlace('📘 Curso: Aprende Chispa', 'APRENDE_CHISPA.md', 'El curso por niveles, desde cero, con ejercicios y mini proyectos'),
+      enlace('📄 Chuleta', 'CHULETA_CHISPA.md', 'Todos los comandos, una línea cada uno (para tenerla abierta o imprimirla)'),
+    );
+    rellenar(this.guia, h('div', { class: 'cabecera-guia' }, icono('lupa', 16), buscador, aprender), resultados);
   }
 
   private receta(r: Receta): HTMLElement {

@@ -253,6 +253,19 @@ describe('Límites: ningún juego puede congelar o llenar la memoria del navegad
     }
   });
 
+  it('un objeto que se clona (o crea su misma plantilla) en «cuando empieza» no rompe el juego: error claro', () => {
+    for (const [scripts, plantillas] of [
+      [{ 'a.chs': 'cuando empieza:\n    clonar(yo)' }, {}],
+      [{ 'a.chs': 'cuando empieza:\n    yo.clonar()' }, {}],
+      [{ 'a.chs': 'cuando empieza:\n    crear("B", 0, 0)', 'b.chs': 'cuando empieza:\n    crear("B", 0, 0)' }, { B: { script: 'b.chs' } }],
+    ] as const) {
+      const j = juegoDePrueba({ scripts: { ...scripts }, plantillas: { ...plantillas }, escena: [{ nombre: 'A', script: 'a.chs' }] });
+      j.avanzar(2);
+      expect(j.errores.map((e) => e.error.message).join()).toMatch(/crea otro objeto en su «cuando empieza», y ese otro crea otro/);
+      expect(j.errores.every((e) => e.error instanceof ErrorChispa)).toBe(true);
+    }
+  });
+
   it('millones de objetos, de hilos (aLaVez) o de mensajes', () => {
     const casos: [string, RegExp][] = [
       ['repetir 900000 veces:\n        crear("B", 0, 0)', new RegExp(`${LIMITE_OBJETOS.toLocaleString('es')} objetos`)],

@@ -14,7 +14,7 @@
     "pruebas:vigilar": "vitest",
     "lineas": "node herramientas/contar-lineas.mjs",
     "pruebas:navegador": "npm run build && node pruebas-navegador/editor.mjs",
-    "manual": "vitest run pruebas/manual.test.ts -u",
+    "manual": "vitest run pruebas/manual.test.ts pruebas/curso.test.ts -u",
     "licencias": "node herramientas/licencias.mjs",
     "cabeceras": "node herramientas/cabeceras.mjs",
     "capturas": "node herramientas/capturas.mjs"
