@@ -21,11 +21,13 @@ import { abrirEditorAnimacion } from '../recursos/EditorAnimaciones';
 import { importarArchivos, resumenImportar } from '../recursos/importar';
 import type { DefObjeto } from '../../proyecto/formato';
 import { OBJETOS_NUEVOS, type VistaEscena } from '../escena/VistaEscena';
+import { CATEGORIAS_BIBLIOTECA, buscarEnBiblioteca, type CategoriaBiblioteca } from '../biblioteca/biblioteca';
+import { miniatura } from '../interfaz/iconosFormas';
 import { botonIcono, h, icono, rellenar } from '../interfaz/dom';
 import { confirmar, notificar, pedirTexto } from '../interfaz/dialogos';
 import { tiene } from '../../utilidades/seguro';
 
-type Pestana = 'escena' | 'proyecto';
+type Pestana = 'escena' | 'proyecto' | 'biblioteca';
 
 function iconoDe(def: DefObjeto): string {
   if (def.mapa) return 'mapa';
@@ -72,6 +74,7 @@ export class PanelIzquierdo {
     const e = this.estado;
     const p = e.proyecto;
     const comun = [this.pestana, e.escenaActual, JSON.stringify(e.seleccion), e.seleccionados.join(), e.pestanaActiva, textoPortapapeles(e.portapapeles)];
+    if (this.pestana === 'biblioteca') return JSON.stringify([this.pestana]);
     if (this.pestana === 'escena') {
       return JSON.stringify([comun, Object.keys(p.escenas), p.escenaInicial, e.escena.objetos.map((o) => [o.nombre, o.script, o.script && o.script in p.scripts, iconoDe(o), o.sprite?.fijo, o.plantilla])]);
     }
@@ -91,9 +94,9 @@ export class PanelIzquierdo {
       h('button', { class: `pestana-panel ${this.pestana === p ? 'activa' : ''}`, onclick: () => {
         this.pestana = p;
         this.dibujar();
-      } }, icono(ic, 15), texto);
-    rellenar(this.cabecera, pestana('escena', 'Escena', 'escena'), pestana('proyecto', 'Proyecto', 'carpeta'));
-    rellenar(this.cuerpo, ...(this.pestana === 'escena' ? this.pestanaEscena() : this.pestanaProyecto()));
+      } }, icono(ic, 15), h('span', { class: 'texto-pestana' }, texto));
+    rellenar(this.cabecera, pestana('escena', 'Escena', 'escena'), pestana('proyecto', 'Proyecto', 'carpeta'), pestana('biblioteca', 'Biblioteca', 'libro'));
+    rellenar(this.cuerpo, ...(this.pestana === 'escena' ? this.pestanaEscena() : this.pestana === 'proyecto' ? this.pestanaProyecto() : this.pestanaBiblioteca()));
     this.cuerpo.scrollTop = scroll;
   }
 
@@ -172,6 +175,48 @@ export class PanelIzquierdo {
       objetos.length ? lista : h('p', { class: 'nota' }, 'La escena está vacía. Añade un objeto con los botones de abajo.'),
       h('div', { class: 'titulo-lista' }, h('span', {}, 'Añadir')),
       anadir,
+    ];
+  }
+
+  // ═════════════════════════ Pestaña Biblioteca ═════════════════════════
+
+  private busqueda = '';
+  private categoria: CategoriaBiblioteca | null = null;
+
+  /** Objetos listos: se arrastran a la escena (o se pulsan para ponerlos en el centro). */
+  private pestanaBiblioteca(): HTMLElement[] {
+    const lista = h('div', { class: 'lista-biblioteca' });
+    const pintarLista = () => {
+      const encontrados = buscarEnBiblioteca(this.busqueda, this.categoria);
+      rellenar(lista, ...(encontrados.length
+        ? encontrados.map((el) =>
+            h('button', {
+              class: 'ficha-biblioteca',
+              draggable: 'true',
+              'data-biblioteca': el.id,
+              title: `${el.descripcion}\nArrástralo a la escena (o haz clic para ponerlo en el centro).`,
+              ondragstart: (ev: DragEvent) => ev.dataTransfer?.setData('chispa/biblioteca', el.id),
+              onclick: () => this.vista.anadirDeBiblioteca(el.id),
+            },
+            miniatura(el.objetos[0]?.sprite ?? el.plantillas?.[Object.keys(el.plantillas)[0]]?.sprite),
+            h('span', { class: 'texto-ficha' }, h('strong', {}, el.nombre), h('span', {}, el.descripcion)),
+            ))
+        : [h('p', { class: 'nota' }, `No hay nada con «${this.busqueda}». Prueba con otra palabra: jugador, enemigo, moneda...`)]));
+    };
+    const buscador = h('input', { type: 'search', class: 'campo buscador-biblioteca', placeholder: 'Buscar: moneda, enemigo, saltar…', value: this.busqueda, 'aria-label': 'Buscar en la biblioteca', oninput: () => {
+      this.busqueda = buscador.value;
+      pintarLista();
+    } });
+    const chip = (c: CategoriaBiblioteca | null, texto: string) =>
+      h('button', { class: `chip ${this.categoria === c ? 'activo' : ''}`, onclick: () => {
+        this.categoria = c;
+        this.dibujar();
+      } }, texto);
+    pintarLista();
+    return [
+      buscador,
+      h('div', { class: 'chips-biblioteca' }, chip(null, 'Todo'), CATEGORIAS_BIBLIOTECA.map((c) => chip(c, c))),
+      lista,
     ];
   }
 

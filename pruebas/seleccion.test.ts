@@ -293,6 +293,7 @@ describe('Deshacer y rehacer: TODO lo que cambia el proyecto', () => {
     },
     cambiarCamino: (e) => e.cambiarCamino(obj(0), [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }], true),
     convertirEnImagen: (e) => e.convertirEnImagen(obj(2), imagenPrueba('forma')),
+    insertarDeBiblioteca: (e) => e.insertarDeBiblioteca('nave', 0, 0),
   };
 
   for (const [nombre, cambio] of Object.entries(cambios)) {

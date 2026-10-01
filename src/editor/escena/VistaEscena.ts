@@ -36,6 +36,7 @@ import type { DefObjeto } from '../../proyecto/formato';
 import type { EstadoEditor, TipoNuevoObjeto } from '../estado/EstadoEditor';
 import { iconoForma } from '../interfaz/iconosFormas';
 import { abrirEditorPluma } from '../recursos/EditorPluma';
+import { BIBLIOTECA } from '../biblioteca/biblioteca';
 import { FORMAS_DIBUJO, type Forma } from '../../objetos/formas/figuras';
 import { botonIcono, h, icono } from '../interfaz/dom';
 import { notificar } from '../interfaz/dialogos';
@@ -235,6 +236,23 @@ export class VistaEscena {
     for (let i = 0; i < 20 && ocupado(x); i++) x += 80;
     this.estado.crearObjeto(tipo, x, y, undefined, forma);
     if (tipo === 'mapa') this.ponerHerramienta('pincel');
+    this.canvas.focus();
+  }
+
+  /** Pone un objeto de la biblioteca en el centro de lo que se ve. */
+  anadirDeBiblioteca(id: string): void {
+    const x = this.iman ? ajustar(this.camara.x, PASO_IMAN) : Math.round(this.camara.x);
+    const y = this.iman ? ajustar(this.camara.y, PASO_IMAN) : Math.round(this.camara.y);
+    this.ponerDeBiblioteca(id, x, y);
+  }
+
+  private ponerDeBiblioteca(id: string, x: number, y: number): void {
+    const nuevos = this.estado.insertarDeBiblioteca(id, x, y);
+    const el = BIBLIOTECA.find((b) => b.id === id);
+    if (!nuevos.length && el?.plantillas) {
+      const nombres = Object.keys(el.plantillas);
+      notificar(`Plantilla ${nombres.map((n) => `«${n}»`).join(', ')} añadida (en Proyecto > Plantillas). Créala desde el código: crear("${nombres[0]}", x, y)`, 'ok');
+    }
     this.canvas.focus();
   }
 
@@ -921,7 +939,9 @@ export class VistaEscena {
       if (!dt) return;
       const plantilla = dt.getData('chispa/plantilla');
       const imagen = dt.getData('chispa/imagen');
-      if (plantilla) this.estado.colocarPlantilla(plantilla, m.x, m.y);
+      const biblioteca = dt.getData('chispa/biblioteca');
+      if (biblioteca) this.ponerDeBiblioteca(biblioteca, m.x, m.y);
+      else if (plantilla) this.estado.colocarPlantilla(plantilla, m.x, m.y);
       else if (imagen) this.estado.crearObjeto('imagen', m.x, m.y, imagen);
       else {
         // Los sonidos soltados en la escena se importan (no se pueden «colocar»)

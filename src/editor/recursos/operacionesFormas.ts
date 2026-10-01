@@ -51,7 +51,7 @@ export function formaEnElMundo(def: DefObjeto): MultiPolygon {
   const f = figuraDe(datosDe(s, def.escala ?? 1));
   const mover = (p: Punto[]) => aMundo(p, def.x ?? 0, def.y ?? 0, def.rotacion ?? 0, s.voltear ?? false, false).map((q): [number, number] => [q.x, q.y]);
   // Un camino abierto (una línea) no tiene relleno: se usan sus trozos gruesos
-  const poligonos: Punto[][][] = f.trazo ? f.piezas.map((p) => [p]) : f.anillos;
+  const poligonos: Punto[][][] = f.trazo ? f.piezas.filter((p): p is Punto[] => Array.isArray(p)).map((p) => [p]) : f.anillos;
   return poligonos.map((pol) => pol.map((anillo) => cerrarAnillo(mover(anillo))));
 }
 

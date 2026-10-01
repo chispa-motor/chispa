@@ -22,6 +22,16 @@
 import type { Caja } from '../componentes/Colision';
 import type { Poligono } from './figuras';
 
+/** Un círculo de verdad (los círculos chocan como círculos, no como polígonos: es más exacto y mucho más rápido). */
+export interface Circulo {
+  x: number;
+  y: number;
+  r: number;
+}
+/** Una pieza convexa: un polígono o un círculo. */
+export type Pieza = Poligono | Circulo;
+export const esCirculo = (p: Pieza): p is Circulo => !Array.isArray(p);
+
 export interface Choque {
   /** Cuánto se meten una en otra (píxeles). */
   profundidad: number;
@@ -31,12 +41,19 @@ export interface Choque {
 }
 
 /** La caja que ocupan unas piezas. */
-export function cajaDePiezas(piezas: Poligono[]): Caja {
+export function cajaDePiezas(piezas: Pieza[]): Caja {
   let izquierda = Infinity;
   let derecha = -Infinity;
   let abajo = Infinity;
   let arriba = -Infinity;
   for (const p of piezas) {
+    if (esCirculo(p)) {
+      izquierda = Math.min(izquierda, p.x - p.r);
+      derecha = Math.max(derecha, p.x + p.r);
+      abajo = Math.min(abajo, p.y - p.r);
+      arriba = Math.max(arriba, p.y + p.r);
+      continue;
+    }
     for (const q of p) {
       if (q.x < izquierda) izquierda = q.x;
       if (q.x > derecha) derecha = q.x;
@@ -58,7 +75,93 @@ export function cajaComoPieza(c: Caja): Poligono {
 }
 
 /** Choque entre dos piezas convexas (null si no se tocan). `margen` > 0 cuenta como tocar si están a esa distancia. */
-export function choquePiezas(a: Poligono, b: Poligono, margen = 0): Choque | null {
+export function choquePiezas(a: Pieza, b: Pieza, margen = 0): Choque | null {
+  if (esCirculo(a) && esCirculo(b)) return choqueCirculos(a, b, margen);
+  if (esCirculo(a)) return choqueCirculoPoligono(a, b as Poligono, margen);
+  if (esCirculo(b)) {
+    const c = choqueCirculoPoligono(b, a, margen);
+    return c && { profundidad: c.profundidad, nx: -c.nx, ny: -c.ny };
+  }
+  return choquePoligonos(a, b, margen);
+}
+
+/**
+ * Un círculo contra una caja (sin girar), sin crear nada por el camino: es el
+ * choque más común (pelotas contra suelos y paredes), así que va aparte.
+ */
+export function choqueCirculoCaja(cx: number, cy: number, r: number, c: Caja, margen = 0): Choque | null {
+  const px = Math.min(Math.max(cx, c.izquierda), c.derecha);
+  const py = Math.min(Math.max(cy, c.abajo), c.arriba);
+  const dx = cx - px;
+  const dy = cy - py;
+  const d2 = dx * dx + dy * dy;
+  if (d2 > 0) {
+    const d = Math.sqrt(d2);
+    if (d > r + margen) return null;
+    return { profundidad: r - d, nx: dx / d, ny: dy / d };
+  }
+  // El centro está dentro de la caja: sale por el lado más cercano
+  const opciones = [cx - c.izquierda, c.derecha - cx, cy - c.abajo, c.arriba - cy];
+  const i = opciones.indexOf(Math.min(...opciones));
+  const n = [[-1, 0], [1, 0], [0, -1], [0, 1]][i];
+  return { profundidad: opciones[i] + r, nx: n[0], ny: n[1] };
+}
+
+export function choqueCirculos(a: Circulo, b: Circulo, margen: number): Choque | null {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  const d = Math.hypot(dx, dy);
+  const profundidad = a.r + b.r - d;
+  if (profundidad < -margen) return null;
+  return d > 1e-9 ? { profundidad, nx: dx / d, ny: dy / d } : { profundidad, nx: 0, ny: 1 };
+}
+
+/** Un círculo contra un polígono: los ejes del polígono y el que va del vértice más cercano al centro del círculo. */
+function choqueCirculoPoligono(c: Circulo, pol: Poligono, margen: number): Choque | null {
+  let mejor = Infinity;
+  let nx = 0;
+  let ny = 0;
+  const probar = (ex: number, ey: number): boolean => {
+    const centro = c.x * ex + c.y * ey;
+    const [minB, maxB] = proyectar(pol, ex, ey);
+    const solape = Math.min(centro + c.r - minB, maxB - (centro - c.r));
+    if (solape < -margen) return false;
+    if (solape < mejor) {
+      mejor = solape;
+      nx = ex;
+      ny = ey;
+    }
+    return true;
+  };
+  let cercano = pol[0];
+  let dmin = Infinity;
+  for (let i = 0; i < pol.length; i++) {
+    const p = pol[i];
+    const q = pol[(i + 1) % pol.length];
+    const l = Math.hypot(q.x - p.x, q.y - p.y);
+    if (l > 1e-9 && !probar(-(q.y - p.y) / l, (q.x - p.x) / l)) return null;
+    const d = (p.x - c.x) ** 2 + (p.y - c.y) ** 2;
+    if (d < dmin) {
+      dmin = d;
+      cercano = p;
+    }
+  }
+  const l = Math.sqrt(dmin);
+  if (l > 1e-9 && !probar((c.x - cercano.x) / l, (c.y - cercano.y) / l)) return null;
+  let cx = 0;
+  let cy = 0;
+  for (const q of pol) {
+    cx += q.x;
+    cy += q.y;
+  }
+  if ((c.x - cx / pol.length) * nx + (c.y - cy / pol.length) * ny < 0) {
+    nx = -nx;
+    ny = -ny;
+  }
+  return { profundidad: mejor, nx, ny };
+}
+
+function choquePoligonos(a: Poligono, b: Poligono, margen: number): Choque | null {
   let mejor = Infinity;
   let nx = 0;
   let ny = 0;
@@ -94,7 +197,7 @@ export function choquePiezas(a: Poligono, b: Poligono, margen = 0): Choque | nul
 }
 
 /** El choque más profundo entre dos figuras hechas de piezas (null si no se tocan). */
-export function choqueFiguras(a: Poligono[], b: Poligono[], margen = 0): Choque | null {
+export function choqueFiguras(a: Pieza[], b: Pieza[], margen = 0): Choque | null {
   let peor: Choque | null = null;
   for (const pa of a) {
     for (const pb of b) {
@@ -106,7 +209,7 @@ export function choqueFiguras(a: Poligono[], b: Poligono[], margen = 0): Choque 
 }
 
 /** ¿Se tocan (o están a menos de `margen`)? */
-export function seTocanFiguras(a: Poligono[], b: Poligono[], margen = 0): boolean {
+export function seTocanFiguras(a: Pieza[], b: Pieza[], margen = 0): boolean {
   for (const pa of a) for (const pb of b) if (choquePiezas(pa, pb, margen)) return true;
   return false;
 }

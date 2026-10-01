@@ -14,7 +14,7 @@
 import { describe, expect, it } from 'vitest';
 import { ModeloPluma, abrirEditorPluma } from '../src/editor/recursos/EditorPluma';
 import { caminoDeForma, combinarFormas, encajarCamino, simplificar } from '../src/editor/recursos/operacionesFormas';
-import { areaConSigno, figuraDe } from '../src/objetos/formas/figuras';
+import { areaDePieza, figuraDe } from '../src/objetos/formas/figuras';
 import { EstadoEditor } from '../src/editor/estado/EstadoEditor';
 import { Inspector } from '../src/editor/paneles/Inspector';
 import type { VistaEscena } from '../src/editor/escena/VistaEscena';
@@ -77,7 +77,7 @@ describe('La pluma (el modelo)', () => {
 
 describe('Operaciones con formas', () => {
   const cuadrado = (x: number, y: number, lado = 100, extra: Partial<DefObjeto> = {}): DefObjeto => ({ x, y, sprite: { forma: 'rectangulo', ancho: lado, alto: lado, color: 'rojo' }, colision: {}, ...extra });
-  const area = (d: DefObjeto) => figuraDe({ forma: 'camino', ancho: d.sprite!.ancho!, alto: d.sprite!.alto!, figuras: d.sprite!.figuras }).piezas.reduce((s, p) => s + areaConSigno(p), 0);
+  const area = (d: DefObjeto) => figuraDe({ forma: 'camino', ancho: d.sprite!.ancho!, alto: d.sprite!.alto!, figuras: d.sprite!.figuras }).piezas.reduce((s, p) => s + areaDePieza(p), 0);
 
   it('unir dos cuadrados que se pisan da una forma con el área de los dos menos lo que comparten', () => {
     const u = combinarFormas([cuadrado(0, 0), cuadrado(50, 0)], 'unir')!;

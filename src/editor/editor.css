@@ -213,6 +213,10 @@ select.campo-bloque { border-radius: 6px; font-family: inherit; font-weight: 600
 .pestana-panel { display: inline-flex; align-items: center; gap: 6px; height: 100%; padding: 0 10px; border: none; background: none; color: var(--texto-suave); cursor: pointer; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; border-bottom: 2px solid transparent; }
 .pestana-panel:hover { color: var(--texto); }
 .pestana-panel.activa { color: var(--texto); border-bottom-color: var(--acento); }
+/* Panel izquierdo: tres pestañas en poco sitio. Si no caben los nombres, las que no están elegidas se quedan con su icono */
+.panel-izquierdo { container-type: inline-size; }
+.panel-izquierdo .pestana-panel { flex: 0 1 auto; min-width: 0; padding: 0 7px; gap: 5px; letter-spacing: .02em; white-space: nowrap; }
+@container (max-width: 340px) { .panel-izquierdo .pestana-panel:not(.activa) .texto-pestana { display: none; } }
 .contador { display: inline-block; min-width: 18px; padding: 0 5px; border-radius: 9px; font-size: 11px; text-align: center; color: #1a0b0b; }
 .contador.error { background: var(--error); }
 .contador.aviso { background: var(--aviso); }
@@ -619,3 +623,15 @@ a.boton { text-decoration: none; display: inline-flex; align-items: center; }
 .lienzo-pluma:focus-visible { box-shadow: 0 0 0 2px var(--acento); }
 .barra-pluma { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .casilla-pluma { display: flex; align-items: center; gap: 4px; color: var(--texto-suave); font-size: 13px; }
+
+/* ── Biblioteca ── */
+.buscador-biblioteca { width: 100%; margin: 6px 0; }
+.chips-biblioteca { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.chip { padding: 3px 9px; border-radius: 12px; border: 1px solid var(--borde-fuerte); background: none; color: var(--texto-suave); font-size: 12px; cursor: pointer; }
+.chip.activo, .chip:hover { background: var(--acento-fondo); color: var(--texto); border-color: var(--acento); }
+.lista-biblioteca { display: flex; flex-direction: column; gap: 5px; }
+.ficha-biblioteca { display: flex; align-items: center; gap: 9px; padding: 7px 8px; border-radius: 7px; border: 1px solid var(--borde); background: var(--fondo); color: var(--texto); text-align: left; cursor: grab; }
+.ficha-biblioteca:hover { border-color: var(--acento); background: var(--acento-fondo); }
+.ficha-biblioteca .miniatura { flex: none; }
+.texto-ficha { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.texto-ficha span { font-size: 12px; color: var(--texto-suave); }

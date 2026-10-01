@@ -12,6 +12,8 @@
  * motor (formas/figuras.ts), así el icono de la estrella ES la estrella.
  */
 import { figuraDe, type DatosFigura, type Forma } from '../../objetos/formas/figuras';
+import { resolverColor } from '../../motor/Color';
+import type { DefSprite } from '../../proyecto/formato';
 
 /** Datos para que cada forma se vea bien en un icono de 20 × 20. */
 const EN_ICONO: Partial<Record<Forma, Partial<DatosFigura>>> = {
@@ -48,6 +50,42 @@ export function iconoForma(forma: Forma, tamano = 18): SVGSVGElement {
   path.setAttribute('stroke', 'currentColor');
   path.setAttribute('stroke-width', '1.5');
   path.setAttribute('stroke-linejoin', 'round');
+  svg.append(path);
+  return svg;
+}
+
+/** Una miniatura del dibujo de un objeto (su forma, con sus proporciones y su color). */
+export function miniatura(sprite: DefSprite | undefined, tamano = 36): SVGSVGElement {
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('width', String(tamano));
+  svg.setAttribute('height', String(tamano));
+  svg.setAttribute('class', 'miniatura');
+  svg.setAttribute('aria-hidden', 'true');
+  const forma = (sprite?.forma ?? 'rectangulo') as Forma;
+  if (!sprite || forma === 'texto') {
+    const t = document.createElementNS(ns, 'text');
+    t.setAttribute('x', '12');
+    t.setAttribute('y', '17');
+    t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('font-size', '14');
+    t.setAttribute('font-weight', '700');
+    t.setAttribute('fill', 'currentColor');
+    t.textContent = 'Aa';
+    svg.append(t);
+    return svg;
+  }
+  const ancho = sprite.ancho ?? 64;
+  const alto = sprite.alto ?? 64;
+  const k = 20 / Math.max(ancho, alto);
+  const path = document.createElementNS(ns, 'path');
+  path.setAttribute('d', trazoDeForma(forma, { ...sprite, ancho: ancho * k, alto: alto * k, radioEsquina: sprite.radioEsquina !== undefined ? sprite.radioEsquina * k : undefined, grosor: Math.max(1.5, (sprite.grosor ?? 6) * k) } as Partial<DatosFigura>));
+  const color = resolverColor(sprite.color ?? 'blanco');
+  path.setAttribute('fill', color);
+  path.setAttribute('fill-rule', 'evenodd');
+  path.setAttribute('stroke', sprite.borde ? resolverColor(sprite.colorBorde ?? 'negro') : '#0006');
+  path.setAttribute('stroke-width', '1');
   svg.append(path);
   return svg;
 }

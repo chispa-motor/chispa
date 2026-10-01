@@ -12,7 +12,7 @@
  * se pincha con su forma de verdad (no con su caja).
  */
 import { describe, expect, it } from 'vitest';
-import { FORMAS_DIBUJO, areaConSigno, esConvexa, figuraDe, type DatosFigura } from '../src/objetos/formas/figuras';
+import { FORMAS_DIBUJO, areaDePieza, esConvexa, figuraDe, type DatosFigura } from '../src/objetos/formas/figuras';
 import { choqueFiguras } from '../src/objetos/formas/sat';
 import { migrarProyecto, proyectoVacio, type DefObjeto } from '../src/proyecto/formato';
 import { Fisica } from '../src/objetos/componentes/Fisica';
@@ -24,7 +24,7 @@ import { trazoDeForma } from '../src/editor/interfaz/iconosFormas';
 
 const suelo: DefObjeto = { nombre: 'Suelo', x: 480, y: -20, sprite: { ancho: 2000, alto: 40 }, colision: {} };
 const caja = (x: number, y: number, extra: Partial<DefObjeto> = {}): DefObjeto => ({ nombre: 'Caja', x, y, sprite: { ancho: 20, alto: 20 }, colision: {}, fisica: {}, ...extra });
-const areaDe = (d: DatosFigura) => figuraDe(d).piezas.reduce((s, p) => s + areaConSigno(p), 0);
+const areaDe = (d: DatosFigura) => figuraDe(d).piezas.reduce((s, p) => s + areaDePieza(p), 0);
 
 describe('Figuras: los puntos de cada forma', () => {
   it('cada forma se parte en piezas convexas, bien orientadas', () => {
@@ -32,8 +32,8 @@ describe('Figuras: los puntos de cada forma', () => {
       const f = figuraDe({ forma, ancho: 200, alto: 100, puntos: [{ x: -0.5, y: -0.5 }, { x: 0.5, y: -0.5 }, { x: 0, y: 0.5 }] });
       expect(f.piezas.length, forma).toBeGreaterThan(0);
       for (const p of f.piezas) {
-        expect(esConvexa(p), forma).toBe(true);
-        expect(areaConSigno(p), forma).toBeGreaterThan(0);
+        if (Array.isArray(p)) expect(esConvexa(p), forma).toBe(true);
+        expect(areaDePieza(p), forma).toBeGreaterThan(0);
       }
     }
   });
@@ -72,8 +72,8 @@ describe('Figuras: los puntos de cada forma', () => {
   });
 
   it('el polígono y la estrella no se pasan de 64 lados (para no congelar el navegador)', () => {
-    expect(figuraDe({ forma: 'poligono', ancho: 100, alto: 100, lados: 1e9 }).piezas[0].length).toBe(64);
-    expect(figuraDe({ forma: 'poligono', ancho: 100, alto: 100, lados: 1 }).piezas[0].length).toBe(3);
+    expect((figuraDe({ forma: 'poligono', ancho: 100, alto: 100, lados: 1e9 }).piezas[0] as unknown[]).length).toBe(64);
+    expect((figuraDe({ forma: 'poligono', ancho: 100, alto: 100, lados: 1 }).piezas[0] as unknown[]).length).toBe(3);
   });
 
   it('SAT: dos cuadrados que se meten 5 píxeles se separan por el lado corto', () => {

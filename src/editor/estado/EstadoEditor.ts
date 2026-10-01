@@ -24,6 +24,7 @@
 import { migrarProyecto, proyectoVacio, tipoPorNombre, type DatoInicial, type DefEscena, type DefObjeto, type DefProyecto, type DefSprite } from '../../proyecto/formato';
 import { FORMAS, FORMAS_DIBUJO, type Forma, type PuntoCamino } from '../../objetos/formas/figuras';
 import { combinarFormas, encajarCamino, esFormaCombinable } from '../recursos/operacionesFormas';
+import { BIBLIOTECA } from '../biblioteca/biblioteca';
 import type { DefAnimacion } from '../../objetos/componentes/Animador';
 import type { TipoCasilla } from '../../objetos/componentes/MapaCasillas';
 import { normalizar, quitarTildes } from '../../utilidades/texto';
@@ -278,6 +279,57 @@ export class EstadoEditor {
       this.propagar(ref);
     });
     return nombre;
+  }
+
+  /**
+   * Pone en la escena un elemento de la biblioteca en (x, y): sus objetos,
+   * sus scripts, sus plantillas y los datos de juego que use (si no estaban).
+   * Un script que ya existe con el mismo código se comparte; si es distinto,
+   * el nuevo se guarda con otro nombre. Devuelve las posiciones de los objetos nuevos.
+   */
+  insertarDeBiblioteca(id: string, x: number, y: number): number[] {
+    const el = BIBLIOTECA.find((b) => b.id === id);
+    if (!el) return [];
+    const nuevos: number[] = [];
+    this.cambiar('objetos', () => {
+      const p = this.proyecto;
+      const archivos = new Map<string, string>();
+      for (const [archivo, codigo] of Object.entries(el.scripts)) {
+        if (!tiene(p.scripts, archivo)) p.scripts[archivo] = codigo;
+        else if (p.scripts[archivo] !== codigo) {
+          const otro = this.nombreLibre(archivo, Object.keys(p.scripts));
+          p.scripts[otro] = codigo;
+          archivos.set(archivo, otro);
+          continue;
+        }
+        archivos.set(archivo, archivo);
+      }
+      const conScript = (def: DefObjeto): DefObjeto => {
+        const copia = structuredClone(def);
+        if (copia.script) copia.script = archivos.get(copia.script) ?? copia.script;
+        return copia;
+      };
+      for (const [nombre, def] of Object.entries(el.plantillas ?? {})) if (!tiene(p.plantillas, nombre)) p.plantillas[nombre] = conScript(def);
+      for (const [dato, valor] of Object.entries(el.datos ?? {})) if (!tiene(p.datos ?? {}, dato)) (p.datos ??= {})[dato] = valor;
+      for (const def of el.objetos) {
+        const o = conScript(def);
+        o.nombre = this.nombreLibre(def.nombre ?? 'Objeto');
+        if (o.sprite?.fijo) {
+          // La interfaz va pegada a la pantalla: los textos de la izquierda, arriba a la izquierda; lo demás, en el centro
+          const arribaIzquierda = o.sprite.alinear === 'izquierda';
+          o.x = arribaIzquierda ? 20 : Math.round(p.ancho / 2 + (def.x ?? 0));
+          o.y = arribaIzquierda ? p.alto - 30 : Math.round(p.alto / 2 + (def.y ?? 0));
+        } else {
+          o.x = Math.round(x + (def.x ?? 0));
+          o.y = Math.round(y + (def.y ?? 0));
+        }
+        this.escena.objetos.push(o);
+        nuevos.push(this.escena.objetos.length - 1);
+      }
+    });
+    if (nuevos.length > 1) this.seleccionarVarios(nuevos);
+    else if (nuevos.length === 1) this.seleccionarIndice(nuevos[0]);
+    return nuevos;
   }
 
   /** «Mis colores» del selector de color (se guardan en el proyecto). Como mucho 40, sin repetir. */

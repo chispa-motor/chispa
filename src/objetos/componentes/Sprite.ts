@@ -91,19 +91,28 @@ export class Sprite extends Componente {
     else this.texto = t;
   }
 
-  private ultimaFigura: { claves: unknown[]; figura: Figura } | null = null;
+  private ultimaFigura: Figura | null = null;
+  private claveFigura = { forma: '', ancho: 0, alto: 0, lados: 0 as number | undefined, radioInterior: 0 as number | undefined, radioEsquina: 0 as number | undefined, inicioArco: 0 as number | undefined, finArco: 0 as number | undefined, grosor: 0 as number | undefined, puntos: undefined as unknown, cerrado: undefined as boolean | undefined, figuras: undefined as unknown };
 
-  /** La figura de su forma con ese tamaño (si nada ha cambiado, la misma de antes, sin recalcular). */
+  /**
+   * La figura de su forma con ese tamaño. Si nada ha cambiado, la misma de
+   * antes, sin recalcular (se pide muchas veces por fotograma: dibujar, chocar...).
+   */
   figura(ancho = this.anchoFinal, alto = this.altoFinal): Figura {
-    const claves = [this.forma, ancho, alto, this.lados, this.radioInterior, this.radioEsquina, this.inicioArco, this.finArco, this.grosor, this.puntos, this.cerrado, this.figuras];
-    const u = this.ultimaFigura;
-    if (u && u.claves.every((c, i) => c === claves[i])) return u.figura;
-    const figura = figuraDe({
+    const k = this.claveFigura;
+    if (
+      this.ultimaFigura && k.forma === this.forma && k.ancho === ancho && k.alto === alto && k.lados === this.lados && k.radioInterior === this.radioInterior &&
+      k.radioEsquina === this.radioEsquina && k.inicioArco === this.inicioArco && k.finArco === this.finArco && k.grosor === this.grosor &&
+      k.puntos === this.puntos && k.cerrado === this.cerrado && k.figuras === this.figuras
+    ) {
+      return this.ultimaFigura;
+    }
+    Object.assign(k, { forma: this.forma, ancho, alto, lados: this.lados, radioInterior: this.radioInterior, radioEsquina: this.radioEsquina, inicioArco: this.inicioArco, finArco: this.finArco, grosor: this.grosor, puntos: this.puntos, cerrado: this.cerrado, figuras: this.figuras });
+    this.ultimaFigura = figuraDe({
       forma: this.forma, ancho, alto, lados: this.lados, radioInterior: this.radioInterior, radioEsquina: this.radioEsquina,
       inicioArco: this.inicioArco, finArco: this.finArco, grosor: this.grosor, puntos: this.puntos, cerrado: this.cerrado, figuras: this.figuras,
     });
-    this.ultimaFigura = { claves, figura };
-    return figura;
+    return this.ultimaFigura;
   }
 
   /** ¿Se dibuja con una figura (y no como un rectángulo, una imagen o un texto)? */

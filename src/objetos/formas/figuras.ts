@@ -24,6 +24,7 @@
  * del tamaño (de -0,5 a 0,5): así, si cambias el ancho, el dibujo se estira.
  */
 import earcut from 'earcut';
+import type { Pieza } from './sat';
 
 export interface Punto {
   x: number;
@@ -94,7 +95,8 @@ export interface DatosFigura {
 export interface Figura {
   anillos: Poligono[][];
   trazo: { puntos: Punto[]; grosor: number } | null;
-  piezas: Poligono[];
+  /** Para chocar: polígonos convexos, o un círculo de verdad (los círculos, que son lo más común, así van rapidísimo). */
+  piezas: Pieza[];
 }
 
 /** Valores por defecto de cada dato de las formas (los mismos en el motor, el editor y la ayuda). */
@@ -135,8 +137,12 @@ function calcular(d: DatosFigura): Figura {
   const concava = (p: Poligono): Figura => ({ anillos: [[p]], trazo: null, piezas: trocear([p]) });
   switch (d.forma) {
     case 'circulo':
-    case 'elipse':
-      return convexa(elipse(w / 2, h / 2, 0, 360, SEGMENTOS_ELIPSE));
+    case 'elipse': {
+      const borde = elipse(w / 2, h / 2, 0, 360, SEGMENTOS_ELIPSE);
+      // Un círculo choca como círculo; una elipse, como un polígono de 24 lados (casi igual, y el doble de rápido que 48)
+      if (Math.abs(w - h) < 1e-6) return { anillos: [[borde]], trazo: null, piezas: [{ x: 0, y: 0, r: w / 2 }] };
+      return { anillos: [[borde]], trazo: null, piezas: [elipse(w / 2, h / 2, 0, 360, 24)] };
+    }
     case 'triangulo':
       return convexa([{ x: -w / 2, y: -h / 2 }, { x: w / 2, y: -h / 2 }, { x: 0, y: h / 2 }]);
     case 'rombo':
@@ -294,7 +300,7 @@ function camino(d: DatosFigura, w: number, h: number): Figura {
   const escalar = (p: Punto): Punto => ({ x: p.x * w, y: p.y * h });
   if (d.figuras?.length) {
     const anillos = d.figuras.map((pol) => pol.map((anillo) => anillo.map(escalar))).filter((pol) => pol.length && pol[0].length >= 3);
-    return { anillos, trazo: null, piezas: anillos.flatMap(trocear) };
+    return { anillos, trazo: null, piezas: anillos.flatMap((a) => trocear(a)) };
   }
   const puntos = (d.puntos ?? []).slice(0, MAX_PUNTOS_CAMINO);
   const cerrado = d.cerrado ?? true;
@@ -381,6 +387,11 @@ function unirPorLado(p: number[], q: number[]): number[] | null {
   return null;
 }
 
+/** El área de una pieza (polígono o círculo). */
+export function areaDePieza(p: Pieza): number {
+  return Array.isArray(p) ? areaConSigno(p) : Math.PI * p.r * p.r;
+}
+
 export function areaConSigno(p: Poligono): number {
   let a = 0;
   for (let i = 0; i < p.length; i++) {
@@ -407,6 +418,13 @@ export function esConvexa(p: Poligono): boolean {
 }
 
 // ───────────────────────── De lo local al mundo ─────────────────────────
+
+/** Lleva una pieza (polígono o círculo) al mundo. */
+export function piezaAMundo(p: Pieza, x: number, y: number, rotacion: number, voltearX = false, voltearY = false): Pieza {
+  if (Array.isArray(p)) return aMundo(p, x, y, rotacion, voltearX, voltearY);
+  const [c] = aMundo([{ x: p.x, y: p.y }], x, y, rotacion, voltearX, voltearY);
+  return { x: c.x, y: c.y, r: p.r };
+}
 
 /** Gira (grados, contra las agujas del reloj), voltea y mueve unos puntos. */
 export function aMundo(p: Poligono, x: number, y: number, rotacion: number, voltearX = false, voltearY = false): Poligono {

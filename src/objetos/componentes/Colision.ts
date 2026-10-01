@@ -27,8 +27,8 @@
 import { Componente } from '../Componente';
 import { Vector2 } from '../../motor/Vector2';
 import { Sprite } from './Sprite';
-import { aMundo, type Figura, type Poligono } from '../formas/figuras';
-import { cajaComoPieza, cajaDePiezas } from '../formas/sat';
+import { piezaAMundo, type Figura } from '../formas/figuras';
+import { cajaComoPieza, cajaDePiezas, type Pieza } from '../formas/sat';
 
 /** Cómo choca: auto = con su figura si no es un rectángulo; caja = siempre como una caja; figura = siempre con su figura (girada). */
 export type FormaColision = 'auto' | 'caja' | 'figura';
@@ -68,13 +68,13 @@ export class Colision extends Componente {
     return this.forma === 'figura' || s.forma !== 'rectangulo';
   }
 
-  private ultimas: { figura: Figura; x: number; y: number; rot: number; vx: boolean; vy: boolean; piezas: Poligono[] } | null = null;
+  private ultimas: { figura: Figura; x: number; y: number; rot: number; vx: boolean; vy: boolean; piezas: Pieza[] } | null = null;
 
   /**
    * La figura en el mundo, partida en piezas convexas (ya girada, volteada y
    * en su sitio). Si choca como una caja, la caja como una sola pieza.
    */
-  piezas(): Poligono[] {
+  piezas(): Pieza[] {
     if (!this.usaFigura()) return [cajaComoPieza(this.caja())];
     const s = this.objeto.obtener(Sprite)!;
     const t = this.objeto.transformacion;
@@ -85,7 +85,20 @@ export class Colision extends Componente {
     const vy = s.voltearY !== t.escala.y < 0;
     const u = this.ultimas;
     if (u && u.figura === figura && u.x === x && u.y === y && u.rot === t.rotacion && u.vx === vx && u.vy === vy) return u.piezas;
-    const piezas = figura.piezas.map((p) => aMundo(p, x, y, t.rotacion, vx, vy));
+    // Un círculo (lo más común): se mueve el mismo, sin crear nada nuevo en cada paso de la física
+    const unica = figura.piezas.length === 1 ? figura.piezas[0] : null;
+    if (unica && !Array.isArray(unica) && unica.x === 0 && unica.y === 0 && u?.figura === figura) {
+      const c = u.piezas[0] as { x: number; y: number };
+      c.x = x;
+      c.y = y;
+      u.x = x;
+      u.y = y;
+      u.rot = t.rotacion;
+      u.vx = vx;
+      u.vy = vy;
+      return u.piezas;
+    }
+    const piezas = figura.piezas.map((p) => piezaAMundo(p, x, y, t.rotacion, vx, vy));
     this.ultimas = { figura, x, y, rot: t.rotacion, vx, vy, piezas };
     return piezas;
   }

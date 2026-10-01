@@ -44,6 +44,8 @@ await contexto.grantPermissions(['clipboard-read', 'clipboard-write']);
 
 let fallos = 0;
 async function prueba(nombre, fn) {
+  // SOLO="texto" ejecuta solo las pruebas que lo llevan en el nombre (para repetir una que falla)
+  if (process.env.SOLO && !nombre.includes(process.env.SOLO)) return;
   const pagina = await contexto.newPage();
   const errores = [];
   pagina.on('pageerror', (e) => errores.push(e.message));
@@ -57,6 +59,7 @@ async function prueba(nombre, fn) {
   } catch (e) {
     fallos++;
     console.log(`  ✗ ${nombre}\n      ${String(e.message ?? e).split('\n')[0]}`);
+    if (process.env.CAPTURA) await pagina.screenshot({ path: process.env.CAPTURA }).catch(() => {});
   } finally {
     await pagina.close();
   }
@@ -583,6 +586,51 @@ await prueba('añadir objetos, arrastrarlos y deshacer', async (p) => {
   await p.click('button:has-text("Pegar")');
   comprobar((await estado(p, () => window.chispa.estado.escena.objetos.map((o) => o.nombre))).join() === 'Texto', 'no se ha pegado el texto en Nivel2');
   comprobar((await estado(p, () => window.chispa.estado.seleccionado.sprite.fijo)) === true, 'el texto nuevo no es de interfaz');
+});
+
+await prueba('día 1: formas, estilo con el selector de color, pluma, unir y la biblioteca', async (p) => {
+  // Una estrella desde el menú «Más formas»
+  await p.click('.boton-anadir');
+  await p.click('[data-forma="estrella"]');
+  comprobar((await estado(p, () => window.chispa.estado.seleccionado.sprite.forma)) === 'estrella', 'no se ha añadido la estrella');
+  comprobar(await p.isVisible('[data-ruta="sprite.lados"]'), 'el inspector no enseña las puntas de la estrella');
+  // El selector de color: una paleta lista cambia el color del objeto
+  await p.click('.inspector .selector-color');
+  await p.waitForSelector('.selector-color-ventana');
+  await p.selectOption('.selector-color-ventana select', 'neon');
+  await p.click('.selector-color-ventana [data-color="#2bff88"]');
+  await p.waitForFunction(() => window.chispa.estado.seleccionado.sprite.color === '#2bff88');
+  await p.keyboard.press('Escape');
+  // Estilo: degradado y sombra (se dibuja sin errores). La sección empieza plegada.
+  await p.click('.seccion-titulo:has-text("Estilo")');
+  await p.selectOption('[data-ruta="sprite.relleno"]', 'degradado');
+  await p.check('[data-ruta="sprite.sombra"]');
+  comprobar((await estado(p, () => window.chispa.estado.seleccionado.sprite.sombra)) === '#00000088', 'no se ha puesto la sombra');
+  // Unir la estrella con el cuadrado del ejemplo
+  await estado(p, () => window.chispa.estado.seleccionarVarios([0, window.chispa.estado.escena.objetos.length - 1]));
+  await p.click('button:has-text("Unir formas")');
+  comprobar((await estado(p, () => window.chispa.estado.seleccionado.nombre)) === 'Union', 'no se han unido las formas');
+  // La pluma: tres puntos y clic en el primero para cerrar
+  await p.click('.boton-anadir');
+  await p.click('.opcion-menu:has-text("Dibujar con la pluma")');
+  const lienzo = await p.locator('.lienzo-pluma').boundingBox();
+  const punto = (fx, fy) => p.mouse.click(lienzo.x + lienzo.width * fx, lienzo.y + lienzo.height * fy);
+  await punto(0.3, 0.7);
+  await punto(0.7, 0.7);
+  await punto(0.5, 0.3);
+  await punto(0.3, 0.7);
+  await p.click('.dialogo button:has-text("Aceptar")');
+  const camino = await estado(p, () => window.chispa.estado.seleccionado.sprite);
+  comprobar(camino.forma === 'camino' && camino.puntos.length === 3 && camino.cerrado === undefined, 'la pluma no ha guardado un triángulo cerrado');
+  // La biblioteca: arrastrar una moneda a la escena
+  await p.click('.pestana-panel:has-text("Biblioteca")');
+  await p.fill('.buscador-biblioteca', 'moneda');
+  await p.locator('[data-biblioteca="moneda"]').dragTo(p.locator('.lienzo-escena'));
+  comprobar((await estado(p, () => window.chispa.estado.escena.objetos.some((o) => o.nombre === 'Moneda'))), 'no se ha soltado la moneda en la escena');
+  // Y se juega sin errores
+  await p.keyboard.press('F5');
+  await p.waitForTimeout(500);
+  await p.keyboard.press('F5');
 });
 
 await prueba('pintar casillas (arrastrando y con Mayús) en un mapa', async (p) => {
