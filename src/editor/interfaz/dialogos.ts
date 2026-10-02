@@ -95,6 +95,8 @@ export function avisar(titulo: string, mensaje: string | HTMLElement): void {
   abrirDialogo(titulo, mensaje, [{ texto: 'Entendido', clase: 'principal' }]);
 }
 
+export const MAXIMO_NOTIFICACIONES = 3;
+
 /** Mensaje pequeño que desaparece solo (abajo a la derecha). */
 export function notificar(texto: string, tipo: 'normal' | 'error' | 'ok' = 'normal'): void {
   let zona = document.getElementById('notificaciones');
@@ -104,6 +106,8 @@ export function notificar(texto: string, tipo: 'normal' | 'error' | 'ok' = 'norm
   }
   const n = h('div', { class: `notificacion ${tipo}` }, texto);
   zona.append(n);
+  // Como mucho tres a la vez: si se hacen muchas cosas seguidas, no tapan media pantalla
+  while (zona.children.length > MAXIMO_NOTIFICACIONES) zona.firstElementChild!.remove();
   setTimeout(() => n.classList.add('saliendo'), 2600);
   setTimeout(() => n.remove(), 3000);
 }

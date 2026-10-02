@@ -330,11 +330,26 @@ class Analizador {
         this.expr(e.objeto, amb);
         this.expr(e.indice, amb);
         return;
-      case 'Llamada':
+      case 'Llamada': {
+        const desconocido = (x: Expresion): x is Extract<Expresion, { tipo: 'Identificador' }> =>
+          x.tipo === 'Identificador' && !amb.buscar(x.nombre) && !this.ctx.globales.buscar(x.nombre) && x.nombre !== 'otro' && x.nombre !== 'yo';
+        // jugador(2).x → lo natural es escribirlo así, pero la función se llama controles
+        if (desconocido(e.funcion) && normalizar(e.funcion.nombre) === 'jugador') {
+          this.error(e.funcion.pos, "no existe ninguna función llamada 'jugador'. Los controles de cada jugador se leen con 'controles'.", 'Ejemplos: controles(2).x  ·  controles(2).sePulso("a")  ·  yo.moverConJugador(2, 300)');
+          e.argumentos.forEach((x) => this.expr(x, amb));
+          return;
+        }
         this.expr(e.funcion, amb);
-        e.argumentos.forEach((x) => this.expr(x, amb));
+        e.argumentos.forEach((x) => {
+          // meter(llave): un nombre suelto que no existe, dentro de unos paréntesis, casi siempre es un texto sin comillas
+          if (desconocido(x)) {
+            const pista = this.pistaNombre(x.original, amb);
+            this.error(x.pos, `intentas usar '${x.original}', pero no existe ninguna variable con ese nombre.`, /comillas|Querías decir|buscar\(/.test(pista) ? pista : `Si es un nombre (un texto), va entre comillas: "${x.original}". ${pista}`);
+          } else this.expr(x, amb);
+        });
         this.comprobarLlamada(e, amb);
         return;
+      }
     }
   }
 
@@ -440,10 +455,15 @@ class Analizador {
     if (!recurso || !lista) return;
     if (lista.some((x) => normalizar(x) === normalizar(primero.valor))) return;
     const parecido = sugerir(primero.valor, lista);
+    // «ningún sonido llamado», pero «ninguna plantilla llamada»
+    const m = recurso.que === 'sonido';
+    const vacio = m
+      ? 'Este proyecto todavía no tiene ningún sonido. En Proyecto > Sonidos puedes hacer uno, importarlo o coger uno de los que trae Chispa (el botón del libro).'
+      : `Este proyecto todavía no tiene ninguna ${recurso.que}.`;
     this.error(
       primero.pos,
-      `no existe ninguna ${recurso.que} llamada "${primero.valor}".`,
-      parecido ? `¿Querías decir "${parecido}"?` : lista.length ? `Las que hay son: ${enumerar(lista, 12)}.` : `Este proyecto todavía no tiene ninguna ${recurso.que}.`,
+      `no existe ${m ? 'ningún' : 'ninguna'} ${recurso.que} ${m ? 'llamado' : 'llamada'} "${primero.valor}".`,
+      parecido ? `¿Querías decir "${parecido}"?` : lista.length ? `${m ? 'Los' : 'Las'} que hay son: ${enumerar(lista, 12)}.` : vacio,
     );
   }
 

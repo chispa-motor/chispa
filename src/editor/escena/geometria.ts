@@ -17,6 +17,8 @@
  *
  * Recuerda: en Chispa la Y crece hacia ARRIBA; en la pantalla crece hacia abajo.
  */
+import { CONTROLES_NUEVOS } from '../interfaz/controlesNuevos';
+import type { TipoControl } from '../../objetos/componentes/Control';
 import type { DefEscena, DefObjeto, DefProyecto } from '../../proyecto/formato';
 
 export interface Caja {
@@ -173,4 +175,22 @@ export function pasoDeCuadricula(base: number, zoom: number): number {
   while (paso * zoom < 12) paso *= 2;
   while (paso * zoom > 120 && paso > 1) paso /= 2;
   return paso;
+}
+
+/**
+ * Dónde se pone un control de interfaz nuevo (en la PANTALLA del juego, con la Y hacia arriba).
+ * Los marcadores (barra, icono con contador) van arriba a la izquierda, como los textos; el
+ * minimapa, arriba a la derecha; los demás, en el centro. Si ya hay otra cosa de la interfaz
+ * en ese sitio, se baja hasta encontrar hueco: así no tapa al jugador ni a otro marcador.
+ */
+export function sitioDeControlNuevo(tipo: TipoControl, ancho: number, alto: number, objetos: DefObjeto[]): { x: number; y: number } {
+  const medidas = CONTROLES_NUEVOS[tipo].def.sprite ?? {};
+  const w = medidas.ancho ?? 100;
+  const h = medidas.alto ?? 40;
+  const x = tipo === 'barra' || tipo === 'icono' ? 24 + Math.round(w / 2) : tipo === 'minimapa' ? ancho - 16 - Math.round(w / 2) : Math.round(ancho / 2);
+  let y = tipo === 'barra' || tipo === 'icono' || tipo === 'minimapa' ? alto - 16 - Math.round(h / 2) : Math.round(alto / 2);
+  const ocupado = (py: number) =>
+    objetos.some((o) => o.sprite?.fijo && Math.abs((o.x ?? 0) - x) < (w + (o.sprite.ancho ?? 100)) / 2 && Math.abs((o.y ?? 0) - py) < (h + (o.sprite.alto ?? 40)) / 2);
+  for (let i = 0; i < 12 && ocupado(y); i++) y -= h + 8;
+  return { x, y: Math.max(Math.round(h / 2), y) };
 }

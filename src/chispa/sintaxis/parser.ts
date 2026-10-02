@@ -361,6 +361,12 @@ class Parser {
     if (parecida) {
       this.error(`has escrito '${t.original}', que no es ninguna palabra de Chispa.`, `¿Querías decir '${parecida}'?`, t);
     }
+    // "al empezar:", "al tocar Moneda:", "al pulsar espacio:" → en Chispa los eventos empiezan por 'cuando'
+    if (t.valor === 'al') {
+      const que = sig.valor ?? '';
+      const ejemplo = /^toc/.test(que) ? 'cuando toco Moneda:' : /^puls/.test(que) ? 'cuando se pulsa "espacio":' : /^(clic|hacer)/.test(que) ? 'cuando hago clic:' : 'cuando empieza:';
+      this.error(`'al ${sig.original ?? que}' no es de Chispa: los eventos empiezan por 'cuando'.`, `Se escribe así: ${ejemplo}`, t);
+    }
     this.error(
       `no entiendo qué quieres hacer con '${t.original}' al principio de la línea.`,
       'Una línea puede empezar con una palabra de Chispa (si, mientras, variable...), con una variable a la que das valor (vida = 5) o con una llamada a una función (saltar()).',

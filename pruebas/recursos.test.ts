@@ -36,7 +36,7 @@ function conRecursos(): EstadoEditor {
 describe('Dónde se usa cada recurso', () => {
   it('imágenes: objetos, plantillas, casillas, animaciones y código', () => {
     const e = conRecursos();
-    expect(e.usosDe('imagen', 'nave')).toEqual(['nave (escena Principal)', 'la animación «volar»', 'reglas.chs (línea 2)']);
+    expect(e.usosDe('imagen', 'nave')).toEqual(['Nave (escena Principal)', 'la animación «volar»', 'reglas.chs (línea 2)']);
     expect(e.usosDe('imagen', 'roca')).toEqual(['la casilla «piedra» de Mapa (escena Principal)', 'la plantilla Bala']);
   });
 

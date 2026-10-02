@@ -52,6 +52,7 @@ import {
   marcoDelJuego,
   objetoEn,
   ordenDeDibujo,
+  sitioDeControlNuevo,
   pasoDeCuadricula,
   posicionEnEditor,
   posicionGuardada,
@@ -87,6 +88,10 @@ export const OBJETOS_NUEVOS: { tipo: TipoNuevoObjeto; texto: string; icono: stri
   { tipo: 'mapa', texto: 'Mapa de casillas', icono: 'mapa', ayuda: 'Una rejilla para pintar suelos y paredes' },
   { tipo: 'vacio', texto: 'Objeto vacío', icono: 'vacio', ayuda: 'Un objeto invisible (para scripts que controlan el juego)' },
 ];
+
+/** Con qué opacidad se dibuja en el editor un objeto que empieza sin verse (y el que está seleccionado). */
+export const OPACIDAD_OCULTO = 0.18;
+export const OPACIDAD_OCULTO_ELEGIDO = 0.6;
 
 export class VistaEscena {
   readonly elemento: HTMLElement;
@@ -232,14 +237,15 @@ export class VistaEscena {
     return h('div', { class: 'con-menu' }, boton, menu);
   }
 
-  /** Crea un control de interfaz en el centro de la pantalla del juego (si hay algo justo ahí, un poco más abajo). */
+  /**
+   * Crea un control de interfaz. Los marcadores (barra, icono con contador) van arriba a la
+   * izquierda, como los textos, y el minimapa arriba a la derecha; los demás, en el centro
+   * de la pantalla del juego. Si ya hay otra cosa de la interfaz ahí, un poco más abajo.
+   */
   anadirControl(tipo: TipoControl): void {
     const m = this.marco();
-    const x = Math.round(((m.derecha - m.izquierda) * m.zoom) / 2);
-    let y = Math.round(((m.arriba - m.abajo) * m.zoom) / 2);
-    const ocupado = (py: number) => this.estado.escena.objetos.some((o) => o.sprite?.fijo && o.x === x && o.y === py);
-    for (let i = 0; i < 10 && ocupado(y); i++) y -= 40;
-    this.estado.crearControl(tipo, x, y);
+    const sitio = sitioDeControlNuevo(tipo, Math.round((m.derecha - m.izquierda) * m.zoom), Math.round((m.arriba - m.abajo) * m.zoom), this.estado.escena.objetos);
+    this.estado.crearControl(tipo, sitio.x, sitio.y);
     this.canvas.focus();
   }
 
@@ -442,6 +448,12 @@ export class VistaEscena {
           try {
             ctx.translate(l.x, l.y);
             if (def.sprite?.fijo) ctx.scale(1 / marco.zoom, 1 / marco.zoom);
+            // Lo que empieza sin verse (visible: falso) sale muy clarito: se sabe que está y dónde, pero no tapa
+            // lo demás. El que está seleccionado se ve algo más, para poder retocarlo
+            if (def.sprite?.visible === false) {
+              ctx.globalAlpha *= this.estado.indicesSeleccionados().includes(i) ? OPACIDAD_OCULTO_ELEGIDO : OPACIDAD_OCULTO;
+              s.visible = true;
+            }
             s.dibujarEn(r, 0, 0);
           } finally {
             ctx.restore();

@@ -16,6 +16,7 @@
  * que se puede plegar, y las opcionales tienen un interruptor para ponerlas
  * o quitarlas (como los componentes de Unity).
  */
+import { normalizar } from '../../utilidades/texto';
 import { NOMBRES_COLORES } from '../../motor/Color';
 import { DISTANCIA_POR_DEFECTO } from '../../objetos/componentes/Comportamiento';
 import { leerDatoInicial, tipoPorNombre, type DatoInicial, type DefControl, type DefEscena, type DefObjeto, type DefSprite } from '../../proyecto/formato';
@@ -38,6 +39,17 @@ import { LETRAS } from '../../motor/Letras';
 /** Cómo se llaman las letras listas en el inspector. */
 const NOMBRES_LETRAS: Record<string, string> = { normal: 'Normal', redonda: 'Redonda', clasica: 'Clásica', maquina: 'Máquina de escribir', manuscrita: 'Manuscrita', titulo: 'Título (gruesa)', pixel: 'Píxel' };
 import { tiene } from '../../utilidades/seguro';
+
+/**
+ * Lo que se escribe en «dato» de un control: «puntos», si es un dato del juego, vale por
+ * «juego.puntos» (es lo que casi todos escriben la primera vez). Vacío = sin dato.
+ */
+export function datoDeControl(escrito: string, datosDelJuego: string[]): string | undefined {
+  const t = escrito.trim();
+  if (!t) return undefined;
+  const dato = datosDelJuego.find((d) => normalizar(d) === normalizar(t));
+  return dato ? `juego.${dato}` : t;
+}
 
 export class Inspector {
   readonly elemento = h('div', { class: 'inspector' });
@@ -708,7 +720,7 @@ export class Inspector {
         campoNumero('mínimo', 'control.minimo', c.minimo ?? 0, (v) => cambiar('control.minimo')(v || undefined), { ...largo }),
         campoNumero('paso', 'control.paso', c.paso ?? 1, (v) => cambiar('control.paso')(v), { ...largo, min: 0, ayuda: 'De cuánto en cuánto se mueve (0 = suave)' }),
       ) : null,
-      conNumero || t === 'casilla' ? campoTexto('dato', 'control.dato', c.dato, (v) => cambiar('control.dato')(v.trim() || undefined), 'Un dato que se lee SOLO mientras juegas, sin código: juego.vida, juego.monedas...', 'juego.vida') : null,
+      conNumero || t === 'casilla' ? campoTexto('dato', 'control.dato', c.dato, (v) => cambiar('control.dato')(datoDeControl(v, Object.keys(this.estado.proyecto.datos ?? {}))), 'Un dato que se lee SOLO mientras juegas, sin código: juego.vida, juego.monedas... (los datos del juego se crean haciendo clic en el fondo de la escena > Datos del juego)', 'juego.vida', Object.keys(this.estado.proyecto.datos ?? {}).map((d) => `juego.${d}`)) : null,
       t === 'casilla' ? campoCasilla('marcada', 'control.marcada', c.marcada ?? false, (v) => cambiar('control.marcada')(v || undefined), 'Si empieza marcada') : null,
       t === 'lista' || t === 'menu' ? h('label', { class: 'campo-fila', title: 'Las opciones, una en cada línea' }, h('span', { class: 'campo-etiqueta' }, 'opciones'), opciones) : null,
       t === 'lista' || t === 'menu' ? campoNumero('elegida', 'control.elegido', c.elegido ?? 0, (v) => cambiar('control.elegido')(v || undefined), { ...largo, min: 0, max: (c.opciones ?? []).length, ayuda: 'La que está elegida al empezar (1 = la primera, 0 = ninguna)' }) : null,

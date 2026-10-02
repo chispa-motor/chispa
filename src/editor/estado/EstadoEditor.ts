@@ -21,7 +21,7 @@
  * El código de los scripts NO entra en este historial: el editor de código
  * tiene su propio deshacer, letra a letra (como en cualquier editor).
  */
-import { migrarProyecto, nombresDeSonidos, proyectoVacio, tipoPorNombre, type DatoInicial, type DefEscena, type DefObjeto, type DefProyecto, type DefSprite } from '../../proyecto/formato';
+import { migrarProyecto, nombresDeSonidos, proyectoVacio, tipoDe, tipoPorNombre, type DatoInicial, type DefEscena, type DefObjeto, type DefProyecto, type DefSprite } from '../../proyecto/formato';
 import { FORMAS, FORMAS_DIBUJO, type Forma, type PuntoCamino } from '../../objetos/formas/figuras';
 import { combinarFormas, encajarCamino, esFormaCombinable } from '../recursos/operacionesFormas';
 import { BIBLIOTECA } from '../biblioteca/biblioteca';
@@ -74,6 +74,9 @@ const MAXIMO_HISTORIAL = 100;
 /** Lo que cada copia de una plantilla tiene suyo. Todo lo demás es igual en todas las copias. */
 const CAMPOS_DE_CADA_COPIA = new Set(['nombre', 'tipo', 'plantilla', 'x', 'y']);
 const COLORES_NUEVOS = ['#4aa3ff', '#ff6b6b', '#ffd23f', '#5ad17a', '#b57cff', '#ff9f45', '#3ad6c9'];
+
+/** Las funciones de Chispa que reciben el NOMBRE (o el tipo) de un objeto entre comillas. */
+const FUNCIONES_CON_NOMBRE_DE_OBJETO = ['buscar', 'buscarTodos', 'contar', 'crear', 'tocando', 'masCercano', 'cercanos', 'atravesar', 'dejarDeAtravesar'];
 
 export class EstadoEditor {
   proyecto: DefProyecto;
@@ -479,7 +482,8 @@ export class EstadoEditor {
       // Los textos nuevos son de INTERFAZ (pegados a la pantalla): casi siempre son vidas, puntos o títulos
       texto: ['Texto', { sprite: { forma: 'texto', texto: 'Texto', tamano: 32, color: 'blanco', ancho: 160, alto: 40, fijo: true, alinear: 'izquierda' } }],
       boton: ['Boton', { sprite: { forma: 'rectangulo', color: '#3b82f6', ancho: 180, alto: 56, texto: 'Boton', tamano: 24, fijo: true }, control: { tipo: 'boton' } }],
-      imagen: [imagen ?? 'Imagen', { sprite: { imagen, ancho: 64, alto: 64 }, colision: {} }],
+      // El objeto se llama como su imagen, con mayúscula (como los demás: Cuadrado, Texto...): «gema» → «Gema»
+      imagen: [imagen ? imagen.charAt(0).toUpperCase() + imagen.slice(1) : 'Imagen', { sprite: { imagen, ancho: 64, alto: 64 }, colision: {} }],
       mapa: ['Mapa', { mapa: { tamano: 48, tipos: { suelo: { color: '#5ad17a', solida: true } }, celdas: {} } }],
       vacio: ['Objeto', {}],
       forma: [nombreDeForma(forma), { sprite: { forma, color, ...DATOS_FORMA_NUEVA[forma] }, colision: {} }],
@@ -663,19 +667,31 @@ export class EstadoEditor {
       this.cambiar('objetos', () => {
         this.proyecto.plantillas[final] = this.proyecto.plantillas[ref.nombre];
         delete this.proyecto.plantillas[ref.nombre];
+        // Lo que se crea con crear("Marciano") se llama Marciano (y no como se llamaba la plantilla antes)
+        if (normalizar(this.proyecto.plantillas[final].nombre ?? '') === normalizar(ref.nombre)) this.proyecto.plantillas[final].nombre = final;
         // Las copias enlazadas siguen enlazadas (y son del tipo nuevo)
         for (const o of this.todosLosObjetos()) {
           if (o.plantilla !== ref.nombre) continue;
           o.plantilla = final;
           if (o.tipo === ref.nombre) o.tipo = final;
         }
+        this.renombrarObjetoEnElProyecto(ref.nombre, final);
       });
       this.seleccionar({ tipo: 'plantilla', nombre: final });
+      this.avisar('scripts');
       return final;
     }
     const otros = this.proyecto.escenas[ref.escena].objetos.filter((o) => o !== def).map((o) => o.nombre ?? '');
     const final = this.nombreLibre(limpio, otros);
-    this.cambiar('objetos', () => (def.nombre = final));
+    const viejo = def.nombre;
+    const tipoViejo = tipoDe(def);
+    this.cambiar('objetos', () => {
+      def.nombre = final;
+      if (viejo) this.renombrarObjetoEnElProyecto(viejo, final);
+      // «Moneda2» pasa a «Estrella»: si ya no queda ninguna Moneda, lo que hablaba de las Monedas habla de las Estrellas
+      if (tipoViejo !== viejo && !def.tipo) this.renombrarObjetoEnElProyecto(tipoViejo, tipoDe(def));
+    });
+    this.avisar('scripts');
     return final;
   }
 
@@ -723,7 +739,23 @@ export class EstadoEditor {
       // Una luz cálida, como una antorcha
       luz: { color: '#ffd9a0', radio: 220 },
     };
-    this.cambiarPropiedad(ref, componente, activo ? structuredClone(porDefecto[componente]) : undefined);
+    const nuevo = activo ? structuredClone(porDefecto[componente]) : undefined;
+    // El enemigo persigue a alguien QUE EXISTE: al jugador de esta escena, se llame como se llame
+    if (nuevo && componente === 'comportamiento') (nuevo as { objetivo: string }).objetivo = this.aQuienPerseguir(ref);
+    this.cambiarPropiedad(ref, componente, nuevo);
+  }
+
+  /**
+   * A quién persigue un enemigo si no se dice: al objeto «Jugador»; si no lo hay, al que
+   * se maneja (con las flechas o con los controles de un jugador); si no, al primer
+   * objeto de la escena que no sea de la interfaz ni un mapa. Si no hay nadie, «Jugador».
+   */
+  private aQuienPerseguir(ref: RefObjeto): string {
+    const yo = this.definicion(ref);
+    const otros = this.escena.objetos.filter((o) => o !== yo && o.nombre && !o.mapa && !o.sprite?.fijo);
+    const seManeja = (o: DefObjeto) => o.comportamiento?.tipo === 'jugador' || /moverCon(Flechas|Jugador)|controles\(|teclado\./.test(o.script ? this.proyecto.scripts[o.script] ?? '' : '');
+    const elegido = otros.find((o) => normalizar(o.nombre!) === 'jugador') ?? otros.find(seManeja) ?? otros[0];
+    return elegido?.nombre ?? 'Jugador';
   }
 
   /** Propiedades propias (vida = 3...). */
@@ -1167,6 +1199,37 @@ export class EstadoEditor {
     return this.nombreLibre(n, nombresDeSonidos(this.proyecto).filter((x) => x !== anterior));
   }
 
+  /**
+   * Al cambiar el nombre de un objeto o de una plantilla: se cambia también donde se le
+   * nombra, para que el juego no deje de funcionar sin avisar. En el código, solo en los
+   * sitios que hablan de OBJETOS (cuando toco X, buscar("X"), crear("X")...; no en
+   * yo.imagen = "x", aunque la imagen se llame igual). En el inspector: a quién sigue la
+   * cámara, a quién persigue un enemigo y el centro de un minimapa.
+   * Si todavía queda algún objeto o plantilla con el nombre viejo (o de ese tipo), no se toca nada.
+   */
+  private renombrarObjetoEnElProyecto(viejo: string, nuevo: string): void {
+    const v = normalizar(viejo);
+    if (!v || v === normalizar(nuevo)) return;
+    const sigue = Object.keys(this.proyecto.plantillas).some((n) => normalizar(n) === v) || this.todosLosObjetos().some((o) => normalizar(o.nombre ?? '') === v || normalizar(tipoDe(o)) === v);
+    if (sigue) return;
+    const es = (texto: string | undefined) => normalizar(texto ?? '') === v;
+    for (const escena of Object.values(this.proyecto.escenas)) {
+      if (es(escena.camara?.seguir)) escena.camara!.seguir = nuevo;
+      if (escena.camara?.jugadores) escena.camara.jugadores.seguir = escena.camara.jugadores.seguir.map((n) => (es(n) ? nuevo : n));
+    }
+    for (const o of this.todosLosObjetos()) {
+      if (o.comportamiento && es(o.comportamiento.objetivo)) o.comportamiento.objetivo = nuevo;
+      if (o.control && es(o.control.seguir)) o.control.seguir = nuevo;
+    }
+    const enLlamada = new RegExp(`(\\b(?:${FUNCIONES_CON_NOMBRE_DE_OBJETO.join('|')})\\((?:[^()"\\n]|"[^"\\n]*")*?)"([^"\\n]*)"`, 'g');
+    const enEvento = /^(\s*cuando\s+(?:dejo\s+de\s+tocar|toco)\s+)([\p{L}_][\p{L}\p{N}_]*)/gmu;
+    for (const [archivo, codigo] of Object.entries(this.proyecto.scripts)) {
+      this.proyecto.scripts[archivo] = codigo
+        .replace(enEvento, (entero, antes: string, nombre: string) => (es(nombre) ? antes + nuevo : entero))
+        .replace(enLlamada, (entero, antes: string, nombre: string) => (es(nombre) ? `${antes}"${nuevo}"` : entero));
+    }
+  }
+
   /** Al cambiar el nombre de un sonido o una canción: también en el código (el texto entre comillas). */
   private renombrarEnElCodigo(viejo: string, nuevo: string): void {
     for (const [archivo, codigo] of Object.entries(this.proyecto.scripts)) {
@@ -1240,9 +1303,14 @@ export class EstadoEditor {
       const datos = imagenDeDibujo(nombre);
       if (!datos) return null;
       this.empezarCambioLargo();
+      // Son dibujos de 16×16: en un proyecto que aún no tiene imágenes se activan los «píxeles nítidos» (si no, se ven borrosos)
+      if (!Object.keys(this.proyecto.imagenes).length && !this.proyecto.pixelArt) this.cambiarAjusteProyecto('pixelArt', true);
       // Si ya hay una imagen con ese nombre y es la misma, se usa esa; si es otra, se añade con otro nombre
       const final = this.proyecto.imagenes[nombre] === datos && tiene(this.proyecto.imagenes, nombre) ? nombre : this.agregarImagen(nombre, datos);
-      if (enEscena) this.crearObjeto('imagen', this.proyecto.ancho / 2, this.proyecto.alto / 2, final);
+      if (enEscena) {
+        const sitio = this.sitioLibre();
+        this.crearObjeto('imagen', sitio.x, sitio.y, final);
+      }
       this.terminarCambioLargo();
       return final;
     }
@@ -1254,6 +1322,21 @@ export class EstadoEditor {
     const c = CANCIONES_LISTAS.find((x) => x.nombre === nombre);
     if (!c) return null;
     return tiene(this.proyecto.canciones ?? {}, nombre) ? nombre : this.guardarCancion(nombre, structuredClone(c.cancion));
+  }
+
+  /**
+   * Un sitio de la pantalla del juego donde no hay ya otro objeto: el centro y, si
+   * está ocupado, a su derecha, a su izquierda, debajo... Así lo que se añade
+   * seguido no queda amontonado (y tapado) en el mismo punto.
+   */
+  sitioLibre(): { x: number; y: number } {
+    const cx = Math.round(this.proyecto.ancho / 2);
+    const cy = Math.round(this.proyecto.alto / 2);
+    const ocupado = (x: number, y: number) => this.escena.objetos.some((o) => !o.sprite?.fijo && Math.abs((o.x ?? 0) - x) < 40 && Math.abs((o.y ?? 0) - y) < 40);
+    for (const dy of [0, -96, 96, -192, 192]) {
+      for (const dx of [0, 96, -96, 192, -192, 288, -288]) if (!ocupado(cx + dx, cy + dy)) return { x: cx + dx, y: cy + dy };
+    }
+    return { x: cx, y: cy };
   }
 
   /** Añade un tipo de letra (.ttf, .otf, .woff, .woff2, como "data URL"). Devuelve el nombre final. */

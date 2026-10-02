@@ -273,7 +273,9 @@ export function planDePantallas(p: DefProyecto, cuales: readonly TipoPantalla[],
     const opciones = ['Seguir', 'Reiniciar', ...(n.menu ? ['Salir al menú'] : [])];
     plan.enElJuego.push(
       {
-        nombre: ventana, x: W / 2, y: H / 2, sprite: { color: AZUL, ancho: 340, alto: 110 + opciones.length * 50, tamano: 22, fijo: true, capa: 100 },
+        // Empiezan sin verse (visible: false): en el juego no hacen falta hasta la pausa, y en el editor
+        // salen muy claritos, sin tapar lo que hay en medio de la escena
+        nombre: ventana, x: W / 2, y: H / 2, sprite: { color: AZUL, ancho: 340, alto: 110 + opciones.length * 50, tamano: 22, fijo: true, capa: 100, visible: false },
         control: { tipo: 'ventana', titulo: 'PAUSA', colorFondo: '#10141fee' },
         script: script('pausa', [
           '# PAUSA: con Escape o con P se para el juego y sale esta ventana con su menu.',
@@ -292,7 +294,7 @@ export function planDePantallas(p: DefProyecto, cuales: readonly TipoPantalla[],
         ].join('\n')),
       },
       {
-        nombre: menu, x: W / 2, y: H / 2 - 18, sprite: { color: AZUL, ancho: 280, alto: opciones.length * 46, tamano: 24, fijo: true, capa: 101 },
+        nombre: menu, x: W / 2, y: H / 2 - 18, sprite: { color: AZUL, ancho: 280, alto: opciones.length * 46, tamano: 24, fijo: true, capa: 101, visible: false },
         control: { tipo: 'menu', opciones, elegido: 1 },
         script: script('menupausa', [
           '# Lo que hace cada opcion del menu de pausa.',

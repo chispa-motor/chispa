@@ -16,6 +16,7 @@
  * enseña al cambiar de pestaña: así cada script conserva su deshacer y la
  * posición del cursor.
  */
+import { tipoDe } from '../../proyecto/formato';
 import { EditorState, type Extension } from '@codemirror/state';
 import {
   EditorView,
@@ -257,6 +258,22 @@ export class EditorCodigo {
     if (!lectura.ok) return false;
     if (!p.bloques) {
       p.bloques = new EditorBloques((codigo) => this.codigoDesdeBloques(p, codigo));
+      // Los bloques de la paleta salen con nombres que hay en el proyecto (sus sonidos, sus plantillas, sus objetos...)
+      p.bloques.nombres = () => {
+        const pr = this.estado.proyecto;
+        const canciones = Object.keys(pr.canciones ?? {});
+        const sonidos = [...Object.keys(pr.sonidosHechos ?? {}), ...Object.keys(pr.sonidos)];
+        return {
+          sonidos,
+          musicas: canciones.length ? canciones : sonidos,
+          plantillas: Object.keys(pr.plantillas),
+          escenas: Object.keys(pr.escenas).filter((e) => e !== this.estado.escenaActual),
+          animaciones: Object.keys(pr.animaciones),
+          // Los demás objetos de la escena, por su tipo (Moneda2 → Moneda), sin los de interfaz ni el de este script
+          objetos: [...new Set(this.estado.escena.objetos.filter((o) => o.script !== p.archivo.nombre && !o.sprite?.fijo && !o.mapa && o.nombre).map((o) => tipoDe(o)))],
+        };
+      };
+      p.bloques.pintarPaleta();
       p.caja.append(p.bloques.elemento);
     }
     p.bloques.cargar(lectura.bloques);

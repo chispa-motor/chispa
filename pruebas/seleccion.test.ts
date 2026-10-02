@@ -341,7 +341,7 @@ describe('Deshacer y rehacer: TODO lo que cambia el proyecto', () => {
       const d = Object.getOwnPropertyDescriptor(EstadoEditor.prototype, m);
       return typeof d?.value === 'function';
     });
-    const privados = new Set(['nombreDeSonidoLibre', 'renombrarEnElCodigo', 'avisar', 'apuntar', 'restaurar', 'cambiarObjeto', 'propagar', 'objetosConSitio']);
+    const privados = new Set(['aQuienPerseguir', 'renombrarObjetoEnElProyecto', 'sitioLibre', 'nombreDeSonidoLibre', 'renombrarEnElCodigo', 'avisar', 'apuntar', 'restaurar', 'cambiarObjeto', 'propagar', 'objetosConSitio']);
     const sinProbar = metodos.filter((m) => !sinDeshacer.has(m) && !privados.has(m) && !(m in cambios));
     expect(sinProbar).toEqual([]);
   });

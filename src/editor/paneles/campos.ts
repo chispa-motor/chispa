@@ -85,9 +85,18 @@ export function campoNumero(etiqueta: string, ruta: string, valor: number | unde
   return fila(nombre, entrada, o.ayuda ?? `${etiqueta} (arrastra el nombre para cambiarlo)`);
 }
 
-export function campoTexto(etiqueta: string, ruta: string, valor: string | undefined, alCambiar: (v: string) => void, ayuda?: string, placeholder = ''): HTMLElement {
+let numeroDeLista = 0;
+
+/** `sugerencias`: valores que se ofrecen al escribir (se puede escribir otra cosa). */
+export function campoTexto(etiqueta: string, ruta: string, valor: string | undefined, alCambiar: (v: string) => void, ayuda?: string, placeholder = '', sugerencias: string[] = []): HTMLElement {
   const entrada = h('input', { type: 'text', class: 'campo', value: valor ?? '', placeholder, spellcheck: 'false', 'data-ruta': ruta, onchange: () => alCambiar(entrada.value) });
-  return fila(etiqueta, entrada, ayuda);
+  const f = fila(etiqueta, entrada, ayuda);
+  if (sugerencias.length) {
+    const id = `sugerencias-${++numeroDeLista}`;
+    entrada.setAttribute('list', id);
+    f.append(h('datalist', { id }, sugerencias.map((s) => h('option', { value: s }))));
+  }
+  return f;
 }
 
 export function campoCasilla(etiqueta: string, ruta: string, valor: boolean, alCambiar: (v: boolean) => void, ayuda?: string): HTMLElement {

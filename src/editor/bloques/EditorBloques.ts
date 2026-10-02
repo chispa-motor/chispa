@@ -22,9 +22,9 @@ import { h, icono, rellenar } from '../interfaz/dom';
 import { analizarSintaxis } from '../../chispa/sintaxis/parser';
 import { ACCIONES, DATOS_CON_BLOQUE, EVENTOS, accionPorId, aCodigo, datoPorObjetivo, type Accion, type Bloque, type ClaseEvento } from './modelo';
 
-type Categoria = 'eventos' | 'control' | 'movimiento' | 'apariencia' | 'efectos' | 'sonido' | 'objetos' | 'variables' | 'funciones';
+export type Categoria = 'eventos' | 'control' | 'movimiento' | 'apariencia' | 'efectos' | 'sonido' | 'objetos' | 'interfaz' | 'variables' | 'funciones';
 
-const CATEGORIAS: { id: Categoria; nombre: string; color: string }[] = [
+export const CATEGORIAS: { id: Categoria; nombre: string; color: string }[] = [
   { id: 'eventos', nombre: 'Eventos', color: '#e6a817' },
   { id: 'control', nombre: 'Control', color: '#e08a1e' },
   { id: 'movimiento', nombre: 'Movimiento', color: '#4c8bf5' },
@@ -32,6 +32,7 @@ const CATEGORIAS: { id: Categoria; nombre: string; color: string }[] = [
   { id: 'efectos', nombre: 'Efectos', color: '#e8590c' },
   { id: 'sonido', nombre: 'Sonido', color: '#cf63cf' },
   { id: 'objetos', nombre: 'Objetos', color: '#2eb872' },
+  { id: 'interfaz', nombre: 'Interfaz', color: '#14a3a3' },
   { id: 'variables', nombre: 'Variables', color: '#ff8c1a' },
   { id: 'funciones', nombre: 'Funciones', color: '#e6556b' },
 ];
@@ -61,8 +62,9 @@ function categoriaDe(b: Bloque): Categoria {
 }
 
 /** Los bloques de la paleta de cada categoría (lo que se crea al arrastrarlos). */
-function paleta(c: Categoria): Bloque[] {
+export function paleta(c: Categoria): Bloque[] {
   const acciones = (cat: Accion['categoria']): Bloque[] => ACCIONES.filter((a) => a.categoria === cat).map((a) => ({ tipo: 'accion', accion: a.id, campos: [...a.porDefecto] }));
+  const datos = (cat: Categoria): Bloque[] => DATOS_CON_BLOQUE.filter((d) => d.categoria === cat).map((d): Bloque => ({ tipo: 'asignar', objetivo: d.objetivo, operador: '=', valor: d.valor }));
   switch (c) {
     case 'eventos':
       return EVENTOS.map((e) => ({ tipo: 'evento', clase: e.clase, dato: e.dato?.porDefecto ?? '', cuerpo: [] }));
@@ -70,10 +72,12 @@ function paleta(c: Categoria): Bloque[] {
       return [
         { tipo: 'si', ramas: [{ condicion: 'yo.x > 500', cuerpo: [] }], sino: null },
         { tipo: 'si', ramas: [{ condicion: 'juego.vidas > 0', cuerpo: [] }], sino: [] },
+        { tipo: 'si', ramas: [{ condicion: 'controles(1).sePulso("a")', cuerpo: [] }], sino: null },
         { tipo: 'repetir', veces: '10', cuerpo: [] },
         { tipo: 'mientras', condicion: 'yo.y < 500', cuerpo: [] },
         { tipo: 'paraCada', variables: 'enemigo', coleccion: 'buscarTodos("Enemigo")', cuerpo: [] },
         ...acciones('control'),
+        ...datos('control'),
         { tipo: 'romper' },
         { tipo: 'continuar' },
       ];
@@ -92,8 +96,43 @@ function paleta(c: Categoria): Bloque[] {
         { tipo: 'hacer', codigo: 'curar(10)' },
       ];
     default:
-      return [...acciones(c), ...DATOS_CON_BLOQUE.filter((d) => d.categoria === c).map((d): Bloque => ({ tipo: 'asignar', objetivo: d.objetivo, operador: '=', valor: d.valor }))];
+      return [...acciones(c), ...datos(c)];
   }
+}
+
+/** Los nombres que hay en el proyecto (para que los bloques de la paleta salgan con algo que existe). */
+export interface NombresDelProyecto {
+  sonidos: string[];
+  musicas: string[];
+  plantillas: string[];
+  escenas: string[];
+  animaciones: string[];
+  objetos: string[];
+}
+
+/** Qué lista de nombres usa el primer hueco de cada bloque que nombra algo del proyecto. */
+const NOMBRE_EN_BLOQUE: Record<string, keyof NombresDelProyecto> = {
+  reproducir: 'sonidos', reproducirEn: 'sonidos', bucleEn: 'sonidos', ponerVolumen: 'sonidos', ponerTono: 'sonidos', ponerPan: 'sonidos',
+  musica: 'musicas', cruzarMusica: 'musicas', crear: 'plantillas', cambiarEscena: 'escenas', cambiarEscenaTransicion: 'escenas', animar: 'animaciones',
+};
+
+/**
+ * La paleta, con los nombres del proyecto: «reproducir el sonido "salto"» sale
+ * con un sonido que SÍ hay (si hay alguno), «cuando toco Moneda» con un objeto
+ * de la escena... Así el bloque funciona nada más soltarlo.
+ */
+export function paletaPara(c: Categoria, n: NombresDelProyecto | null): Bloque[] {
+  const bloques = paleta(c);
+  if (!n) return bloques;
+  return bloques.map((b): Bloque => {
+    if (b.tipo === 'accion') {
+      const lista = n[NOMBRE_EN_BLOQUE[b.accion]] ?? [];
+      const actual = /^"(.*)"$/.exec(b.campos[0] ?? '')?.[1];
+      if (lista.length && actual !== undefined && !lista.includes(actual)) return { ...b, campos: [`"${lista[0]}"`, ...b.campos.slice(1)] };
+    }
+    if (b.tipo === 'evento' && (b.clase === 'toco' || b.clase === 'dejoDeTocar') && n.objetos.length && !n.objetos.includes(b.dato)) return { ...b, dato: n.objetos[0] };
+    return b;
+  });
 }
 
 /** ¿Tiene cuerpos donde meter otros bloques? */
@@ -133,6 +172,9 @@ export class EditorBloques {
   private temporizador = 0;
   private resaltado: number | null = null;
   private ultimaLineaDe = new Map<number, number>();
+
+  /** Para preguntar los nombres del proyecto al pintar la paleta (los pone quien crea el editor). */
+  nombres: (() => NombresDelProyecto) | null = null;
 
   constructor(private alCambiar: (codigo: string) => void) {
     const verCodigo = h('button', { class: 'boton-icono', title: 'Ver al lado el código que escriben los bloques', onclick: () => {
@@ -275,6 +317,11 @@ export class EditorBloques {
 
   // ───────────────────────── Dibujo ─────────────────────────
 
+  /** Vuelve a pintar la paleta (al cambiar los nombres del proyecto). */
+  pintarPaleta(): void {
+    this.dibujarPaleta();
+  }
+
   private dibujarPaleta(): void {
     const cat = CATEGORIAS.find((c) => c.id === this.categoria)!;
     rellenar(this.paletaEl,
@@ -286,7 +333,7 @@ export class EditorBloques {
           } }, h('span', { class: 'punto' }), c.nombre)),
       ),
       h('div', { class: 'lista-paleta', style: `--color: ${cat.color}` },
-        paleta(this.categoria).map((b) => {
+        paletaPara(this.categoria, this.nombres?.() ?? null).map((b) => {
           const el = h('div', { class: `bloque-paleta tipo-${b.tipo}`, draggable: 'true', style: `--color: ${CATEGORIAS.find((c) => c.id === categoriaDe(b))!.color}`, title: 'Arrástralo a tu código' }, this.textoDe(b));
           el.addEventListener('dragstart', (e) => this.empezarArrastre(e, { tipo: 'nuevo', bloque: b }));
           el.addEventListener('dragend', () => this.terminarArrastre());

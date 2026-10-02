@@ -152,7 +152,7 @@ export class DatosJuego extends Anfitrion {
     throw new ErrorChispa(
       pos,
       `todavía no hay nada guardado en 'juego.${original}'.`,
-      s ? `¿Querías decir 'juego.${s}'?` : `Guarda primero un valor, por ejemplo en "cuando empieza": juego.${original} = 0`,
+      s ? `¿Querías decir 'juego.${s}'?` : `Dale un valor antes de usarlo. Sin código: haz clic en el fondo de la escena y, en «Datos del juego», pulsa «+ Nuevo dato» (${original} = 0). Con código, en "cuando empieza": juego.${original} = 0`,
     );
   }
   asignar(p: string, v: Valor, original: string): void {

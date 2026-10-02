@@ -40,7 +40,9 @@ export function abrirRecursosListos(estado: EstadoEditor, seccion: SeccionRecurs
             DIBUJOS.filter((d) => d.categoria === categoria).map((d) => {
               const esta = Object.prototype.hasOwnProperty.call(p.imagenes, d.nombre);
               return h('button', { class: `ficha-dibujo ${esta ? 'esta' : ''}`, 'data-dibujo': d.nombre, title: esta ? `«${d.nombre}» ya está en el proyecto (clic: ponerlo otra vez en la escena)` : `Añadir «${d.nombre}»`, onclick: () => {
+                const nitido = estado.proyecto.pixelArt;
                 const r = estado.anadirRecursoListo('dibujo', d.nombre, categoria !== 'casillas');
+                if (!nitido && estado.proyecto.pixelArt) notificar('He activado «píxeles nítidos» (Proyecto) para que estos dibujos no se vean borrosos.');
                 notificar(categoria === 'casillas' ? `Casilla «${r}» añadida a Proyecto > Imágenes. Elígela en tu mapa: inspector > tipos de casilla > imagen.` : `«${r}» añadido al proyecto y a la escena.`, 'ok');
                 pintar();
               } }, h('img', { src: imagenDeDibujo(d.nombre) ?? '', alt: d.titulo, draggable: 'false' }), h('span', {}, d.titulo), esta ? h('span', { class: 'marca-esta' }, '✓') : null);
