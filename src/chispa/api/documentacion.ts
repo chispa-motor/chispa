@@ -263,6 +263,17 @@ export const DOC_MODULOS: DocModulo[] = [
     ],
   },
   {
+    nombre: 'puntuaciones',
+    descripcion: 'La tabla de las 10 mejores puntuaciones del juego, con el nombre de quien las hizo. Se guarda en el ordenador de quien juega (como guardar y cargar). En el editor, «Pantallas listas» trae una pantalla de Fin del juego y una Tabla de puntuaciones que ya la usan.',
+    ejemplo: 'si puntuaciones.entra(juego.puntos):\n    puntuaciones.guardar("Ana", juego.puntos)',
+    miembros: [
+      d('guardar', 'accion', 'puntuaciones.guardar("nombre", puntos)', 'Apunta una puntuación en la tabla. Devuelve su puesto (1 = la mejor) o 0 si no entra entre las 10 mejores.', 'variable puesto = puntuaciones.guardar("Ana", juego.puntos)\nsi puesto == 1:\n    mostrar("¡Nuevo record!")', 'guardar("${1:nombre}", ${2:juego.puntos})'),
+      d('lista', 'accion', 'puntuaciones.lista()', 'Las mejores puntuaciones, de mayor a menor: una lista de tablas con nombre y puntos.', 'para cada p en puntuaciones.lista():\n    mostrar(p.nombre, p.puntos)', 'lista()'),
+      d('entra', 'accion', 'puntuaciones.entra(puntos)', 'Verdadero si esos puntos entrarían en la tabla (hay hueco, o superan a la última).', 'si puntuaciones.entra(juego.puntos):\n    mostrar("¡Escribe tu nombre!")', 'entra(${1:juego.puntos})'),
+      d('borrar', 'accion', 'puntuaciones.borrar()', 'Deja la tabla vacía.', 'puntuaciones.borrar()', 'borrar()'),
+    ],
+  },
+  {
     nombre: 'junta',
     descripcion: 'Unir objetos con cuerdas, muelles y bisagras. El objeto que se une necesita Física (y no ser estático); el otro extremo puede ser otro objeto o un punto del mundo (un vector). Se dibujan solas (junta.visibles = falso para que no).',
     ejemplo: 'cuando empieza:\n    junta.cuerda(yo, vector(yo.x, yo.y + 200))',

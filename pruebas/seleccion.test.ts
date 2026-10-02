@@ -305,6 +305,7 @@ describe('Deshacer y rehacer: TODO lo que cambia el proyecto', () => {
     agregarLetra: (e) => e.agregarLetra('Comica.ttf', 'data:font/ttf;base64,AAEAAAAAAAAAAAAA'),
     borrarLetra: (e) => e.borrarLetra('MiLetra'),
     crearControl: (e) => e.crearControl('barra', 100, 100),
+    anadirPantallas: (e) => void e.anadirPantallas(['menu', 'fin', 'pausa'], { empezarPorMenu: true }),
     guardarSonidoHecho: (e) => e.guardarSonidoHecho('pium', sonidoDeTipo('disparo')),
     borrarSonidoHecho: (e) => e.borrarSonidoHecho('tilin'),
     guardarCancion: (e) => e.guardarCancion('otra', cancionDeEjemplo()),

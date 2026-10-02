@@ -2679,6 +2679,51 @@ cuando toco Enemigo:
     tiempo.camaraLenta(0.3, 1)
 ```
 
+### `puntuaciones`
+
+La tabla de las 10 mejores puntuaciones del juego, con el nombre de quien las hizo. Se guarda en el ordenador de quien juega (como guardar y cargar). En el editor, «Pantallas listas» trae una pantalla de Fin del juego y una Tabla de puntuaciones que ya la usan.
+
+```
+si puntuaciones.entra(juego.puntos):
+    puntuaciones.guardar("Ana", juego.puntos)
+```
+
+#### `puntuaciones.guardar("nombre", puntos)`
+
+Apunta una puntuación en la tabla. Devuelve su puesto (1 = la mejor) o 0 si no entra entre las 10 mejores.
+
+```
+variable puesto = puntuaciones.guardar("Ana", juego.puntos)
+si puesto == 1:
+    mostrar("¡Nuevo record!")
+```
+
+#### `puntuaciones.lista()`
+
+Las mejores puntuaciones, de mayor a menor: una lista de tablas con nombre y puntos.
+
+```
+para cada p en puntuaciones.lista():
+    mostrar(p.nombre, p.puntos)
+```
+
+#### `puntuaciones.entra(puntos)`
+
+Verdadero si esos puntos entrarían en la tabla (hay hueco, o superan a la última).
+
+```
+si puntuaciones.entra(juego.puntos):
+    mostrar("¡Escribe tu nombre!")
+```
+
+#### `puntuaciones.borrar()`
+
+Deja la tabla vacía.
+
+```
+puntuaciones.borrar()
+```
+
 ### `junta`
 
 Unir objetos con cuerdas, muelles y bisagras. El objeto que se une necesita Física (y no ser estático); el otro extremo puede ser otro objeto o un punto del mundo (un vector). Se dibujan solas (junta.visibles = falso para que no).

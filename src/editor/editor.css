@@ -679,3 +679,10 @@ a.boton { text-decoration: none; display: inline-flex; align-items: center; }
 /* ── Controles de interfaz en el menú Añadir ── */
 .rejilla-controles { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
 .rejilla-controles .opcion-menu { padding: 5px 8px; font-size: 13px; }
+
+/* ── Pantallas listas ── */
+.dialogo.dialogo-pantallas { width: min(560px, 95vw); }
+.pantallas-listas { display: flex; flex-direction: column; gap: 8px; }
+.fila-pantalla { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+.fila-pantalla input { margin-top: 4px; }
+.fila-pantalla em { color: var(--texto-suave); font-style: normal; font-size: 12px; }

@@ -36,6 +36,7 @@ import { problemaDataURL, problemaLetra, type TipoRecurso as TipoRecursoArchivo 
 import { LETRAS, MAXIMO_LETRAS } from '../../motor/Letras';
 import type { TipoControl } from '../../objetos/componentes/Control';
 import { CONTROLES_NUEVOS } from '../interfaz/controlesNuevos';
+import { planDePantallas, type PlanPantallas, type TipoPantalla } from '../pantallas/pantallas';
 import { completarSonido, type ParamsSonido } from '../../sonido/generador';
 import type { DefCancion } from '../../sonido/musica';
 import { ErrorMotor } from '../../motor/Errores';
@@ -477,6 +478,26 @@ export class EstadoEditor {
     });
     this.seleccionarIndice(indice);
     return indice;
+  }
+
+  /**
+   * Añade pantallas listas (menú, opciones, créditos, puntuaciones, fin, pausa),
+   * conectadas entre sí y con la escena del juego. Todo de una vez (un solo
+   * deshacer). Devuelve los nombres con los que quedan.
+   */
+  anadirPantallas(cuales: readonly TipoPantalla[], opciones: { escenaDeJuego?: string; empezarPorMenu?: boolean } = {}): PlanPantallas {
+    const escenaDeJuego = opciones.escenaDeJuego && tiene(this.proyecto.escenas, opciones.escenaDeJuego) ? opciones.escenaDeJuego : this.escenaActual;
+    const plan = planDePantallas(this.proyecto, cuales, escenaDeJuego);
+    this.cambiar('proyecto', () => {
+      Object.assign(this.proyecto.escenas, structuredClone(plan.escenas));
+      Object.assign(this.proyecto.scripts, plan.scripts);
+      this.proyecto.escenas[escenaDeJuego].objetos.push(...structuredClone(plan.enElJuego));
+      // Fin y Récords usan juego.puntos: si el juego no lo tiene, se le pone (empieza en 0)
+      if (plan.necesitaPuntos && !Object.keys(this.proyecto.datos ?? {}).some((d) => normalizar(d) === 'puntos')) (this.proyecto.datos ??= {}).puntos = 0;
+      if (opciones.empezarPorMenu && plan.nombres.menu && tiene(plan.escenas, plan.nombres.menu)) this.proyecto.escenaInicial = plan.nombres.menu;
+    });
+    this.avisar('scripts');
+    return plan;
   }
 
   /** Crea un control de interfaz (barra, lista, ventana...) en la escena actual y lo selecciona. */

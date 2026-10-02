@@ -43,6 +43,7 @@ import { letrasDisponibles } from '../../motor/Letras';
 import { DIVISIONES, MAXIMO_CAMARAS, TRANSICIONES, type Division, type Transicion } from '../../objetos/Escena';
 import type { Camara } from '../../objetos/Camara';
 import { crearModuloJunta } from './juntas';
+import { crearModuloPuntuaciones } from './puntuaciones';
 import { Tabla } from '../ejecucion/valores';
 import { lanzarRayo } from '../../objetos/Rayos';
 import { CajaDialogo } from '../../objetos/Dialogo';
@@ -775,6 +776,9 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
 
   // ── efectos especiales (efectos.ts) ──
   g.declarar('efecto', crearModuloEfecto({ efectos: () => ctx.escena.efectos, aqui, propios: () => ctx.efectosPropios?.() ?? {} }));
+
+  // ── la tabla de las mejores puntuaciones (puntuaciones.ts) ──
+  g.declarar('puntuaciones', crearModuloPuntuaciones(ctx));
 
   // ── juntas: cuerdas, muelles y bisagras (juntas.ts) ──
   g.declarar('junta', crearModuloJunta({ juntas: () => ctx.escena.juntas, yo: () => (interprete.objetoActual as ObjetoJuego | null) ?? null }));

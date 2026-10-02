@@ -27,6 +27,7 @@ import { abrirEditorParticulas } from '../recursos/EditorParticulas';
 import { botonIcono, h, icono, rellenar } from '../interfaz/dom';
 import { confirmar, notificar, pedirTexto } from '../interfaz/dialogos';
 import { abrirEditorSonidos } from '../recursos/EditorSonidos';
+import { abrirPantallasListas } from '../pantallas/dialogoPantallas';
 import { abrirEditorMusica } from '../recursos/EditorMusica';
 import { callar, tocar } from '../recursos/audioEditor';
 import { FRECUENCIA_MUESTREO, generarSonido } from '../../sonido/generador';
@@ -116,6 +117,7 @@ export class PanelIzquierdo {
         escenas.map((n) => h('option', { value: n, selected: n === e.escenaActual }, n + (n === e.proyecto.escenaInicial ? '  ★' : ''))),
       ),
       botonIcono('mas', 'Nueva escena (por ejemplo, otro nivel o un menú)', () => this.nuevaEscena()),
+      botonIcono('boton', 'Pantallas listas: menú, opciones, créditos, puntuaciones, fin del juego y pausa', () => abrirPantallasListas(this.estado)),
     );
 
     const objetos = e.escena.objetos;
@@ -360,7 +362,10 @@ export class PanelIzquierdo {
     );
 
     return [
-      this.grupo('Escenas', 'escena', [botonIcono('mas', 'Nueva escena', () => this.nuevaEscena(), undefined, 'pequeno')], escenas, ''),
+      this.grupo('Escenas', 'escena', [
+        botonIcono('boton', 'Pantallas listas: menú, opciones, créditos, puntuaciones, fin del juego y pausa', () => abrirPantallasListas(e), undefined, 'pequeno'),
+        botonIcono('mas', 'Nueva escena', () => this.nuevaEscena(), undefined, 'pequeno'),
+      ], escenas, ''),
       this.grupo('Scripts', 'script', [botonIcono('mas', 'Nuevo script (sin objeto)', async () => {
         const n = await pedirTexto('Nuevo script', 'Nombre del archivo:', 'script');
         if (n) e.crearScriptSuelto(n);

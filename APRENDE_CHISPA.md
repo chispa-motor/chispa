@@ -2,7 +2,7 @@
 
 > Este archivo se genera solo con `npm run manual`, a partir de la API de verdad (no lo cambies a mano: cambia `src/chispa/api/curso.ts`). Un test ejecuta cada ejemplo, cada ejercicio y cada mini proyecto para comprobar que funcionan.
 
-Un curso por niveles para aprender a programar juegos con Chispa, aunque no hayas programado nunca. Salen **todos** los comandos que existen (394), cada uno con qué hace, un ejemplo corto que funciona y el error que más se comete con él.
+Un curso por niveles para aprender a programar juegos con Chispa, aunque no hayas programado nunca. Salen **todos** los comandos que existen (398), cada uno con qué hace, un ejemplo corto que funciona y el error que más se comete con él.
 
 **Cómo usarlo:**
 
@@ -59,6 +59,7 @@ Una regla para todo el curso: en el código **no hacen falta tildes**. Se escrib
   - [Juntas: cuerdas, muelles y bisagras](#juntas-cuerdas-muelles-y-bisagras)
   - [Pantalla dividida y varias cámaras](#pantalla-dividida-y-varias-camaras)
   - [Sonido con sitio y música que cambia](#sonido-con-sitio-y-musica-que-cambia)
+  - [Pantallas listas y tabla de puntuaciones](#pantallas-listas-y-tabla-de-puntuaciones)
   - [Depurar: encontrar los fallos](#depurar-encontrar-los-fallos)
 - [Soluciones de los ejercicios](#soluciones)
 
@@ -6962,6 +6963,78 @@ cuando empieza:
 ```
 cuando empieza:
     musica.tono = 10
+```
+
+### Pantallas listas y tabla de puntuaciones
+
+En el editor, el botón «Pantallas listas» (junto a las escenas) añade un menú principal, opciones, créditos, tabla de puntuaciones, fin del juego y pausa, ya conectados. La tabla guarda las 10 mejores puntuaciones con su nombre en el ordenador de quien juega.
+
+#### `puntuaciones.guardar("nombre", puntos)`
+
+Apunta una puntuación en la tabla.
+
+```
+cuando empieza:
+    variable puesto = puntuaciones.guardar("Ana", 1200)
+    mostrar("puesto", puesto)
+```
+
+**Error típico:** Olvidar el nombre: primero el nombre, luego los puntos. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    puntuaciones.guardar(1200)
+```
+
+#### `puntuaciones.lista()`
+
+Las mejores puntuaciones, de mayor a menor: una lista de tablas con nombre y puntos.
+
+```
+cuando empieza:
+    para cada p en puntuaciones.lista():
+        mostrar(p.nombre, p.puntos)
+```
+
+**Error típico:** Pedirle el nombre a la lista entera: hay que recorrerla (para cada p en ...) o coger una: puntuaciones.lista()[1].nombre Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    mostrar(puntuaciones.lista().nombre)
+```
+
+#### `puntuaciones.entra(puntos)`
+
+Verdadero si esos puntos entrarían en la tabla (hay hueco, o superan a la última).
+
+```
+cuando empieza:
+    si puntuaciones.entra(500):
+        mostrar("entra en la tabla")
+```
+
+**Error típico:** Darle un texto: quiere los puntos (un número). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    si puntuaciones.entra("muchos"):
+        mostrar("si")
+```
+
+#### `puntuaciones.borrar()`
+
+Deja la tabla vacía.
+
+```
+cuando se pulsa "b":
+    puntuaciones.borrar()
+```
+
+**Error típico:** Borrarla en cada fotograma: nunca se guardaría nada. Esto no da error: funciona, pero no hace lo que querías.
+
+```
+cuando cada fotograma:
+    puntuaciones.borrar()
 ```
 
 ### Depurar: encontrar los fallos

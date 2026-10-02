@@ -114,6 +114,8 @@ export class Control extends Componente {
 
   /** Por dónde se cogió (al arrastrar el deslizador o la ventana). */
   private arrastre: { dx: number; dy: number } | null = null;
+  /** Dónde estaba el ratón la última vez que se dibujó el menú (para saber si se ha movido). */
+  private ratonAntes: { x: number; y: number } | null = null;
   /** El reloj del cursor del campo de texto (parpadea). */
   private reloj = 0;
 
@@ -603,8 +605,10 @@ export class Control extends Componente {
         const n = this.opciones.length;
         const arriba = y - (n * this.altoFila) / 2;
         const sobre = m ? this.filaEn(m) : -1;
-        // El ratón por encima mueve la opción marcada (así ratón y teclado van juntos)
-        if (sobre >= 0 && escena?.iniciada) this.elegido = sobre;
+        // El ratón, AL MOVERSE por encima, mueve la opción marcada (si está quieto, mandan las flechas)
+        const movido = !!m && (!this.ratonAntes || this.ratonAntes.x !== m.x || this.ratonAntes.y !== m.y);
+        if (sobre >= 0 && movido && escena?.iniciada) this.elegido = sobre;
+        this.ratonAntes = m;
         this.opciones.forEach((opcion, i) => {
           const fy = arriba + i * this.altoFila;
           const marcada = i === this.elegido;

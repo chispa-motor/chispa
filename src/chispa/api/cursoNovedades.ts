@@ -266,4 +266,14 @@ export function agregarNovedades(tema: Tema, c: Comando): void {
     'cuando empieza:\n    mostrar(buscar("Barra").cuantos("moneda"))', 'Preguntárselo a una barra: es de los inventarios.');
   c('objeto:vaciar', 'cuando empieza:\n    buscar("Inventario").vaciar()', 'buscar("Inventario").vaciar()',
     'cuando empieza:\n    buscar("Lista").vaciar()', 'Vaciar una lista: es de los inventarios. Para una lista: yo.opciones = []');
+
+  tema(4, 'Pantallas listas y tabla de puntuaciones', 'En el editor, el botón «Pantallas listas» (junto a las escenas) añade un menú principal, opciones, créditos, tabla de puntuaciones, fin del juego y pausa, ya conectados. La tabla guarda las 10 mejores puntuaciones con su nombre en el ordenador de quien juega.');
+  c('puntuaciones:guardar', 'cuando empieza:\n    variable puesto = puntuaciones.guardar("Ana", 1200)\n    mostrar("puesto", puesto)', 'puntuaciones.guardar("Ana", 1200)',
+    'cuando empieza:\n    puntuaciones.guardar(1200)', 'Olvidar el nombre: primero el nombre, luego los puntos.');
+  c('puntuaciones:lista', 'cuando empieza:\n    para cada p en puntuaciones.lista():\n        mostrar(p.nombre, p.puntos)', 'mostrar(puntuaciones.lista())',
+    'cuando empieza:\n    mostrar(puntuaciones.lista().nombre)', 'Pedirle el nombre a la lista entera: hay que recorrerla (para cada p en ...) o coger una: puntuaciones.lista()[1].nombre');
+  c('puntuaciones:entra', 'cuando empieza:\n    si puntuaciones.entra(500):\n        mostrar("entra en la tabla")', 'mostrar(puntuaciones.entra(500))',
+    'cuando empieza:\n    si puntuaciones.entra("muchos"):\n        mostrar("si")', 'Darle un texto: quiere los puntos (un número).');
+  c('puntuaciones:borrar', 'cuando se pulsa "b":\n    puntuaciones.borrar()', 'puntuaciones.borrar()',
+    'cuando cada fotograma:\n    puntuaciones.borrar()', 'Borrarla en cada fotograma: nunca se guardaría nada.', 'l');
 }

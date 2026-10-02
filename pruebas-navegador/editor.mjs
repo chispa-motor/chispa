@@ -556,6 +556,45 @@ await prueba('día 4: controles de interfaz puestos desde el menú Añadir, usad
   comprobar(!(await p.$('.consola-editor .mensaje.error')), 'errores en la consola: ' + consola.slice(-300));
 });
 
+await prueba('día 4: «Pantallas listas» añade menú, opciones, puntuaciones, fin y pausa, y se juegan', async (p) => {
+  await p.click('.selector-escena button[title^="Pantallas listas"]');
+  await p.waitForSelector('.pantallas-listas');
+  comprobar((await p.$$('.fila-pantalla input:checked')).length === 6, 'no salen las 6 pantallas marcadas');
+  await p.click('.dialogo .boton.principal:has-text("Añadir")');
+  await p.waitForFunction(() => Object.keys(window.chispa.estado.proyecto.escenas).length === 6);
+  const proyecto = await estado(p, () => ({ escenas: Object.keys(window.chispa.estado.proyecto.escenas), inicial: window.chispa.estado.proyecto.escenaInicial }));
+  comprobar(proyecto.inicial === 'Menu' && proyecto.escenas.join() === 'Principal,Menu,Opciones,Creditos,Records,Fin', 'escenas: ' + JSON.stringify(proyecto));
+  // La segunda vez, las que ya están salen sin marcar (solo la pausa, que no es una escena)
+  await p.click('.selector-escena button[title^="Pantallas listas"]');
+  comprobar((await p.$$('.fila-pantalla input:checked')).length === 1, 'las pantallas que ya están no deberían salir marcadas');
+  await p.click('.dialogo .boton:has-text("Cancelar")');
+  // A jugar: el menú, con el teclado, hasta Opciones y vuelta; luego al juego y pausa
+  await p.keyboard.press('F5');
+  await p.waitForFunction(() => document.querySelector('.estado-juego')?.textContent?.includes('escena Menu'));
+  await p.waitForTimeout(400);
+  await p.keyboard.press('ArrowDown');
+  await p.waitForTimeout(60);
+  await p.keyboard.press('Enter');
+  await p.waitForFunction(() => document.querySelector('.estado-juego')?.textContent?.includes('escena Opciones'), null, { timeout: 5000 });
+  await p.waitForTimeout(500);
+  await p.keyboard.press('Escape');
+  await p.waitForFunction(() => document.querySelector('.estado-juego')?.textContent?.includes('escena Menu'), null, { timeout: 5000 });
+  await p.waitForTimeout(500);
+  await p.keyboard.press('Enter');
+  await p.waitForFunction(() => document.querySelector('.estado-juego')?.textContent?.includes('escena Principal'), null, { timeout: 5000 });
+  await p.waitForTimeout(500);
+  await p.keyboard.press('Escape');
+  await p.waitForTimeout(300);
+  // La ventana de pausa, en el centro de la pantalla: su barra de título es azul
+  const azul = await estado(p, () => {
+    const c = document.querySelector('.lienzo-juego');
+    const d = c.getContext('2d').getImageData(Math.floor(c.width * 0.5), Math.floor(c.height * (0.5 - 115 / 540)), 1, 1).data;
+    return d[2] > 200 && d[0] < 120;
+  });
+  comprobar(azul, 'al pulsar Escape en el juego no sale la ventana de pausa');
+  comprobar(!(await p.$('.consola-editor .mensaje.error')), 'errores en la consola: ' + (await textoDe(p, '.consola-editor')).slice(-300));
+});
+
 await prueba('depurar: clic en el número de línea, el juego se para, se ven las variables y se va paso a paso', async (p) => {
   const codigo = 'variable vueltas = 0\ncuando cada fotograma:\n    vueltas += 1\n    variable doble = vueltas * 2\n    yo.x += 1\n';
   await estado(p, (c) => {

@@ -2,7 +2,7 @@
 
 > Se genera sola con `npm run manual` (no la cambies a mano). Un test comprueba que no falta ningún comando y que cada ejemplo funciona.
 
-Todos los comandos de Chispa (394), una línea cada uno, para tenerla abierta mientras programas o imprimirla. Para aprender con calma, el [curso](APRENDE_CHISPA.md).
+Todos los comandos de Chispa (398), una línea cada uno, para tenerla abierta mientras programas o imprimirla. Para aprender con calma, el [curso](APRENDE_CHISPA.md).
 
 En los ejemplos se usan estas variables y esta función, como si ya las tuvieras (y en la escena hay un Jugador y un Mapa de casillas):
 
@@ -626,3 +626,12 @@ Las líneas que terminan en `:` empiezan un bloque: lo de dentro va debajo, con 
 | `musica.capa(numero, volumen, segundos)` | Sube o baja UNA capa de la música que suena. | `musica.capa(1, 0.5, 2)` |
 | `musica.intensidad` | Música adaptativa con un solo número: con 0 solo suena la primera capa, con 1 todas, y en medio van entrando una a una. | `musica.intensidad = 0.5` |
 | `musica.tono` | La velocidad de la música (y su tono): 1 = normal, 1.2 = más rápida y aguda, 0.8 = más lenta y grave. | `musica.tono = 1.2` |
+
+### Pantallas listas y tabla de puntuaciones
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `puntuaciones.guardar("nombre", puntos)` | Apunta una puntuación en la tabla. | `puntuaciones.guardar("Ana", 1200)` |
+| `puntuaciones.lista()` | Las mejores puntuaciones, de mayor a menor: una lista de tablas con nombre y puntos. | `mostrar(puntuaciones.lista())` |
+| `puntuaciones.entra(puntos)` | Verdadero si esos puntos entrarían en la tabla (hay hueco, o superan a la última). | `mostrar(puntuaciones.entra(500))` |
+| `puntuaciones.borrar()` | Deja la tabla vacía. | `puntuaciones.borrar()` |

@@ -380,6 +380,17 @@ describe('Lista y menú', () => {
       j.soltar('ArrowUp', 'ArrowUp');
     }
     expect(control(j).valor).toBe('Salir');
+    // El ratón quieto encima de una opción no pisa a las flechas
+    j.raton.mover(300, 300 + 38);
+    const pintar = () => j.juego.escena.dibujar(lienzo().r);
+    pintar();
+    expect(control(j).valor).toBe('Jugar'); // al moverse por encima, la marca
+    j.pulsar('ArrowDown', 'ArrowDown');
+    j.avanzar(1);
+    j.soltar('ArrowDown', 'ArrowDown');
+    pintar();
+    pintar();
+    expect(control(j).valor).toBe('Opciones');
     // Con el ratón: la de arriba, dos veces (avisa las dos)
     j.clic(300, 300 + 38);
     j.avanzar(1);
