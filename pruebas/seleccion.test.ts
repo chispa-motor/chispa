@@ -310,6 +310,7 @@ describe('Deshacer y rehacer: TODO lo que cambia el proyecto', () => {
     borrarSonidoHecho: (e) => e.borrarSonidoHecho('tilin'),
     guardarCancion: (e) => e.guardarCancion('otra', cancionDeEjemplo()),
     borrarCancion: (e) => e.borrarCancion('melodia'),
+    ponerIcono: (e) => e.ponerIcono(Object.keys(e.proyecto.imagenes)[0]),
     anadirRecursoListo: (e) => void e.anadirRecursoListo('dibujo', 'gato', true),
   };
 

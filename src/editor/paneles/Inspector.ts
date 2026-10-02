@@ -670,7 +670,9 @@ export class Inspector {
         ),
       ]),
       seccion('Proyecto', [
-        campoTexto('nombre', 'proyecto.nombre', e.proyecto.nombre, (v) => e.renombrarProyecto(v), 'Nombre del juego (sale en el título de la página al exportar)'),
+        campoTexto('nombre', 'proyecto.nombre', e.proyecto.nombre, (v) => e.renombrarProyecto(v), 'Nombre del juego (sale en el título de la página y en la pantalla de carga al exportar)'),
+        campoLista('icono', 'proyecto.icono', e.proyecto.icono ?? '', [['', '(sin icono)'], ...Object.keys(e.proyecto.imagenes).map((n): [string, string] => [n, n])], (v) => e.ponerIcono(v || null), 'El icono del juego: una de tus imágenes. Sale en la pestaña del navegador y en la pantalla de carga del juego exportado'),
+        campoCasilla('pantalla de carga', 'proyecto.pantallaDeCarga', e.proyecto.pantallaDeCarga ?? true, (v) => e.cambiarAjusteProyecto('pantallaDeCarga', v), 'En el juego exportado, mientras carga se ve el icono, el nombre del juego y «Hecho con Chispa»'),
         h('div', { class: 'dos-columnas' },
           campoNumero('ancho', 'proyecto.ancho', e.proyecto.ancho, (v) => e.cambiarAjusteProyecto('ancho', v ?? 960), { min: 64, max: 4096, paso: 16, ayuda: 'Ancho de la pantalla del juego, en píxeles' }),
           campoNumero('alto', 'proyecto.alto', e.proyecto.alto, (v) => e.cambiarAjusteProyecto('alto', v ?? 540), { min: 64, max: 4096, paso: 16, ayuda: 'Alto de la pantalla del juego, en píxeles' }),

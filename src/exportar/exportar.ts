@@ -49,7 +49,40 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:syste
 #panel-error p{margin:6px 0;line-height:1.45;white-space:pre-wrap}
 #panel-error .pista{color:#ffd98a}
 #panel-error pre{margin:8px 0;padding:8px 10px;background:#1c0709;border-radius:6px;color:#ffd98a;font:14px ui-monospace,Consolas,monospace;white-space:pre-wrap}
+#panel-error{z-index:20}
+#cargando{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;background:#12141c;color:#e8ebf2;text-align:center;transition:opacity .35s}
+#cargando.fuera{opacity:0;pointer-events:none}
+#cargando .caja-carga{display:flex;flex-direction:column;align-items:center;gap:14px;padding:24px;max-width:90vw}
+#cargando img{width:96px;height:96px;object-fit:contain}
+#cargando img.pixel{image-rendering:pixelated}
+#cargando h1{margin:0;font-size:clamp(22px,5vw,36px);overflow-wrap:anywhere}
+#cargando .barra-carga{width:min(220px,60vw);height:6px;border-radius:3px;background:#2a2f3d;overflow:hidden}
+#cargando .barra-carga i{display:block;width:40%;height:100%;border-radius:3px;background:#f1c40f;animation:carga 1s ease-in-out infinite alternate}
+#cargando p{margin:6px 0 0;font-size:14px;color:#8e97ab}
+#cargando b{color:#f1c40f}
+@keyframes carga{from{transform:translateX(-20%)}to{transform:translateX(170%)}}
+@media (prefers-reduced-motion:reduce){#cargando .barra-carga i{animation:none;width:100%}}
 `;
+
+/** El icono del juego (la "data URL" de la imagen elegida), o null si no tiene o ya no existe. */
+export function iconoDelJuego(proyecto: DefProyecto): string | null {
+  const nombre = proyecto.icono;
+  if (!nombre || !Object.prototype.hasOwnProperty.call(proyecto.imagenes, nombre)) return null;
+  const datos = proyecto.imagenes[nombre];
+  return typeof datos === 'string' && datos.startsWith('data:image/') ? datos : null;
+}
+
+/**
+ * La pantalla de carga: el icono y el nombre del juego, y «Hecho con Chispa».
+ * Va en la página (no la pinta el motor), así que se ve desde el primer
+ * instante, antes de que arranque nada. El reproductor la quita al empezar.
+ */
+export function pantallaDeCarga(proyecto: DefProyecto): string {
+  if (proyecto.pantallaDeCarga === false) return '';
+  const icono = iconoDelJuego(proyecto);
+  const imagen = icono ? `<img${proyecto.pixelArt ? ' class="pixel"' : ''} src="${escaparHTML(icono)}" alt="">` : '';
+  return `<div id="cargando" role="status" aria-label="Cargando"><div class="caja-carga">${imagen}<h1>${escaparHTML(proyecto.nombre)}</h1><div class="barra-carga"><i></i></div><p>Hecho con <b>Chispa</b></p></div></div>\n`;
+}
 
 /** Escapa un texto para meterlo en HTML (el título). */
 export function escaparHTML(texto: string): string {
@@ -96,6 +129,7 @@ export function politicaDeSeguridad(codigo: string, estilos: string[]): string {
 export function generarPaginaJuego(proyecto: DefProyecto, reproductor: string): string {
   const codigo = reproductor.replace(/<\/script/gi, '<\\/script').replace(/<!--/g, '<\\!--');
   const csp = politicaDeSeguridad(codigo, [ESTILOS, ESTILOS_TACTILES]);
+  const icono = iconoDelJuego(proyecto);
   return `<!doctype html>
 ${avisoDeLicencia()}
 <html lang="es">
@@ -105,13 +139,13 @@ ${avisoDeLicencia()}
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="Chispa ${VERSION}">
 <meta name="referrer" content="no-referrer">
-<title>${escaparHTML(proyecto.nombre)}</title>
+<title>${escaparHTML(proyecto.nombre)}</title>${icono ? `\n<link rel="icon" href="${escaparHTML(icono)}">` : ''}
 <style>${ESTILOS}</style>
 <style data-controles-tactiles>${ESTILOS_TACTILES}</style>
 </head>
 <body>
 <div id="contenedor-juego"><canvas id="lienzo" tabindex="0"></canvas></div>
-<div id="panel-error" hidden></div>
+${pantallaDeCarga(proyecto)}<div id="panel-error" hidden></div>
 <script type="application/json" id="proyecto-chispa">${jsonParaScript(proyecto)}</script>
 <script>${codigo}</script>
 </body>

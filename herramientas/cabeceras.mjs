@@ -40,7 +40,8 @@ export const CABECERA_HTML = ['<!--', ...LINEAS.map((l) => (l ? `  ${l}` : '')),
 /** Carpetas y archivos del motor. Los juegos de ejemplo no. */
 const CARPETAS = ['src', 'pruebas', 'pruebas-navegador', 'herramientas'];
 const SUELTOS = ['vite.config.ts', 'vite.reproductor.config.ts', 'index.html'];
-const FUERA = [/^src[\\/]ejemplos[\\/]/];
+// Tampoco en las plantillas de proyecto (cada carpeta de src/plantillas es un juego de partida, de dominio público)
+const FUERA = [/^src[\\/]ejemplos[\\/]/, /^src[\\/]plantillas[\\/][^\\/]+[\\/]/];
 
 export function archivosDelMotor(raiz = '.') {
   const lista = [];

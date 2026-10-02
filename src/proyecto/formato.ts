@@ -284,6 +284,10 @@ export interface DefProyecto {
   pixelArt?: boolean;
   /** En el juego exportado, botones en la pantalla de los móviles (si no se dice: sí). */
   controlesTactiles?: boolean;
+  /** El icono del juego: el nombre de una de sus imágenes. Sale en la pestaña del navegador y en la pantalla de carga del juego exportado. */
+  icono?: string;
+  /** En el juego exportado, la pantalla «Hecho con Chispa» mientras carga (si no se dice: sí). */
+  pantallaDeCarga?: boolean;
   /** nombre corto → ruta del archivo o "data URL" */
   imagenes: Record<string, string>;
   /** nombre corto → ruta del archivo o "data URL" (.mp3, .ogg, .wav) */
@@ -370,6 +374,9 @@ function completar(p: DefProyecto): DefProyecto {
     alto: p.alto ?? 540,
     pixelArt: p.pixelArt ?? false,
     controlesTactiles: p.controlesTactiles ?? true,
+    // El icono solo vale si es una imagen del proyecto; la pantalla de carga solo se guarda si se ha quitado
+    ...(p.icono && Object.prototype.hasOwnProperty.call(p.imagenes ?? {}, p.icono) ? { icono: p.icono } : {}),
+    ...(p.pantallaDeCarga === false ? { pantallaDeCarga: false } : {}),
     imagenes: p.imagenes ?? {},
     sonidos: p.sonidos ?? {},
     animaciones: p.animaciones ?? {},

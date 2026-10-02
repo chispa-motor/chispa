@@ -207,10 +207,24 @@ export class EstadoEditor {
   }
 
   /** Tamaño de la pantalla del juego y pixel art. */
-  cambiarAjusteProyecto(ajuste: 'ancho' | 'alto' | 'pixelArt' | 'controlesTactiles', valor: number | boolean): void {
+  cambiarAjusteProyecto(ajuste: 'ancho' | 'alto' | 'pixelArt' | 'controlesTactiles' | 'pantallaDeCarga', valor: number | boolean): void {
     this.cambiar('proyecto', () => {
-      if (ajuste === 'pixelArt' || ajuste === 'controlesTactiles') this.proyecto[ajuste] = Boolean(valor);
+      // La pantalla de carga solo se apunta si se quita (lo normal es que esté)
+      if (ajuste === 'pantallaDeCarga') {
+        if (valor) delete this.proyecto.pantallaDeCarga;
+        else this.proyecto.pantallaDeCarga = false;
+      } else if (ajuste === 'pixelArt' || ajuste === 'controlesTactiles') this.proyecto[ajuste] = Boolean(valor);
       else this.proyecto[ajuste] = Math.max(64, Math.min(4096, Math.round(Number(valor) || 0)));
+    });
+  }
+
+  /** El icono del juego: una de las imágenes del proyecto (null o un nombre que no existe = sin icono). */
+  ponerIcono(nombre: string | null): void {
+    const vale = !!nombre && tiene(this.proyecto.imagenes, nombre);
+    if (!vale && !this.proyecto.icono) return;
+    this.cambiar('proyecto', () => {
+      if (vale) this.proyecto.icono = nombre!;
+      else delete this.proyecto.icono;
     });
   }
 
@@ -1032,6 +1046,7 @@ export class EstadoEditor {
         for (const t of Object.values(o.mapa?.tipos ?? {})) if (t.imagen === nombre) delete t.imagen;
       }
       for (const a of Object.values(this.proyecto.animaciones)) a.fotogramas = a.fotogramas.filter((f) => f !== nombre);
+      if (this.proyecto.icono === nombre) delete this.proyecto.icono;
     });
   }
 
@@ -1092,6 +1107,7 @@ export class EstadoEditor {
         if (tipo === 'animacion' && o.animacion === viejo) o.animacion = final;
       }
       if (tipo === 'imagen') for (const a of Object.values(this.proyecto.animaciones)) a.fotogramas = a.fotogramas.map((f) => (f === viejo ? final : f));
+      if (tipo === 'imagen' && this.proyecto.icono === viejo) this.proyecto.icono = final;
       for (const [archivo, codigo] of Object.entries(this.proyecto.scripts)) {
         this.proyecto.scripts[archivo] = codigo.replace(/"([^"\n]*)"/g, (entero, dentro: string) => (normalizar(dentro) === normalizar(viejo) ? `"${final}"` : entero));
       }

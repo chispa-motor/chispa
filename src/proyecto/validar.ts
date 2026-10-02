@@ -514,6 +514,8 @@ export function validarProyecto(datos: unknown): Partial<DefProyecto> {
     alto: (x, r) => numero(x, r, 16, L.anchoAlto),
     pixelArt: logico,
     controlesTactiles: logico,
+    icono: nombre,
+    pantallaDeCarga: logico,
     imagenes: (x, r) => registro(x, r, L.imagenes, recurso('imagen')),
     sonidos: (x, r) => registro(x, r, L.sonidos, recurso('sonido')),
     animaciones: (x, r) => registro(x, r, L.animaciones, animacion),

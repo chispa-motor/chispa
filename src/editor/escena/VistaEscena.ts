@@ -437,10 +437,15 @@ export class VistaEscena {
         const l = aLocal(p.x, p.y);
         if (s) {
           ctx.save();
-          ctx.translate(l.x, l.y);
-          if (def.sprite?.fijo) ctx.scale(1 / marco.zoom, 1 / marco.zoom);
-          s.dibujarEn(r, 0, 0);
-          ctx.restore();
+          // Si el dibujo falla (su imagen aún no ha cargado), el lienzo se deja como estaba:
+          // si no, lo que se dibuja después sale cada vez más desplazado
+          try {
+            ctx.translate(l.x, l.y);
+            if (def.sprite?.fijo) ctx.scale(1 / marco.zoom, 1 / marco.zoom);
+            s.dibujarEn(r, 0, 0);
+          } finally {
+            ctx.restore();
+          }
         } else if (!mapa) {
           this.dibujarVacio(l.x, l.y, def);
         }

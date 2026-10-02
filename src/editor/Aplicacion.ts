@@ -27,6 +27,8 @@ import { ErrorChispa, ErrorCompilacion } from '../chispa/errores/ErrorChispa';
 import { ErrorMotor } from '../motor/Errores';
 import { prepararPublicacion, type DestinoPublicar } from '../exportar/publicar';
 import { proyectoMinimo } from '../ejemplos/minimo/proyecto';
+import { elegirPlantilla } from './plantillas/elegirPlantilla';
+import { hacerPortada } from './exportar/portada';
 import { proyectoVacio } from '../proyecto/formato';
 import { cargarAutomatico, descargar, elegirArchivo, guardarAutomatico, nombreDeArchivo } from './Almacen';
 import { EditorCodigo } from './codigo/EditorCodigo';
@@ -302,6 +304,7 @@ export class Aplicacion {
         botonIcono('abrir', 'Abrir un proyecto (.chispa.json)', () => this.abrirArchivo(), 'Abrir'),
         botonIcono('guardar', 'Descargar el proyecto como archivo .chispa.json (Ctrl+S)', () => this.descargarProyecto(), 'Guardar'),
         botonIcono('exportar', 'Exportar el juego como una página web que funciona sola', () => this.exportar(), 'Exportar'),
+        botonIcono('estrella', 'itch.io en un clic: descarga el zip listo para subir a itch.io (con el nombre, el icono y la pantalla de carga) y te dice los pasos', () => this.exportar('itch'), 'itch.io', 'boton-itch'),
       ),
       h('div', { class: 'grupo-barra' }, deshacer, rehacer),
       h('div', { class: 'grupo-barra controles-juego' }, ejecutar, pausar, parar),
@@ -471,23 +474,13 @@ export class Aplicacion {
   }
 
   private async nuevo(): Promise<void> {
-    const elegir = await new Promise<'vacio' | 'ejemplo' | null>((resolver) => {
-      abrirDialogo('Proyecto nuevo',
-        h('div', {},
-          h('p', {}, 'El proyecto actual se cerrará. Si quieres conservarlo, descárgalo antes con «Guardar».'),
-          h('p', {}, '¿Cómo quieres empezar?'),
-        ),
-        [
-          { texto: 'Cancelar', alPulsar: () => resolver(null) },
-          { texto: 'Con el ejemplo', alPulsar: () => resolver('ejemplo') },
-          { texto: 'Vacío', clase: 'principal', alPulsar: () => resolver('vacio') },
-        ]);
-    });
-    if (!elegir) return;
+    const proyecto = await elegirPlantilla(true);
+    if (!proyecto) return;
     this.parar();
-    this.estado.abrir(elegir === 'vacio' ? proyectoVacio('Mi juego') : proyectoMinimo);
+    this.estado.abrir(proyecto);
     this.vistaEscena.encuadrar();
     this.inferior.limpiar();
+    notificar(`Proyecto nuevo: ${this.estado.proyecto.nombre}. Pulsa «Ejecutar» (F5) para probarlo.`, 'ok');
   }
 
   private async abrirArchivo(): Promise<void> {
@@ -516,7 +509,8 @@ export class Aplicacion {
     notificar('Proyecto descargado. Para abrirlo otra vez: botón «Abrir».', 'ok');
   }
 
-  async exportar(): Promise<void> {
+  /** Exportar. Con un destino (el botón «itch.io»), va directo: descarga lo de ese sitio y enseña sus pasos. */
+  async exportar(directo?: DestinoPublicar): Promise<void> {
     if (this.inferior.revisar() > 0) {
       this.inferior.mostrarPestana('problemas');
       return avisar('Hay errores en el código', 'Arregla los errores (pestaña Problemas) antes de exportar el juego.');
@@ -529,11 +523,13 @@ export class Aplicacion {
     } catch {
       return avisar('No encuentro el reproductor', 'Falta el archivo reproductor.js. Arranca el editor con "npm run dev" (lo genera solo) o ejecuta "npm run reproductor".');
     }
-    this.dialogoPublicar(reproductor);
+    // La portada para itch.io se dibuja ya (hace falta un lienzo: si el navegador no deja, no hay portada)
+    const portada = await hacerPortada(this.estado.proyecto);
+    this.dialogoPublicar(reproductor, portada, directo);
   }
 
   /** Exportar: un archivo, itch.io o GitHub Pages. Descarga lo que hace falta y enseña los pasos en la web de cada sitio. */
-  private dialogoPublicar(reproductor: string): void {
+  private dialogoPublicar(reproductor: string, portada: Uint8Array | null, directo?: DestinoPublicar): void {
     const cuerpo = h('div', { class: 'publicar' });
     const elegir = () =>
       rellenar(cuerpo,
@@ -548,8 +544,9 @@ export class Aplicacion {
       h('button', { class: `opcion-publicar destino-${destino}`, onclick: () => pasos(destino) },
         icono(ic, 26), h('strong', {}, titulo), h('span', {}, texto));
     const pasos = (destino: DestinoPublicar) => {
-      const p = prepararPublicacion(this.estado.proyecto, reproductor, destino);
+      const p = prepararPublicacion(this.estado.proyecto, reproductor, destino, portada);
       const bajar = () => descargar(p.descarga.nombre, p.descarga.contenido, p.descarga.tipo);
+      const bajarPortada = p.portada ? () => descargar(p.portada!.nombre, p.portada!.contenido, p.portada!.tipo) : null;
       bajar();
       rellenar(cuerpo,
         h('h3', { class: 'titulo-publicar' }, p.titulo),
@@ -558,12 +555,14 @@ export class Aplicacion {
         h('div', { class: 'botones-publicar' },
           h('button', { class: 'boton-enlace', onclick: elegir }, '← Otras opciones'),
           h('span', { class: 'espacio' }),
+          bajarPortada ? h('button', { class: 'boton', 'data-accion': 'portada', onclick: bajarPortada, title: p.portada!.nombre }, 'Descargar portada') : null,
           h('button', { class: 'boton', onclick: bajar, title: p.descarga.nombre }, 'Descargar otra vez'),
           p.enlace ? h('a', { class: 'boton principal', href: p.enlace.url, target: '_blank', rel: 'noopener' }, p.enlace.texto) : null,
         ),
       );
     };
-    elegir();
+    if (directo) pasos(directo);
+    else elegir();
     abrirDialogo('Exportar y publicar tu juego', cuerpo, [{ texto: 'Cerrar' }], 'dialogo-ancho');
   }
 

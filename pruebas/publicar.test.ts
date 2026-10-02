@@ -14,7 +14,11 @@
 import { describe, expect, it } from 'vitest';
 import { crc32, crearZip } from '../src/exportar/zip';
 import { nombreCorto, prepararPublicacion } from '../src/exportar/publicar';
-import { proyectoVacio } from '../src/proyecto/formato';
+import { migrarProyecto, proyectoVacio, type DefProyecto } from '../src/proyecto/formato';
+import { generarPaginaJuego, iconoDelJuego, pantallaDeCarga } from '../src/exportar/exportar';
+import { imagenDeDibujo } from '../src/recursos/dibujos';
+import { EstadoEditor } from '../src/editor/estado/EstadoEditor';
+import { lineasDeTitulo } from '../src/editor/exportar/portada';
 
 /** Lee un .zip "a mano" siguiendo el formato: desde el final (el directorio central) hasta los datos. */
 function leerZip(zip: Uint8Array): { nombre: string; texto: string; crcBien: boolean; metodo: number; utf8: boolean }[] {
@@ -92,7 +96,7 @@ describe('Publicar', () => {
     expect(index.texto).toContain('<script type="application/json" id="proyecto-chispa">');
     expect(index.texto).toContain('reproductor');
     const pasos = p.pasos.join('\n');
-    for (const t of ['Upload new project', 'Kind of project', '**HTML**', 'played in the browser', 'Viewport dimensions', '**800**', '**600**', 'Public']) expect(pasos).toContain(t);
+    for (const t of ['Upload new project', '¡Mi Juego del Ñandú!', 'Kind of project', '**HTML**', 'played in the browser', 'Viewport dimensions', '**800**', '**600**', 'Public']) expect(pasos).toContain(t);
     expect(p.enlace?.url).toBe('https://itch.io/game/new');
   });
 
@@ -119,5 +123,117 @@ describe('Publicar', () => {
         expect(paso.replace(/\*\*/g, '')).not.toContain('*');
       }
     }
+  });
+});
+
+// ───────────────────────── Día 5, bloque 3: icono, nombre y pantalla de carga ─────────────────────────
+
+describe('El icono, el nombre y la pantalla de carga del juego exportado', () => {
+  const PNG = imagenDeDibujo('gema')!;
+  const conIcono = (): DefProyecto => ({ ...proyectoVacio('La Gema <b>Azul</b> & "más"'), imagenes: { gema: PNG }, icono: 'gema', pixelArt: true });
+
+  it('la página lleva el icono (pestaña del navegador) y la pantalla de carga con el nombre y «Hecho con Chispa»', () => {
+    const html = generarPaginaJuego(conIcono(), 'console.log(1)');
+    expect(html).toContain(`<link rel="icon" href="${PNG}">`);
+    const carga = /<div id="cargando"[\s\S]*?<\/div><\/div>/.exec(html)![0];
+    expect(carga).toContain(`<img class="pixel" src="${PNG}" alt="">`);
+    expect(carga).toContain('Hecho con <b>Chispa</b>');
+    // El nombre va escapado: no puede meter HTML en la página
+    expect(carga).toContain('<h1>La Gema &lt;b&gt;Azul&lt;/b&gt; &amp; &quot;más&quot;</h1>');
+    expect(html).not.toContain('<b>Azul</b>');
+    // La pantalla de carga va antes del código, para que se vea desde el primer momento
+    expect(html.indexOf('id="cargando"')).toBeLessThan(html.indexOf('<script>'));
+    expect(html.indexOf('id="cargando"')).toBeGreaterThan(html.indexOf('id="lienzo"'));
+  });
+
+  it('sin icono no hay <link> ni imagen, pero sí pantalla de carga; y se puede quitar', () => {
+    const sin = proyectoVacio('Sin icono');
+    const html = generarPaginaJuego(sin, 'console.log(1)');
+    expect(html).not.toContain('rel="icon"');
+    expect(pantallaDeCarga(sin)).not.toContain('<img');
+    expect(pantallaDeCarga(sin)).toContain('<h1>Sin icono</h1>');
+    const quitada = generarPaginaJuego({ ...conIcono(), pantallaDeCarga: false }, 'console.log(1)');
+    expect(quitada).not.toContain('<div id="cargando"');
+    expect(quitada).toContain('rel="icon"');
+  });
+
+  it('un icono que no es una imagen del proyecto (o no es una imagen de verdad) no se usa', () => {
+    expect(iconoDelJuego({ ...conIcono(), icono: 'no-esta' })).toBeNull();
+    expect(iconoDelJuego({ ...conIcono(), icono: '__proto__' })).toBeNull();
+    expect(iconoDelJuego({ ...conIcono(), icono: 'toString' })).toBeNull();
+    expect(iconoDelJuego({ ...conIcono(), imagenes: { gema: 'javascript:alert(1)' } })).toBeNull();
+    expect(iconoDelJuego({ ...conIcono(), imagenes: { gema: 'https://malo.example/x.png' } })).toBeNull();
+    expect(iconoDelJuego(conIcono())).toBe(PNG);
+  });
+
+  it('los estilos de la pantalla de carga entran en la política de seguridad (no hace falta ningún estilo suelto)', () => {
+    const html = generarPaginaJuego(conIcono(), 'console.log(1)');
+    const carga = /<div id="cargando"[\s\S]*?<\/div><\/div>/.exec(html)![0];
+    expect(carga).not.toMatch(/style=|onload|onerror|<script/i);
+    expect(html).toContain('#cargando{');
+    expect(html).toMatch(/img-src data: blob:/);
+  });
+
+  it('al abrir un proyecto: el icono tiene que ser una de sus imágenes; la pantalla de carga solo se guarda si se quita', () => {
+    const base = JSON.parse(JSON.stringify(conIcono()));
+    expect(migrarProyecto(base).icono).toBe('gema');
+    expect('pantallaDeCarga' in migrarProyecto(base)).toBe(false);
+    expect(migrarProyecto({ ...base, icono: 'otra' }).icono).toBeUndefined();
+    expect(migrarProyecto({ ...base, pantallaDeCarga: false }).pantallaDeCarga).toBe(false);
+    expect('pantallaDeCarga' in migrarProyecto({ ...base, pantallaDeCarga: true })).toBe(false);
+    expect(() => migrarProyecto({ ...base, icono: 7 })).toThrow();
+    expect(() => migrarProyecto({ ...base, pantallaDeCarga: 'no' })).toThrow();
+  });
+
+  it('en el editor: poner y quitar el icono se deshace; borrar o renombrar su imagen lo arrastra', () => {
+    const e = new EstadoEditor();
+    e.agregarImagen('gema', PNG);
+    e.agregarImagen('otra', imagenDeDibujo('llave')!);
+    e.ponerIcono('gema');
+    expect(e.proyecto.icono).toBe('gema');
+    e.ponerIcono('no-existe');
+    expect(e.proyecto.icono).toBeUndefined();
+    e.deshacer();
+    expect(e.proyecto.icono).toBe('gema');
+    e.renombrarRecurso('imagen', 'gema', 'joya');
+    expect(e.proyecto.icono).toBe('joya');
+    e.borrarImagen('otra');
+    expect(e.proyecto.icono).toBe('joya');
+    e.borrarImagen('joya');
+    expect(e.proyecto.icono).toBeUndefined();
+    e.deshacer();
+    expect(e.proyecto.icono).toBe('joya');
+    e.cambiarAjusteProyecto('pantallaDeCarga', false);
+    expect(e.proyecto.pantallaDeCarga).toBe(false);
+    e.cambiarAjusteProyecto('pantallaDeCarga', true);
+    expect('pantallaDeCarga' in e.proyecto).toBe(false);
+    // Sin icono, quitarlo no cuenta como un cambio
+    const limpio = new EstadoEditor();
+    limpio.ponerIcono(null);
+    expect(limpio.modificado).toBe(false);
+  });
+
+  it('itch.io: los pasos dicen el nombre del juego, y la portada (si la hay) se descarga aparte', () => {
+    const sin = prepararPublicacion(conIcono(), 'console.log(1)', 'itch');
+    expect(sin.portada).toBeUndefined();
+    expect(sin.pasos.join('\n')).not.toContain('portada');
+    expect(sin.pasos.join('\n')).toContain('su icono');
+    expect(sin.pasos.join('\n')).toContain('**Title**');
+    const con = prepararPublicacion(conIcono(), 'console.log(1)', 'itch', new Uint8Array([137, 80, 78, 71]));
+    expect(con.portada).toEqual({ nombre: 'la-gema-b-azul-b-mas-portada.png', contenido: new Uint8Array([137, 80, 78, 71]), tipo: 'image/png' });
+    expect(con.pasos.join('\n')).toContain('Cover image');
+    // El zip sigue llevando solo el juego
+    expect(leerZip(con.descarga.contenido as Uint8Array).map((a) => a.nombre)).toEqual(['index.html']);
+    // La portada solo es para itch.io
+    expect(prepararPublicacion(conIcono(), 'console.log(1)', 'github', new Uint8Array([1])).portada).toBeUndefined();
+  });
+
+  it('el título de la portada se parte en líneas que caben (tres como mucho)', () => {
+    const cabe = (t: string) => t.length <= 10;
+    expect(lineasDeTitulo('Mi juego', cabe)).toEqual(['Mi juego']);
+    expect(lineasDeTitulo('La gran aventura del ñandú', cabe)).toEqual(['La gran', 'aventura', 'del ñandú']);
+    expect(lineasDeTitulo('uno dos tres cuatro cinco seis siete ocho nueve diez once', cabe)).toHaveLength(3);
+    expect(lineasDeTitulo('Supercalifragilistico', cabe)[0].length).toBeLessThanOrEqual(10);
+    expect(lineasDeTitulo('   ', cabe)).toEqual([]);
   });
 });

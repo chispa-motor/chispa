@@ -39,12 +39,16 @@ export interface Dibujo {
   categoria: CategoriaDibujo;
   /** 16 filas de 16 letras (o de 8, si es simétrico: la mitad izquierda). */
   filas: string[];
+  /** Dibujado mirando hacia arriba, pero se entrega tumbado: mirando a la DERECHA (hacia donde va yo.avanzar con rotación 0). */
+  tumbado?: boolean;
 }
 
 const LADO = 16;
 const VACIA = '........';
 
 const dibujo = (nombre: string, titulo: string, categoria: CategoriaDibujo, filas: string[]): Dibujo => ({ nombre, titulo, categoria, filas });
+
+const tumbar = (d: Dibujo): Dibujo => ({ ...d, tumbado: true });
 
 const DIBUJADOS: Dibujo[] = [
   // ── Personajes ──
@@ -72,10 +76,10 @@ const DIBUJADOS: Dibujo[] = [
     '.......w', '......kw', '......kc', '.....kbc', '.....kbc', '....kbbb', '....kbbb', '...kbbbb',
     '..kgbbbb', '.kggbbBB', 'kgggbbBB', 'kggkkbbb', 'kgk..kbb', 'kk...koo', '......oy', '.......y',
   ]),
-  dibujo('coche', 'Coche (visto desde arriba)', 'personajes', [
+  tumbar(dibujo('coche', 'Coche (visto desde arriba)', 'personajes', [
     VACIA, '....kkkk', '...krrrr', '..kyrrrr', '..krrrrr', '.kkrcccc', '.kkrcccc', '..krrrrr',
     '..krRRRR', '..krRRRR', '..krrrrr', '.kkrcccc', '.kkrrrrr', '..krrrrr', '..kRrrrr', '...kkkkk',
-  ]),
+  ])),
   // ── Enemigos ──
   dibujo('slime', 'Slime', 'enemigos', [
     VACIA, VACIA, VACIA, VACIA, VACIA, '.....kkk', '...kklll', '..kllwll',
@@ -166,6 +170,8 @@ const CASILLAS: [string, string, Receta][] = [
     if (y < alto) return y === 0 || grano(x, y, 2) > 0.75 ? 'l' : 'G';
     return grano(x, y, 3) > 0.85 ? 'N' : grano(x, y, 4) > 0.9 ? '#c98a66' : 'n';
   }],
+  // La hierba vista desde arriba: toda verde, con matas más claras y más oscuras
+  ['cesped', 'Césped (visto desde arriba)', (x, y) => (grano(x, y, 12) > 0.9 ? 'l' : grano(x, y, 13) > 0.88 ? '#2f8f3e' : grano(x >> 1, y >> 1, 14) > 0.8 ? '#45ad52' : 'G')],
   ['tierra', 'Tierra', (x, y) => (grano(x, y, 5) > 0.86 ? 'N' : grano(x, y, 6) > 0.9 ? '#c98a66' : 'n')],
   ['ladrillo', 'Ladrillo', (x, y) => {
     const fila = Math.floor(y / 4);
@@ -218,10 +224,12 @@ function colorDe(letra: string): [number, number, number, number] {
 
 /** Las 16 filas de 16 colores de un dibujo (los simétricos, ya completos). */
 export function coloresDe(d: Dibujo): string[][] {
-  return d.filas.map((fila) => {
+  const filas = d.filas.map((fila) => {
     const letras = [...fila];
     return letras.length === LADO / 2 ? [...letras, ...[...letras].reverse()] : letras;
   });
+  // Tumbado: un cuarto de vuelta, para que lo de arriba quede a la derecha
+  return d.tumbado ? filas.map((_, y) => filas.map((__, x) => filas[LADO - 1 - x][y])) : filas;
 }
 
 function aPNG(colores: string[][]): Uint8Array {

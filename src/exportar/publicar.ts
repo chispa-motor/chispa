@@ -37,6 +37,8 @@ export interface Publicacion {
   /** Una dirección para abrir (la web donde se sube el juego). */
   enlace?: { texto: string; url: string };
   nota?: string;
+  /** Otro archivo que se puede descargar aparte (la portada para la página del juego). */
+  portada?: Descarga;
 }
 
 /** "Mi juego!" → "mi-juego" (para nombres de archivo y de repositorio). */
@@ -52,27 +54,30 @@ export function nombreCorto(nombre: string): string {
 }
 
 /** Prepara lo que hay que descargar y los pasos, para cada sitio. */
-export function prepararPublicacion(proyecto: DefProyecto, reproductor: string, destino: DestinoPublicar): Publicacion {
+export function prepararPublicacion(proyecto: DefProyecto, reproductor: string, destino: DestinoPublicar, portada?: Uint8Array | null): Publicacion {
   const html = generarPaginaJuego(proyecto, reproductor);
   const corto = nombreCorto(proyecto.nombre);
   const tamano = `${proyecto.ancho} × ${proyecto.alto}`;
 
   if (destino === 'itch') {
     const nombre = `${corto}-itch.zip`;
+    const archivoPortada = `${corto}-portada.png`;
     return {
       destino,
       titulo: 'Publicar en itch.io',
       descarga: { nombre, contenido: crearZip([{ nombre: 'index.html', contenido: html }]), tipo: 'application/zip' },
       enlace: { texto: 'Abrir itch.io', url: 'https://itch.io/game/new' },
+      ...(portada ? { portada: { nombre: archivoPortada, contenido: portada, tipo: 'image/png' } } : {}),
       pasos: [
-        `Ya se ha descargado **${nombre}**. Dentro lleva tu juego entero (un index.html). No hace falta abrirlo ni descomprimirlo.`,
+        `Ya se ha descargado **${nombre}**. Dentro lleva tu juego entero (un index.html), con su nombre${proyecto.icono ? ', su icono' : ''} y su pantalla de carga. No hace falta abrirlo ni descomprimirlo.`,
         'Entra en **itch.io** e inicia sesión (si no tienes cuenta, créala: es gratis).',
         'Arriba a la derecha, abre el menú de tu nombre y elige **Upload new project** (subir un proyecto nuevo).',
-        'Escribe el **Title** (el nombre de tu juego).',
+        `En **Title** escribe el nombre de tu juego: **${proyecto.nombre}**.`,
         'En **Kind of project** (tipo de proyecto), elige **HTML**.',
         `En **Uploads**, pulsa **Upload files** y elige **${nombre}**.`,
         'Cuando termine de subir, marca la casilla **This file will be played in the browser** (se juega en el navegador).',
         `En **Embed options**, en **Viewport dimensions** pon **${proyecto.ancho}** de ancho y **${proyecto.alto}** de alto (el tamaño de tu juego). Marca también **Fullscreen button** para que se pueda jugar a pantalla completa.`,
+        ...(portada ? [`Si quieres una portada para la página: pulsa aquí abajo **Descargar portada** y súbela en **Cover image** (se llama **${archivoPortada}**).`] : []),
         'Abajo del todo, pulsa **Save & view page**. Así ves tu página y pruebas el juego. De momento solo la ves tú: está como borrador («Draft»).',
         'Cuando te guste, vuelve a editarla (**Edit game**), en **Visibility & access** elige **Public** y guarda. ¡Ya lo puede jugar todo el mundo!',
       ],

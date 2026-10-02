@@ -990,7 +990,7 @@ await prueba('exportar el juego y que funcione solo, sin el editor', async (p) =
   juego.on('console', (m) => mensajes.push(m.text()));
   juego.on('pageerror', (e) => mensajes.push('ERROR ' + e.message));
   await juego.goto(pathToFileURL(archivo).href);
-  await juego.waitForTimeout(800);
+  await juego.waitForTimeout(2400);
   const panel = await juego.$eval('#panel-error', (el) => el.hidden);
   await juego.close();
   comprobar(panel, 'el juego exportado enseña un error');
@@ -1015,7 +1015,7 @@ await prueba('seguridad: el juego exportado funciona con su CSP, y un script col
   juego.on('requestfailed', (r) => r.url().startsWith('http') && !/csp/i.test(r.failure()?.errorText ?? '') && salieron.push(r.url() + ' ' + r.failure()?.errorText));
   juego.on('requestfinished', (r) => r.url().startsWith('http') && salieron.push(r.url()));
   await juego.goto(pathToFileURL(archivo).href);
-  await juego.waitForTimeout(800);
+  await juego.waitForTimeout(2400);
   const hackeado = await juego.evaluate(() => window.hackeado);
   const arranco = mensajes.some((m) => m.includes('¡Hola!'));
   await juego.close();
@@ -1162,6 +1162,108 @@ await prueba('rendimiento: 500 objetos en la escena', async (p) => {
   const juego = await estado(p, () => window.chispa.vistaJuego.motor.tiempo.fps);
   console.log(`      (juego con 500 objetos con física amontonados: ${juego} fotogramas por segundo)`);
   comprobar(juego > 30 / HOLGURA, `el juego va a ${juego} fotogramas por segundo`);
+});
+
+// ───────────────────────── Día 5: plantillas, recursos listos e itch.io en un clic ─────────────────────────
+
+await prueba('plantillas: cada una se abre desde «Proyecto nuevo», se ve en el editor y se juega sin errores', async (p) => {
+  for (const id of ['plataformas', 'aventura', 'naves', 'puzzle', 'carreras', 'cartas', 'historia']) {
+    await p.click('[aria-label="Proyecto nuevo"]');
+    comprobar((await p.$$('[data-plantilla]')).length === 9, 'faltan fichas en «Proyecto nuevo»');
+    await p.click(`[data-plantilla="${id}"]`);
+    await p.waitForTimeout(500);
+    // El editor dibuja la escena con sus imágenes (y no deja el lienzo descolocado si aún no habían cargado)
+    const vista = await estado(p, () => {
+      const v = window.chispa.vistaEscena;
+      const t = v.r.ctx.getTransform();
+      return { objetos: v.objetos.length, imagenes: v.imagenesCargadas.size, e: t.e, f: t.f };
+    });
+    comprobar(vista.objetos > 2 && vista.imagenes >= 3, `${id}: el editor no ha cargado la escena`);
+    comprobar(Math.abs(vista.e) < 1 && Math.abs(vista.f) < 1, `${id}: el lienzo de la escena se ha quedado descolocado (${vista.e}, ${vista.f})`);
+    await p.keyboard.press('F5');
+    await p.waitForFunction(() => document.querySelector('.estado-juego')?.textContent?.startsWith('Jugando'));
+    await p.waitForTimeout(700);
+    await p.keyboard.press('Space');
+    await p.keyboard.down('ArrowRight');
+    await p.waitForTimeout(500);
+    await p.keyboard.up('ArrowRight');
+    const errores = await p.$$eval('.consola-editor .mensaje.error', (l) => l.map((x) => x.textContent));
+    comprobar(errores.length === 0, `${id}: errores al jugar: ${errores.join(' | ')}`);
+    comprobar((await textoDe(p, '.estado-juego')).startsWith('Jugando'), `${id}: el juego se ha parado`);
+    await p.keyboard.press('Escape');
+    await p.click('button:has-text("Parar")');
+  }
+});
+
+await prueba('recursos listos: un dibujo va al proyecto y a la escena; un sonido y una canción, al proyecto', async (p) => {
+  await estado(p, () => window.chispa.estado.abrir({ formato: 'chispa-proyecto', version: 3, nombre: 'Recursos', ancho: 960, alto: 540, imagenes: {}, sonidos: {}, animaciones: {}, scripts: {}, plantillas: {}, escenas: { Principal: { colorFondo: 'negro', objetos: [] } }, escenaInicial: 'Principal' }));
+  await p.click('.pestana-panel:nth-child(2)');
+  await p.click('[aria-label^="Dibujos listos"]');
+  await p.waitForSelector('[data-dibujo="gato"]');
+  comprobar((await p.$$('[data-dibujo]')).length === 34, 'no están los 34 dibujos');
+  await p.click('[data-dibujo="gato"]');
+  await p.click('[data-dibujo="hierba"]');
+  await p.click('[data-seccion="sonidos"]');
+  await p.click('[data-recurso="moneda"] [data-accion="anadir"]');
+  await p.click('[data-seccion="musica"]');
+  await p.click('[data-recurso="accion"] [data-accion="anadir"]');
+  const r = await estado(p, () => {
+    const pr = window.chispa.estado.proyecto;
+    return { imagenes: Object.keys(pr.imagenes), objetos: pr.escenas.Principal.objetos.map((o) => o.sprite?.imagen), sonidos: Object.keys(pr.sonidosHechos ?? {}), canciones: Object.keys(pr.canciones ?? {}) };
+  });
+  comprobar(r.imagenes.join() === 'gato,hierba', 'las imágenes no están: ' + r.imagenes);
+  comprobar(r.objetos.join() === 'gato', 'solo el gato va a la escena: ' + r.objetos);
+  comprobar(r.sonidos.join() === 'moneda' && r.canciones.join() === 'accion', 'faltan el sonido o la canción');
+  comprobar(await p.$eval('[data-recurso="accion"] [data-accion="anadir"]', (b) => b.disabled), 'lo ya añadido se puede añadir otra vez');
+  await p.keyboard.press('Escape');
+});
+
+await prueba('itch.io en un clic: el zip se descarga al pulsar el botón, con icono, nombre y pantalla de carga; y hay portada', async (p) => {
+  await p.click('[aria-label="Proyecto nuevo"]');
+  await p.click('[data-plantilla="naves"]');
+  await estado(p, () => {
+    window.chispa.estado.renombrarProyecto('Ovnis <3');
+    window.chispa.estado.ponerIcono('nave');
+  });
+  const [zip] = await Promise.all([p.waitForEvent('download'), p.click('.boton-itch')]);
+  comprobar(zip.suggestedFilename() === 'ovnis-3-itch.zip', 'el zip no se llama bien: ' + zip.suggestedFilename());
+  const rutaZip = join(carpeta, zip.suggestedFilename());
+  await zip.saveAs(rutaZip);
+  const index = sacarDelZip(readFileSync(rutaZip), 'index.html');
+  comprobar(index.includes('<link rel="icon" href="data:image/png;base64,'), 'la página no lleva el icono');
+  comprobar(index.includes('<h1>Ovnis &lt;3</h1>') && index.includes('Hecho con <b>Chispa</b>'), 'la página no lleva la pantalla de carga con el nombre');
+  comprobar((await textoDe(p, '.pasos-publicar')).includes('Ovnis <3'), 'los pasos no dicen el nombre del juego');
+  // La portada: un PNG de 630×500
+  const [portada] = await Promise.all([p.waitForEvent('download'), p.click('[data-accion="portada"]')]);
+  comprobar(portada.suggestedFilename() === 'ovnis-3-portada.png', 'la portada no se llama bien: ' + portada.suggestedFilename());
+  const rutaPortada = join(carpeta, portada.suggestedFilename());
+  await portada.saveAs(rutaPortada);
+  const png = readFileSync(rutaPortada);
+  comprobar(png.readUInt32BE(16) === 630 && png.readUInt32BE(20) === 500, 'la portada no mide 630×500');
+  await p.keyboard.press('Escape');
+
+  // El juego exportado: primero la pantalla de carga (con el juego SIN empezar), luego el juego
+  const archivo = join(carpeta, 'ovnis.html');
+  writeFileSync(archivo, index);
+  const juego = await contexto.newPage();
+  const errores = [];
+  juego.on('pageerror', (e) => errores.push(e.message));
+  juego.on('console', (m) => /Content Security Policy/i.test(m.text()) && errores.push(m.text()));
+  await juego.goto(pathToFileURL(archivo).href);
+  const carga = await juego.evaluate(() => {
+    const c = document.getElementById('cargando');
+    const img = c?.querySelector('img');
+    return { texto: c?.textContent ?? '', visible: !!c && getComputedStyle(c).opacity === '1', icono: img ? img.naturalWidth : 0, pixel: img ? getComputedStyle(img).imageRendering : '', lienzo: document.querySelector('#lienzo').width };
+  });
+  comprobar(carga.visible && carga.texto.includes('Ovnis <3') && carga.texto.includes('Hecho con Chispa'), 'no se ve la pantalla de carga: ' + JSON.stringify(carga));
+  comprobar(carga.icono === 16 && carga.pixel === 'pixelated', 'el icono de la pantalla de carga no se ve bien: ' + JSON.stringify(carga));
+  await juego.waitForTimeout(2400);
+  const despues = await juego.evaluate(() => ({ carga: !!document.getElementById('cargando'), error: !document.getElementById('panel-error').hidden, titulo: document.title, icono: document.querySelector('link[rel="icon"]')?.href.slice(0, 22), lienzo: document.querySelector('#lienzo').width }));
+  await juego.close();
+  comprobar(!despues.carga, 'la pantalla de carga no se quita');
+  comprobar(!despues.error && errores.length === 0, 'el juego exportado da errores: ' + errores.join(' | '));
+  comprobar(despues.titulo === 'Ovnis <3' && despues.icono === 'data:image/png;base64,', 'la página no lleva el nombre o el icono');
+  comprobar(despues.lienzo > 1, 'el juego no ha empezado');
 });
 
 await navegador.close();
