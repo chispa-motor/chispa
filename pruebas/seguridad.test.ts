@@ -11,7 +11,7 @@
  * SEGURIDAD: cada ataque que se probó en la auditoría (AUDITORIA_SEGURIDAD.md)
  * está aquí, para que nunca vuelva a funcionar.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -26,6 +26,12 @@ import { generarPaginaJuego } from '../src/exportar/exportar';
 import { huellaCSP, sha256 } from '../src/utilidades/sha256';
 import { proyectoMinimo } from '../src/ejemplos/minimo/proyecto';
 import { EstadoEditor } from '../src/editor/estado/EstadoEditor';
+import { MAXIMO_HISTORIAL, MAXIMO_VOCES } from '../src/motor/Sonido';
+import { LADO_MAXIMO_ESTAMPA, MAXIMO_PIXELES_ESTAMPAS, estampa, estampaTirada, olvidarEstampas, pixelesDeEstampas, ponerRelojDeEstampas } from '../src/motor/Estampas';
+import { MAXIMO_SEGUNDOS_DE_MUSICA, MAXIMO_SEGUNDOS_DE_SONIDOS, audioQueCabe } from '../src/proyecto/JuegoEnMarcha';
+import { duracionDeCancion } from '../src/sonido/musica';
+import { duracionDe } from '../src/sonido/generador';
+import { plantillaPorId } from '../src/plantillas/indice';
 import { IMAGEN_PRUEBA, SONIDO_PRUEBA, ejecutar, errorDe, juegoDePrueba } from './ayudantes';
 
 // ───────────────────────── 1. Salir del intérprete ─────────────────────────
@@ -375,5 +381,186 @@ describe('Otras protecciones', () => {
     const e = new EstadoEditor();
     expect(() => e.agregarImagen('trampa.png', 'data:image/png;base64,' + btoa('<script>alert(1)</script>'))).toThrow(/No se puede añadir «trampa.png»/);
     expect(() => e.agregarSonido('espia.mp3', 'https://malo.example/a.mp3')).toThrow(/internet/);
+  });
+});
+
+// ───────────────────────── 7. Lo nuevo de Chispa 1.1 ─────────────────────────
+
+describe('Chispa 1.1: lo nuevo tampoco puede congelar el juego ni llenar la memoria', () => {
+  const objeto = (codigo: string) => juegoDePrueba({
+    scripts: { 'p.chs': codigo }, gravedad: 0, sonidos: { salto: SONIDO_PRUEBA },
+    escena: [{ nombre: 'Prueba', x: 100, y: 100, sprite: { ancho: 20, alto: 20 }, script: 'p.chs' }, { nombre: 'Otro', x: 300, y: 100, sprite: { ancho: 20, alto: 20 } }],
+  });
+
+  it('sonidos sin fin: como mucho suenan MAXIMO_VOCES a la vez y el historial no crece sin parar', () => {
+    const j = objeto('cuando cada fotograma:\n    repetir 2000 veces:\n        sonido.bucleEn("salto", vector(aleatorio(0, 9000), aleatorio(0, 9000)), 100)\n        sonido.reproducir("salto")');
+    const t0 = performance.now();
+    j.avanzar(5);
+    expect(j.errores).toEqual([]);
+    expect(j.juego.motor.sonido.cuantasVoces).toBeLessThanOrEqual(MAXIMO_VOCES);
+    expect(j.juego.motor.sonido.cuantasVoces).toBeGreaterThan(0);
+    expect(j.juego.motor.sonido.historial.length).toBeLessThanOrEqual(MAXIMO_HISTORIAL * 2);
+    expect(performance.now() - t0).toBeLessThan(5000);
+  });
+
+  it('el mismo bucle en el mismo sitio no se amontona', () => {
+    const j = objeto('cuando cada fotograma:\n    sonido.bucleEn("salto", yo, 100)\n    sonido.bucleEn("salto", vector(5, 5), 100)');
+    j.avanzar(30);
+    expect(j.juego.motor.sonido.cuantasVoces).toBe(2);
+  });
+
+  it('puntuaciones: un nombre de millones de letras no deja el juego parado, y se guarda recortado', () => {
+    const j = objeto('cuando empieza:\n    variable t = "<img src=x onerror=alert(1)>     "\n    repetir 14 veces:\n        t = t + t\n    repetir 3000 veces:\n        puntuaciones.guardar(t + texto(aleatorio(0, 99999)), aleatorio(0, 999999))\n    mostrar(puntuaciones.lista().longitud, puntuaciones.lista()[1].nombre.longitud)');
+    const t0 = performance.now();
+    j.avanzar(2);
+    expect(j.errores).toEqual([]);
+    expect(performance.now() - t0).toBeLessThan(4000);
+    const [cuantas, letras] = j.salida[0].split(' ').map(Number);
+    expect(cuantas).toBeLessThanOrEqual(10);
+    expect(letras).toBeLessThanOrEqual(16);
+  });
+
+  it('el aspecto en marcha tiene los mismos topes que en el archivo (un resplandor de un trillón no pasa)', () => {
+    const enorme = '999999999999999999999';
+    const j = objeto(`cuando empieza:\n    yo.borde = ${enorme}\n    yo.tamanoResplandor = ${enorme}\n    yo.desenfoqueSombra = ${enorme}\n    yo.grosorContorno = ${enorme}\n    yo.desenfoque = ${enorme}\n    yo.sombraX = ${enorme}\n    yo.sombraY = -${enorme}\n    yo.brillo = ${enorme}\n    mostrar(yo.borde, yo.tamanoResplandor, yo.desenfoqueSombra, yo.grosorContorno, yo.desenfoque, yo.sombraX, yo.sombraY, yo.brillo)\n    yo.borde = 3\n    yo.sombraX = -4\n    yo.brillo = 1.5\n    mostrar(yo.borde, yo.sombraX, yo.brillo)`);
+    j.avanzar(1);
+    expect(j.errores).toEqual([]);
+    expect(j.salida).toEqual(['1000 1000 1000 1000 1000 10000 -10000 100', '3 -4 1.5']);
+  });
+
+  it('el archivo sigue rechazando esos números fuera de sus topes', () => {
+    for (const sprite of [{ tamanoResplandor: 1e21 }, { borde: -1 }, { desenfoqueSombra: 5000 }, { sombraX: 1e9 }]) {
+      const p = JSON.parse(JSON.stringify(proyectoVacio('x')));
+      p.escenas.Principal.objetos.push({ nombre: 'A', sprite });
+      expect(() => migrarProyecto(p), JSON.stringify(sprite)).toThrow(/por seguridad no se abre/);
+    }
+  });
+
+  it('canciones y sonidos hechos: solo se prepara lo que cabe en la memoria; lo demás se queda en silencio', () => {
+    // 200 canciones del tamaño máximo: antes se convertían todas en sonido al empezar (unos 19 GB)
+    const cancion = { tempo: 40, pasos: 256, bucle: true, pistas: Array.from({ length: 8 }, () => ({ instrumento: 'organo', volumen: 1, notas: [{ paso: 0, nota: 60, largo: 256 }] })) };
+    const p = JSON.parse(JSON.stringify(proyectoVacio('x')));
+    p.canciones = Object.fromEntries(Array.from({ length: 200 }, (_, i) => [`c${i}`, cancion]));
+    p.sonidosHechos = Object.fromEntries(Array.from({ length: 2000 }, (_, i) => [`s${i}`, { sostenido: 1.5, caida: 2, ataque: 1 }]));
+    const abierto = migrarProyecto(p);
+    const cabe = audioQueCabe(abierto);
+    const musica = [...cabe.canciones].reduce((s, n) => s + duracionDeCancion(abierto.canciones![n]) * abierto.canciones![n].pistas.length, 0);
+    const sonidos = [...cabe.sonidos].reduce((s, n) => s + duracionDe(abierto.sonidosHechos![n]), 0);
+    expect(musica).toBeLessThanOrEqual(MAXIMO_SEGUNDOS_DE_MUSICA);
+    expect(sonidos).toBeLessThanOrEqual(MAXIMO_SEGUNDOS_DE_SONIDOS);
+    expect(cabe.canciones.size).toBeGreaterThan(0);
+    expect(cabe.canciones.size).toBeLessThan(200);
+    expect(cabe.sonidos.size).toBeLessThan(2000);
+    expect(cabe.fuera.length).toBe(200 - cabe.canciones.size + 2000 - cabe.sonidos.size);
+    // Las primeras entran, las últimas no
+    expect(cabe.canciones.has('c0')).toBe(true);
+    expect(cabe.canciones.has('c199')).toBe(false);
+  });
+
+  it('en los juegos normales (todas las plantillas) cabe todo el sonido', () => {
+    for (const id of ['plataformas', 'aventura', 'naves', 'puzzle', 'carreras', 'cartas', 'historia']) {
+      const proyecto = migrarProyecto(plantillaPorId(id)!.crear());
+      expect(audioQueCabe(proyecto).fuera, id).toEqual([]);
+    }
+  });
+
+  it('estampas: entre todas no pasan de MAXIMO_PIXELES_ESTAMPAS, y las que se tiran sueltan su memoria', () => {
+    const original = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation(((etiqueta: string) => {
+      if (etiqueta !== 'canvas') return original(etiqueta);
+      const lienzo = { width: 0, height: 0, getContext: () => ({ lienzo }) };
+      return lienzo as unknown as HTMLElement;
+    }) as typeof document.createElement);
+    let ahora = 1000;
+    ponerRelojDeEstampas(() => ahora);
+    olvidarEstampas();
+    try {
+      // Cientos de objetos enormes, cada uno distinto: antes eran 400 lienzos de 768 × 768 (casi 1 GB)
+      const hechas: (HTMLCanvasElement | null)[] = [];
+      for (let i = 0; i < 400; i++) hechas.push(estampa(`grande${i}`, LADO_MAXIMO_ESTAMPA, LADO_MAXIMO_ESTAMPA, () => {}));
+      expect(pixelesDeEstampas()).toBeLessThanOrEqual(MAXIMO_PIXELES_ESTAMPAS);
+      const caben = Math.floor(MAXIMO_PIXELES_ESTAMPAS / (LADO_MAXIMO_ESTAMPA * LADO_MAXIMO_ESTAMPA));
+      expect(hechas.filter(Boolean).length).toBe(caben);
+      // Las que no caben no se hacen (ese objeto se pinta directamente): no se tiran las recién hechas
+      expect(hechas[399]).toBeNull();
+      expect(estampaTirada(hechas[0]!)).toBe(false);
+      // Al rato sí se puede hacer sitio: la más vieja se tira y su lienzo se queda vacío (suelta la memoria)
+      ahora += 5000;
+      expect(estampa('otra', LADO_MAXIMO_ESTAMPA, LADO_MAXIMO_ESTAMPA, () => {})).not.toBeNull();
+      expect(estampaTirada(hechas[0]!)).toBe(true);
+      expect(hechas[0]!.width).toBe(0);
+      expect(pixelesDeEstampas()).toBeLessThanOrEqual(MAXIMO_PIXELES_ESTAMPAS);
+      olvidarEstampas();
+      expect(pixelesDeEstampas()).toBe(0);
+      expect(estampaTirada(hechas[1]!)).toBe(true);
+    } finally {
+      ponerRelojDeEstampas(() => performance.now());
+      olvidarEstampas();
+      vi.restoreAllMocks();
+    }
+  });
+
+  it('encuadrar una lista enorme da un error claro, y un texto de efecto larguísimo se recorta', () => {
+    const j = objeto('variable l = []\ncuando empieza:\n    repetir 5000 veces:\n        l.añadir(yo)\n    escena.camara.encuadrar(l)');
+    j.avanzar(2);
+    expect(j.errores[0].error.mensajeCorto).toMatch(/admite 100 objetos como mucho, y le das 5000/);
+    const k = objeto('cuando empieza:\n    variable t = "a"\n    repetir 19 veces:\n        t = t + t\n    efecto.texto(t, yo)');
+    const t0 = performance.now();
+    k.avanzar(5);
+    expect(k.errores).toEqual([]);
+    expect(performance.now() - t0).toBeLessThan(2000);
+  });
+
+  it('lo nuevo tampoco deja llegar a JavaScript: junta, efecto, puntuaciones, controles, luces', () => {
+    for (const codigo of ['mostrar(junta.constructor)', 'mostrar(efecto.constructor)', 'mostrar(puntuaciones.__proto__)', 'mostrar(controles(1).constructor)', 'mostrar(musica.constructor)', 'mostrar(escena.camaraDe(1).constructor)']) {
+      // O no deja ni empezar (lo ve la revisión), o da un error al llegar: nunca enseña nada
+      let salida: string[] = [];
+      try {
+        const j = objeto(`cuando empieza:\n    ${codigo}`);
+        j.avanzar(1);
+        salida = j.salida;
+        expect(j.errores.length, codigo).toBe(1);
+      } catch (e) {
+        expect(String((e as Error).message), codigo).toMatch(/no tiene nada llamado/);
+      }
+      expect(salida, codigo).toEqual([]);
+    }
+    // Y los nombres con trampa se rechazan con un error de Chispa, no se cuelan
+    for (const codigo of ['efecto.usar("__proto__", yo)', 'yo.efecto = "constructor"', 'yo.patron = "constructor"', 'yo.mezcla = "toString"', 'yo.forma = "__proto__"', 'controles(1).ponerTecla("__proto__", "a")']) {
+      let salida: string[] = [];
+      try {
+        const j = objeto(`cuando empieza:\n    ${codigo}\n    mostrar("sigue")`);
+        j.avanzar(1);
+        salida = j.salida;
+        expect(j.errores.length, codigo).toBe(1);
+      } catch (e) {
+        expect(e, codigo).toBeInstanceOf(Error);
+      }
+      expect(salida, codigo).toEqual([]);
+    }
+  });
+
+  it('un icono o una letra con trampa en el archivo no pasan', () => {
+    const p = JSON.parse(JSON.stringify(proyectoVacio('x')));
+    p.letras = { 'x; } body { display: none': IMAGEN_PRUEBA };
+    expect(() => migrarProyecto(p)).toThrow(/por seguridad no se abre/);
+    const q = JSON.parse(JSON.stringify(proyectoVacio('x')));
+    // El icono es el NOMBRE de una imagen del proyecto: cualquier otra cosa se quita sin más
+    q.icono = 'javascript:alert(1)';
+    expect(migrarProyecto(q).icono).toBeUndefined();
+    expect(generarPaginaJuego(migrarProyecto(q), 'console.log(1)')).not.toContain('javascript:alert');
+    const r = JSON.parse(JSON.stringify(proyectoVacio('x')));
+    r.icono = '__proto__';
+    expect(migrarProyecto(r).icono).toBeUndefined();
+  });
+
+  it('en el editor, cambiar el nombre de un objeto por uno con comillas no escribe nada raro en el código', () => {
+    const e = new EstadoEditor();
+    e.abrir(plantillaPorId('historia')!.crear());
+    const antes = { ...e.proyecto.scripts };
+    const indice = e.escena.objetos.findIndex((o) => o.nombre === 'Jugador');
+    e.renombrar({ tipo: 'escena', escena: e.escenaActual, indice }, 'X");sistema.abrirWeb("http://malo.example');
+    expect(e.proyecto.scripts).toEqual(antes);
+    for (const codigo of Object.values(e.proyecto.scripts)) expect(codigo).not.toContain('abrirWeb');
   });
 });

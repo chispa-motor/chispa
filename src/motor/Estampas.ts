@@ -25,19 +25,52 @@
 export const MAXIMO_ESTAMPAS = 400;
 /** Una estampa no pasa de este tamaño (en píxeles): lo muy grande se pinta directamente. */
 export const LADO_MAXIMO_ESTAMPA = 768;
+/**
+ * Entre todas no pasan de estos píxeles (unos 64 MB de memoria). Sin este tope, un juego con
+ * cientos de objetos enormes, cada uno de un color, llenaría la memoria del ordenador.
+ */
+export const MAXIMO_PIXELES_ESTAMPAS = 16_000_000;
+/** Una estampa tan reciente no se tira para hacer sitio a otra (si no, se harían y tirarían sin parar). */
+const VIDA_MINIMA_MS = 2000;
 
 const estampas = new Map<string, HTMLCanvasElement>();
+/** Cuándo se hizo cada una. */
+const nacidas = new WeakMap<HTMLCanvasElement, number>();
+let pixeles = 0;
 let activas = true;
+let ahora = (): number => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+/** Para las pruebas: otro reloj (en milisegundos), para no tener que esperar. */
+export function ponerRelojDeEstampas(reloj: () => number): void {
+  ahora = reloj;
+}
+
+/** Tira una estampa y suelta su memoria. Quien la tuviera guardada lo nota con `estampaTirada`. */
+function tirar(clave: string): void {
+  const lienzo = estampas.get(clave);
+  if (!lienzo) return;
+  estampas.delete(clave);
+  pixeles -= lienzo.width * lienzo.height;
+  lienzo.width = 0;
+  lienzo.height = 0;
+}
+function tirarTodas(): void {
+  for (const clave of [...estampas.keys()]) tirar(clave);
+  pixeles = 0;
+}
+/** ¿Esa estampa ya se ha tirado? (No se puede pegar: hay que pedirla otra vez.) */
+export const estampaTirada = (lienzo: HTMLCanvasElement): boolean => lienzo.width === 0 || lienzo.height === 0;
+/** Cuántos píxeles ocupan entre todas. */
+export const pixelesDeEstampas = (): number => pixeles;
 
 /** Para las pruebas: con `falso`, todo se pinta directamente (sin estampas). */
 export function usarEstampas(si: boolean): void {
   activas = si;
-  if (!si) estampas.clear();
+  if (!si) tirarTodas();
 }
 export const estampasActivas = (): boolean => activas;
 export const cuantasEstampas = (): number => estampas.size;
 export function olvidarEstampas(): void {
-  estampas.clear();
+  tirarTodas();
 }
 
 const numeros = new WeakMap<object, number>();
@@ -52,7 +85,7 @@ export function numeroDe(cosa: object | null | undefined): number {
 
 /**
  * La estampa de esa clave. Si no existe, se crea (de `ancho` × `alto` píxeles) y se
- * llama a `pintar` para dibujarla. null si no se puede (demasiado grande, o sin lienzo).
+ * llama a `pintar` para dibujarla. null si no se puede (demasiado grande, sin lienzo, o no caben más).
  */
 export function estampa(clave: string, ancho: number, alto: number, pintar: (ctx: CanvasRenderingContext2D) => void): HTMLCanvasElement | null {
   if (!activas) return null;
@@ -66,16 +99,23 @@ export function estampa(clave: string, ancho: number, alto: number, pintar: (ctx
   const w = Math.ceil(ancho);
   const h = Math.ceil(alto);
   if (!(w >= 1 && h >= 1) || w > LADO_MAXIMO_ESTAMPA || h > LADO_MAXIMO_ESTAMPA || typeof document === 'undefined') return null;
+  // Se hace sitio tirando las que hace más que no se piden. Si la más vieja es recién hecha, es que
+  // en este juego no caben todas: esta no se hace (y ese objeto se pinta directamente, como siempre)
+  const t = ahora();
+  while (estampas.size >= MAXIMO_ESTAMPAS || pixeles + w * h > MAXIMO_PIXELES_ESTAMPAS) {
+    const vieja = estampas.keys().next().value;
+    if (vieja === undefined) break;
+    if (t - (nacidas.get(estampas.get(vieja)!) ?? 0) < VIDA_MINIMA_MS) return null;
+    tirar(vieja);
+  }
   const lienzo = document.createElement('canvas');
   lienzo.width = w;
   lienzo.height = h;
   const ctx = lienzo.getContext('2d');
   if (!ctx) return null;
   pintar(ctx);
-  if (estampas.size >= MAXIMO_ESTAMPAS) {
-    const vieja = estampas.keys().next().value;
-    if (vieja !== undefined) estampas.delete(vieja);
-  }
   estampas.set(clave, lienzo);
+  nacidas.set(lienzo, t);
+  pixeles += w * h;
   return lienzo;
 }

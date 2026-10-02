@@ -109,6 +109,14 @@ autocompletado, su ficha en el manual, su bloque y su ejemplo probado.
   solos; lo único que cambia al abrirlos es que sus círculos siguen chocando
   como cajas, como antes, para que el juego se juegue igual.
 
+## Seguridad
+
+Todo lo nuevo ha pasado la misma revisión que la 1.0 (`AUDITORIA_SEGURIDAD.md`,
+«Chispa 1.1»). Un juego que te pasa otra persona tampoco puede colgar el
+navegador con lo nuevo: como mucho suenan 64 sonidos a la vez, la música y los
+sonidos hechos que no caben en la memoria se quedan en silencio, y los dibujos
+ya hechos que aceleran el juego tienen un tope de memoria.
+
 ## Lo que queda pendiente
 
 - En **móviles y tabletas**, el campo de texto de la interfaz no abre el

@@ -184,7 +184,8 @@ export function crearModuloEfecto(ctx: ContextoEfectos): Modulo {
       },
       texto: (a, p) => {
         const ej = 'efecto.texto("+1", yo, "amarillo")';
-        const texto = aTexto(a[0] ?? null);
+        // Un texto que sube y se va: con 200 letras sobra (uno larguísimo costaría mucho de pintar)
+        const texto = aTexto(a[0] ?? null).slice(0, 200);
         if (a[0] === undefined) throw new ErrorChispa(p, "'efecto.texto' necesita el texto que sale.", `Ejemplo: ${ej}`);
         const { sitio: s, usados } = sitio(a, 1, 'texto', p, ej);
         const color = a[1 + usados] === undefined ? 'blanco' : argTexto(a, 1 + usados, 'efecto.texto', p, ej);

@@ -1223,16 +1223,21 @@ export class EstadoEditor {
     }
     const enLlamada = new RegExp(`(\\b(?:${FUNCIONES_CON_NOMBRE_DE_OBJETO.join('|')})\\((?:[^()"\\n]|"[^"\\n]*")*?)"([^"\\n]*)"`, 'g');
     const enEvento = /^(\s*cuando\s+(?:dejo\s+de\s+tocar|toco)\s+)([\p{L}_][\p{L}\p{N}_]*)/gmu;
+    // El nombre nuevo se escribe DENTRO del código: solo si no puede romperlo ni colar nada
+    // (en «cuando toco X» tiene que ser una palabra; entre comillas, no puede llevar comillas ni saltos de línea)
+    const esPalabra = /^[\p{L}_][\p{L}\p{N}_]*$/u.test(nuevo);
+    const cabeEntreComillas = !/["\\\n\r{}]/.test(nuevo);
     for (const [archivo, codigo] of Object.entries(this.proyecto.scripts)) {
       this.proyecto.scripts[archivo] = codigo
-        .replace(enEvento, (entero, antes: string, nombre: string) => (es(nombre) ? antes + nuevo : entero))
-        .replace(enLlamada, (entero, antes: string, nombre: string) => (es(nombre) ? `${antes}"${nuevo}"` : entero));
+        .replace(enEvento, (entero, antes: string, nombre: string) => (esPalabra && es(nombre) ? antes + nuevo : entero))
+        .replace(enLlamada, (entero, antes: string, nombre: string) => (cabeEntreComillas && es(nombre) ? `${antes}"${nuevo}"` : entero));
     }
   }
 
   /** Al cambiar el nombre de un sonido o una canción: también en el código (el texto entre comillas). */
   private renombrarEnElCodigo(viejo: string, nuevo: string): void {
     for (const [archivo, codigo] of Object.entries(this.proyecto.scripts)) {
+      if (/["\\\n\r{}]/.test(nuevo)) return; // un nombre con comillas rompería el código: se deja como estaba
       this.proyecto.scripts[archivo] = codigo.replace(/"([^"\n]*)"/g, (entero, dentro: string) => (normalizar(dentro) === normalizar(viejo) ? `"${nuevo}"` : entero));
     }
   }

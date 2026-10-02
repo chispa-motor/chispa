@@ -23,7 +23,7 @@ import type { Renderizador } from '../../motor/Renderizador';
 import { ESTILO_POR_DEFECTO, MEZCLAS, esSencillo, pintarConEstilo, type Estilo, type Mezcla, type Patron, type TipoRelleno } from '../../motor/Estilo';
 import { resolverColor } from '../../motor/Color';
 import { siluetaDe } from '../../motor/Filtros';
-import { estampa, estampasActivas, numeroDe } from '../../motor/Estampas';
+import { estampa, estampaTirada, estampasActivas, numeroDe } from '../../motor/Estampas';
 import { aLocal, figuraDe, puntoEnFigura, type Figura, type Forma, type Punto, type PuntoCamino } from '../formas/figuras';
 
 export type FormaSprite = Forma;
@@ -366,7 +366,7 @@ export class Sprite extends Componente {
     const u = this.ultimaEstampa;
     let cuerpo = u.cuerpo;
     let sombra = u.sombra;
-    if (!cuerpo || u.datos.length !== datos.length || datos.some((d, i) => d !== u.datos[i])) {
+    if (!cuerpo || estampaTirada(cuerpo) || (sombra && estampaTirada(sombra)) || u.datos.length !== datos.length || datos.some((d, i) => d !== u.datos[i])) {
       // Ha cambiado algo. Si cambia en cada fotograma, las estampas no compensan
       if (++this.cambiosDeEstampa > 3) {
         this.cambiosDeEstampa = 0;
@@ -387,9 +387,13 @@ export class Sprite extends Componente {
         });
       };
       cuerpo = hacer(`c|${clave}`, margen, 'cuerpo');
-      if (!cuerpo) return false;
-      sombra = e.sombra ? hacer(`s|${clave}`, margen + e.desenfoqueSombra * 1.5, 'sombra') : null;
-      if (e.sombra && !sombra) return false;
+      sombra = cuerpo && e.sombra ? hacer(`s|${clave}`, margen + e.desenfoqueSombra * 1.5, 'sombra') : null;
+      if (!cuerpo || (e.sombra && !sombra)) {
+        // No se puede (muy grande, o ya no caben más estampas): un rato directamente, sin volver a preguntar
+        this.sinEstampa = 90;
+        u.cuerpo = null;
+        return false;
+      }
       u.datos = datos;
       u.cuerpo = cuerpo;
       u.sombra = sombra;

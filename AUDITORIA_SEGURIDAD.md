@@ -4,8 +4,9 @@ Antes de publicar Chispa como código abierto se revisó todo el motor **como
 lo haría un atacante**. La pregunta era siempre la misma: *si alguien me pasa
 un proyecto o un juego, ¿qué me puede hacer?*
 
-Cada ataque que se probó tiene su test en `pruebas/seguridad.test.ts` (46
-tests) y en las pruebas del navegador (`pruebas-navegador/editor.mjs`, las 3
+Cada ataque que se probó tiene su test en `pruebas/seguridad.test.ts` (59
+tests; los 12 últimos son de la revisión de Chispa 1.1, al final de este
+documento) y en las pruebas del navegador (`pruebas-navegador/editor.mjs`, las 3
 que empiezan por «seguridad»). Así ninguno puede volver a funcionar sin que
 falle un test.
 
@@ -244,6 +245,96 @@ JavaScript.
 Es un archivo que se genera solo (`npm run reproductor`) y estaba en el
 `.gitignore`, pero se había guardado antes. Se ha quitado de Git: no tenía
 nada secreto, pero así no se sube código compilado al repositorio.
+
+---
+
+## Chispa 1.1: revisión de todo lo nuevo
+
+Al terminar la 1.1 se repitió la auditoría sobre lo que se había añadido:
+juntas, efectos y partículas, luces, estilo de los objetos, estampas,
+sonido por sitios, música por capas, sonidos y canciones hechos en el
+editor, controles de interfaz, puntuaciones, varios jugadores y cámaras,
+letras propias, icono y pantalla de carga, plantillas y recursos listos.
+Se probaron unos 35 ataques (scripts que piden cosas sin fin o con números
+disparatados, y archivos de proyecto con valores fuera de sitio). Estos
+son los que funcionaban:
+
+### 14. Media · Sonidos sin fin
+
+`sonido.reproducir` o `sonido.bucleEn` dentro de un bucle creaban una voz
+por cada llamada, sin tope: con unas decenas de miles el juego se quedaba
+parado (más de un minuto) y la memoria crecía. Además, el historial de
+órdenes de sonido crecía durante toda la partida.
+
+**Arreglo:** como mucho 64 sonidos a la vez (`MAXIMO_VOCES`); los que se
+piden de más no suenan. El mismo bucle pedido otra vez en el mismo sitio
+sustituye al anterior. El historial guarda solo las últimas órdenes.
+
+### 15. Media · Canciones y sonidos hechos que llenan la memoria
+
+Las canciones y los sonidos hechos en el editor van en el proyecto como
+números y notas, y al empezar el juego se convierten en sonido. Cada uno
+estaba dentro de sus topes, pero no había tope para la suma: un archivo
+con 200 canciones del tamaño máximo pedía unos 19 GB al empezar, y 2000
+sonidos largos, 1,4 GB.
+
+**Arreglo:** se preparan como mucho 1200 segundos de música (contando
+cada pista) y 600 de sonidos hechos (`audioQueCabe`, en
+`JuegoEnMarcha.ts`). Lo que no cabe se queda en silencio y se avisa en la
+consola. El proyecto se abre igual: nadie pierde su trabajo por esto.
+
+### 16. Media · Estampas sin tope de memoria
+
+Las estampas (los dibujos ya hechos que aceleran el dibujo, nuevas en la
+1.1) tenían tope de cantidad (400) y de tamaño (768 píxeles), pero juntas
+podían ocupar casi 1 GB, y un objeto podía seguir guardando una estampa
+ya tirada.
+
+**Arreglo:** entre todas no pasan de 16 millones de píxeles (unos 64 MB).
+Al tirar una se vacía su lienzo (suelta la memoria al momento) y quien la
+tuviera lo nota y la pide otra vez. Las recién hechas no se tiran: si no
+caben todas, las que sobran se pintan directamente, como antes de las
+estampas.
+
+### 17. Baja · Números de aspecto sin tope en marcha
+
+`yo.tamanoResplandor`, `yo.desenfoqueSombra`, `yo.borde`,
+`yo.grosorContorno`, `yo.desenfoque`, `yo.sombraX`, `yo.sombraY` y
+`yo.brillo` tenían tope al abrir un archivo, pero no al cambiarlos desde
+un script: un resplandor de un trillón de píxeles deja el navegador
+pintando sin parar.
+
+**Arreglo:** los mismos topes que en el archivo (se recorta sin dar error).
+
+### 18. Baja · Un nombre enorme en las puntuaciones
+
+`puntuaciones.guardar` con un nombre de cientos de miles de letras, miles
+de veces, paraba el juego 15 segundos (se limpiaba el nombre entero antes
+de recortarlo a 16 letras).
+
+**Arreglo:** solo se mira el principio del nombre.
+
+### 19. Baja · Otros topes que faltaban
+
+- `escena.camara.encuadrar` con una lista de 100 000 objetos: ahora, 100
+  como mucho, con un error claro.
+- `efecto.texto` con un texto de medio millón de letras: se recorta a 200.
+- En el editor, al cambiar el nombre de un objeto se cambia también en el
+  código. Un nombre con comillas, llaves o barras ya no se escribe en los
+  scripts (los rompería).
+
+### Probado en lo nuevo y sin problemas
+
+Juntas (tope de 500), partículas (3000), polígonos y caminos (500 y 400
+puntos), lados (64), opciones de una lista (200), casillas del inventario,
+letras propias (el nombre no puede llevar nada de CSS), icono (solo vale
+el nombre de una imagen del proyecto), filtros de pantalla y luces (cada
+número tiene su intervalo), `constructor` y `__proto__` en todos los
+módulos nuevos, nombres con trampa en `efecto.usar`, `yo.patron`,
+`yo.mezcla`, `yo.forma` y en los controles de cada jugador, y la pantalla
+de carga (el nombre del juego y el icono van escapados en la página).
+`npm audit` sigue dando 0 vulnerabilidades y no se ha añadido ninguna
+dependencia.
 
 ---
 

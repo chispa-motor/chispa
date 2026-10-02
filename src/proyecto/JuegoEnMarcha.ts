@@ -47,8 +47,8 @@ import { Luz } from '../objetos/Luces';
 import { Control } from '../objetos/componentes/Control';
 import { ponerSemilla } from '../utilidades/azar';
 import { cargarLetra, declararLetras, olvidarLetras } from '../motor/Letras';
-import { FRECUENCIA_MUESTREO, generarSonido } from '../sonido/generador';
-import { FRECUENCIA_MUSICA, renderizarPista } from '../sonido/musica';
+import { FRECUENCIA_MUESTREO, duracionDe, generarSonido } from '../sonido/generador';
+import { FRECUENCIA_MUSICA, duracionDeCancion, renderizarPista } from '../sonido/musica';
 import type { ConfigParticulas } from '../objetos/Particulas';
 import { normalizar } from '../utilidades/texto';
 import { migrarProyecto, tipoPorNombre, type DefObjeto, type DefProyecto } from './formato';
@@ -164,10 +164,13 @@ export class JuegoEnMarcha implements ContextoJuego {
     declararLetras(Object.keys(proyecto.letras ?? {}));
     // Los sonidos hechos en el editor y las canciones se convierten en sonido ahora (en el proyecto solo van sus números y sus notas)
     const conAudio = motor.sonido.hayAudio;
-    for (const [n, s] of Object.entries(proyecto.sonidosHechos ?? {})) motor.sonido.registrarMuestras(n, conAudio ? generarSonido(s) : new Float32Array(0), FRECUENCIA_MUESTREO);
+    // Lo que no cabe en el tope de audio se queda en silencio (ver `audioQueCabe`)
+    const cabe = audioQueCabe(proyecto);
+    for (const [n, s] of Object.entries(proyecto.sonidosHechos ?? {})) motor.sonido.registrarMuestras(n, conAudio && cabe.sonidos.has(n) ? generarSonido(s) : new Float32Array(0), FRECUENCIA_MUESTREO);
     for (const [n, c] of Object.entries(proyecto.canciones ?? {})) {
-      motor.sonido.registrarCancion(n, c.pistas.map((p) => (conAudio ? renderizarPista(c, p) : new Float32Array(0))), FRECUENCIA_MUSICA, c.bucle !== false);
+      motor.sonido.registrarCancion(n, c.pistas.map((p) => (conAudio && cabe.canciones.has(n) ? renderizarPista(c, p) : new Float32Array(0))), FRECUENCIA_MUSICA, c.bucle !== false);
     }
+    if (cabe.fuera.length) escribirEnConsola(`Este juego tiene demasiado sonido hecho en el editor y no cabe todo en la memoria: se quedan en silencio ${cabe.fuera.map((n) => `"${n}"`).join(', ')}. Quita canciones o sonidos que no uses, o hazlos más cortos.`, 'aviso');
     const juego = new JuegoEnMarcha(motor, proyecto, opciones);
     // Revisamos TODOS los scripts al principio: así los errores salen todos
     // a la vez nada más pulsar Ejecutar, y no a los 5 minutos de partida.
@@ -676,6 +679,35 @@ export function crearObjetoDesdeDefinicion(def: DefObjeto, nombrePorDefecto: str
     o.propiedades.set(normalizar(nombre), { valor, original: nombre });
   }
   return o;
+}
+
+/** Segundos de música (contando cada pista de cada canción) que se preparan como mucho: unos 150 MB. */
+export const MAXIMO_SEGUNDOS_DE_MUSICA = 1200;
+/** Segundos de sonidos hechos en el editor que se preparan como mucho: unos 100 MB. */
+export const MAXIMO_SEGUNDOS_DE_SONIDOS = 600;
+
+/**
+ * Qué sonidos hechos y qué canciones caben en la memoria. Al empezar el juego todos se convierten
+ * en sonido de verdad, y eso ocupa: un archivo con cientos de canciones larguísimas llenaría la
+ * memoria del ordenador y lo dejaría colgado. Los que no caben (los últimos) se quedan en silencio.
+ */
+export function audioQueCabe(proyecto: Pick<DefProyecto, 'sonidosHechos' | 'canciones'>): { sonidos: Set<string>; canciones: Set<string>; fuera: string[] } {
+  const sonidos = new Set<string>();
+  const canciones = new Set<string>();
+  const fuera: string[] = [];
+  let segundos = 0;
+  for (const [n, s] of Object.entries(proyecto.sonidosHechos ?? {})) {
+    segundos += duracionDe(s);
+    if (segundos <= MAXIMO_SEGUNDOS_DE_SONIDOS) sonidos.add(n);
+    else fuera.push(n);
+  }
+  segundos = 0;
+  for (const [n, c] of Object.entries(proyecto.canciones ?? {})) {
+    segundos += duracionDeCancion(c) * c.pistas.length;
+    if (segundos <= MAXIMO_SEGUNDOS_DE_MUSICA) canciones.add(n);
+    else fuera.push(n);
+  }
+  return { sonidos, canciones, fuera };
 }
 
 /** Por defecto, los avisos se escriben en la consola de la página. */

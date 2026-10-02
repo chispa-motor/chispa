@@ -518,6 +518,7 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
         const ej = 'escena.camara.encuadrar([buscar("Jugador1"), buscar("Jugador2")])';
         const lista = a[0];
         if (!Array.isArray(lista)) throw new ErrorChispa(p, `'${nombre}.encuadrar' necesita una lista de objetos, y le das ${lista === undefined ? 'nada' : nombreTipo(lista)}.`, `Los objetos van en UNA lista, entre corchetes. Ejemplo: ${ej}`);
+        if (lista.length > 100) throw new ErrorChispa(p, `'${nombre}.encuadrar' admite 100 objetos como mucho, y le das ${lista.length}.`, `Encuadra solo a los protagonistas. Ejemplo: ${ej}`);
         const objetos = lista.map((v, i) => {
           if (!(v instanceof RefObjeto)) throw new ErrorChispa(p, `lo ${i + 1}º de la lista no es un objeto: es ${v === null ? 'un objeto vacío (nulo): ese objeto no existe' : nombreTipo(v)}.`, `Ejemplo: ${ej}`);
           return v.objeto;

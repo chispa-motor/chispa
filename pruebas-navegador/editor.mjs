@@ -1426,6 +1426,8 @@ await prueba('pantallas de portátil: en 1366×768 y en 1280×720 cabe todo (bar
       return [...document.querySelectorAll('.categoria-bloques')].filter((c) => c.offsetParent).map((c) => { const b = c.getBoundingClientRect(); return b.top >= columna.top - 1 && b.bottom <= columna.bottom + 1; });
     });
     comprobar(categorias.length === 10 && categorias.every(Boolean), `${ancho}×${alto}: las categorías de los bloques no caben: ${categorias}`);
+    // Y no queda por debajo el editor del proyecto anterior (se quedaba su caja al abrir otro proyecto)
+    comprobar(await estado(p, () => document.querySelectorAll('.caja-script').length) === 1, `${ancho}×${alto}: queda la caja de un script del proyecto anterior`);
     await comprobarQueCabe('los bloques');
     // Las ventanas grandes: se ven enteras o se desplazan por dentro, y sus botones se pueden pulsar
     await p.click('.pestana-panel:has-text("Proyecto")');

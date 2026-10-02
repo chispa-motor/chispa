@@ -55,6 +55,12 @@ interface ScriptDeObjeto {
 }
 
 /** Una sola RefObjeto por objeto: así `otro == jugador` funciona (mismo objeto = misma referencia). */
+/**
+ * Un número de aspecto (un borde, un desenfoque), dentro de los mismos topes que al abrir un archivo:
+ * un valor disparatado (un resplandor de un millón) dejaría el juego parado al pintarlo.
+ */
+const acotado = (n: number, min: number, max: number): number => (n >= min ? Math.min(max, n) : min);
+
 const referencias = new WeakMap<ObjetoJuego, RefObjeto>();
 export function referencia(o: ObjetoJuego): RefObjeto {
   let r = referencias.get(o);
@@ -387,14 +393,14 @@ const PROPIEDADES: Record<string, PropiedadObjeto> = sinPrototipo({
   },
   grosorcontorno: {
     obtener: (o, p) => necesitaSprite(o, 'grosorContorno', p).grosorContorno,
-    asignar: (o, v, p) => (necesitaSprite(o, 'grosorContorno', p).grosorContorno = Math.max(0, comoNumero(v, 'grosorContorno', p))),
+    asignar: (o, v, p) => (necesitaSprite(o, 'grosorContorno', p).grosorContorno = acotado(comoNumero(v, 'grosorContorno', p), 0, 1000)),
   },
   brillo: {
     obtener: (o, p) => necesitaSprite(o, 'brillo', p).brillo,
     asignar: (o, v, p) => {
       const n = comoNumero(v, 'brillo', p);
       if (n < 0) throw new ErrorChispa(p, `el brillo no puede ser negativo (0 = negro, 1 = normal, 2 = el doble de claro), y le das ${n}.`, 'Ejemplo: yo.brillo = 1.5');
-      necesitaSprite(o, 'brillo', p).brillo = n;
+      necesitaSprite(o, 'brillo', p).brillo = acotado(n, 0, 100);
     },
   },
   grises: {
@@ -403,7 +409,7 @@ const PROPIEDADES: Record<string, PropiedadObjeto> = sinPrototipo({
   },
   desenfoque: {
     obtener: (o, p) => necesitaSprite(o, 'desenfoque', p).desenfoque,
-    asignar: (o, v, p) => (necesitaSprite(o, 'desenfoque', p).desenfoque = Math.max(0, comoNumero(v, 'desenfoque', p))),
+    asignar: (o, v, p) => (necesitaSprite(o, 'desenfoque', p).desenfoque = acotado(comoNumero(v, 'desenfoque', p), 0, 1000)),
   },
 
   // ── Estilo (ver motor/Estilo.ts) ──
@@ -435,7 +441,7 @@ const PROPIEDADES: Record<string, PropiedadObjeto> = sinPrototipo({
   },
   borde: {
     obtener: (o, p) => necesitaSprite(o, 'borde', p).borde,
-    asignar: (o, v, p) => (necesitaSprite(o, 'borde', p).borde = Math.max(0, comoNumero(v, 'borde', p))),
+    asignar: (o, v, p) => (necesitaSprite(o, 'borde', p).borde = acotado(comoNumero(v, 'borde', p), 0, 1000)),
   },
   colorborde: {
     obtener: (o, p) => necesitaSprite(o, 'colorBorde', p).colorBorde,
@@ -451,15 +457,15 @@ const PROPIEDADES: Record<string, PropiedadObjeto> = sinPrototipo({
   },
   sombrax: {
     obtener: (o, p) => necesitaSprite(o, 'sombraX', p).sombraX,
-    asignar: (o, v, p) => (necesitaSprite(o, 'sombraX', p).sombraX = comoNumero(v, 'sombraX', p)),
+    asignar: (o, v, p) => (necesitaSprite(o, 'sombraX', p).sombraX = acotado(comoNumero(v, 'sombraX', p), -10_000, 10_000)),
   },
   sombray: {
     obtener: (o, p) => necesitaSprite(o, 'sombraY', p).sombraY,
-    asignar: (o, v, p) => (necesitaSprite(o, 'sombraY', p).sombraY = comoNumero(v, 'sombraY', p)),
+    asignar: (o, v, p) => (necesitaSprite(o, 'sombraY', p).sombraY = acotado(comoNumero(v, 'sombraY', p), -10_000, 10_000)),
   },
   desenfoquesombra: {
     obtener: (o, p) => necesitaSprite(o, 'desenfoqueSombra', p).desenfoqueSombra,
-    asignar: (o, v, p) => (necesitaSprite(o, 'desenfoqueSombra', p).desenfoqueSombra = Math.max(0, comoNumero(v, 'desenfoqueSombra', p))),
+    asignar: (o, v, p) => (necesitaSprite(o, 'desenfoqueSombra', p).desenfoqueSombra = acotado(comoNumero(v, 'desenfoqueSombra', p), 0, 1000)),
   },
   resplandor: {
     obtener: (o, p) => necesitaSprite(o, 'resplandor', p).resplandor,
@@ -467,7 +473,7 @@ const PROPIEDADES: Record<string, PropiedadObjeto> = sinPrototipo({
   },
   tamanoresplandor: {
     obtener: (o, p) => necesitaSprite(o, 'tamanoResplandor', p).tamanoResplandor,
-    asignar: (o, v, p) => (necesitaSprite(o, 'tamanoResplandor', p).tamanoResplandor = Math.max(0, comoNumero(v, 'tamanoResplandor', p))),
+    asignar: (o, v, p) => (necesitaSprite(o, 'tamanoResplandor', p).tamanoResplandor = acotado(comoNumero(v, 'tamanoResplandor', p), 0, 1000)),
   },
   mezcla: {
     obtener: (o, p) => necesitaSprite(o, 'mezcla', p).mezcla,

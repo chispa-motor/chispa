@@ -69,6 +69,18 @@ export const EFECTOS: Record<string, Efecto> = sinPrototipo({
 /** Dónde suena algo: un punto del mundo, o un objeto (el sonido va con él). */
 export type SitioSonido = { x: number; y: number } | { posicion: { x: number; y: number }; destruido: boolean };
 
+/** Como mucho, estos sonidos sonando a la vez (sin la música). */
+export const MAXIMO_VOCES = 64;
+/** Cuántas órdenes recuerda el historial. */
+export const MAXIMO_HISTORIAL = 500;
+
+/** ¿Es el mismo sitio? El mismo objeto, o el mismo punto (aunque sea otro vector con los mismos números). */
+function mismoSitio(a: SitioSonido | null, b: SitioSonido | null): boolean {
+  if (a === b) return true;
+  if (!a || !b || 'posicion' in a || 'posicion' in b) return false;
+  return a.x === b.x && a.y === b.y;
+}
+
 /** Hasta dónde se oye un sonido con sitio si no se dice (píxeles). */
 export const ALCANCE_NORMAL = 800;
 
@@ -124,7 +136,21 @@ export class Sonido {
   private canciones = new Map<string, Cancion>();
 
   /** Registro de lo que se ha pedido (útil para los tests y para depurar). */
+  /** Lo último que se ha pedido (para las pruebas y para depurar). Solo se guardan las últimas MAXIMO_HISTORIAL órdenes. */
   readonly historial: string[] = [];
+
+  /** Apunta una orden en el historial, sin dejar que crezca sin fin (un juego largo pide sonidos sin parar). */
+  private apuntar(orden: string): void {
+    this.historial.push(orden);
+    if (this.historial.length > MAXIMO_HISTORIAL * 2) this.historial.splice(0, this.historial.length - MAXIMO_HISTORIAL);
+  }
+
+  /** Cuántos sonidos están sonando ahora (sin contar la música). */
+  get cuantasVoces(): number {
+    let n = 0;
+    for (const grupo of this.voces.values()) n += grupo.size;
+    return n;
+  }
 
   private _volumenMusica = 0.6;
   private salidaMusica: GainNode | null = null;
@@ -165,7 +191,7 @@ export class Sonido {
    * `fundido`: segundos en los que sube desde silencio (0 = de golpe).
    */
   musica(nombre: string, fundido = 0): void {
-    this.historial.push(`musica ${nombre}${fundido ? ` fundido ${fundido}` : ''}`);
+    this.apuntar(`musica ${nombre}${fundido ? ` fundido ${fundido}` : ''}`);
     if (this.musicaActual === nombre && this.musicaPausadaEn === null) return;
     this.comprobarMusica(nombre);
     this.pararMusica();
@@ -183,7 +209,7 @@ export class Sonido {
     this.comprobarMusica(nombre);
     // La de antes se apaga sola (pararMusica con fundido la deja sonando mientras baja)
     this.pararMusica(this.musicaActual !== null ? segundos : 0);
-    this.historial.push(`cruzar musica ${nombre} ${segundos}`);
+    this.apuntar(`cruzar musica ${nombre} ${segundos}`);
     this.musicaActual = nombre;
     this.volumenCapas = this.capasSegunIntensidad(nombre);
     this.empezarMusica(0, segundos);
@@ -224,7 +250,7 @@ export class Sonido {
 
   /** Para la música. `fundido`: segundos en los que baja hasta el silencio. */
   pararMusica(fundido = 0): void {
-    if (this.musicaActual) this.historial.push(`parar musica${fundido ? ` fundido ${fundido}` : ''}`);
+    if (this.musicaActual) this.apuntar(`parar musica${fundido ? ` fundido ${fundido}` : ''}`);
     const fuentes = this.fuentesMusica;
     const ganancia = this.gananciaMusica;
     const ctx = this.contexto;
@@ -246,7 +272,7 @@ export class Sonido {
   /** Pone la música en pausa (recuerda por dónde iba). */
   pausarMusica(): void {
     if (!this.musicaActual || this.musicaPausadaEn !== null) return;
-    this.historial.push('pausar musica');
+    this.apuntar('pausar musica');
     this.musicaPausadaEn = this.contexto ? (this.contexto.currentTime - this.musicaEmpezoEn) * this._tonoMusica : 0;
     for (const f of this.fuentesMusica) f.stop();
     this.fuentesMusica = [];
@@ -255,7 +281,7 @@ export class Sonido {
   /** Sigue la música por donde iba. */
   seguirMusica(): void {
     if (this.musicaPausadaEn === null) return;
-    this.historial.push('seguir musica');
+    this.apuntar('seguir musica');
     const desde = this.musicaPausadaEn;
     this.musicaPausadaEn = null;
     this.empezarMusica(desde, 0);
@@ -302,7 +328,7 @@ export class Sonido {
       );
     }
     const v = Math.min(1, Math.max(0, volumen));
-    this.historial.push(`capa ${capa} ${v}${segundos ? ` en ${segundos}` : ''}`);
+    this.apuntar(`capa ${capa} ${v}${segundos ? ` en ${segundos}` : ''}`);
     this.volumenCapas[capa - 1] = v;
     const g = this.gananciasCapas[capa - 1];
     const ctx = this.contexto;
@@ -383,7 +409,7 @@ export class Sonido {
 
   /** Un pitido generado. Frecuencia en hercios (440 = nota La). */
   tono(frecuencia: number, segundos = 0.2): void {
-    this.historial.push(`tono ${frecuencia} ${segundos}`);
+    this.apuntar(`tono ${frecuencia} ${segundos}`);
     const ctx = this.obtenerContexto();
     if (!ctx || !this.salida) return;
     const osc = ctx.createOscillator();
@@ -412,7 +438,7 @@ export class Sonido {
       const parecido = sugerir(nombre, hay);
       throw new ErrorMotor(`No hay ningún efecto de sonido llamado "${nombre}".`, (parecido ? `¿Querías decir "${parecido}"? ` : '') + `Los efectos que hay son: ${hay.join(', ')}.`);
     }
-    this.historial.push(`efecto ${nombre}`);
+    this.apuntar(`efecto ${nombre}`);
     const ctx = this.obtenerContexto();
     if (!ctx || !this.salida) return;
     const t = ctx.currentTime;
@@ -464,17 +490,20 @@ export class Sonido {
    */
   reproducir(nombre: string, opciones: { volumen?: number; tono?: number; bucle?: boolean; pan?: number; sitio?: SitioSonido; alcance?: number } = {}): void {
     const { volumen = 1, tono = 1, bucle = false, pan = 0, sitio = null, alcance = ALCANCE_NORMAL } = opciones;
-    this.historial.push(`${bucle ? 'bucle' : 'reproducir'} ${nombre}${volumen !== 1 ? ` volumen ${volumen}` : ''}${tono !== 1 ? ` tono ${tono}` : ''}${pan ? ` pan ${pan}` : ''}${sitio ? ` en sitio (alcance ${alcance})` : ''}`);
+    this.apuntar(`${bucle ? 'bucle' : 'reproducir'} ${nombre}${volumen !== 1 ? ` volumen ${volumen}` : ''}${tono !== 1 ? ` tono ${tono}` : ''}${pan ? ` pan ${pan}` : ''}${sitio ? ` en sitio (alcance ${alcance})` : ''}`);
     this.comprobar(nombre);
     const buffer = this.buffers.get(nombre) ?? this.mezclaDeCancion(nombre);
     const ctx = this.obtenerContexto();
     const conAudio = !!(ctx && this.salida && buffer);
     // Sin audio (tests), los bucles se apuntan igualmente: así sonando() y los cambios en vivo dicen lo mismo
     if (!conAudio && !bucle) return;
+    // Como mucho MAXIMO_VOCES sonidos a la vez: los que se piden de más no suenan (nadie los distinguiría,
+    // y un «sonido.reproducir» dentro de un bucle no debe congelar el juego ni llenar la memoria)
+    if (this.cuantasVoces >= MAXIMO_VOCES) return;
     const voz: Voz = { nombre, fuente: null, ganancia: null, panorama: null, bucle, volumen: Math.max(0, volumen), tono: Math.max(0.05, tono), pan: Math.max(-1, Math.min(1, pan)), sitio, alcance, volumenSitio: 1 };
     const grupo = this.voces.get(nombre) ?? new Set();
     // El mismo bucle pedido otra vez en el mismo sitio no se amontona
-    if (bucle) for (const v of grupo) if (v.bucle && v.sitio === sitio) this.pararVoz(v, grupo);
+    if (bucle) for (const v of grupo) if (v.bucle && mismoSitio(v.sitio, sitio)) this.pararVoz(v, grupo);
     grupo.add(voz);
     this.voces.set(nombre, grupo);
     if (sitio && this.oyente) this.colocar(voz, this.oyente, this.medioAncho);
@@ -517,7 +546,7 @@ export class Sonido {
 
   /** Para un sonido concreto, o todos si no se da nombre. */
   parar(nombre?: string): void {
-    this.historial.push(`parar ${nombre ?? 'todo'}`);
+    this.apuntar(`parar ${nombre ?? 'todo'}`);
     const grupos = nombre ? [this.voces.get(nombre)] : [...this.voces.values()];
     for (const g of grupos) if (g) for (const v of [...g]) this.pararVoz(v, g);
   }
@@ -534,7 +563,7 @@ export class Sonido {
    */
   ajustar(nombre: string, cambios: { volumen?: number; tono?: number; pan?: number }, segundos = 0): number {
     this.comprobar(nombre, 'cambiar');
-    this.historial.push(`ajustar ${nombre}${cambios.volumen !== undefined ? ` volumen ${cambios.volumen}` : ''}${cambios.tono !== undefined ? ` tono ${cambios.tono}` : ''}${cambios.pan !== undefined ? ` pan ${cambios.pan}` : ''}${segundos ? ` en ${segundos}` : ''}`);
+    this.apuntar(`ajustar ${nombre}${cambios.volumen !== undefined ? ` volumen ${cambios.volumen}` : ''}${cambios.tono !== undefined ? ` tono ${cambios.tono}` : ''}${cambios.pan !== undefined ? ` pan ${cambios.pan}` : ''}${segundos ? ` en ${segundos}` : ''}`);
     const grupo = this.voces.get(nombre);
     if (!grupo) return 0;
     const ctx = this.contexto;

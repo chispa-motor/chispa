@@ -312,6 +312,8 @@ export class EditorCodigo {
         this.pestanas.set(nuevoNombre, p);
       } else {
         p.vista.destroy();
+        // Su caja se quita de la página (si no, se quedaba debajo, con sus bloques, al abrir otro proyecto)
+        p.caja.remove();
         this.pestanas.delete(nombre);
       }
     }

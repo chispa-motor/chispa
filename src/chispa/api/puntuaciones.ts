@@ -62,7 +62,8 @@ export function crearModuloPuntuaciones(ctx: ContextoPuntuaciones): Modulo {
       guardar: (a, p) => {
         const ej = 'puntuaciones.guardar("Ana", juego.puntos)';
         if (a[0] === undefined) throw new ErrorChispa(p, "a 'puntuaciones.guardar' le falta el nombre de quien ha jugado.", `Ejemplo: ${ej}`);
-        const nombre = [...aTexto(a[0]).replace(/\s+/g, ' ').trim()].slice(0, LETRAS_NOMBRE).join('') || '???';
+        // Solo se mira el principio: un nombre enorme no puede dejar el juego parado
+        const nombre = [...aTexto(a[0]).slice(0, 200).replace(/\s+/g, ' ').trim()].slice(0, LETRAS_NOMBRE).join('') || '???';
         const puntos = argNumero(a, 1, 'puntuaciones.guardar', p, ej);
         if (!Number.isFinite(puntos)) throw new ErrorChispa(p, 'los puntos tienen que ser un número normal.', `Ejemplo: ${ej}`);
         const tabla = leerPuntuaciones(ctx);

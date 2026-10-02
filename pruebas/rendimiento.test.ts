@@ -14,7 +14,7 @@
  * (pruebas-navegador/editor.mjs, «rendimiento»).
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { LADO_MAXIMO_ESTAMPA, MAXIMO_ESTAMPAS, cuantasEstampas, estampa, estampasActivas, numeroDe, olvidarEstampas, usarEstampas } from '../src/motor/Estampas';
+import { LADO_MAXIMO_ESTAMPA, MAXIMO_ESTAMPAS, cuantasEstampas, estampa, estampasActivas, numeroDe, olvidarEstampas, ponerRelojDeEstampas, usarEstampas } from '../src/motor/Estampas';
 import { PARTICULA_DIMINUTA, Particulas, type ConfigParticulas } from '../src/objetos/Particulas';
 import type { Renderizador } from '../src/motor/Renderizador';
 
@@ -33,6 +33,7 @@ function conLienzos() {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  ponerRelojDeEstampas(() => performance.now());
   usarEstampas(true);
   olvidarEstampas();
 });
@@ -59,7 +60,11 @@ describe('Estampas', () => {
     // La primera se usa otra vez: ya no es la más vieja
     let repintada = false;
     estampa('e0', 8, 8, () => (repintada = true));
-    estampa('nueva', 8, 8, () => {});
+    // Recién hechas no se tiran (si no, se harían y tirarían sin parar): la nueva no cabe todavía
+    expect(estampa('nueva', 8, 8, () => {})).toBeNull();
+    // Pasado un rato, sí
+    ponerRelojDeEstampas(() => performance.now() + 5000);
+    expect(estampa('nueva', 8, 8, () => {})).not.toBeNull();
     expect(cuantasEstampas()).toBe(MAXIMO_ESTAMPAS);
     estampa('e0', 8, 8, () => (repintada = true));
     expect(repintada).toBe(false);
