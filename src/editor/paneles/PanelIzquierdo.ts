@@ -40,7 +40,7 @@ function iconoDe(def: DefObjeto): string {
   if (!def.sprite) return 'vacio';
   if (def.sprite.imagen) return 'imagen';
   if (def.sprite.forma === 'texto') return 'texto';
-  if (def.sprite.fijo && def.sprite.texto) return 'boton';
+  if (def.control || (def.sprite.fijo && def.sprite.texto)) return 'boton';
   return def.sprite.forma === 'circulo' ? 'circulo' : 'objeto';
 }
 

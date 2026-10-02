@@ -502,6 +502,60 @@ await prueba('día 3: hacer un sonido y una canción en el editor, y usarlos en 
   comprobar(!(await p.$('.consola-editor .mensaje.error')), 'errores en la consola: ' + (await textoDe(p, '.consola-editor')).slice(-300));
 });
 
+await prueba('día 4: controles de interfaz puestos desde el menú Añadir, usados con el ratón y el teclado de verdad', async (p) => {
+  await p.click('.boton-anadir');
+  await p.click('[data-control="casilla"]');
+  await p.click('.boton-anadir');
+  await p.click('[data-control="deslizador"]');
+  await p.click('.boton-anadir');
+  await p.click('[data-control="campo"]');
+  comprobar((await textoDe(p, '.inspector, .panel-derecho')).includes('Control: Campo de texto'), 'el inspector no enseña la sección del control');
+  // Cada uno en su sitio y con su script (lo que hace quien juega llega a «cuando cambia»)
+  await estado(p, () => {
+    const e = window.chispa.estado;
+    const sitios = { Casilla: [200, 400], Deslizador: [200, 300], Campo: [200, 200] };
+    e.escena.objetos.forEach((o, i) => {
+      if (!sitios[o.nombre]) return;
+      e.seleccionarIndice(i);
+      e.cambiarPropiedad(e.seleccion, 'x', sitios[o.nombre][0]);
+      e.cambiarPropiedad(e.seleccion, 'y', sitios[o.nombre][1]);
+      const archivo = e.crearScriptPara(e.seleccion);
+      e.cambiarCodigo(archivo, 'cuando cambia:\n    mostrar(yo.nombre + "=" + yo.valor)\n');
+    });
+  });
+  await p.keyboard.press('F5');
+  await p.waitForFunction(() => document.querySelector('.estado-juego')?.textContent?.startsWith('Jugando'));
+  await p.waitForTimeout(300);
+  const caja = await p.locator('.lienzo-juego').boundingBox();
+  // Del juego (960×540, la Y hacia arriba) a la página
+  const sitio = (x, y) => ({ x: caja.x + (x / 960) * caja.width, y: caja.y + ((540 - y) / 540) * caja.height });
+  const clic = async (x, y) => p.mouse.click(sitio(x, y).x, sitio(x, y).y);
+  await clic(105, 400); // el cuadradito de la casilla (a la izquierda del todo)
+  await p.waitForTimeout(100);
+  // El deslizador: se coge por el medio y se arrastra a la derecha del todo
+  await p.mouse.move(sitio(200, 300).x, sitio(200, 300).y);
+  await p.mouse.down();
+  await p.mouse.move(sitio(400, 300).x, sitio(400, 300).y, { steps: 4 });
+  await p.mouse.up();
+  await p.waitForTimeout(100);
+  // El campo: clic y a escribir (con eñe y mayúsculas); la «a» no es una orden mientras se escribe
+  await clic(200, 200);
+  await p.waitForTimeout(100);
+  // La Ñ no está en el teclado «de mentira» de la prueba: se manda su tecla a mano (en un teclado de verdad llega igual)
+  await estado(p, () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Ñ', code: 'Semicolon', bubbles: true })));
+  await p.keyboard.type('u 7', { delay: 50 });
+  await p.waitForTimeout(80);
+  await p.keyboard.press('Backspace');
+  await p.keyboard.press('Enter');
+  await p.waitForTimeout(200);
+  const consola = await textoDe(p, '.consola-editor');
+  comprobar(consola.includes('Casilla=verdadero'), 'la casilla no se ha marcado: ' + consola.slice(-200));
+  comprobar(consola.includes('Deslizador=100'), 'el deslizador no ha llegado al final: ' + consola.slice(-200));
+  const campos = consola.split('\n').filter((l) => l.includes('Campo=')).map((l) => l.slice(l.indexOf('Campo=') + 6).trim());
+  comprobar(campos.includes('Ñu 7') && campos[campos.length - 1] === 'Ñu', 'lo escrito en el campo no es lo tecleado: ' + JSON.stringify(campos));
+  comprobar(!(await p.$('.consola-editor .mensaje.error')), 'errores en la consola: ' + consola.slice(-300));
+});
+
 await prueba('depurar: clic en el número de línea, el juego se para, se ven las variables y se va paso a paso', async (p) => {
   const codigo = 'variable vueltas = 0\ncuando cada fotograma:\n    vueltas += 1\n    variable doble = vueltas * 2\n    yo.x += 1\n';
   await estado(p, (c) => {

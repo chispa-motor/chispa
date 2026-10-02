@@ -96,10 +96,13 @@ export function revisarTextos(proyecto: DefProyecto, globales: Entorno, programa
     ...Object.values(proyecto.escenas).flatMap((e) => e.objetos.map((o): [string, DefObjeto] => [o.nombre ?? 'objeto', o])),
     ...Object.entries(proyecto.plantillas),
   ];
-  for (const [nombre, def] of objetos) {
-    const texto = def.sprite?.texto;
+  // Los textos con huecos y los datos de los controles ("juego.vida": es como un texto con un solo hueco)
+  const porRevisar: [string, DefObjeto, string | undefined, string][] = objetos.flatMap(([nombre, def]): [string, DefObjeto, string | undefined, string][] => [
+    [nombre, def, def.sprite?.texto, `en el texto de '${nombre}'`],
+    [nombre, def, def.control?.dato?.trim() ? `{${def.control.dato.trim()}}` : undefined, `en el dato de '${nombre}'`],
+  ]);
+  for (const [, def, texto, donde] of porRevisar) {
     if (!tieneHuecos(texto)) continue;
-    const donde = `en el texto de '${nombre}'`;
     let plantilla: Expresion;
     try {
       plantilla = plantillaDeTexto(texto!);

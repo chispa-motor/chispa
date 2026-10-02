@@ -63,6 +63,11 @@ export class Recursos {
     this.imagenes.delete(nombre);
   }
 
+  /** La imagen con ese nombre, o null si no hay (para lo que es opcional: los objetos de un inventario). */
+  imagenSiExiste(nombre: string): HTMLImageElement | null {
+    return this.imagenes.get(nombre) ?? null;
+  }
+
   /** Devuelve una imagen ya cargada. Si no existe, da un error claro. */
   imagen(nombre: string): HTMLImageElement {
     const img = this.imagenes.get(nombre);

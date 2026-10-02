@@ -152,7 +152,22 @@ function motorDePrueba(ancho = 960, alto = 540) {
     window.dispatchEvent(new MouseEvent('pointerup', opciones));
   }
 
-  return { motor: motor as unknown as Motor, avanzar, pulsar, soltar, clic, entrada };
+  /** El ratón, paso a paso (para arrastrar): bajar el botón en un sitio, moverlo y soltarlo. Coordenadas como en clic(). */
+  const raton = {
+    bajar(x: number, y: number) {
+      const opciones = { button: 0, clientX: x, clientY: alto - y, bubbles: true };
+      canvas.dispatchEvent(new MouseEvent('pointermove', opciones));
+      canvas.dispatchEvent(new MouseEvent('pointerdown', opciones));
+    },
+    mover(x: number, y: number) {
+      window.dispatchEvent(new MouseEvent('pointermove', { clientX: x, clientY: alto - y, bubbles: true }));
+    },
+    soltar() {
+      window.dispatchEvent(new MouseEvent('pointerup', { button: 0, bubbles: true }));
+    },
+  };
+
+  return { motor: motor as unknown as Motor, avanzar, pulsar, soltar, clic, raton, entrada };
 }
 
 export interface OpcionesJuegoPrueba {

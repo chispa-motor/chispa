@@ -70,6 +70,8 @@ export type Evento =
   | { tipo: 'clic'; encima: boolean }
   /** "cuando termina la animacion:" (solo las que no se repiten) */
   | { tipo: 'animacion' }
+  /** cuando cambia:  (lo que vale el control de interfaz del objeto: un deslizador, una casilla, una lista...) */
+  | { tipo: 'cambia' }
   /** cuando salgo de la pantalla: */
   | { tipo: 'pantalla' }
   /** cuando recibo "abrir_puerta":  (mensaje: el nombre normalizado; original: como se escribió) */

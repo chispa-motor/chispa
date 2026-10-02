@@ -154,6 +154,13 @@ export class Entrada {
    * Guardamos el código porque al soltar la tecla el navegador podría darnos
    * otro "key" (si pulsaste Mayús entre medias) y la tecla se quedaría pegada.
    */
+  /**
+   * Se está escribiendo en un campo de texto del juego: las teclas no son
+   * órdenes («cuando se pulsa "a"» no salta), son letras. Lo pone el campo.
+   */
+  escribiendo = false;
+  /** Lo que se ha escrito en este fotograma: letras, "\b" (borrar), "\n" (Intro) y "\x1b" (Escape). */
+  textoEscrito: string[] = [];
   private teclasAbajo = new Map<string, string>();
   private pulsadasEsteFotograma = new Set<string>();
   private soltadasEsteFotograma = new Set<string>();
@@ -184,6 +191,15 @@ export class Entrada {
         // Si se está escribiendo en un campo de texto o en el editor de código, la tecla no es para el juego
         if (esCampoDeTexto(e.target) || !this.aceptarTecla(e)) return;
         if (EVITAR_SCROLL.has(e.code)) e.preventDefault();
+        if (this.escribiendo) {
+          // Mantener una tecla pulsada SÍ repite la letra (como en cualquier campo de texto)
+          if (e.key === 'Backspace') this.textoEscrito.push('\b');
+          else if (e.key === 'Enter') this.textoEscrito.push('\n');
+          else if (e.key === 'Escape') this.textoEscrito.push('\x1b');
+          else if ([...e.key].length === 1 && !e.ctrlKey && !e.metaKey) this.textoEscrito.push(e.key);
+          if (e.key === 'Backspace' || e.key === ' ') e.preventDefault();
+          return;
+        }
         if (e.repeat) return; // Mantener pulsada una tecla repite el evento: lo ignoramos.
         const nombre = nombreDesdeEvento(e);
         this.teclasAbajo.set(e.code, nombre);
@@ -357,6 +373,7 @@ export class Entrada {
   /** El motor lo llama al terminar cada fotograma: borra lo que solo dura un fotograma. */
   finDeFotograma(): void {
     this.pulsadasEsteFotograma.clear();
+    this.textoEscrito = [];
     this.soltadasEsteFotograma.clear();
     this.botonesPulsados.clear();
     this.botonesSoltados.clear();

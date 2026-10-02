@@ -518,7 +518,7 @@ class Parser {
       'Los eventos que existen son:\n' +
       '    cuando empieza:\n    cuando cada fotograma:\n    cuando cada 2 segundos:\n    cuando pasen 3 segundos:\n' +
       '    cuando se pulsa "espacio":   (también "se mantiene" y "se suelta")\n' +
-      '    cuando toco Enemigo:\n    cuando dejo de tocar Enemigo:\n    cuando hago clic:\n    cuando hago clic encima:\n    cuando termina la animacion:\n    cuando salgo de la pantalla:\n    cuando recibo "mensaje":';
+      '    cuando toco Enemigo:\n    cuando dejo de tocar Enemigo:\n    cuando hago clic:\n    cuando hago clic encima:\n    cuando cambia:   (un deslizador, una casilla, una lista...)\n    cuando termina la animacion:\n    cuando salgo de la pantalla:\n    cuando recibo "mensaje":';
 
     if (this.esPalabra('empieza') || this.esPalabra('empiece') || this.esPalabra('comienza')) {
       this.avanzar();
@@ -570,6 +570,10 @@ class Parser {
       }
       return { tipo: 'clic', encima: false };
     }
+    if (this.esPalabra('cambia') || this.esPalabra('cambio')) {
+      this.avanzar();
+      return { tipo: 'cambia' };
+    }
     if (this.esPalabra('termina')) {
       this.avanzar();
       if (this.esPalabra('la')) this.avanzar();
@@ -618,7 +622,7 @@ class Parser {
         recibe: 'cuando recibo "mensaje":', reciba: 'cuando recibo "mensaje":', llega: 'cuando recibo "mensaje":', escucho: 'cuando recibo "mensaje":', oigo: 'cuando recibo "mensaje":',
       });
       const forma = SINONIMOS[normalizar(t.original)];
-      const parecido = sugerir(t.original, ['empieza', 'toco', 'hago', 'dejo', 'se', 'cada', 'pasen', 'termina', 'salgo', 'recibo']);
+      const parecido = sugerir(t.original, ['empieza', 'toco', 'hago', 'dejo', 'se', 'cada', 'pasen', 'termina', 'salgo', 'recibo', 'cambia']);
       this.error(
         `no conozco el evento 'cuando ${t.original}'.`,
         forma ? `En Chispa se escribe así: ${forma}\n${ayuda}` : parecido ? `¿Querías decir 'cuando ${parecido} ...'?\n${ayuda}` : ayuda,

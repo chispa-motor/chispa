@@ -675,3 +675,7 @@ a.boton { text-decoration: none; display: inline-flex; align-items: center; }
 .rejilla-musica { flex: none; cursor: pointer; }
 .raya-musica { position: absolute; top: 0; width: 2px; height: 100%; min-height: 2000px; background: #ffffff; opacity: 0.8; pointer-events: none; display: none; z-index: 1; }
 .pie-musica { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+
+/* ── Controles de interfaz en el menú Añadir ── */
+.rejilla-controles { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+.rejilla-controles .opcion-menu { padding: 5px 8px; font-size: 13px; }

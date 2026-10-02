@@ -44,6 +44,7 @@ import { Comportamiento } from '../objetos/componentes/Comportamiento';
 import { Sprite } from '../objetos/componentes/Sprite';
 import { RECETAS } from '../objetos/Efectos';
 import { Luz } from '../objetos/Luces';
+import { Control } from '../objetos/componentes/Control';
 import { ponerSemilla } from '../utilidades/azar';
 import { cargarLetra, declararLetras, olvidarLetras } from '../motor/Letras';
 import { FRECUENCIA_MUESTREO, generarSonido } from '../sonido/generador';
@@ -477,6 +478,7 @@ export class JuegoEnMarcha implements ContextoJuego {
       o.agregar(new ScriptChispa(this.interprete, programa, (e) => this.informarError(e)));
     }
     this.textoConHuecos(o, def);
+    this.datoDeControl(o, def);
     // agregar() a la escena al final: si la escena ya está en marcha, esto
     // arranca el script (y lanza su "cuando empieza") con todo ya montado.
     // Si ese «cuando empieza» crea otro objeto igual (clonar(yo), o crear su
@@ -516,6 +518,33 @@ export class JuegoEnMarcha implements ContextoJuego {
       return propio;
     };
     s.textoVivo = this.interprete.textoVivo(plantilla, entorno, { archivo: `texto de ${o.nombre}`, lineas: [fuenteDeTexto(def.sprite!.texto!)] });
+  }
+
+  /** Si el control del objeto tiene un dato ("juego.vida"), lo lee solo en cada fotograma. */
+  private datoDeControl(o: ObjetoJuego, def: DefObjeto): void {
+    const c = o.obtener(Control);
+    const dato = def.control?.dato?.trim();
+    if (!c || !dato) return;
+    const escrito = `{${dato}}`;
+    const plantilla = plantillaDeTexto(escrito); // ya revisado antes de empezar
+    let propio: Entorno | null = null;
+    const entorno = () => {
+      const delScript = o.obtener(ScriptChispa)?.entornoDelScript;
+      if (delScript) return delScript;
+      if (!propio) {
+        propio = new Entorno(this.interprete.globales);
+        propio.declarar('yo', referencia(o));
+      }
+      return propio;
+    };
+    const leer = this.interprete.textoVivo(plantilla, entorno, { archivo: `dato de ${o.nombre}`, lineas: [fuenteDeTexto(escrito)] });
+    c.leerDato = () => {
+      const t = leer();
+      if (t === null) return null;
+      // verdadero y falso valen 1 y 0 (para las casillas); lo que no es un número, 0
+      const n = t === 'verdadero' ? 1 : Number(t);
+      return Number.isFinite(n) ? n : 0;
+    };
   }
 
   /** Un script ha fallado (y ya se ha parado): se cuenta y se informa. */
@@ -575,6 +604,33 @@ export function crearObjetoDesdeDefinicion(def: DefObjeto, nombrePorDefecto: str
     f.rebote = def.fisica.rebote ?? 0;
     f.masa = def.fisica.masa ?? 1;
     f.polvo = def.fisica.polvo ?? false;
+  }
+  if (def.control && def.sprite) {
+    const c = o.agregar(new Control());
+    const d = def.control;
+    c.tipo = d.tipo;
+    c.activado = d.activado ?? true;
+    c.minimo = d.minimo ?? 0;
+    c.maximo = d.maximo ?? 100;
+    c.paso = d.paso ?? 1;
+    c.dato = d.dato ?? '';
+    c.ponerNumero(d.valor ?? (d.tipo === 'barra' ? c.maximo : c.minimo));
+    c.marcada = d.marcada ?? false;
+    c.pista = d.pista ?? '';
+    c.largoMaximo = d.largoMaximo ?? 20;
+    c.opciones = [...(d.opciones ?? [])];
+    c.titulo = d.titulo ?? '';
+    c.arrastrable = d.arrastrable ?? false;
+    c.conCerrar = d.conCerrar ?? false;
+    c.columnas = d.columnas ?? 4;
+    c.filas = d.filas ?? 2;
+    for (const cosa of d.objetos ?? []) c.meter(cosa.nombre, cosa.cantidad);
+    c.elegido = (d.elegido ?? 0) - 1;
+    c.seguir = d.seguir ?? '';
+    c.alcance = d.alcance ?? 2000;
+    c.colorFondo = d.colorFondo ?? c.colorFondo;
+    // El Dibujo del objeto deja que lo pinte el control
+    o.obtener(Sprite)!.pintor = (r, x, y) => c.dibujar(r, x, y);
   }
   if (def.luz) {
     const l = o.agregar(new Luz());

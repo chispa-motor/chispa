@@ -2,7 +2,7 @@
 
 > Se genera sola con `npm run manual` (no la cambies a mano). Un test comprueba que no falta ningún comando y que cada ejemplo funciona.
 
-Todos los comandos de Chispa (379), una línea cada uno, para tenerla abierta mientras programas o imprimirla. Para aprender con calma, el [curso](APRENDE_CHISPA.md).
+Todos los comandos de Chispa (394), una línea cada uno, para tenerla abierta mientras programas o imprimirla. Para aprender con calma, el [curso](APRENDE_CHISPA.md).
 
 En los ejemplos se usan estas variables y esta función, como si ya las tuvieras (y en la escena hay un Jugador y un Mapa de casillas):
 
@@ -505,6 +505,26 @@ Las líneas que terminan en `:` empiezan un bloque: lo de dentro va debajo, con 
 | `dibujar.enPantalla.elipse(x, y, ancho, alto, color, relleno)` | Una elipse en la pantalla, con el centro en (x, y). | `dibujar.enPantalla.elipse(480, 60, 300, 40, "blanco")` |
 | `dibujar.enPantalla.poligono(puntos, color, relleno, grosor)` | Una forma con los puntos que quieras (una lista de vectores) en la pantalla. | `dibujar.enPantalla.poligono([vector(20, 20), vector(60, 20), vector(40, 55)], "rojo")` |
 | `semilla(numero)` | Hace que el azar SE REPITA: con la misma semilla, aleatorio(), elegir(), probabilidad() y lista.mezclar() dan siempre lo mismo y en el mismo orden. | `semilla(1234)` |
+
+### Controles de interfaz
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `yo.valor` | En un CONTROL de interfaz, lo que vale: el número de una barra, un deslizador o un icono con contador; verdadero o falso en una casilla; el texto de un campo; la opción elegida de una lista o un menú; lo que hay en la casilla elegida de un inventario. | `buscar("Barra").valor = 40` |
+| `cuando cambia` | En el script de un CONTROL de interfaz: se ejecuta cuando quien juega cambia lo que vale (mueve el deslizador, marca la casilla, escribe en el campo, elige en la lista o pulsa una opción del menú). | `cuando cambia:` |
+| `yo.minimo` | En una barra o un deslizador: el valor más bajo (0 si no se dice). | `buscar("Deslizador").minimo = 10` |
+| `yo.maximo` | En una barra o un deslizador: el valor más alto (100 si no se dice). | `buscar("Barra").maximo = 200` |
+| `yo.opciones` | En una lista o un menú: sus opciones, una lista de textos. | `buscar("Menu").opciones = ["Jugar", "Salir"]` |
+| `yo.elegido` | En una lista, un menú o un inventario: el número de la opción (o la casilla) elegida. | `buscar("Lista").elegido = 2` |
+| `yo.activado` | En un control: si se puede usar. | `buscar("Casilla").activado = falso` |
+| `yo.titulo` | En una ventana: lo que pone en su barra de arriba. | `buscar("Ventana").titulo = "Tienda"` |
+| `yo.abrir()` | Enseña un control con todo lo que lleva dentro (sus hijos: lo pegado a él con pegarA). | `buscar("Ventana").abrir()` |
+| `yo.cerrar()` | Esconde un control con todo lo que lleva dentro. | `buscar("Ventana").cerrar()` |
+| `yo.enfocar()` | En un campo de texto: empieza a escribir en él, como si se hiciera clic. | `buscar("Campo").enfocar()` |
+| `yo.meter("cosa", cantidad)` | En un inventario: mete esa cosa (una si no se dice cuántas). | `buscar("Inventario").meter("llave")` |
+| `yo.sacar("cosa", cantidad)` | En un inventario: saca esa cosa (una si no se dice cuántas). | `buscar("Inventario").sacar("llave")` |
+| `yo.cuantos("cosa")` | En un inventario: cuántas hay de esa cosa. | `mostrar(buscar("Inventario").cuantos("moneda"))` |
+| `yo.vaciar()` | En un inventario: lo deja vacío. | `buscar("Inventario").vaciar()` |
 
 ## Nivel 4: Avanzado
 

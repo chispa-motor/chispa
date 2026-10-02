@@ -87,6 +87,8 @@ export class Sprite extends Componente {
   tamano = 24;
   /** Color de la letra de las etiquetas (en los objetos de texto se usa `color`). */
   colorTexto = 'blanco';
+  /** Si el objeto es un control de interfaz, quien lo dibuja (en vez de la forma o la imagen). */
+  pintor: ((r: Renderizador, x: number, y: number) => void) | null = null;
   /** El tipo de letra del texto (ver Letras.ts). */
   letra = 'normal';
   alinear: 'izquierda' | 'centro' | 'derecha' = 'centro';
@@ -183,6 +185,8 @@ export class Sprite extends Componente {
   }
 
   private dibujarSinFiltro(r: Renderizador, x: number, y: number): void {
+    // Un control de interfaz (botón, barra, lista...) se dibuja a su manera (ver Control.ts)
+    if (this.pintor) return this.pintor(r, x, y);
     const rotacion = -this.objeto.transformacion.rotacion;
     const w = this.anchoFinal;
     const h = this.altoFinal;

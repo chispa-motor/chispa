@@ -100,7 +100,7 @@ export function eventoDeLinea(texto: string): (typeof DOC_EVENTOS)[number] | nul
 }
 
 /** Palabras que forman parte de la línea de un evento (para enseñar la ayuda del evento). */
-const PALABRAS_DE_EVENTO = new Set(['cuando', 'empieza', 'cada', 'fotograma', 'segundos', 'segundo', 'pasen', 'se', 'pulsa', 'mantiene', 'suelta', 'toco', 'dejo', 'de', 'tocar', 'hago', 'clic', 'encima', 'termina', 'la', 'animacion', 'salgo', 'pantalla', 'recibo', 'recibe', 'reciba', 'llega', 'escucho', 'oigo']);
+const PALABRAS_DE_EVENTO = new Set(['cuando', 'empieza', 'cada', 'fotograma', 'segundos', 'segundo', 'pasen', 'se', 'pulsa', 'mantiene', 'suelta', 'toco', 'dejo', 'de', 'tocar', 'hago', 'clic', 'encima', 'cambia', 'termina', 'la', 'animacion', 'salgo', 'pantalla', 'recibo', 'recibe', 'reciba', 'llega', 'escucho', 'oigo']);
 
 /** Ayuda al pasar el ratón por encima de una palabra. */
 export const ayudaAlPasar = hoverTooltip((vista: EditorView, pos: number) => {

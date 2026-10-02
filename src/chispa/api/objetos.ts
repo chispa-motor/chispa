@@ -41,6 +41,7 @@ import { NOMBRES_MEZCLAS, PATRONES, TIPOS_RELLENO } from '../../motor/Estilo';
 import { EFECTOS_CONTINUOS, RECETAS } from '../../objetos/Efectos';
 import { Luz } from '../../objetos/Luces';
 import { letrasDisponibles } from '../../motor/Letras';
+import { METODOS_CONTROL, NOMBRES_CONTROL, PROPIEDADES_CONTROL, controlDe, esDeControl } from './controles';
 import { NOMBRES_COLORES, esColorValido } from '../../motor/Color';
 import { FORMAS, MAX_LADOS, MAX_PUNTOS_CAMINO, POR_DEFECTO } from '../../objetos/formas/figuras';
 
@@ -989,7 +990,8 @@ interface PropiedadPropia {
 PROPIEDADES.tamano = PROPIEDADES['tamaño'];
 
 /** Nombres de las propiedades y acciones del motor, tal como se escriben oficialmente. */
-export const NOMBRES_PROPIEDADES_OBJETO = NOMBRES_BONITOS;
+/** Todo lo que tiene un objeto: lo de siempre y lo de los controles de interfaz. */
+export const NOMBRES_PROPIEDADES_OBJETO = [...NOMBRES_BONITOS, ...NOMBRES_CONTROL];
 
 export class RefObjeto extends Anfitrion {
   constructor(readonly objeto: ObjetoJuego) {
@@ -1018,7 +1020,7 @@ export class RefObjeto extends Anfitrion {
   }
 
   propiedadesConocidas(): string[] {
-    return [...NOMBRES_BONITOS, ...[...this.propias().values()].map((x) => x.original), ...(this.script()?.nombresDeFunciones() ?? [])];
+    return [...NOMBRES_BONITOS, ...(controlDe(this.objeto) ? NOMBRES_CONTROL : []), ...[...this.propias().values()].map((x) => x.original), ...(this.script()?.nombresDeFunciones() ?? [])];
   }
 
   /** Su script (si tiene): para llamar a sus funciones desde otros objetos. */
@@ -1028,6 +1030,12 @@ export class RefObjeto extends Anfitrion {
 
   obtener(p: string, original: string, pos: Posicion): Valor {
     const o = this.objeto;
+    // Lo de los controles de interfaz (yo.valor, yo.abrir()...) solo existe si el objeto es un control
+    const control = esDeControl(p) ? controlDe(o) : null;
+    if (control) {
+      if (PROPIEDADES_CONTROL[p]) return PROPIEDADES_CONTROL[p].obtener(control, o, pos);
+      return new FuncionNativa(original, (args, pos2) => METODOS_CONTROL[p](control, args, pos2));
+    }
     if (PROPIEDADES[p]) return PROPIEDADES[p].obtener(o, pos);
     if (METODOS[p]) return new FuncionNativa(original, (args, pos2) => METODOS[p](o, args, pos2));
     const propia = this.propias().get(p);
@@ -1036,6 +1044,9 @@ export class RefObjeto extends Anfitrion {
     const script = this.script();
     const funcion = script?.funcionDelScript(p);
     if (funcion) return funcion;
+    if (esDeControl(p)) {
+      throw new ErrorChispa(pos, `'${original}' es de los controles de interfaz (barra, deslizador, lista, ventana...), y '${o.nombre}' no es un control.`, `En el editor: Añadir > Interfaz. Si es una propiedad tuya, dale un valor antes: yo.${original} = 0`);
+    }
     const s = sugerir(original, this.propiedadesConocidas());
     if (!s && script?.tieneVariable(p)) {
       throw new ErrorChispa(
@@ -1059,6 +1070,13 @@ export class RefObjeto extends Anfitrion {
   }
 
   asignar(p: string, v: Valor, original: string, pos: Posicion): void {
+    const control = esDeControl(p) ? controlDe(this.objeto) : null;
+    if (control) {
+      const deControl = PROPIEDADES_CONTROL[p];
+      if (!deControl) throw new ErrorChispa(pos, `'${original}' es una acción del control (se usa con paréntesis), no se le puede dar un valor.`, `Ejemplo: yo.${original}(...)`);
+      if (!deControl.asignar) throw new ErrorChispa(pos, `'${original}' solo se puede leer, no cambiar.`);
+      return deControl.asignar(control, v, pos, this.objeto);
+    }
     const prop = PROPIEDADES[p];
     if (prop) {
       if (!prop.asignar) {
@@ -1070,7 +1088,7 @@ export class RefObjeto extends Anfitrion {
       throw new ErrorChispa(pos, `'${original}' es una acción del objeto (se usa con paréntesis), no se le puede dar un valor.`, `Ejemplo: yo.${original}(...)`);
     }
     // ¿Un nombre casi igual a uno del motor? Seguramente está mal escrito (yo.velocidda → velocidad)
-    const parecido = this.propias().has(p) ? null : propiedadMalEscrita(original);
+    const parecido = this.propias().has(p) || esDeControl(p) ? null : propiedadMalEscrita(original);
     if (parecido) {
       throw new ErrorChispa(
         pos,
@@ -1091,5 +1109,5 @@ export function propiedadMalEscrita(nombre: string): string | null {
 
 /** ¿Es una propiedad o acción del motor? (nombre normalizado) */
 export function esMiembroDelMotor(nombre: string): boolean {
-  return nombre in PROPIEDADES || nombre in METODOS;
+  return nombre in PROPIEDADES || nombre in METODOS || esDeControl(nombre);
 }

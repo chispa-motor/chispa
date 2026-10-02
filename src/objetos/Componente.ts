@@ -46,6 +46,8 @@ export abstract class Componente {
   recibeClics?(): boolean;
   /** Se llama cuando se hace clic encima de este objeto (si recibeClics() dice que sí). */
   alHacerClic?(): void;
+  /** Se llama cuando cambia lo que vale el control de interfaz del objeto (un deslizador, una casilla, una lista...). */
+  alCambiar?(): void;
   /** Se llama cuando termina una animación que no se repite. */
   alTerminarAnimacion?(nombre: string): void;
   /** Se llama cuando el objeto se destruye. */

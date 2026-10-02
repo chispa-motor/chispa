@@ -34,7 +34,7 @@ const VALORES = new Set(['verdadero', 'falso', 'nulo']);
 const ESPECIALES = new Set(['yo', 'otro', 'casilla', 'juego', 'delta']);
 const GLOBALES = new Set([...DOC_FUNCIONES.map((d) => normalizar(d.nombre)), ...DOC_MODULOS.map((m) => normalizar(m.nombre))]);
 /** Palabras que solo son especiales después de "cuando" o en "repetir N veces". */
-const PALABRAS_DE_EVENTO = new Set(['empieza', 'fotograma', 'segundos', 'segundo', 'se', 'pulsa', 'mantiene', 'suelta', 'toco', 'dejo', 'de', 'tocar', 'hago', 'clic', 'encima', 'pasen', 'termina', 'la', 'animacion', 'veces']);
+const PALABRAS_DE_EVENTO = new Set(['empieza', 'fotograma', 'segundos', 'segundo', 'se', 'pulsa', 'mantiene', 'suelta', 'toco', 'dejo', 'de', 'tocar', 'hago', 'clic', 'encima', 'cambia', 'pasen', 'termina', 'la', 'animacion', 'veces']);
 
 interface Estado {
   /** ¿Estamos en una línea que empieza por "cuando" o "repetir"? */

@@ -24,6 +24,7 @@
  * Coordenadas: la Y crece hacia ARRIBA y (0,0) es la esquina inferior
  * izquierda de la pantalla al empezar.
  */
+import type { TipoControl } from '../objetos/componentes/Control';
 import type { ParamsSonido } from '../sonido/generador';
 import type { DefCancion } from '../sonido/musica';
 import type { FormaSprite } from '../objetos/componentes/Sprite';
@@ -161,6 +162,39 @@ export interface DefMapa {
   celdas: Record<string, string>;
 }
 
+/** Un control de interfaz (ver Control.ts). Lo que no se dice, vale lo normal. */
+export interface DefControl {
+  tipo: TipoControl;
+  activado?: boolean;
+  /** Barra, deslizador e icono: el número con el que empieza, y entre qué valores. */
+  valor?: number;
+  minimo?: number;
+  maximo?: number;
+  paso?: number;
+  /** Un dato que se lee solo en cada fotograma: "juego.vida" */
+  dato?: string;
+  /** Casilla: si empieza marcada. */
+  marcada?: boolean;
+  /** Campo de texto: lo que se ve en gris cuando está vacío, y cuántas letras caben. */
+  pista?: string;
+  largoMaximo?: number;
+  /** Lista y menú: las opciones y la elegida al empezar (1 = la primera; 0 = ninguna). */
+  opciones?: string[];
+  elegido?: number;
+  /** Ventana: su título, si se puede arrastrar y si tiene botón de cerrar. */
+  titulo?: string;
+  arrastrable?: boolean;
+  conCerrar?: boolean;
+  /** Inventario: columnas, filas y lo que tiene al empezar. */
+  columnas?: number;
+  filas?: number;
+  objetos?: { nombre: string; cantidad: number }[];
+  /** Minimapa: el objeto que va en el centro y cuánto mundo se ve a lo ancho. */
+  seguir?: string;
+  alcance?: number;
+  colorFondo?: string;
+}
+
 export interface DefObjeto {
   nombre?: string;
   tipo?: string;
@@ -185,6 +219,8 @@ export interface DefObjeto {
   efecto?: string;
   /** Una luz que lleva encima (se ve cuando la escena tiene oscuridad). */
   luz?: DefLuz;
+  /** Si es un control de interfaz (botón, barra, lista...): cuál y sus datos. Necesita Dibujo (sprite). */
+  control?: DefControl;
   /** Nombre de un script de `proyecto.scripts`. */
   script?: string;
   /** Propiedades propias con su valor inicial (como los Attributes de Roblox): vida = 3... */

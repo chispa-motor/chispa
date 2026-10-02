@@ -234,6 +234,13 @@ export class ScriptChispa extends Componente {
     });
   }
 
+  alCambiar(): void {
+    if (this.detenido) return;
+    this.conArchivo(() => {
+      for (const ev of this.eventos) if (ev.evento.tipo === 'cambia') this.lanzarEvento(ev);
+    });
+  }
+
   alTerminarAnimacion(): void {
     this.conArchivo(() => {
       for (const ev of this.eventos) if (ev.evento.tipo === 'animacion') this.lanzarEvento(ev);

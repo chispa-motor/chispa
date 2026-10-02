@@ -2,7 +2,7 @@
 
 > Este archivo se genera solo con `npm run manual`, a partir de la API de verdad (no lo cambies a mano: cambia `src/chispa/api/curso.ts`). Un test ejecuta cada ejemplo, cada ejercicio y cada mini proyecto para comprobar que funcionan.
 
-Un curso por niveles para aprender a programar juegos con Chispa, aunque no hayas programado nunca. Salen **todos** los comandos que existen (379), cada uno con qué hace, un ejemplo corto que funciona y el error que más se comete con él.
+Un curso por niveles para aprender a programar juegos con Chispa, aunque no hayas programado nunca. Salen **todos** los comandos que existen (394), cada uno con qué hace, un ejemplo corto que funciona y el error que más se comete con él.
 
 **Cómo usarlo:**
 
@@ -47,6 +47,7 @@ Una regla para todo el curso: en el código **no hacen falta tildes**. Se escrib
   - [Efectos de pantalla y de objeto](#efectos-de-pantalla-y-de-objeto)
   - [Luces y oscuridad](#luces-y-oscuridad)
   - [Letras, dibujo y azar que se repite](#letras-dibujo-y-azar-que-se-repite)
+  - [Controles de interfaz](#controles-de-interfaz)
 - [Nivel 4: Avanzado](#nivel-4-avanzado)
   - [Mensajes entre objetos y datos globales](#mensajes-entre-objetos-y-datos-globales)
   - [Ir a sitios esquivando paredes](#ir-a-sitios-esquivando-paredes)
@@ -5754,6 +5755,254 @@ cuando empieza:
 ```
 cuando empieza:
     semilla("hoy")
+```
+
+### Controles de interfaz
+
+En el editor (Añadir > Interfaz) hay controles ya hechos: botón, barra, campo de texto, deslizador, casilla, lista, menú, ventana, inventario, minimapa e icono con contador. Todos tienen yo.valor (lo que valen) y avisan con «cuando cambia:». En estos ejemplos la escena tiene uno de cada, con su nombre: Barra, Deslizador, Casilla, Campo, Lista, Menu, Ventana e Inventario.
+
+#### `yo.valor`
+
+En un CONTROL de interfaz, lo que vale: el número de una barra, un deslizador o un icono con contador; verdadero o falso en una casilla; el texto de un campo; la opción elegida de una lista o un menú; lo que hay en la casilla elegida de un inventario.
+
+```
+cuando empieza:
+    buscar("Barra").valor = 40
+```
+
+**Error típico:** Pedírselo a un objeto que no es un control: solo lo tienen las barras, deslizadores, casillas, campos, listas... Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    yo.valor = 40
+    mostrar(buscar("Jugador").valor)
+```
+
+#### `cuando cambia`
+
+En el script de un CONTROL de interfaz: se ejecuta cuando quien juega cambia lo que vale (mueve el deslizador, marca la casilla, escribe en el campo, elige en la lista o pulsa una opción del menú).
+
+```
+cuando cambia:
+    mostrar("ahora vale", yo.valor)
+```
+
+**Error típico:** Mirar el valor en cada fotograma: funciona, pero es más fácil poner «cuando cambia:» en el script del deslizador. Esto no da error: funciona, pero no hace lo que querías.
+
+```
+cuando cada fotograma:
+    sonido.volumen = buscar("Deslizador").valor / 100
+```
+
+#### `yo.minimo`
+
+En una barra o un deslizador: el valor más bajo (0 si no se dice).
+
+```
+cuando empieza:
+    buscar("Deslizador").minimo = 10
+```
+
+**Error típico:** Ponérselo a una casilla: el mínimo es de las barras y los deslizadores. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    buscar("Casilla").minimo = 10
+```
+
+#### `yo.maximo`
+
+En una barra o un deslizador: el valor más alto (100 si no se dice).
+
+```
+cuando empieza:
+    buscar("Barra").maximo = 200
+    buscar("Barra").valor = 200
+```
+
+**Error típico:** Un máximo menor que el mínimo: la barra no tendría recorrido. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    buscar("Barra").maximo = -5
+```
+
+#### `yo.opciones`
+
+En una lista o un menú: sus opciones, una lista de textos.
+
+```
+cuando empieza:
+    buscar("Menu").opciones = ["Jugar", "Salir"]
+```
+
+**Error típico:** Darle un texto: las opciones son una LISTA, entre corchetes. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    buscar("Menu").opciones = "Jugar"
+```
+
+#### `yo.elegido`
+
+En una lista, un menú o un inventario: el número de la opción (o la casilla) elegida.
+
+```
+cuando empieza:
+    buscar("Lista").elegido = 2
+```
+
+**Error típico:** Elegir una opción que no hay. La primera es la 1. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    buscar("Lista").elegido = 99
+```
+
+#### `yo.activado`
+
+En un control: si se puede usar.
+
+```
+cuando empieza:
+    buscar("Casilla").activado = falso
+```
+
+**Error típico:** Darle un texto: es verdadero o falso. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    buscar("Casilla").activado = "no"
+```
+
+#### `yo.titulo`
+
+En una ventana: lo que pone en su barra de arriba.
+
+```
+cuando empieza:
+    buscar("Ventana").titulo = "Tienda"
+```
+
+**Error típico:** Ponérselo a una barra: el título es de las ventanas. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    buscar("Barra").titulo = "Vida"
+```
+
+#### `yo.abrir()`
+
+Enseña un control con todo lo que lleva dentro (sus hijos: lo pegado a él con pegarA).
+
+```
+cuando se pulsa "i":
+    buscar("Ventana").abrir()
+```
+
+**Error típico:** Darle un valor: abrir es una acción, lleva paréntesis. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    buscar("Ventana").abrir = verdadero
+```
+
+#### `yo.cerrar()`
+
+Esconde un control con todo lo que lleva dentro.
+
+```
+cuando empieza:
+    buscar("Ventana").cerrar()
+```
+
+**Error típico:** Esconder solo la ventana: lo que lleva dentro se queda a la vista. cerrar() lo esconde todo. Esto no da error: funciona, pero no hace lo que querías.
+
+```
+cuando empieza:
+    buscar("Ventana").visible = falso
+```
+
+#### `yo.enfocar()`
+
+En un campo de texto: empieza a escribir en él, como si se hiciera clic.
+
+```
+cuando empieza:
+    buscar("Campo").enfocar()
+```
+
+**Error típico:** Enfocar una lista: solo se escribe en los campos de texto. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    buscar("Lista").enfocar()
+```
+
+#### `yo.meter("cosa", cantidad)`
+
+En un inventario: mete esa cosa (una si no se dice cuántas).
+
+```
+cuando empieza:
+    buscar("Inventario").meter("llave")
+    buscar("Inventario").meter("moneda", 5)
+```
+
+**Error típico:** Meter cero: la cantidad tiene que ser más de 0. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    buscar("Inventario").meter("llave", 0)
+```
+
+#### `yo.sacar("cosa", cantidad)`
+
+En un inventario: saca esa cosa (una si no se dice cuántas).
+
+```
+cuando empieza:
+    buscar("Inventario").meter("llave")
+    mostrar(buscar("Inventario").sacar("llave"))
+```
+
+**Error típico:** Olvidar las comillas: el nombre de la cosa es un texto. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    buscar("Inventario").sacar(llave)
+```
+
+#### `yo.cuantos("cosa")`
+
+En un inventario: cuántas hay de esa cosa.
+
+```
+cuando empieza:
+    mostrar(buscar("Inventario").cuantos("moneda"))
+```
+
+**Error típico:** Preguntárselo a una barra: es de los inventarios. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    mostrar(buscar("Barra").cuantos("moneda"))
+```
+
+#### `yo.vaciar()`
+
+En un inventario: lo deja vacío.
+
+```
+cuando empieza:
+    buscar("Inventario").vaciar()
+```
+
+**Error típico:** Vaciar una lista: es de los inventarios. Para una lista: yo.opciones = [] Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    buscar("Lista").vaciar()
 ```
 
 ### Ejercicios del nivel 3

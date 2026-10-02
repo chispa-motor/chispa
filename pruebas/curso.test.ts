@@ -42,6 +42,12 @@ function mundo(scripts: Record<string, string>, proyecto?: { objetos: DefObjeto[
       { nombre: 'Enemigo', ...caja(800, 200) },
       { nombre: 'Meta', ...caja(900, 100, { colision: { solido: false } }) },
       { nombre: 'Plataforma', ...caja(300, 450, { recorrido: { puntos: [{ x: 150, y: 0 }] } }) },
+      // Un control de interfaz de cada clase (los que se añaden en el editor con Añadir > Interfaz)
+      ...(['barra', 'deslizador', 'casilla', 'campo', 'lista', 'menu', 'ventana', 'inventario'] as const).map((tipo, i): DefObjeto => ({
+        nombre: tipo[0].toUpperCase() + tipo.slice(1), x: 100, y: 500 - i * 40,
+        sprite: { ancho: 200, alto: 30, fijo: true, tamano: 16 },
+        control: { tipo, ...(tipo === 'lista' || tipo === 'menu' ? { opciones: ['Uno', 'Dos', 'Tres'] } : {}) },
+      })),
       { nombre: 'Mapa', x: 0, y: 0, mapa: { tamano: 32, tipos: { suelo: { solida: true }, agua: { solida: false }, hielo: { solida: true } }, celdas: { '0,0': 'suelo', '1,0': 'suelo', '2,0': 'hielo' } } },
     ],
     plantillas: {

@@ -42,6 +42,8 @@ import { botonIcono, h, icono } from '../interfaz/dom';
 import { notificar } from '../interfaz/dialogos';
 import { importarArchivos, resumenImportar, tipoDeArchivo } from '../recursos/importar';
 import { cargarLetra, olvidarLetras } from '../../motor/Letras';
+import { TIPOS_CONTROL, type TipoControl } from '../../objetos/componentes/Control';
+import { CONTROLES_NUEVOS } from '../interfaz/controlesNuevos';
 import { tiene } from '../../utilidades/seguro';
 import {
   ajustar,
@@ -202,6 +204,15 @@ export class VistaEscena {
         const ref = this.estado.seleccion;
         if (ref) abrirEditorPluma(this.estado, ref, { vacio: true });
       } }, h('span', { class: 'icono-pluma' }, '✒'), h('span', {}, 'Dibujar con la pluma')),
+      h('div', { class: 'titulo-menu' }, 'Interfaz'),
+      h('div', { class: 'rejilla-controles' },
+        TIPOS_CONTROL.filter((t) => t !== 'boton').map((t) =>
+          h('button', { class: 'opcion-menu', title: CONTROLES_NUEVOS[t].ayuda, 'data-control': t, onclick: () => {
+            menu.hidden = true;
+            this.anadirControl(t);
+          } }, h('span', {}, CONTROLES_NUEVOS[t].texto)),
+        ),
+      ),
       h('div', { class: 'titulo-menu' }, 'Más formas'),
       h('div', { class: 'rejilla-formas' },
         FORMAS_DIBUJO.filter((f) => f.forma !== 'rectangulo' && f.forma !== 'circulo').map((f) =>
@@ -219,6 +230,17 @@ export class VistaEscena {
       if (!menu.hidden && !menu.contains(e.target as Node) && !boton.contains(e.target as Node)) menu.hidden = true;
     });
     return h('div', { class: 'con-menu' }, boton, menu);
+  }
+
+  /** Crea un control de interfaz en el centro de la pantalla del juego (si hay algo justo ahí, un poco más abajo). */
+  anadirControl(tipo: TipoControl): void {
+    const m = this.marco();
+    const x = Math.round(((m.derecha - m.izquierda) * m.zoom) / 2);
+    let y = Math.round(((m.arriba - m.abajo) * m.zoom) / 2);
+    const ocupado = (py: number) => this.estado.escena.objetos.some((o) => o.sprite?.fijo && o.x === x && o.y === py);
+    for (let i = 0; i < 10 && ocupado(y); i++) y -= 40;
+    this.estado.crearControl(tipo, x, y);
+    this.canvas.focus();
   }
 
   /** Crea un objeto nuevo en el centro de lo que se ve. */

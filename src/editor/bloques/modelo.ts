@@ -29,7 +29,7 @@ import { analizarSintaxis } from '../../chispa/sintaxis/parser';
 
 export type ClaseEvento =
   | 'empieza' | 'fotograma' | 'cada' | 'pasen' | 'pulsa' | 'mantiene' | 'suelta'
-  | 'toco' | 'dejoDeTocar' | 'clic' | 'clicEncima' | 'animacion' | 'pantalla' | 'recibo';
+  | 'toco' | 'dejoDeTocar' | 'clic' | 'clicEncima' | 'cambia' | 'animacion' | 'pantalla' | 'recibo';
 
 export type Bloque = (
   /** cuando ...: (dato: la tecla, los segundos, con quién, el mensaje...) */
@@ -66,6 +66,7 @@ export const EVENTOS: { clase: ClaseEvento; texto: string; dato?: { nombre: stri
   { clase: 'dejoDeTocar', texto: 'cuando dejo de tocar', dato: { nombre: 'con quién', porDefecto: 'Agua' } },
   { clase: 'clic', texto: 'cuando hago clic' },
   { clase: 'clicEncima', texto: 'cuando hago clic encima' },
+  { clase: 'cambia', texto: 'cuando cambia' },
   { clase: 'cada', texto: 'cuando cada … segundos', dato: { nombre: 'segundos', porDefecto: '2' } },
   { clase: 'pasen', texto: 'cuando pasen … segundos', dato: { nombre: 'segundos', porDefecto: '3' } },
   { clase: 'recibo', texto: 'cuando recibo', dato: { nombre: 'mensaje', porDefecto: 'empezar' } },
@@ -140,6 +141,12 @@ export const ACCIONES: Accion[] = [
   { id: 'muelle', categoria: 'objetos', partes: ['unir con un muelle', 0, 'a', 1, 'de largo', 2], funcion: 'junta.muelle', porDefecto: ['yo', 'buscar("Techo")', '120'] },
   { id: 'bisagra', categoria: 'objetos', partes: ['poner una bisagra a', 0, 'con el eje en', 1], funcion: 'junta.bisagra', porDefecto: ['yo', 'vector(400, 300)'] },
   { id: 'quitarJuntas', categoria: 'objetos', partes: ['soltar las juntas de', 0], funcion: 'junta.quitar', porDefecto: ['yo'] },
+  { id: 'abrirControl', categoria: 'apariencia', partes: ['abrir (con lo que lleva dentro)'], funcion: 'yo.abrir', porDefecto: [] },
+  { id: 'cerrarControl', categoria: 'apariencia', partes: ['cerrar (con lo que lleva dentro)'], funcion: 'yo.cerrar', porDefecto: [] },
+  { id: 'enfocar', categoria: 'control', partes: ['empezar a escribir en mí'], funcion: 'yo.enfocar', porDefecto: [] },
+  { id: 'meter', categoria: 'objetos', partes: ['meter en mi inventario', 0, 'cantidad', 1], funcion: 'yo.meter', porDefecto: ['"llave"', '1'] },
+  { id: 'sacar', categoria: 'objetos', partes: ['sacar de mi inventario', 0, 'cantidad', 1], funcion: 'yo.sacar', porDefecto: ['"llave"', '1'] },
+  { id: 'vaciarInventario', categoria: 'objetos', partes: ['vaciar mi inventario'], funcion: 'yo.vaciar', porDefecto: [] },
   { id: 'pantallaNormal', categoria: 'efectos', partes: ['quitar los filtros de pantalla'], funcion: 'pantalla.normal', porDefecto: [] },
   { id: 'flashObjeto', categoria: 'efectos', partes: ['flash del objeto', 0, 'durante', 1, 'segundos'], funcion: 'yo.flash', porDefecto: ['"blanco"', '0.1'] },
   { id: 'efecto', categoria: 'sonido', partes: ['sonido', 0], funcion: 'sonido.efecto', porDefecto: ['"moneda"'] },
@@ -206,6 +213,14 @@ export const DATOS_CON_BLOQUE: DatoConBloque[] = [
   { categoria: 'efectos', objetivo: 'yo.efecto', valor: '"fuego"' },
   { categoria: 'efectos', objetivo: 'efecto.suave', valor: 'falso' },
   { categoria: 'apariencia', objetivo: 'yo.letra', valor: '"pixel"' },
+  { categoria: 'control', objetivo: 'yo.valor', valor: '50' },
+  { categoria: 'control', objetivo: 'yo.minimo', valor: '0' },
+  { categoria: 'control', objetivo: 'yo.maximo', valor: '100' },
+  { categoria: 'control', objetivo: 'yo.opciones', valor: '["Jugar", "Opciones", "Salir"]' },
+  { categoria: 'control', objetivo: 'yo.elegido', valor: '1' },
+  { categoria: 'control', objetivo: 'yo.activado', valor: 'falso' },
+  { categoria: 'control', objetivo: 'yo.titulo', valor: '"Tienda"' },
+  { categoria: 'control', objetivo: 'yo.texto', valor: 'yo.cuantos("llave")' },
   { categoria: 'objetos', objetivo: 'junta.visibles', valor: 'falso' },
   { categoria: 'sonido', objetivo: 'sonido.oyente', valor: 'yo' },
   { categoria: 'sonido', objetivo: 'musica.intensidad', valor: '0.5' },
@@ -364,6 +379,7 @@ function leerEvento(ev: Evento): { clase: ClaseEvento; dato: string } {
     case 'fotograma':
     case 'animacion':
     case 'pantalla':
+    case 'cambia':
       return { clase: ev.tipo, dato: '' };
     case 'intervalo':
       return { clase: 'cada', dato: escribir(ev.segundos) };
@@ -531,6 +547,8 @@ export function cabeceraEvento(clase: ClaseEvento, dato: string): string {
       return 'cuando hago clic';
     case 'clicEncima':
       return 'cuando hago clic encima';
+    case 'cambia':
+      return 'cuando cambia';
     case 'animacion':
       return 'cuando termina la animacion';
     case 'pantalla':

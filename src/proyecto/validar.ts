@@ -28,9 +28,10 @@ import { ErrorMotor } from '../motor/Errores';
 import { esColorValido } from '../motor/Color';
 import { esNombreProhibido } from '../utilidades/seguro';
 import { problemaDataURL, problemaLetra } from './archivos';
+import { MAXIMO_CASILLAS, MAXIMO_OPCIONES, TIPOS_CONTROL } from '../objetos/componentes/Control';
 import { LIMITES_SONIDO, ONDAS, completarSonido, type ParamsSonido } from '../sonido/generador';
 import { INSTRUMENTOS, LIMITES_CANCION, type DefCancion, type NotaCancion, type PistaCancion } from '../sonido/musica';
-import type { DefLuz } from './formato';
+import type { DefControl, DefLuz } from './formato';
 import type { DatoInicial, DefCamara, DefColision, DefComportamiento, DefEscena, DefFisica, DefMapa, DefObjeto, DefProyecto, DefRecorrido, DefSprite } from './formato';
 import type { DefAnimacion } from '../objetos/componentes/Animador';
 import type { TipoCasilla } from '../objetos/componentes/MapaCasillas';
@@ -310,6 +311,37 @@ function objetoJuego(v: unknown, ruta: Ruta): DefObjeto {
     comportamiento,
     animacion: nombre,
     efecto: nombre,
+    control: (x, r) => {
+      const c = campos<Partial<DefControl>>(objeto(x, r), r, {
+        tipo: (t, rt) => unoDe(t, rt, TIPOS_CONTROL),
+        activado: logico,
+        valor: numero,
+        minimo: numero,
+        maximo: numero,
+        paso: (n, rn) => numero(n, rn, 0, 1e9),
+        dato: (t, rt) => texto(t, rt, 200),
+        marcada: logico,
+        pista: (t, rt) => texto(t, rt, 200),
+        largoMaximo: (n, rn) => numero(n, rn, 1, 500),
+        opciones: (l, rl) => lista(l, rl, MAXIMO_OPCIONES, (t, rt) => texto(t, rt, 200)),
+        elegido: (n, rn) => numero(n, rn, 0, MAXIMO_OPCIONES),
+        titulo: (t, rt) => texto(t, rt, 200),
+        arrastrable: logico,
+        conCerrar: logico,
+        columnas: (n, rn) => numero(n, rn, 1, 20),
+        filas: (n, rn) => numero(n, rn, 1, 20),
+        objetos: (l, rl) => lista(l, rl, MAXIMO_CASILLAS, (o, ro) => {
+          const d = campos<{ nombre?: string; cantidad?: number }>(objeto(o, ro), ro, { nombre, cantidad: (n, rn) => numero(n, rn, 0, 1e9) });
+          return { nombre: d.nombre ?? '', cantidad: d.cantidad ?? 1 };
+        }),
+        seguir: nombre,
+        alcance: (n, rn) => numero(n, rn, 50, 1e6),
+        colorFondo: color,
+      });
+      if (!c.tipo) fallo(r, 'al control le falta decir de qué tipo es');
+      if ((c.columnas ?? 4) * (c.filas ?? 2) > MAXIMO_CASILLAS) fallo(r, `un inventario puede tener ${MAXIMO_CASILLAS} casillas como mucho`);
+      return c as DefControl;
+    },
     luz: (x, r) => campos<DefLuz>(objeto(x, r), r, {
       tipo: (t, rt) => unoDe(t, rt, ['punto', 'foco'] as const),
       color,

@@ -34,6 +34,8 @@ import { normalizar, quitarTildes } from '../../utilidades/texto';
 import { esNombreProhibido, tiene } from '../../utilidades/seguro';
 import { problemaDataURL, problemaLetra, type TipoRecurso as TipoRecursoArchivo } from '../../proyecto/archivos';
 import { LETRAS, MAXIMO_LETRAS } from '../../motor/Letras';
+import type { TipoControl } from '../../objetos/componentes/Control';
+import { CONTROLES_NUEVOS } from '../interfaz/controlesNuevos';
 import { completarSonido, type ParamsSonido } from '../../sonido/generador';
 import type { DefCancion } from '../../sonido/musica';
 import { ErrorMotor } from '../../motor/Errores';
@@ -459,7 +461,7 @@ export class EstadoEditor {
       circulo: ['Circulo', { sprite: { forma: 'circulo', color, ancho: 64, alto: 64 }, colision: {} }],
       // Los textos nuevos son de INTERFAZ (pegados a la pantalla): casi siempre son vidas, puntos o títulos
       texto: ['Texto', { sprite: { forma: 'texto', texto: 'Texto', tamano: 32, color: 'blanco', ancho: 160, alto: 40, fijo: true, alinear: 'izquierda' } }],
-      boton: ['Boton', { sprite: { forma: 'rectangulo', color: '#3b82f6', ancho: 180, alto: 56, texto: 'Boton', tamano: 24, fijo: true } }],
+      boton: ['Boton', { sprite: { forma: 'rectangulo', color: '#3b82f6', ancho: 180, alto: 56, texto: 'Boton', tamano: 24, fijo: true }, control: { tipo: 'boton' } }],
       imagen: [imagen ?? 'Imagen', { sprite: { imagen, ancho: 64, alto: 64 }, colision: {} }],
       mapa: ['Mapa', { mapa: { tamano: 48, tipos: { suelo: { color: '#5ad17a', solida: true } }, celdas: {} } }],
       vacio: ['Objeto', {}],
@@ -471,6 +473,18 @@ export class EstadoEditor {
     let indice = -1;
     this.cambiar('objetos', () => {
       this.escena.objetos.push({ nombre: this.nombreLibre(nombre), ...pos, ...structuredClone(def) });
+      indice = this.escena.objetos.length - 1;
+    });
+    this.seleccionarIndice(indice);
+    return indice;
+  }
+
+  /** Crea un control de interfaz (barra, lista, ventana...) en la escena actual y lo selecciona. */
+  crearControl(tipo: TipoControl, x: number, y: number): number {
+    const { nombre, def } = CONTROLES_NUEVOS[tipo];
+    let indice = -1;
+    this.cambiar('objetos', () => {
+      this.escena.objetos.push({ nombre: this.nombreLibre(nombre), x: Math.round(x), y: Math.round(y), ...structuredClone(def) });
       indice = this.escena.objetos.length - 1;
     });
     this.seleccionarIndice(indice);

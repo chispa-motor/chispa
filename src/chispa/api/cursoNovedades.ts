@@ -234,4 +234,36 @@ export function agregarNovedades(tema: Tema, c: Comando): void {
     'cuando empieza:\n    musica.intensidad = 50', 'Darle un porcentaje: va de 0 a 1.');
   c('musica:tono', 'cuando empieza:\n    musica.reproducir("tema")\n    musica.tono = 1.2', 'musica.tono = 1.2',
     'cuando empieza:\n    musica.tono = 10', 'Pasarse: va de 0.25 a 4 (1 = normal).');
+
+  tema(3, 'Controles de interfaz', 'En el editor (Añadir > Interfaz) hay controles ya hechos: botón, barra, campo de texto, deslizador, casilla, lista, menú, ventana, inventario, minimapa e icono con contador. Todos tienen yo.valor (lo que valen) y avisan con «cuando cambia:». En estos ejemplos la escena tiene uno de cada, con su nombre: Barra, Deslizador, Casilla, Campo, Lista, Menu, Ventana e Inventario.');
+  c('objeto:valor', 'cuando empieza:\n    buscar("Barra").valor = 40', 'buscar("Barra").valor = 40',
+    'cuando empieza:\n    yo.valor = 40\n    mostrar(buscar("Jugador").valor)', 'Pedírselo a un objeto que no es un control: solo lo tienen las barras, deslizadores, casillas, campos, listas...');
+  c('evento:cuando cambia', 'cuando cambia:\n    mostrar("ahora vale", yo.valor)', 'cuando cambia:',
+    'cuando cada fotograma:\n    sonido.volumen = buscar("Deslizador").valor / 100', 'Mirar el valor en cada fotograma: funciona, pero es más fácil poner «cuando cambia:» en el script del deslizador.', 'l');
+  c('objeto:minimo', 'cuando empieza:\n    buscar("Deslizador").minimo = 10', 'buscar("Deslizador").minimo = 10',
+    'cuando empieza:\n    buscar("Casilla").minimo = 10', 'Ponérselo a una casilla: el mínimo es de las barras y los deslizadores.');
+  c('objeto:maximo', 'cuando empieza:\n    buscar("Barra").maximo = 200\n    buscar("Barra").valor = 200', 'buscar("Barra").maximo = 200',
+    'cuando empieza:\n    buscar("Barra").maximo = -5', 'Un máximo menor que el mínimo: la barra no tendría recorrido.');
+  c('objeto:opciones', 'cuando empieza:\n    buscar("Menu").opciones = ["Jugar", "Salir"]', 'buscar("Menu").opciones = ["Jugar", "Salir"]',
+    'cuando empieza:\n    buscar("Menu").opciones = "Jugar"', 'Darle un texto: las opciones son una LISTA, entre corchetes.');
+  c('objeto:elegido', 'cuando empieza:\n    buscar("Lista").elegido = 2', 'buscar("Lista").elegido = 2',
+    'cuando empieza:\n    buscar("Lista").elegido = 99', 'Elegir una opción que no hay. La primera es la 1.');
+  c('objeto:activado', 'cuando empieza:\n    buscar("Casilla").activado = falso', 'buscar("Casilla").activado = falso',
+    'cuando empieza:\n    buscar("Casilla").activado = "no"', 'Darle un texto: es verdadero o falso.');
+  c('objeto:titulo', 'cuando empieza:\n    buscar("Ventana").titulo = "Tienda"', 'buscar("Ventana").titulo = "Tienda"',
+    'cuando empieza:\n    buscar("Barra").titulo = "Vida"', 'Ponérselo a una barra: el título es de las ventanas.');
+  c('objeto:abrir', 'cuando se pulsa "i":\n    buscar("Ventana").abrir()', 'buscar("Ventana").abrir()',
+    'cuando empieza:\n    buscar("Ventana").abrir = verdadero', 'Darle un valor: abrir es una acción, lleva paréntesis.');
+  c('objeto:cerrar', 'cuando empieza:\n    buscar("Ventana").cerrar()', 'buscar("Ventana").cerrar()',
+    'cuando empieza:\n    buscar("Ventana").visible = falso', 'Esconder solo la ventana: lo que lleva dentro se queda a la vista. cerrar() lo esconde todo.', 'l');
+  c('objeto:enfocar', 'cuando empieza:\n    buscar("Campo").enfocar()', 'buscar("Campo").enfocar()',
+    'cuando empieza:\n    buscar("Lista").enfocar()', 'Enfocar una lista: solo se escribe en los campos de texto.');
+  c('objeto:meter', 'cuando empieza:\n    buscar("Inventario").meter("llave")\n    buscar("Inventario").meter("moneda", 5)', 'buscar("Inventario").meter("llave")',
+    'cuando empieza:\n    buscar("Inventario").meter("llave", 0)', 'Meter cero: la cantidad tiene que ser más de 0.');
+  c('objeto:sacar', 'cuando empieza:\n    buscar("Inventario").meter("llave")\n    mostrar(buscar("Inventario").sacar("llave"))', 'buscar("Inventario").sacar("llave")',
+    'cuando empieza:\n    buscar("Inventario").sacar(llave)', 'Olvidar las comillas: el nombre de la cosa es un texto.');
+  c('objeto:cuantos', 'cuando empieza:\n    mostrar(buscar("Inventario").cuantos("moneda"))', 'mostrar(buscar("Inventario").cuantos("moneda"))',
+    'cuando empieza:\n    mostrar(buscar("Barra").cuantos("moneda"))', 'Preguntárselo a una barra: es de los inventarios.');
+  c('objeto:vaciar', 'cuando empieza:\n    buscar("Inventario").vaciar()', 'buscar("Inventario").vaciar()',
+    'cuando empieza:\n    buscar("Lista").vaciar()', 'Vaciar una lista: es de los inventarios. Para una lista: yo.opciones = []');
 }

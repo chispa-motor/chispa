@@ -360,6 +360,15 @@ cuando hago clic encima:
     escena.cambiar("Nivel1")
 ```
 
+#### `cuando cambia:`
+
+En el script de un CONTROL de interfaz: se ejecuta cuando quien juega cambia lo que vale (mueve el deslizador, marca la casilla, escribe en el campo, elige en la lista o pulsa una opción del menú). El valor nuevo está en yo.valor.
+
+```
+cuando cambia:
+    sonido.volumen = yo.valor / 100
+```
+
 #### `cuando termina la animacion:`
 
 Se ejecuta cuando termina una animación que no se repite.
@@ -1157,6 +1166,62 @@ Color de la letra de las etiquetas (botones).
 yo.colorTexto = "negro"
 ```
 
+#### `yo.valor`
+
+En un CONTROL de interfaz, lo que vale: el número de una barra, un deslizador o un icono con contador; verdadero o falso en una casilla; el texto de un campo; la opción elegida de una lista o un menú; lo que hay en la casilla elegida de un inventario.
+
+```
+buscar("BarraVida").valor = juego.vida
+```
+
+#### `yo.minimo`
+
+En una barra o un deslizador: el valor más bajo (0 si no se dice).
+
+```
+buscar("Deslizador").minimo = 1
+```
+
+#### `yo.maximo`
+
+En una barra o un deslizador: el valor más alto (100 si no se dice). La barra está llena cuando su valor llega al máximo.
+
+```
+buscar("BarraVida").maximo = 200
+```
+
+#### `yo.opciones`
+
+En una lista o un menú: sus opciones, una lista de textos.
+
+```
+buscar("Menu").opciones = ["Jugar", "Opciones", "Salir"]
+```
+
+#### `yo.elegido`
+
+En una lista, un menú o un inventario: el número de la opción (o la casilla) elegida. La primera es la 1; 0 es ninguna.
+
+```
+buscar("Lista").elegido = 1
+```
+
+#### `yo.activado`
+
+En un control: si se puede usar. Con falso se ve apagado y no atiende al ratón ni al teclado.
+
+```
+buscar("BotonComprar").activado = juego.monedas >= 10
+```
+
+#### `yo.titulo`
+
+En una ventana: lo que pone en su barra de arriba.
+
+```
+buscar("Ventana").titulo = "Tienda"
+```
+
 #### `yo.fijo`
 
 Si es verdadero, se queda pegado a la pantalla (interfaz: vida, puntos, botones).
@@ -1558,6 +1623,67 @@ yo.formaColision = "caja"
 ```
 
 ### Acciones
+
+#### `yo.abrir()`
+
+Enseña un control con todo lo que lleva dentro (sus hijos: lo pegado a él con pegarA). Para ventanas y menús que aparecen.
+
+```
+cuando se pulsa "i":
+    buscar("Ventana").abrir()
+```
+
+#### `yo.cerrar()`
+
+Esconde un control con todo lo que lleva dentro.
+
+```
+buscar("Ventana").cerrar()
+```
+
+#### `yo.enfocar()`
+
+En un campo de texto: empieza a escribir en él, como si se hiciera clic. Mientras se escribe, las teclas son letras (no saltan los «cuando se pulsa»).
+
+```
+buscar("CampoNombre").enfocar()
+```
+
+#### `yo.meter("cosa", cantidad)`
+
+En un inventario: mete esa cosa (una si no se dice cuántas). Si ya hay de esa, se suman; si no, va a la primera casilla vacía. Devuelve falso si no cabe. Si hay una imagen con ese nombre, se ve en la casilla.
+
+```
+cuando toco Llave:
+    buscar("Inventario").meter("llave")
+    destruir(otro)
+```
+
+#### `yo.sacar("cosa", cantidad)`
+
+En un inventario: saca esa cosa (una si no se dice cuántas). Devuelve cuántas ha sacado de verdad (0 si no había).
+
+```
+si buscar("Inventario").sacar("llave") == 1:
+    mostrar("puerta abierta")
+```
+
+#### `yo.cuantos("cosa")`
+
+En un inventario: cuántas hay de esa cosa.
+
+```
+si buscar("Inventario").cuantos("moneda") >= 10:
+    mostrar("puedes comprar")
+```
+
+#### `yo.vaciar()`
+
+En un inventario: lo deja vacío.
+
+```
+buscar("Inventario").vaciar()
+```
 
 #### `yo.saltar(fuerza)`
 

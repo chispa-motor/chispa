@@ -18,7 +18,9 @@
  */
 import { NOMBRES_COLORES } from '../../motor/Color';
 import { DISTANCIA_POR_DEFECTO } from '../../objetos/componentes/Comportamiento';
-import { leerDatoInicial, tipoPorNombre, type DatoInicial, type DefObjeto, type DefSprite } from '../../proyecto/formato';
+import { leerDatoInicial, tipoPorNombre, type DatoInicial, type DefControl, type DefObjeto, type DefSprite } from '../../proyecto/formato';
+import { NOMBRES_CONTROLES } from '../../objetos/componentes/Control';
+import { CONTROLES_NUEVOS } from '../interfaz/controlesNuevos';
 import { FORMAS_DIBUJO, MAX_LADOS, POR_DEFECTO } from '../../objetos/formas/figuras';
 import { ESTILO_POR_DEFECTO, NOMBRES_MEZCLAS, PATRONES } from '../../motor/Estilo';
 import { misColores } from '../interfaz/SelectorColor';
@@ -220,8 +222,9 @@ export class Inspector {
     const imagenes = Object.keys(e.proyecto.imagenes);
     const aspecto = s
       ? [
-          campoLista('dibujo', 'sprite.dibujo', s.imagen ? `imagen:${s.imagen}` : s.forma ?? 'rectangulo',
-            [...FORMAS_DIBUJO.map((f): [string, string] => [f.forma, f.texto]), ['texto', 'Texto'], ...imagenes.map((i): [string, string] => [`imagen:${i}`, `Imagen: ${i}`])],
+          // Un control se dibuja a su manera: no elige forma (el icono sí puede llevar una imagen)
+          def.control && def.control.tipo !== 'icono' ? null : campoLista(def.control ? 'imagen' : 'dibujo', 'sprite.dibujo', s.imagen ? `imagen:${s.imagen}` : s.forma ?? 'rectangulo',
+            def.control ? [['rectangulo', '(un círculo de color)'], ...imagenes.map((i): [string, string] => [`imagen:${i}`, `Imagen: ${i}`])] : [...FORMAS_DIBUJO.map((f): [string, string] => [f.forma, f.texto]), ['texto', 'Texto'], ...imagenes.map((i): [string, string] => [`imagen:${i}`, `Imagen: ${i}`])],
             (v) => {
               e.empezarCambioLargo();
               if (v.startsWith('imagen:')) {
@@ -236,8 +239,8 @@ export class Inspector {
             },
             'Qué se dibuja: una forma de color, un texto o una imagen del proyecto'),
           s.imagen ? null : campoColor('color', 'sprite.color', s.color ?? 'blanco', cambiar('sprite.color')),
-          ...(s.imagen ? [] : this.datosDeForma(s, cambiar, largo)),
-          s.imagen || s.forma === 'texto' ? null : h('div', { class: 'acciones-forma' },
+          ...(s.imagen || def.control ? [] : this.datosDeForma(s, cambiar, largo)),
+          s.imagen || s.forma === 'texto' || def.control ? null : h('div', { class: 'acciones-forma' },
             h('button', { class: 'boton-enlace', 'data-accion': 'pluma', title: 'Retocar la forma punto a punto, o dibujar una nueva, con la pluma', onclick: () => abrirEditorPluma(e, ref) }, '✒ Editar con la pluma'),
             h('button', { class: 'boton-enlace', 'data-accion': 'a-imagen', title: 'Dibuja la forma (con su relleno y su borde) en una imagen y el objeto pasa a usarla. Sigue chocando con su forma.', onclick: () => {
               const png = formaAPNG(def);
@@ -249,12 +252,12 @@ export class Inspector {
             campoNumero('ancho', 'sprite.ancho', s.ancho ?? 64, cambiar('sprite.ancho'), { ...largo, min: 1 }),
             campoNumero('alto', 'sprite.alto', s.alto ?? 64, cambiar('sprite.alto'), { ...largo, min: 1 }),
           ),
-          s.forma === 'texto' || s.texto
+          def.control ? null : s.forma === 'texto' || s.texto
             ? campoTexto(s.forma === 'texto' ? 'texto' : 'etiqueta', 'sprite.texto', s.texto, (v) => cambiar('sprite.texto')(v || undefined), s.forma === 'texto' ? 'Lo que pone. Entre llaves, un dato que se actualiza solo: Puntos: {juego.puntos}' : 'Texto encima (para botones)')
             : h('button', { class: 'boton-enlace', onclick: () => cambiar('sprite.texto')('Boton') }, '+ Añadir un texto encima (para botones)'),
-          s.forma === 'texto' || s.texto ? this.menuDatos(ref, def) : null,
+          !def.control && (s.forma === 'texto' || s.texto) ? this.menuDatos(ref, def) : null,
           tieneHuecos(s.texto) ? h('p', { class: 'nota' }, 'Este texto se actualiza solo mientras juegas: lo que va entre llaves { } se cambia por su valor.') : null,
-          s.forma === 'texto' || s.texto
+          !def.control && (s.forma === 'texto' || s.texto)
             ? h('div', { class: 'dos-columnas' },
                 campoNumero('tamaño', 'sprite.tamano', s.tamano ?? 24, cambiar('sprite.tamano'), { ...largo, min: 4, ayuda: 'Tamaño de la letra' }),
                 s.forma === 'texto' && !s.imagen
@@ -262,7 +265,7 @@ export class Inspector {
                   : campoColor('letra', 'sprite.colorTexto', s.colorTexto ?? 'blanco', cambiar('sprite.colorTexto'), 'Color de la letra'),
               )
             : null,
-          s.forma === 'texto' || s.texto
+          !def.control && (s.forma === 'texto' || s.texto)
             ? campoLista('tipo de letra', 'sprite.letra', s.letra ?? 'normal', [...LETRAS, ...Object.keys(this.estado.proyecto.letras ?? {})].map((l): [string, string] => [l, NOMBRES_LETRAS[l] ?? l]), (v) => cambiar('sprite.letra')(v === 'normal' ? undefined : v))
             : null,
           h('div', { class: 'dos-columnas' },
@@ -281,6 +284,8 @@ export class Inspector {
       : [];
     partes.push(seccion('Dibujo', aspecto, { activo: !!s, alActivar: (v) => e.activarComponente(ref, 'sprite', v), ayuda: 'Cómo se ve el objeto' }));
     if (s) partes.push(this.seccionEstilo(s, cambiar, largo));
+    // Control de interfaz (botón, barra, lista, ventana...)
+    if (def.control && s) partes.push(this.seccionControl(def, def.control, s, cambiar, largo));
     // Luz (se ve cuando la escena tiene oscuridad)
     const l = def.luz;
     partes.push(seccion('Luz', l ? [
@@ -656,6 +661,50 @@ export class Inspector {
           'Datos que comparten todos los scripts (puntos, vidas, nivel...). En el código: juego.puntos', '+ Nuevo dato'),
       ], { ayuda: 'Los valores con los que empieza juego. Se pueden leer y cambiar desde cualquier script' }),
     ];
+  }
+
+  /** La sección de un control de interfaz: lo que tiene cada tipo. */
+  private seccionControl(def: DefObjeto, c: DefControl, s: DefSprite, cambiar: (ruta: string) => (v: unknown) => void, largo: { empezar: () => void; terminar: () => void }): HTMLElement {
+    const t = c.tipo;
+    const conNumero = t === 'barra' || t === 'deslizador' || t === 'icono';
+    const conTexto = t === 'boton' || t === 'casilla' || t === 'barra' || t === 'icono';
+    const lineas = (v: string) => v.split('\n').map((x) => x.trim()).filter(Boolean);
+    const opciones = h('textarea', { class: 'campo', rows: '4', spellcheck: 'false', 'data-ruta': 'control.opciones', 'aria-label': 'Opciones, una por línea', onchange: () => cambiar('control.opciones')(lineas(opciones.value).slice(0, 200)) }, (c.opciones ?? []).join('\n'));
+    return seccion(`Control: ${NOMBRES_CONTROLES[t]}`, [
+      h('p', { class: 'nota' }, CONTROLES_NUEVOS[t].ayuda),
+      conTexto ? campoTexto(t === 'icono' ? 'delante' : 'texto', 'sprite.texto', s.texto, (v) => cambiar('sprite.texto')(v || undefined), t === 'barra' ? 'Un texto encima de la barra. Entre llaves, un dato: {yo.valor} / {yo.maximo}' : t === 'icono' ? 'Lo que va delante del número: × o nada' : 'Lo que pone') : null,
+      t === 'campo' ? campoTexto('pista', 'control.pista', c.pista, (v) => cambiar('control.pista')(v || undefined), 'Lo que se ve en gris cuando está vacío') : null,
+      t === 'campo' ? campoNumero('letras', 'control.largoMaximo', c.largoMaximo ?? 20, (v) => cambiar('control.largoMaximo')(v), { ...largo, min: 1, max: 500, ayuda: 'Cuántas letras caben como mucho' }) : null,
+      conNumero ? h('div', { class: 'dos-columnas' },
+        campoNumero('valor', 'control.valor', c.valor ?? 0, (v) => cambiar('control.valor')(v), { ...largo, ayuda: 'Con cuánto empieza' }),
+        t === 'icono' ? null : campoNumero('máximo', 'control.maximo', c.maximo ?? 100, (v) => cambiar('control.maximo')(v), { ...largo }),
+      ) : null,
+      t === 'deslizador' ? h('div', { class: 'dos-columnas' },
+        campoNumero('mínimo', 'control.minimo', c.minimo ?? 0, (v) => cambiar('control.minimo')(v || undefined), { ...largo }),
+        campoNumero('paso', 'control.paso', c.paso ?? 1, (v) => cambiar('control.paso')(v), { ...largo, min: 0, ayuda: 'De cuánto en cuánto se mueve (0 = suave)' }),
+      ) : null,
+      conNumero || t === 'casilla' ? campoTexto('dato', 'control.dato', c.dato, (v) => cambiar('control.dato')(v.trim() || undefined), 'Un dato que se lee SOLO mientras juegas, sin código: juego.vida, juego.monedas...', 'juego.vida') : null,
+      t === 'casilla' ? campoCasilla('marcada', 'control.marcada', c.marcada ?? false, (v) => cambiar('control.marcada')(v || undefined), 'Si empieza marcada') : null,
+      t === 'lista' || t === 'menu' ? h('label', { class: 'campo-fila', title: 'Las opciones, una en cada línea' }, h('span', { class: 'campo-etiqueta' }, 'opciones'), opciones) : null,
+      t === 'lista' || t === 'menu' ? campoNumero('elegida', 'control.elegido', c.elegido ?? 0, (v) => cambiar('control.elegido')(v || undefined), { ...largo, min: 0, max: (c.opciones ?? []).length, ayuda: 'La que está elegida al empezar (1 = la primera, 0 = ninguna)' }) : null,
+      t === 'ventana' ? campoTexto('título', 'control.titulo', c.titulo, (v) => cambiar('control.titulo')(v || undefined)) : null,
+      t === 'ventana' ? campoCasilla('se arrastra', 'control.arrastrable', c.arrastrable ?? false, (v) => cambiar('control.arrastrable')(v || undefined), 'Se puede mover cogiéndola por la barra del título') : null,
+      t === 'ventana' ? campoCasilla('botón de cerrar', 'control.conCerrar', c.conCerrar ?? false, (v) => cambiar('control.conCerrar')(v || undefined), 'Una X para cerrarla (desde el código: yo.cerrar() y yo.abrir())') : null,
+      t === 'ventana' ? h('p', { class: 'nota' }, 'Para meter cosas dentro: en el script de cada cosa, cuando empieza: yo.pegarA(buscar("' + (def.nombre ?? 'Ventana') + '")). Se mueven, se abren y se cierran con ella.') : null,
+      t === 'inventario' ? h('div', { class: 'dos-columnas' },
+        campoNumero('columnas', 'control.columnas', c.columnas ?? 4, (v) => cambiar('control.columnas')(v), { ...largo, min: 1, max: 20 }),
+        campoNumero('filas', 'control.filas', c.filas ?? 2, (v) => cambiar('control.filas')(v), { ...largo, min: 1, max: Math.floor(100 / (c.columnas ?? 4)) }),
+      ) : null,
+      t === 'minimapa' ? campoTexto('centro', 'control.seguir', c.seguir, (v) => cambiar('control.seguir')(v.trim() || undefined), 'El objeto que va siempre en el centro (su nombre). Vacío: se ve el mundo entero', 'Jugador') : null,
+      t === 'minimapa' && c.seguir ? campoNumero('alcance', 'control.alcance', c.alcance ?? 2000, (v) => cambiar('control.alcance')(v), { ...largo, min: 50, paso: 100, ayuda: 'Cuántos píxeles del mundo se ven a lo ancho' }) : null,
+      t === 'boton' || t === 'minimapa' ? null : campoColor('fondo', 'control.colorFondo', c.colorFondo ?? '#1b2130', (v) => cambiar('control.colorFondo')(v === '#1b2130' ? undefined : v), 'El color de detrás (la barra vacía, el fondo de la lista...)'),
+      t === 'deslizador' || t === 'minimapa' ? null : h('div', { class: 'dos-columnas' },
+        campoNumero('letra', 'sprite.tamano', s.tamano ?? 24, cambiar('sprite.tamano'), { ...largo, min: 4, ayuda: 'Tamaño de la letra' }),
+        campoColor('color', 'sprite.colorTexto', s.colorTexto ?? 'blanco', cambiar('sprite.colorTexto'), 'Color de la letra'),
+      ),
+      t === 'deslizador' || t === 'minimapa' ? null : campoLista('tipo de letra', 'sprite.letra', s.letra ?? 'normal', [...LETRAS, ...Object.keys(this.estado.proyecto.letras ?? {})].map((l): [string, string] => [l, NOMBRES_LETRAS[l] ?? l]), (v) => cambiar('sprite.letra')(v === 'normal' ? undefined : v)),
+      campoCasilla('activado', 'control.activado', c.activado ?? true, (v) => cambiar('control.activado')(v ? undefined : false), 'Si no está activado se ve apagado y no se puede usar (desde el código: yo.activado = falso)'),
+    ], { ayuda: 'Lo que hace que este objeto sea un control de interfaz' });
   }
 }
 

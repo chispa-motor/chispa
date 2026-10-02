@@ -20,6 +20,7 @@ import { migrarProyecto } from '../src/proyecto/formato';
 import { revisarProyecto } from '../src/proyecto/Revision';
 import { jugarUnRato } from './bot-arena';
 import { Sprite } from '../src/objetos/componentes/Sprite';
+import { ponerSemilla } from '../src/utilidades/azar';
 
 const RUTA = 'proyectos/arena-de-habilidades/arena-de-habilidades.chispa.json';
 const cargar = () => migrarProyecto(JSON.parse(readFileSync(RUTA, 'utf8')));
@@ -33,6 +34,8 @@ describe('Arena de Habilidades', () => {
 
   it('del menú a la arena, y se juega varias oleadas sin ningún error', () => {
     const j = juegoDePrueba({ proyecto: cargar() });
+    // El juego usa el azar (dónde salen los enemigos, qué ataque toca): con una semilla, la prueba es siempre la misma partida
+    ponerSemilla(2026);
     j.avanzar(5);
     expect(j.juego.nombreEscena).toBe('Menu');
     j.pulsar('Enter');
@@ -47,6 +50,8 @@ describe('Arena de Habilidades', () => {
 
   it('el jefe: sus 3 fases con diálogos y ataques avisados, y la victoria', () => {
     const j = juegoDePrueba({ proyecto: cargar() });
+    // El juego usa el azar (dónde salen los enemigos, qué ataque toca): con una semilla, la prueba es siempre la misma partida
+    ponerSemilla(2026);
     j.avanzar(5);
     j.juego.ejecutarOrden('escena.cambiar("Arena")');
     j.avanzar(90);
@@ -74,6 +79,8 @@ describe('Arena de Habilidades', () => {
 
   it('se juega con mando: start empieza, la palanca mueve, X lanza el orbe, start pausa', () => {
     const j = juegoDePrueba({ proyecto: cargar() });
+    // El juego usa el azar (dónde salen los enemigos, qué ataque toca): con una semilla, la prueba es siempre la misma partida
+    ponerSemilla(2026);
     const e = j.juego.motor.entrada;
     const mando = (botones: string[], x = 0, y = 0) => {
       e.ponerMando(true, new Set(botones), x, y);
@@ -102,6 +109,8 @@ describe('Arena de Habilidades', () => {
 
   it('el récord se guarda al perder y el menú lo enseña', () => {
     const j = juegoDePrueba({ proyecto: cargar() });
+    // El juego usa el azar (dónde salen los enemigos, qué ataque toca): con una semilla, la prueba es siempre la misma partida
+    ponerSemilla(2026);
     j.avanzar(5);
     j.juego.ejecutarOrden('escena.cambiar("Arena")');
     j.avanzar(90);
