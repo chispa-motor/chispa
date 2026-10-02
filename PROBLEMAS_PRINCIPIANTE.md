@@ -160,3 +160,86 @@ Tres juegos de géneros que no se habían probado antes, usando sobre todo lo nu
 
 - Un objeto que se convierte en plantilla conserva el `mostrar("Hola, soy ...")` del script nuevo: con muchas copias, la consola se llena. Se podría quitar esa línea al hacer la plantilla, o no ponerla en las plantillas.
 - `cuando toco` solo avisa al **empezar** a tocar: para volver a hablar con alguien hay que apartarse y volver. Es lo esperado, pero podría existir «cuando pulso una tecla al lado de…».
+
+---
+
+# Cuarta prueba: la versión 1.1 (lo nuevo)
+
+Otra vez en el lugar de alguien de 12 años que no sabe programar ni inglés,
+pero esta vez usando sobre todo **lo nuevo de la 1.1**: los dibujos y sonidos
+listos, las plantillas, los controles de interfaz, las pantallas listas, los
+editores de sonido y de música, los varios jugadores y los bloques nuevos.
+
+Hice cuatro juegos, en el editor de verdad (un navegador automático que pulsa
+los mismos botones, arrastra los mismos bloques y escribe lo mismo que una
+persona):
+
+- **a) Solo con bloques y sin escribir nada:** un héroe que coge gemas con un
+  contador en pantalla y un fantasma que lo persigue. Dibujos y sonidos
+  listos, bloques arrastrados, el dato del juego y el contador desde el
+  inspector, y el enemigo con «Comportamiento».
+- **b) Para dos jugadores:** dos personajes manejados cada uno con sus teclas
+  (sin código), pantalla dividida, un sonido hecho con el generador, una
+  canción del editor de música y las pantallas listas (menú, opciones,
+  créditos, puntuaciones, fin y pausa).
+- **c) A partir de una plantilla (Naves):** cambiando nombres, números y
+  dibujos, y escribiendo código con el autocompletado.
+- **d) Una aventura escrita desde cero:** barra de vida, inventario, luces y
+  oscuridad, cuerdas y diálogos con opciones. Aquí probé además unas 85
+  formas de equivocarse con los comandos nuevos.
+
+Los cuatro juegos funcionaron al final y **se borraron** (nunca se guardaron
+en el proyecto). Lo que queda son los tests: `pruebas/principiante4.test.ts`
+(30 tests) y dos pruebas en `pruebas-navegador/editor.mjs` («principiante 4»).
+
+## Fallos (cosas que no funcionaban)
+
+| # | Problema | Arreglo |
+|---|---|---|
+| 1 | **Al abrir una plantilla (o cualquier proyecto con imágenes), la vista de la escena se quedaba vacía**: solo el fondo. Si una imagen aún no había cargado al dibujar, el lienzo se quedaba desplazado para siempre. | Cada objeto se dibuja de forma que, si falla, el lienzo queda como estaba. Al cargar la imagen, se ve. |
+| 2 | **Los bloques de la interfaz no estaban en la paleta.** `yo.valor`, `yo.opciones`, `yo.elegido`… tenían bloque, pero la categoría Control no enseñaba los bloques de «dato = valor»: no había forma de encontrarlos. | Categoría nueva **«Interfaz»** con todo lo de barras, listas, ventanas, inventario y puntuaciones. Un test comprueba que TODOS los bloques están en la paleta. |
+| 3 | **Una barra con la vida del jugador no se podía hacer sin código.** En «dato», `buscar("Heroe").vida` daba «no entiendo el símbolo \»: las comillas no valían dentro de un dato (ni de un hueco de un texto del inspector). | Ya valen. Y si se escribe `Heroe.vida`, el inspector lo convierte solo en `buscar("Heroe").vida`. |
+| 4 | **Cambiar el nombre de un objeto o de una plantilla rompía el juego sin avisar.** Con la plantilla Naves: al llamar «Cohete» a la nave, `cuando toco Nave` dejaba de saltar y no salía ningún error. | Al renombrar se cambia también donde se le nombra: `cuando toco X`, `buscar("X")`, `crear("X")`, `contar("X")`…, a quién sigue la cámara, a quién persigue un enemigo y el centro de un minimapa. No se toca `yo.imagen = "x"` aunque la imagen se llame igual. Si quedan más objetos de ese tipo, no se cambia nada. |
+| 5 | **El enemigo con «Comportamiento» no perseguía a nadie**: perseguía a «Jugador», que no existía (el personaje se llamaba Heroe), y no avisaba. | Persigue al objeto que se maneja (el que se llama Jugador, o el que usa las flechas o los controles de un jugador), se llame como se llame. |
+
+## Difícil, largo o confuso
+
+| # | Problema | Arreglo |
+|---|---|---|
+| 6 | Al añadir tres dibujos listos seguidos, **quedaban uno encima de otro**: solo se veía el último. | Cada uno va a un sitio libre: el centro, a su derecha, a su izquierda, debajo… |
+| 7 | Los objetos se llamaban como la imagen, en minúscula (`gema`), y los demás objetos van con mayúscula (`Cuadrado`, `Texto`). | `Gema`, `Gema2`… La imagen sigue siendo `gema`. |
+| 8 | En un proyecto en blanco, los dibujos de 16×16 **se veían borrosos**. | Al añadir el primero a un proyecto sin imágenes se activan los «píxeles nítidos» (y se avisa). Si ya había imágenes, no se toca. |
+| 9 | Al hacer varias cosas seguidas, **los avisos se amontonaban** y tapaban medio inspector. | Como mucho tres a la vez. |
+| 10 | Los bloques salían con nombres de ejemplo que no existen: «reproducir el sonido "salto"», «crear "Bala"», «cuando toco Moneda»… Soltarlos daba un error. | Salen con lo que hay en el proyecto: su primer sonido, su plantilla, otra escena, un objeto de la escena. |
+| 11 | Un contador o una barra nuevos aparecían **en el centro, encima del jugador**. | Los marcadores van arriba a la izquierda (como los textos) y el minimapa arriba a la derecha; si hay otro, debajo. |
+| 12 | En «dato» había que escribir `juego.puntos` de memoria. | El campo ofrece los datos del juego y las propiedades de los objetos. Si se escribe solo `puntos`, vale. |
+| 13 | En «dato» de una barra, `yo.vida` no daba error hasta jugar, y el error hablaba de «una función vida()». | Se avisa antes de jugar: «'yo' es este mismo objeto… 'vida' es de 'Heroe': buscar("Heroe").vida». |
+| 14 | `juego.puntos += 1` en bloques, sin haber creado el dato: la pista solo decía cómo arreglarlo con código. | La pista dice también cómo hacerlo sin código: fondo de la escena > Datos del juego > «+ Nuevo dato». |
+| 15 | Después de añadir las pantallas listas, **la ventana de pausa tapaba el centro de la escena en el editor** (justo donde están los personajes). | La pausa empieza sin verse. En el editor, lo que empieza sin verse se dibuja muy clarito (y algo más al seleccionarlo): se sabe que está, pero no tapa. |
+
+## Errores al escribir con lo nuevo: mensajes que no ayudaban
+
+| Lo que escribió | Pista nueva |
+|---|---|
+| `jugador(2).x` | No existe la función 'jugador'. Los controles de cada jugador se leen con 'controles': `controles(2).x` |
+| `al empezar:` · `al tocar Moneda:` · `al pulsar espacio:` | Los eventos empiezan por 'cuando': `cuando empieza:` · `cuando toco Moneda:` · `cuando se pulsa "espacio":` |
+| `buscar("Inventario").meter(llave)` | Si es un nombre (un texto), va entre comillas: `"llave"` |
+| `yo.letra = pixel` · `yo.forma = estrella` · `yo.texto = Hola` | ¿Querías escribir "pixel" entre comillas? · Si es un texto, va entre comillas: "Hola" |
+| `sonido.reproducir("pum")` | «No existe ningún sonido llamado» (antes: «ninguna sonido llamada»), y dónde conseguir uno si el proyecto no tiene ninguno. |
+| `yo.luz = 200` | 'luz' enciende o apaga: `yo.luz = verdadero`. El tamaño es `yo.radioLuz = 200` |
+| `escena.camaraDe(2).seguir("Llave")` | Si "Llave" es el nombre del objeto, búscalo: `buscar("Llave")` |
+
+Lo demás que probé ya daba un mensaje claro: `controles(5)`,
+`controles(1).pulsado("saltar")`, `pantalla.dividir(5)`,
+`musica.intensidad = 5`, `junta.cuerda(yo, "Meta")`,
+`puntuaciones.guardar(100, "Ana")`, `dibujar.poligono([0, 0, 10, 10])`,
+`escena.oscuridad = 80`, `yo.mezcla = "brillo"`, un parámetro llamado `y`…
+
+## Lo que no se ha cambiado
+
+- **`juego.puntos += 1` sin crear el dato sigue siendo un error** (no empieza
+  solo en 0). Empezar en 0 escondería las erratas (`juego.puntso += 1`
+  contaría en otro sitio sin avisar). El error ahora dice cómo crearlo con y
+  sin código.
+- **`sonido.volumen = 50`** no da error (se queda en el máximo). Quien viene
+  de pensar en «de 0 a 100» oye el sonido igualmente.

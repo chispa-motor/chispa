@@ -915,7 +915,8 @@ export function textoConHuecos(t: Token, lineas: string[] = []): Expresion {
     }
     const cierre = cuerpo.indexOf('}', i + 1);
     if (cierre < 0) errorEn(i, cuerpo.length - i, "hay un hueco '{' que no se cierra con '}'.", 'Los huecos se escriben así: "Puntos: {juego.puntos}". Para escribir una llave de verdad, pon dos: {{');
-    const dentro = cuerpo.slice(i + 1, cierre);
+    // Dentro de un hueco, \" es una comilla: así vale {buscar("Heroe").vida} en los textos del inspector (y, con \", en el código)
+    const dentro = cuerpo.slice(i + 1, cierre).replace(/\\"/g, '"');
     if (!dentro.trim()) errorEn(i, cierre - i + 1, 'hay un hueco { } vacío.', 'Dentro de las llaves va lo que quieres enseñar: "Puntos: {juego.puntos}"');
     if (literal) partes.push(literal);
     literal = '';

@@ -1266,6 +1266,116 @@ await prueba('itch.io en un clic: el zip se descarga al pulsar el botón, con ic
   comprobar(despues.lienzo > 1, 'el juego no ha empezado');
 });
 
+// ───────────────────────── Día 6: la prueba de principiante de la 1.1 ─────────────────────────
+
+await prueba('principiante 4: un juego solo con bloques y sin código (dibujos listos, bloques, dato del juego, contador y enemigo)', async (p) => {
+  await p.click('[aria-label="Proyecto nuevo"]');
+  await p.click('[data-plantilla="vacio"]');
+  await p.click('.pestana-panel:has-text("Proyecto")');
+  await p.click('[aria-label^="Dibujos listos"]');
+  for (const d of ['heroe', 'gema', 'fantasma']) await p.click(`[data-dibujo="${d}"]`);
+  await p.click('[data-seccion="sonidos"]');
+  await p.click('[data-recurso="moneda"] [data-accion="anadir"]');
+  comprobar((await p.$$('#notificaciones .notificacion')).length <= 3, 'hay más de tres avisos a la vez');
+  await p.keyboard.press('Escape');
+  let objetos = await estado(p, () => window.chispa.estado.escena.objetos.map((o) => ({ n: o.nombre, x: o.x, y: o.y })));
+  comprobar(objetos.map((o) => o.n).join() === 'Heroe,Gema,Fantasma', 'los objetos no se llaman con mayúscula: ' + JSON.stringify(objetos));
+  comprobar(new Set(objetos.map((o) => o.x + ',' + o.y)).size === 3, 'los dibujos han quedado amontonados: ' + JSON.stringify(objetos));
+  comprobar(await estado(p, () => window.chispa.estado.proyecto.pixelArt), 'no se han activado los píxeles nítidos');
+
+  // El script del héroe, solo con bloques
+  await p.click('.pestana-panel:has-text("Escena")');
+  await p.click('.nodo:has-text("Heroe")');
+  await p.click('button:has-text("Crear script")');
+  await p.waitForSelector('.cm-content');
+  await p.keyboard.press('Control+b');
+  await p.waitForSelector('.editor-bloques');
+  comprobar(await p.$('.categoria-bloques:has-text("Interfaz")'), 'no hay categoría «Interfaz» en los bloques');
+  const cat = (c) => p.click(`.categoria-bloques:has-text("${c}")`);
+  const boca = (clase) => p.evaluate((c) => `.bloque[data-id="${[...document.querySelectorAll('.area-bloques .bloque.tipo-evento')].filter((x) => x.querySelector('select')?.value === c).pop().dataset.id}"] .boca-bloque .lista-bloques`, clase);
+  await cat('Eventos');
+  // «cuando toco» sale ya con un objeto de la escena (la gema), no con «Moneda»
+  comprobar((await textoDe(p, '.bloque-paleta:has-text("cuando toco")')).includes('Gema'), '«cuando toco» no sale con un objeto de la escena');
+  await p.dragAndDrop('.bloque-paleta:has-text("cuando cada fotograma")', '.area-bloques');
+  await p.dragAndDrop('.bloque-paleta:has-text("cuando toco")', '.area-bloques');
+  await cat('Movimiento');
+  await p.dragAndDrop('.bloque-paleta:has-text("moverme con las flechas")', await boca('fotograma'));
+  await cat('Objetos');
+  await p.dragAndDrop('.bloque-paleta:has-text("destruir")', await boca('toco'));
+  await cat('Variables');
+  await p.dragAndDrop('.bloque-paleta:has-text("juego.puntos")', await boca('toco'));
+  await cat('Sonido');
+  // «reproducir el sonido» sale con el sonido que hay en el proyecto
+  await p.dragAndDrop('.bloque-paleta:has-text("reproducir el sonido"):not(:has-text("en"))', await boca('toco'));
+  const codigo = await estado(p, () => Object.values(window.chispa.estado.proyecto.scripts)[0]);
+  comprobar(codigo.includes('cuando toco Gema:') && codigo.includes('sonido.reproducir("moneda")') && codigo.includes('yo.moverConFlechas(300)'), 'los bloques no han escrito el código esperado:\n' + codigo);
+
+  // Sin el dato del juego, el error dice cómo crearlo sin código
+  await p.keyboard.press('F5');
+  await p.waitForFunction(() => document.querySelector('.estado-juego')?.textContent?.startsWith('Jugando'));
+  await p.click('.vista-juego canvas');
+  await p.keyboard.down('ArrowRight');
+  await p.waitForFunction(() => document.querySelector('.consola-editor .mensaje.error'), null, { timeout: 5000 });
+  await p.keyboard.up('ArrowRight');
+  comprobar((await textoDe(p, '.consola-editor')).includes('Datos del juego'), 'el error de juego.puntos no dice cómo crear el dato');
+  await p.click('.controles-juego .parar');
+
+  // El dato del juego, el contador y el enemigo, desde el inspector
+  await p.click('.pestana:has-text("Escena")');
+  await p.click('.lienzo-escena', { position: { x: 30, y: 30 } });
+  await p.click('button:has-text("+ Nuevo dato")');
+  await p.fill('.dialogo input', 'puntos');
+  await p.keyboard.press('Enter');
+  await p.waitForSelector('.dialogo:has-text("Valor inicial")');
+  await p.keyboard.press('Enter');
+  await p.click('.boton-anadir');
+  await p.click('[data-control="icono"]');
+  const icono = await estado(p, () => window.chispa.estado.seleccionado);
+  comprobar(icono.x < 100 && icono.y > 480, 'el contador no sale arriba a la izquierda: ' + icono.x + ',' + icono.y);
+  comprobar((await p.$$('datalist option[value="juego.puntos"]')).length === 1, 'el campo «dato» no ofrece juego.puntos');
+  await p.fill('[data-ruta="control.dato"]', 'puntos');
+  await p.keyboard.press('Enter');
+  comprobar((await estado(p, () => window.chispa.estado.seleccionado.control.dato)) === 'juego.puntos', '«puntos» no se ha convertido en juego.puntos');
+  await p.click('.nodo:has-text("Fantasma")');
+  await p.check('details.seccion:has(.seccion-titulo:text-is("Comportamiento")) .interruptor');
+  comprobar((await estado(p, () => window.chispa.estado.seleccionado.comportamiento.objetivo)) === 'Heroe', 'el fantasma no persigue al héroe');
+
+  // Y se juega: coge la gema, suma un punto y el fantasma viene
+  await p.keyboard.press('F5');
+  await p.waitForFunction(() => document.querySelector('.estado-juego')?.textContent?.startsWith('Jugando'));
+  await p.click('.vista-juego canvas');
+  await p.keyboard.down('ArrowRight');
+  await p.waitForTimeout(700);
+  await p.keyboard.up('ArrowRight');
+  const fin = await estado(p, () => {
+    const j = window.chispa.vistaJuego.juego;
+    return { objetos: j.escena.objetos.filter((o) => !o.destruido).map((o) => o.nombre), fantasma: j.escena.buscar('Fantasma').posicion.x };
+  });
+  comprobar(!fin.objetos.includes('Gema'), 'no ha cogido la gema');
+  comprobar(fin.fantasma > objetos[2].x + 5, 'el fantasma no persigue');
+  comprobar(!(await p.$('.consola-editor .mensaje.error')), 'errores al jugar: ' + (await textoDe(p, '.consola-editor')).slice(-300));
+});
+
+await prueba('principiante 4: la pausa de «Pantallas listas» no tapa la escena en el editor, y renombrar un objeto no rompe el juego', async (p) => {
+  await p.click('[aria-label="Proyecto nuevo"]');
+  await p.click('[data-plantilla="naves"]');
+  await p.click('.pestana-panel:has-text("Proyecto")');
+  await p.click('[aria-label^="Pantallas listas"]');
+  await p.click('.dialogo-botones .principal');
+  await p.waitForTimeout(300);
+  const ocultos = await estado(p, () => window.chispa.estado.proyecto.escenas.Espacio.objetos.filter((o) => o.sprite?.visible === false).map((o) => o.nombre));
+  comprobar(ocultos.join() === 'VentanaPausa,MenuPausa', 'la pausa no empieza oculta: ' + ocultos);
+  // Renombrar la nave: «cuando toco Nave» pasa a «cuando toco Cohete» y el juego sigue funcionando
+  await estado(p, () => {
+    const e = window.chispa.estado;
+    e.renombrar({ tipo: 'escena', escena: 'Espacio', indice: e.proyecto.escenas.Espacio.objetos.findIndex((o) => o.nombre === 'Nave') }, 'Cohete');
+    e.renombrar({ tipo: 'plantilla', nombre: 'Ovni' }, 'Marciano');
+  });
+  const scripts = await estado(p, () => window.chispa.estado.proyecto.scripts);
+  comprobar(scripts['oleadas.chs'].includes('crear("Marciano"') && scripts['bala.chs'].includes('cuando toco Marciano:'), 'renombrar la plantilla no ha cambiado el código');
+  comprobar((await estado(p, () => window.chispa.inferior.revisar())) === 0, 'hay errores después de renombrar');
+});
+
 await navegador.close();
 await new Promise((r) => servidor.httpServer.close(r));
 console.log(fallos ? `\n${fallos} prueba(s) han fallado.` : '\nTodas las pruebas del navegador han pasado.');

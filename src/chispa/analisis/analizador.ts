@@ -46,6 +46,10 @@ import { comprobarNombreTecla, NOMBRES_TECLAS } from '../../motor/Entrada';
 import { ErrorMotor } from '../../motor/Errores';
 import { NOMBRES_COLORES, esColorValido } from '../../motor/Color';
 import { normalizar } from '../../utilidades/texto';
+import { LETRAS } from '../../motor/Letras';
+
+/** Las formas que se escriben entre comillas (yo.forma = "estrella"). */
+const FORMAS_CON_NOMBRE = ['rectangulo', 'circulo', 'triangulo', 'elipse', 'poligono', 'estrella', 'rombo', 'corazon', 'flecha', 'capsula', 'anillo', 'arco'];
 import { TIPOS_PARTICULAS } from '../../objetos/Particulas';
 import { sinPrototipo } from '../../utilidades/seguro';
 
@@ -185,6 +189,12 @@ class Analizador {
 
       case 'Asignacion':
         this.asignacion(s.objetivo, s.operador, amb);
+        // yo.texto = Hola: un nombre suelto que no existe, a la derecha de un =, casi siempre es un texto sin comillas
+        if (s.valor.tipo === 'Identificador' && s.objetivo.tipo === 'Miembro' && !amb.buscar(s.valor.nombre) && !this.ctx.globales.buscar(s.valor.nombre) && s.valor.nombre !== 'otro' && s.valor.nombre !== 'yo') {
+          const pista = this.pistaNombre(s.valor.original, amb);
+          this.error(s.valor.pos, `intentas usar '${s.valor.original}', pero no existe ninguna variable con ese nombre.`, /comillas|Querías decir|buscar\(/.test(pista) ? pista : `Si es un texto, va entre comillas: "${s.valor.original}". ${pista}`);
+          return;
+        }
         this.expr(s.valor, amb);
         this.comprobarValorAsignado(s.objetivo, s.valor);
         return;
@@ -525,7 +535,7 @@ class Analizador {
         deUsuario: amb.nombresDeUsuario(),
         objetosEscena: this.ctx.objetosEscena,
         textos: [
-          ...NOMBRES_TECLAS, ...NOMBRES_COLORES, ...Object.keys(TIPOS_PARTICULAS),
+          ...NOMBRES_TECLAS, ...NOMBRES_COLORES, ...Object.keys(TIPOS_PARTICULAS), ...LETRAS, ...FORMAS_CON_NOMBRE,
           ...(this.ctx.plantillas ?? []), ...(this.ctx.escenas ?? []), ...(this.ctx.sonidos ?? []), ...(this.ctx.animaciones ?? []), ...(this.ctx.imagenes ?? []),
         ],
       },

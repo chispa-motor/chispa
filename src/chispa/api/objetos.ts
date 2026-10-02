@@ -71,7 +71,8 @@ export function argObjeto(args: Valor[], i: number, funcion: string, pos: Posici
       v === null
         ? `a '${funcion}' le has dado un objeto vacío (nulo): ese objeto no existe.`
         : `'${funcion}' necesita un objeto del juego, pero le das ${v === undefined ? 'nada' : nombreTipo(v)}.`,
-      `Ejemplo: ${ejemplo}`,
+      // Con el nombre entre comillas no basta: el objeto hay que buscarlo
+      typeof v === 'string' ? `Si "${v}" es el nombre del objeto, búscalo: buscar("${v}"). Ejemplo: ${ejemplo}` : `Ejemplo: ${ejemplo}`,
     );
   }
   return v.objeto;
@@ -360,6 +361,8 @@ const PROPIEDADES: Record<string, PropiedadObjeto> = sinPrototipo({
   luz: {
     obtener: (o) => o.obtener(Luz)?.activo ?? false,
     asignar: (o, v, p) => {
+      // yo.luz = 200: se quería decir lo grande que es
+      if (typeof v === 'number') throw new ErrorChispa(p, "'luz' enciende o apaga la luz: tiene que ser verdadero o falso, pero le das un número.", `Para encenderla: yo.luz = verdadero. Lo grande que es se dice aparte: yo.radioLuz = ${v}`);
       const encender = comoLogico(v, 'luz', p);
       const l = o.obtener(Luz);
       if (l) l.activo = encender;

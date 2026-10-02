@@ -25,6 +25,9 @@ import type { Entorno } from '../chispa/ejecucion/entorno';
 import type { Expresion, Programa } from '../chispa/sintaxis/ast';
 import { textoConHuecos } from '../chispa/sintaxis/parser';
 import type { DefObjeto, DefProyecto } from './formato';
+import { DOC_OBJETO } from '../chispa/api/documentacion';
+import { NOMBRES_CONTROL } from '../chispa/api/controles';
+import { normalizar } from '../utilidades/texto';
 
 /** ¿Tiene huecos? (una llave sola; "{{" es una llave escrita a propósito) */
 export function tieneHuecos(texto: string | undefined): boolean {
@@ -81,6 +84,44 @@ function nombresUsados(e: Expresion, fuera: { nombre: string; original: string; 
 }
 
 /** Nombres creados en el nivel principal de un script (variables y funciones). */
+/** Lo que existe en cualquier objeto (yo.x, yo.color...), más lo de los controles (yo.valor...). */
+const PROPIEDADES_DE_OBJETO = new Set([...DOC_OBJETO.map((d) => normalizar(d.nombre)), ...NOMBRES_CONTROL.map((n) => normalizar(n))]);
+
+/** Los «yo.algo» que se leen en una expresión. */
+function datosDeYo(e: Expresion, fuera: { nombre: string; original: string; pos: Expresion['pos'] }[] = []) {
+  const ver = (x: Expresion) => datosDeYo(x, fuera);
+  switch (e.tipo) {
+    case 'Miembro':
+      if (e.objeto.tipo === 'Identificador' && e.objeto.nombre === 'yo') fuera.push({ nombre: e.propiedad, original: e.original, pos: e.pos });
+      else ver(e.objeto);
+      break;
+    case 'Texto':
+      for (const p of e.partes ?? []) if (typeof p !== 'string') ver(p);
+      break;
+    case 'Lista':
+      e.elementos.forEach(ver);
+      break;
+    case 'Binaria':
+    case 'Logica':
+      ver(e.izquierda);
+      ver(e.derecha);
+      break;
+    case 'Unaria':
+      ver(e.operando);
+      break;
+    case 'Llamada':
+      // yo.cuantos("llave") es una llamada a algo de yo: lo comprueba quien ejecuta
+      if (!(e.funcion.tipo === 'Miembro' && e.funcion.objeto.tipo === 'Identificador' && e.funcion.objeto.nombre === 'yo')) ver(e.funcion);
+      e.argumentos.forEach(ver);
+      break;
+    case 'Indice':
+      ver(e.objeto);
+      ver(e.indice);
+      break;
+  }
+  return fuera;
+}
+
 function nombresDelScript(p: Programa | undefined): string[] {
   if (!p) return [];
   return p.sentencias.flatMap((s) => (s.tipo === 'Variable' ? [s.nombre] : s.tipo === 'Funcion' ? [s.nombre] : []));
@@ -114,13 +155,32 @@ export function revisarTextos(proyecto: DefProyecto, globales: Entorno, programa
     const propios = new Set(['yo', ...nombresDelScript(def.script ? programas.get(def.script) : undefined)]);
     for (const n of nombresUsados(plantilla)) {
       if (propios.has(n.nombre) || globales.buscar(n.nombre)) continue;
+      // {Heroe.vida}: es el nombre de otro objeto → hay que buscarlo
+      const objeto = objetos.find(([nombre]) => normalizar(nombre) === n.nombre)?.[0];
       const parecido = sugerir(n.original, [...propios, ...globales.nombresVisibles()]);
       res.push({
         gravedad: 'error',
         pos: n.pos,
         mensaje: `${donde}: '${n.original}' no existe.`,
-        pista: parecido ? `¿Querías decir '${parecido}'?` : 'Dentro de un hueco puede ir juego.algo, yo.algo, las variables del script del objeto o cualquier función: {redondear(tiempo.total)}',
+        pista: objeto
+          ? `'${objeto}' es otro objeto: para leer un dato suyo hay que buscarlo. Escribe: buscar("${objeto}").vida`
+          : parecido ? `¿Querías decir '${parecido}'?` : 'Dentro de un hueco puede ir juego.algo, yo.algo, las variables del script del objeto o cualquier función: {redondear(tiempo.total)}',
       });
+    }
+    // {yo.vida} en un objeto sin script y sin esa propiedad: 'yo' es ESTE objeto (la barra, el texto), no el jugador
+    if (!def.script) {
+      for (const m of datosDeYo(plantilla)) {
+        if (Object.keys(def.propiedades ?? {}).some((k) => normalizar(k) === m.nombre) || PROPIEDADES_DE_OBJETO.has(m.nombre)) continue;
+        const dueno = objetos.find(([, o]) => o !== def && Object.keys(o.propiedades ?? {}).some((k) => normalizar(k) === m.nombre))?.[0];
+        res.push({
+          gravedad: 'error',
+          pos: m.pos,
+          mensaje: `${donde}: 'yo' es este mismo objeto, y no tiene ninguna propiedad '${m.original}'.`,
+          pista: dueno
+            ? `'${m.original}' es de '${dueno}'. Para leerla desde aquí: buscar("${dueno}").${m.original}`
+            : `Si es de otro objeto (por ejemplo, del jugador): buscar("Jugador").${m.original}. Si es de este, créala en el inspector: Propiedades propias > + Nueva propiedad.`,
+        });
+      }
     }
   }
   return res;

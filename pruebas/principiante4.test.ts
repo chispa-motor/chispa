@@ -28,6 +28,7 @@ import { campoTexto } from '../src/editor/paneles/campos';
 import { juegoDePrueba, unObjeto } from './ayudantes';
 import { plantillaPorId } from '../src/plantillas/indice';
 import { Sprite } from '../src/objetos/componentes/Sprite';
+import { Control } from '../src/objetos/componentes/Control';
 import { OPACIDAD_OCULTO } from '../src/editor/escena/VistaEscena';
 
 /** Los errores que da un script al revisarlo, como en la pestaña Problemas. */
@@ -332,5 +333,85 @@ describe('Prueba de principiante 4: cambiar el nombre a las cosas de una plantil
     j.soltar('Escape', 'Escape');
     expect([ventana.visible, menu.visible]).toEqual([true, true]);
     expect(OPACIDAD_OCULTO).toBeLessThan(0.3);
+  });
+});
+
+describe('Prueba de principiante 4: una barra con la vida del jugador', () => {
+  /** Un héroe con vida = 100 y una barra con ese dato. Devuelve los errores (como en Problemas) y el juego. */
+  function conBarra(dato: string) {
+    const e = new EstadoEditor();
+    e.anadirRecursoListo('dibujo', 'heroe', true);
+    e.cambiarPropiedad(e.seleccion!, 'propiedades', { vida: 80 });
+    e.crearControl('barra', 100, 500);
+    e.cambiarPropiedad(e.seleccion!, 'control.dato', dato);
+    const proyecto = migrarProyecto(JSON.parse(e.aJSON()));
+    return { errores: revisarProyecto(proyecto).errores.map((x) => ({ mensaje: x.mensajeCorto, pista: x.pista ?? '' })), proyecto };
+  }
+
+  it('buscar("Heroe").vida funciona (antes, las comillas dentro del dato daban un error raro)', () => {
+    const { errores: err, proyecto } = conBarra('buscar("Heroe").vida');
+    expect(err).toEqual([]);
+    const j = juegoDePrueba({ proyecto });
+    j.avanzar(3);
+    expect(j.buscar('Barra').obtener(Control)!.numero).toBe(80);
+    expect(j.errores).toEqual([]);
+  });
+
+  it('en el inspector, «Heroe.vida» se convierte solo en buscar("Heroe").vida', () => {
+    expect(datoDeControl('Heroe.vida', [], ['Heroe', 'Barra'])).toBe('buscar("Heroe").vida');
+    expect(datoDeControl('heroe.vida', [], ['Heroe'])).toBe('buscar("Heroe").vida');
+    expect(datoDeControl('juego.vida', [], ['Heroe'])).toBe('juego.vida');
+    expect(datoDeControl('yo.valor', [], ['Heroe'])).toBe('yo.valor');
+  });
+
+  it('yo.vida en la barra: se avisa ANTES de jugar de que «yo» es la barra, y de quién es la vida', () => {
+    const [e] = conBarra('yo.vida').errores;
+    expect(e.mensaje).toContain("'yo' es este mismo objeto");
+    expect(e.pista).toContain('buscar("Heroe").vida');
+    // Lo que sí es de la barra, o de cualquier objeto, no da error
+    expect(conBarra('yo.maximo').errores).toEqual([]);
+    expect(conBarra('yo.x').errores).toEqual([]);
+  });
+
+  it('Heroe.vida escrito a mano en el proyecto: dice que hay que buscarlo', () => {
+    const [e] = conBarra('Heroe.vida').errores;
+    expect(e.pista).toContain('buscar("Heroe").vida');
+  });
+
+  it('en un texto del inspector también vale un dato de otro objeto, con sus comillas', () => {
+    const e = new EstadoEditor();
+    e.anadirRecursoListo('dibujo', 'heroe', true);
+    e.cambiarPropiedad(e.seleccion!, 'propiedades', { vida: 80 });
+    e.crearObjeto('texto', 100, 500);
+    e.cambiarPropiedad(e.seleccion!, 'sprite.texto', 'Vida: {buscar("Heroe").vida}');
+    const proyecto = migrarProyecto(JSON.parse(e.aJSON()));
+    expect(revisarProyecto(proyecto).errores).toEqual([]);
+    const j = juegoDePrueba({ proyecto });
+    j.avanzar(2);
+    const s = j.buscar('Texto').obtener(Sprite)!;
+    s.actualizarTexto();
+    expect(s.texto).toBe('Vida: 80');
+  });
+});
+
+describe('Prueba de principiante 4: más pistas', () => {
+  it('yo.letra = pixel y yo.texto = Hola: faltan las comillas', () => {
+    expect(errores('cuando empieza:\n    yo.letra = pixel\n')[0].pista).toContain('"pixel" entre comillas');
+    expect(errores('cuando empieza:\n    yo.forma = estrella\n')[0].pista).toContain('"estrella" entre comillas');
+    expect(errores('cuando empieza:\n    yo.texto = Hola\n')[0].pista).toContain('Si es un texto, va entre comillas: "Hola"');
+    // Una variable de verdad a la derecha sigue valiendo
+    expect(errores('variable nombre = "Ana"\ncuando empieza:\n    yo.texto = nombre\n')).toEqual([]);
+  });
+
+  it('yo.luz = 200: explica que la luz se enciende con verdadero y el tamaño es radioLuz', () => {
+    const j = unObjeto('cuando empieza:\n    yo.luz = 200\n');
+    j.avanzar(2);
+    expect(j.errores[0].error.pista).toContain('yo.radioLuz = 200');
+  });
+
+  it('pasar el nombre de un objeto entre comillas donde hace falta el objeto: dice que hay que buscarlo', () => {
+    const j = unObjeto('cuando empieza:\n    escena.camara.seguir("Prueba")\n');
+    j.avanzar(2);
+    expect(j.errores[0].error.pista).toContain('buscar("Prueba")');
   });
 });
