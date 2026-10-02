@@ -273,7 +273,13 @@ export function pintarConEstilo(
   ancho: number,
   alto: number,
   trazar: () => void,
-  opciones: { linea?: number; imagen?: (ctx: CanvasRenderingContext2D) => void; contornoImagen?: (ctx: CanvasRenderingContext2D, color: string, grosor: number) => void } = {},
+  opciones: {
+    linea?: number;
+    imagen?: (ctx: CanvasRenderingContext2D) => void;
+    contornoImagen?: (ctx: CanvasRenderingContext2D, color: string, grosor: number) => void;
+    /** Para las estampas: 'sombra' pinta SOLO la sombra (sin desplazar); 'cuerpo', todo menos la sombra. */
+    parte?: 'todo' | 'sombra' | 'cuerpo';
+  } = {},
 ): void {
   const linea = opciones.linea ?? null;
   ctx.save();
@@ -328,11 +334,17 @@ export function pintarConEstilo(
       ctx.setLineDash([]);
     }
   };
+  const parte = opciones.parte ?? 'todo';
+  if (parte === 'sombra') {
+    if (e.sombra) soloSombra(e.sombra, 0, 0, e.desenfoqueSombra);
+    ctx.restore();
+    return;
+  }
   if (e.resplandor) {
     soloSombra(e.resplandor, 0, 0, e.tamanoResplandor);
     soloSombra(e.resplandor, 0, 0, e.tamanoResplandor / 2);
   }
-  if (e.sombra) soloSombra(e.sombra, e.sombraX, e.sombraY, e.desenfoqueSombra);
+  if (e.sombra && parte === 'todo') soloSombra(e.sombra, e.sombraX, e.sombraY, e.desenfoqueSombra);
   pintarCuerpo(pintura, true);
   ctx.restore();
 }

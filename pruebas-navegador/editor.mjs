@@ -1376,6 +1376,191 @@ await prueba('principiante 4: la pausa de «Pantallas listas» no tapa la escena
   comprobar((await estado(p, () => window.chispa.inferior.revisar())) === 0, 'hay errores después de renombrar');
 });
 
+// ───────────────────────── Día 6: rendimiento y pantallas pequeñas ─────────────────────────
+
+await prueba('pantallas de portátil: en 1366×768 y en 1280×720 cabe todo (barra, bloques, ventanas)', async (p) => {
+  for (const [ancho, alto] of [[1366, 768], [1280, 720]]) {
+    await p.setViewportSize({ width: ancho, height: alto });
+    await p.click('[aria-label="Proyecto nuevo"]');
+    await p.click('[data-plantilla="plataformas"]');
+    await p.waitForTimeout(300);
+    /** Lo que se sale de la ventana (sin estar dentro de algo que se desplaza) o se pisa con otra cosa. */
+    const fuera = () => estado(p, () => {
+      const mal = [];
+      for (const el of document.querySelectorAll('button, input, select, .pestana, .pestana-panel, h2, .dialogo, .grupo-barra, .nombre-proyecto')) {
+        const b = el.getBoundingClientRect();
+        if (!b.width || !b.height || getComputedStyle(el).visibility === 'hidden') continue;
+        if (b.right <= innerWidth + 1 && b.bottom <= innerHeight + 1 && b.left >= -1 && b.top >= -1) continue;
+        let pa = el.parentElement;
+        let desplazable = false;
+        while (pa && !desplazable) {
+          const e = getComputedStyle(pa);
+          desplazable = /(auto|scroll)/.test(e.overflowY + e.overflowX);
+          pa = pa.parentElement;
+        }
+        if (!desplazable) mal.push((el.className || el.tagName) + ' «' + (el.textContent || '').trim().slice(0, 20) + '»');
+      }
+      if (document.documentElement.scrollWidth > innerWidth || document.documentElement.scrollHeight > innerHeight) mal.push('la página entera se desplaza');
+      return mal;
+    });
+    const comprobarQueCabe = async (donde) => {
+      const mal = await fuera();
+      comprobar(mal.length === 0, `${ancho}×${alto}, ${donde}: se sale ${mal.slice(0, 5).join(', ')}`);
+    };
+    await comprobarQueCabe('la escena');
+    // El nombre del proyecto se lee entero y los botones de la barra no se pisan
+    const barra = await estado(p, () => {
+      const cajas = [...document.querySelectorAll('.barra-principal .grupo-barra, .barra-principal .nombre-proyecto')].map((e) => e.getBoundingClientRect());
+      const nombre = document.querySelector('.nombre-proyecto span');
+      return { pisan: cajas.some((a, i) => cajas.some((b, j) => j > i && a.left < b.right - 1 && b.left < a.right - 1)), cortado: nombre.scrollWidth > nombre.clientWidth + 1 };
+    });
+    comprobar(!barra.pisan && !barra.cortado, `${ancho}×${alto}: la barra de arriba no cabe (${JSON.stringify(barra)})`);
+    // Los bloques: las diez categorías se ven, sin salirse de su columna
+    await p.click('.nodo:has-text("Jugador")');
+    await p.click('button:has-text("Abrir el código")');
+    await p.waitForSelector('.cm-content');
+    await p.keyboard.press('Control+b');
+    await p.waitForSelector('.editor-bloques');
+    const categorias = await estado(p, () => {
+      const columna = [...document.querySelectorAll('.categorias-bloques')].find((c) => c.offsetParent).getBoundingClientRect();
+      return [...document.querySelectorAll('.categoria-bloques')].filter((c) => c.offsetParent).map((c) => { const b = c.getBoundingClientRect(); return b.top >= columna.top - 1 && b.bottom <= columna.bottom + 1; });
+    });
+    comprobar(categorias.length === 10 && categorias.every(Boolean), `${ancho}×${alto}: las categorías de los bloques no caben: ${categorias}`);
+    await comprobarQueCabe('los bloques');
+    // Las ventanas grandes: se ven enteras o se desplazan por dentro, y sus botones se pueden pulsar
+    await p.click('.pestana-panel:has-text("Proyecto")');
+    for (const [boton, nombre] of [['[aria-label^="Hacer un efecto de sonido"]', 'el generador de sonidos'], ['[aria-label^="Nueva canción"]', 'el editor de música'], ['[aria-label^="Dibujos listos"]', 'los recursos listos'], ['[aria-label^="Pantallas listas"]', 'las pantallas listas']]) {
+      await p.click(boton);
+      await p.waitForSelector('.dialogo');
+      await comprobarQueCabe(nombre);
+      const botones = await estado(p, () => {
+        const d = document.querySelector('.dialogo');
+        const ultimo = [...d.querySelectorAll('.dialogo-botones button')].pop();
+        ultimo.scrollIntoView({ block: 'nearest' });
+        const b = ultimo.getBoundingClientRect();
+        const encima = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+        return { dentro: b.bottom <= innerHeight && b.top >= 0, libre: encima === ultimo || ultimo.contains(encima) };
+      });
+      comprobar(botones.dentro && botones.libre, `${ancho}×${alto}, ${nombre}: el botón de abajo no se puede pulsar (${JSON.stringify(botones)})`);
+      await p.keyboard.press('Escape');
+    }
+    await p.click('.pestana-panel:has-text("Escena")');
+  }
+});
+
+await prueba('estampas: lo que tiene sombra, resplandor, contorno o degradado se ve igual con ellas que sin ellas', async (p) => {
+  await p.click('[aria-label="Proyecto nuevo"]');
+  await p.click('[data-plantilla="cartas"]');
+  await estado(p, () => {
+    const e = window.chispa.estado;
+    const formas = ['circulo', 'rectangulo', 'estrella', 'corazon', 'triangulo', 'flecha'];
+    const estilos = [
+      { sombra: '#000000a0', sombraX: 8, sombraY: -8, desenfoqueSombra: 8 },
+      { resplandor: 'cian', tamanoResplandor: 18 },
+      { contorno: 'blanco', grosorContorno: 4 },
+      { relleno: 'degradado', color2: 'morado', borde: 4, colorBorde: 'negro' },
+      { relleno: 'radial', color2: 'azul', sombra: 'negro', resplandor: 'amarillo', borde: 3 },
+      { relleno: 'radial', color2: 'azul', contorno: 'rojo', opacidad: 0.6, sombra: '#000000' },
+    ];
+    const objetos = [];
+    formas.forEach((forma, i) => estilos.forEach((estilo, j) => objetos.push({ nombre: `F${i}_${j}`, x: 90 + j * 150, y: 60 + i * 80, sprite: { forma, color: ['rojo', 'verde', 'naranja'][i % 3], ancho: 60, alto: 50, ...estilo, ...(i === 5 ? { voltear: true } : {}) } })));
+    ['gema', 'corazon', 'llave'].forEach((img, i) => objetos.push({ nombre: 'I' + i, x: 880, y: 100 + i * 150, sprite: { imagen: img, ancho: 80, alto: 80, sombra: '#000000', resplandor: i === 1 ? 'rosa' : undefined, contorno: i === 2 ? 'blanco' : undefined, grosorContorno: 4 } }));
+    const pr = JSON.parse(e.aJSON());
+    pr.scripts = {};
+    pr.plantillas = {};
+    pr.escenas = { Mesa: { colorFondo: '#33415c', gravedad: 0, objetos } };
+    e.abrir(pr);
+  });
+  await p.keyboard.press('F5');
+  await p.waitForFunction(() => document.querySelector('.estado-juego')?.textContent?.startsWith('Jugando'));
+  await p.waitForTimeout(600);
+  const r = await estado(p, () => {
+    const m = window.chispa.vistaJuego.motor;
+    const c = m.renderizador.ctx;
+    const foto = (si) => {
+      window.chispa.estampas.usar(si);
+      for (let i = 0; i < 3; i++) m.escena.dibujar(m.renderizador);
+      return { datos: c.getImageData(0, 0, c.canvas.width, c.canvas.height).data, estampas: window.chispa.estampas.cuantas() };
+    };
+    const sin = foto(false);
+    // Para que se hagan de nuevo (cada dibujo recuerda las suyas): se reinicia la escena
+    const con = foto(true);
+    let suma = 0;
+    let distintos = 0;
+    for (let i = 0; i < sin.datos.length; i++) {
+      const d = Math.abs(sin.datos[i] - con.datos[i]);
+      suma += d;
+      if (d > 40) distintos++;
+    }
+    let pintado = 0;
+    for (let i = 0; i < con.datos.length; i += 4) if (con.datos[i] !== 0x33 || con.datos[i + 1] !== 0x41) pintado++;
+    return { media: suma / sin.datos.length, distintos: distintos / sin.datos.length, pintado: pintado / (con.datos.length / 4) };
+  });
+  comprobar(r.pintado > 0.1, 'no se ha dibujado nada: ' + JSON.stringify(r));
+  // Solo cambian los bordes (el suavizado no cae en los mismos píxeles): de media, casi nada
+  comprobar(r.media < 4 && r.distintos < 0.04, 'con estampas no se ve igual que sin ellas: ' + JSON.stringify(r));
+  await estado(p, () => window.chispa.estampas.usar(true));
+});
+
+await prueba('rendimiento: 500 objetos con efectos, luces y partículas', async (p) => {
+  await estado(p, () => {
+    const objetos = [];
+    // Un suelo y unas plataformas de casillas: las luces con sombras chocan con ellas
+    const celdas = {};
+    for (let c = 0; c < 20; c++) celdas[`${c},0`] = 'suelo';
+    for (let c = 4; c < 16; c += 3) celdas[`${c},5`] = 'suelo';
+    objetos.push({ nombre: 'Mapa', x: 0, y: 0, mapa: { tamano: 48, tipos: { suelo: { color: '#5ad17a', solida: true } }, celdas } });
+    for (let i = 0; i < 500; i++) {
+      // Todos con algún efecto de estilo: sombra, resplandor, contorno, degradado con borde... (y uno de cada cinco, girando)
+      const sprite = { forma: i % 3 === 0 ? 'circulo' : i % 3 === 1 ? 'rectangulo' : 'estrella', color: ['rojo', 'azul', 'verde', 'amarillo'][i % 4], ancho: 22, alto: 22 };
+      if (i % 5 === 0) Object.assign(sprite, { sombra: '#00000080', sombraX: 4, sombraY: -4, desenfoqueSombra: 6 });
+      if (i % 5 === 1) Object.assign(sprite, { resplandor: 'cian', tamanoResplandor: 14 });
+      if (i % 5 === 2) Object.assign(sprite, { contorno: 'blanco', grosorContorno: 3 });
+      if (i % 5 === 3) Object.assign(sprite, { relleno: 'degradado', color2: 'morado', borde: 2, colorBorde: 'negro' });
+      if (i % 5 === 4) Object.assign(sprite, { borde: 2, colorBorde: 'blanco' });
+      const o = { nombre: 'O' + i, x: 30 + (i % 30) * 30, y: 80 + Math.floor(i / 30) * 26, sprite, script: i % 5 === 4 ? 'gira.chs' : 'anda.chs' };
+      // 50 llevan un efecto de partículas puesto, y 13 una luz (4 de ellas con sombras)
+      if (i % 10 === 0) o.efecto = ['estela', 'fuego', 'humo', 'burbujas'][(i / 10) % 4];
+      if (i % 40 === 0) o.luz = { color: ['#ffd9a0', 'cian', 'rosa'][(i / 40) % 3], radio: 160, sombras: i % 160 === 0, parpadeo: i % 80 === 0 ? 0.4 : 0 };
+      objetos.push(o);
+    }
+    objetos.push({ nombre: 'Director', x: 0, y: 0, script: 'explosiones.chs' });
+    window.chispa.estado.abrir({ formato: 'chispa-proyecto', version: 3, nombre: 'r', ancho: 960, alto: 540, imagenes: {}, sonidos: {}, animaciones: {}, plantillas: {},
+      scripts: {
+        'anda.chs': 'variable v = aleatorio(40, 140)\ncuando cada fotograma:\n    yo.x += v * delta\n    si yo.x > 950:\n        yo.x = 10\n',
+        'gira.chs': 'variable v = aleatorio(40, 140)\ncuando cada fotograma:\n    yo.rotar(90 * delta)\n    yo.x += v * delta\n    si yo.x > 950:\n        yo.x = 10\n',
+        'explosiones.chs': 'cuando cada 0.25 segundos:\n    efecto.explosion(vector(aleatorio(100, 860), aleatorio(100, 440)))\n    efecto.chispas(vector(aleatorio(100, 860), aleatorio(100, 440)))\n',
+      },
+      escenas: { Principal: { colorFondo: '#111', gravedad: 0, oscuridad: 0.8, objetos } }, escenaInicial: 'Principal' });
+  });
+  await p.keyboard.press('F5');
+  await p.waitForFunction(() => document.querySelector('.estado-juego')?.textContent?.startsWith('Jugando'), null, { timeout: 20000 });
+  await p.waitForTimeout(3000);
+  const medir = (conEstampas) => estado(p, (conEstampas) => {
+    window.chispa.estampas.usar(conEstampas);
+    const m = window.chispa.vistaJuego.motor;
+    for (let i = 0; i < 5; i++) { m.escena.actualizar(1 / 60); m.escena.dibujar(m.renderizador); }
+    const N = 40;
+    const t = performance.now();
+    for (let i = 0; i < N; i++) {
+      m.escena.actualizar(1 / 60);
+      m.escena.dibujar(m.renderizador);
+    }
+    // Lo que tarda el motor en hacer un fotograma: mover los 500 objetos y dar todas las órdenes de dibujo
+    return { ms: (performance.now() - t) / N, particulas: m.escena.particulas.cantidad, objetos: m.escena.objetos.length };
+  }, conEstampas);
+  const sin = await medir(false);
+  const con = await medir(true);
+  const fps = await estado(p, () => window.chispa.vistaJuego.motor.tiempo.fps);
+  console.log(`      (500 objetos con efectos, 13 luces y ${con.particulas} partículas: ${con.ms.toFixed(1)} ms por fotograma; sin las mejoras de la 1.1, ${sin.ms.toFixed(1)} ms. En este navegador de pruebas, sin tarjeta gráfica: ${fps} fotogramas por segundo)`);
+  comprobar(con.objetos >= 500 && con.particulas > 300, 'la escena de la prueba no es la que tiene que ser: ' + JSON.stringify(con));
+  comprobar(!(await p.$('.consola-editor .mensaje.error')), 'errores al jugar');
+  // 60 fotogramas por segundo son 16,7 ms por fotograma. Este navegador de pruebas no tiene tarjeta gráfica (todo lo
+  // pinta el procesador, que es mucho más lento que un ordenador normal): aquí se pide no pasar de 25 ms
+  comprobar(con.ms < 25 * HOLGURA, `un fotograma tarda ${con.ms.toFixed(1)} ms (como mucho ${25 * HOLGURA})`);
+  comprobar(con.ms < sin.ms * 0.8, `las mejoras de la 1.1 no se notan: ${con.ms.toFixed(1)} ms con ellas, ${sin.ms.toFixed(1)} sin ellas`);
+});
+
 await navegador.close();
 await new Promise((r) => servidor.httpServer.close(r));
 console.log(fallos ? `\n${fallos} prueba(s) han fallado.` : '\nTodas las pruebas del navegador han pasado.');

@@ -29,6 +29,7 @@ import { prepararPublicacion, type DestinoPublicar } from '../exportar/publicar'
 import { proyectoMinimo } from '../ejemplos/minimo/proyecto';
 import { elegirPlantilla } from './plantillas/elegirPlantilla';
 import { hacerPortada } from './exportar/portada';
+import { cuantasEstampas, usarEstampas } from '../motor/Estampas';
 import { proyectoVacio } from '../proyecto/formato';
 import { cargarAutomatico, descargar, elegirArchivo, guardarAutomatico, nombreDeArchivo } from './Almacen';
 import { EditorCodigo } from './codigo/EditorCodigo';
@@ -66,6 +67,8 @@ export class Aplicacion {
   private inferior: PanelInferior;
 
   private barra = h('header', { class: 'barra-principal' });
+  /** Para las pruebas de rendimiento: encender y apagar las estampas (motor/Estampas.ts) y contarlas. */
+  readonly estampas = { usar: usarEstampas, cuantas: cuantasEstampas };
   private pestanas = h('div', { class: 'pestanas-centro', role: 'tablist' });
   private zonaCodigo = h('div', { class: 'zona-codigo' });
   private zonaEscena = h('div', { class: 'zona-escena' });

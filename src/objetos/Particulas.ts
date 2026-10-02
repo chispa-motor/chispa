@@ -188,6 +188,9 @@ export class Particulas {
   /** `cuales`: todas, solo las normales o solo las que brillan (con luces, las que brillan van encima de la oscuridad). */
   dibujar(r: Renderizador, aPantalla: (x: number, y: number) => { x: number; y: number }, cuales: 'todas' | 'normales' | 'brillantes' = 'todas'): void {
     const ctx = r.ctx;
+    // Cuántos píxeles del lienzo mide un punto del dibujo: las partículas diminutas se pintan como cuadraditos
+    const m = ctx.getTransform?.();
+    const escala = (m && Math.hypot(m.a, m.b)) || 1;
     // Primero las normales y luego las que brillan (cambiar la mezcla cuesta: se hace una vez)
     for (const sumar of cuales === 'todas' ? [false, true] : [cuales === 'brillantes']) {
       let alguna = false;
@@ -195,7 +198,7 @@ export class Particulas {
         if (p.sumar !== sumar) continue;
         if (!alguna && sumar) ctx.globalCompositeOperation = 'lighter';
         alguna = true;
-        dibujarParticula(ctx, p, aPantalla(p.x, p.y));
+        dibujarParticula(ctx, p, aPantalla(p.x, p.y), escala);
       }
       if (alguna && sumar) ctx.globalCompositeOperation = 'source-over';
     }
@@ -212,18 +215,37 @@ function rgb(color: string): [number, number, number] | null {
   return c ? [c[0], c[1], c[2]] : null;
 }
 
-function dibujarParticula(ctx: CanvasRenderingContext2D, p: Particula, s: { x: number; y: number }): void {
+/** Por debajo de este tamaño (en píxeles del lienzo), un círculo y un cuadradito se ven igual (y el cuadradito cuesta la cuarta parte). */
+export const PARTICULA_DIMINUTA = 3.5;
+
+/** Los colores intermedios ya escritos ("rgb(…)"): escribirlos de nuevo en cada fotograma, para miles de partículas, cuesta. */
+const coloresEscritos = new Map<number, string>();
+function colorEscrito(r: number, g: number, b: number): string {
+  // De 4 en 4: 64 tonos por canal, que no se distinguen a simple vista
+  const n = ((r >> 2) << 12) | ((g >> 2) << 6) | (b >> 2);
+  let c = coloresEscritos.get(n);
+  if (!c) coloresEscritos.set(n, (c = `rgb(${(r >> 2) << 2},${(g >> 2) << 2},${(b >> 2) << 2})`));
+  return c;
+}
+
+function dibujarParticula(ctx: CanvasRenderingContext2D, p: Particula, s: { x: number; y: number }, escala = 1): void {
   const t = p.vida / p.vidaTotal; // 1 al nacer, 0 al morir
   ctx.globalAlpha = Math.max(0, Math.min(1, t * 1.5)) * p.opacidad;
   let color = p.color;
   if (p.rgb && p.rgbFinal) {
     const k = 1 - t;
-    const c = p.rgb.map((v, i) => Math.round(v + (p.rgbFinal![i] - v) * k));
-    color = `rgb(${c[0]},${c[1]},${c[2]})`;
+    const a = p.rgb;
+    const b = p.rgbFinal;
+    color = colorEscrito(Math.round(a[0] + (b[0] - a[0]) * k), Math.round(a[1] + (b[1] - a[1]) * k), Math.round(a[2] + (b[2] - a[2]) * k));
   }
   const tam = Math.max(0.5, p.tamano * (p.tamanoFinal + (1 - p.tamanoFinal) * t));
   const radio = tam / 2;
   ctx.fillStyle = color;
+  // Lo diminuto (motas de polvo, chispas lejanas): un cuadradito, sin trazar ningún camino
+  if (tam * escala < PARTICULA_DIMINUTA && p.forma !== 'linea' && p.forma !== 'chispa' && p.forma !== 'anillo') {
+    ctx.fillRect(s.x - radio, s.y - radio, tam, tam);
+    return;
+  }
   switch (p.forma) {
     case 'cuadrado':
     case 'hoja':

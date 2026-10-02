@@ -118,7 +118,9 @@ code, pre, kbd { font-family: var(--letra-codigo); }
 /* ── Modo bloques ── */
 .editor-bloques { flex: 1; min-height: 0; display: flex; outline: none; }
 .paleta-bloques { width: 220px; flex: none; display: flex; border-right: 1px solid var(--borde); background: var(--fondo-paleta); }
-.categorias-bloques { display: flex; flex-direction: column; gap: 2px; padding: 6px 4px; border-right: 1px solid var(--borde); }
+/* Las categorías caben siempre: si la ventana es baja, la columna se desplaza (antes, las últimas se salían por abajo) */
+.categorias-bloques { display: flex; flex-direction: column; gap: 2px; padding: 6px 4px; border-right: 1px solid var(--borde); overflow-y: auto; flex: none; scrollbar-width: thin; }
+.categoria-bloques { flex: none; }
 .categoria-bloques { display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: none; color: var(--texto); font-size: 10px; padding: 5px 2px; border-radius: 6px; cursor: pointer; }
 .categoria-bloques .punto { width: 16px; height: 16px; border-radius: 50%; background: var(--color); border: 2px solid #0003; }
 .categoria-bloques.activa { background: #ffffff14; }
@@ -639,7 +641,10 @@ a.boton { text-decoration: none; display: inline-flex; align-items: center; }
 /* ── Editor de partículas ── */
 .dialogo.dialogo-particulas { width: min(840px, 95vw); max-width: none; }
 .editor-particulas { display: grid; grid-template-columns: 360px 1fr; gap: 14px; max-height: 70vh; }
-.columna-vista { display: flex; flex-direction: column; gap: 8px; }
+/* Cada columna se desplaza por su cuenta si no cabe (en pantallas bajas, los controles pisaban los botones de abajo) */
+.editor-particulas { grid-template-rows: minmax(0, 1fr); }
+.editor-particulas > * { min-height: 0; }
+.columna-vista { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
 .lienzo-particulas { width: 360px; height: 300px; border-radius: 8px; background: #141824; }
 .fila-nombre { display: grid; grid-template-columns: auto 1fr; gap: 6px; align-items: center; }
 .controles-particulas { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; padding-right: 4px; }
@@ -710,3 +715,16 @@ a.boton { text-decoration: none; display: inline-flex; align-items: center; }
 .muestra-plantilla img { width: 48px; height: 48px; image-rendering: pixelated; }
 .mas-plantilla { font-size: 32px; color: #8390a8; }
 .teclas-plantilla { font-size: 11px; padding: 1px 6px; border-radius: 999px; border: 1px solid var(--borde); color: var(--texto-suave); opacity: 0.85; }
+
+/* ── Pantallas pequeñas de portátil (1366×768, 1280×720) ── */
+@media (max-width: 1400px) {
+  /* En la barra, «itch.io», Pausar y Parar se quedan con su dibujo (el nombre sale al pasar el ratón) */
+  .grupo-barra .boton-itch span, .controles-juego .pausar span, .controles-juego .parar span { display: none; }
+  .nombre-proyecto { padding: 0 8px; }
+}
+@media (max-height: 800px) {
+  /* Las categorías de los bloques, más juntas: caben las diez sin desplazar */
+  .categorias-bloques { gap: 0; padding: 3px 4px; }
+  .categoria-bloques { padding: 3px 2px; gap: 1px; }
+  .categoria-bloques .punto { width: 13px; height: 13px; }
+}

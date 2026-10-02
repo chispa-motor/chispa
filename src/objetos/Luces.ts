@@ -223,9 +223,15 @@ let lienzoLuz: HTMLCanvasElement | null = null;
 export function dibujarLuces(r: Renderizador, escena: Escena, oscuridad: number, ambiente: string, cam: Camara = escena.camara): void {
   if (oscuridad <= 0) return;
   const ctx = r.ctx;
-  // A la mitad de resolución: la luz es suave, no hace falta más (y es 4 veces más rápido)
-  const ancho = Math.max(1, Math.ceil(r.ancho / 2));
-  const alto = Math.max(1, Math.ceil(r.alto / 2));
+  // A la mitad de resolución: la luz es suave, no hace falta más (y es 4 veces más rápido).
+  // Y nunca más grande que la mitad de lo que mide el lienzo de verdad: si el juego se ve
+  // pequeño (la vista del editor, una ventana estrecha), el mapa de luz también lo es
+  const m = ctx.getTransform();
+  const enLienzo = Math.min(1, Math.hypot(m.a, m.b) || 1);
+  const ancho = Math.max(1, Math.ceil((r.ancho * enLienzo) / 2));
+  const alto = Math.max(1, Math.ceil((r.alto * enLienzo) / 2));
+  /** De la pantalla del juego al mapa de luz. */
+  const f = ancho / r.ancho;
   lienzoLuz ??= document.createElement('canvas');
   if (lienzoLuz.width !== ancho || lienzoLuz.height !== alto) {
     lienzoLuz.width = ancho;
@@ -234,8 +240,8 @@ export function dibujarLuces(r: Renderizador, escena: Escena, oscuridad: number,
   const l = lienzoLuz.getContext('2d');
   if (!l) return;
   const centro = cam.centroDibujo();
-  const aPantalla = (x: number, y: number) => ({ x: (r.ancho / 2 + (x - centro.x) * cam.zoom) / 2, y: (r.alto / 2 - (y - centro.y) * cam.zoom) / 2 });
-  const escalaRadio = cam.zoom / 2;
+  const aPantalla = (x: number, y: number) => ({ x: (r.ancho / 2 + (x - centro.x) * cam.zoom) * f, y: (r.alto / 2 - (y - centro.y) * cam.zoom) * f });
+  const escalaRadio = cam.zoom * f;
 
   l.setTransform(1, 0, 0, 1, 0, 0);
   l.globalCompositeOperation = 'source-over';
@@ -259,9 +265,9 @@ export function dibujarLuces(r: Renderizador, escena: Escena, oscuridad: number,
   // Cada luz borra la oscuridad (más en el centro, nada en el borde)
   l.globalCompositeOperation = 'destination-out';
   for (const { luz, o, forma, cajas } of luces) {
-    trazarLuz(l, luz, o, forma, aPantalla, escalaRadio, 'blanco');
-    // Lo que tapa la luz se ve por su cara (un poco menos que lo de delante)
-    for (const k of cajas) trazarLuz(l, luz, o, cajaComoForma(k), aPantalla, escalaRadio, 'blanco', 0.8);
+    trazarLuz(l, luz, o, forma ? [forma] : null, aPantalla, escalaRadio, 'blanco');
+    // Lo que tapa la luz se ve por su cara (un poco menos que lo de delante): todas las caras de una vez
+    if (cajas.length) trazarLuz(l, luz, o, cajas.map(cajaComoForma), aPantalla, escalaRadio, 'blanco', 0.8);
   }
   ctx.save();
   // Con la transformación de la pantalla (o del trozo, si está dividida): ocupa justo lo que mide `r`
@@ -272,15 +278,12 @@ export function dibujarLuces(r: Renderizador, escena: Escena, oscuridad: number,
   // Las luces de color tiñen un poco lo que iluminan
   const deColor = luces.filter(({ luz }) => resolverColor(luz.color) !== '#ffffff');
   if (deColor.length) {
-    l.setTransform(1, 0, 0, 1, 0, 0);
-    l.globalCompositeOperation = 'source-over';
-    l.clearRect(0, 0, ancho, alto);
-    l.globalCompositeOperation = 'lighter';
-    for (const { luz, o, forma } of deColor) trazarLuz(l, luz, o, forma, aPantalla, escalaRadio, luz.color);
+    // Directamente sobre la pantalla, sumando luz (sin pasar por el mapa de luz: un lienzo entero menos que copiar)
     ctx.save();
+    ctx.scale(r.ancho / ancho, r.alto / alto);
     ctx.globalCompositeOperation = 'lighter';
     ctx.globalAlpha = 0.35;
-    ctx.drawImage(lienzoLuz, 0, 0, r.ancho, r.alto);
+    for (const { luz, o, forma } of deColor) trazarLuz(ctx, luz, o, forma ? [forma] : null, aPantalla, escalaRadio, luz.color);
     ctx.restore();
   }
 }
@@ -292,7 +295,8 @@ function trazarLuz(
   l: CanvasRenderingContext2D,
   luz: Luz,
   o: ObjetoJuego,
-  forma: { x: number; y: number }[] | null,
+  /** Si se da, la luz solo se pinta dentro de estas formas (lo que se ve desde la luz, o las caras de lo que la tapa). */
+  formas: { x: number; y: number }[][] | null,
   aPantalla: (x: number, y: number) => { x: number; y: number },
   escalaRadio: number,
   color: string,
@@ -303,13 +307,16 @@ function trazarLuz(
   const radio = luz.radioActual * escalaRadio;
   l.save();
   l.beginPath();
-  if (forma && forma.length > 2) {
-    forma.forEach((q, i) => {
-      const s = aPantalla(q.x, q.y);
-      if (i === 0) l.moveTo(s.x, s.y);
-      else l.lineTo(s.x, s.y);
-    });
-    l.closePath();
+  const validas = formas?.filter((forma) => forma.length > 2) ?? [];
+  if (validas.length) {
+    for (const forma of validas) {
+      forma.forEach((q, i) => {
+        const s = aPantalla(q.x, q.y);
+        if (i === 0) l.moveTo(s.x, s.y);
+        else l.lineTo(s.x, s.y);
+      });
+      l.closePath();
+    }
     l.clip();
     l.beginPath();
   }

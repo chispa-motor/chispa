@@ -23,6 +23,7 @@ import type { Renderizador } from '../../motor/Renderizador';
 import { ESTILO_POR_DEFECTO, MEZCLAS, esSencillo, pintarConEstilo, type Estilo, type Mezcla, type Patron, type TipoRelleno } from '../../motor/Estilo';
 import { resolverColor } from '../../motor/Color';
 import { siluetaDe } from '../../motor/Filtros';
+import { estampa, estampasActivas, numeroDe } from '../../motor/Estampas';
 import { aLocal, figuraDe, puntoEnFigura, type Figura, type Forma, type Punto, type PuntoCamino } from '../formas/figuras';
 
 export type FormaSprite = Forma;
@@ -267,26 +268,22 @@ export class Sprite extends Componente {
     const ctx = r.ctx;
     const figura = this.esFigura ? this.figura(w, h) : null;
     const img = this.imagen ? this.objeto.escena!.motor.recursos.imagen(this.imagen) : null;
-    ctx.save();
-    ctx.globalAlpha = this.opacidad;
-    ctx.translate(x, y);
-    if (rotacion) ctx.rotate((rotacion * Math.PI) / 180);
-    ctx.scale(this.voltearX ? -1 : 1, this.voltearY ? 1 : -1); // la Y hacia arriba, como el mundo
-    const trazar = () => {
-      ctx.beginPath();
-      if (img || this.forma === 'rectangulo') ctx.rect(-w / 2, -h / 2, w, h);
-      else if (figura?.trazo) figura.trazo.puntos.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+    const trazarEn = (c: CanvasRenderingContext2D) => {
+      c.beginPath();
+      if (img || this.forma === 'rectangulo') c.rect(-w / 2, -h / 2, w, h);
+      else if (figura?.trazo) figura.trazo.puntos.forEach((p, i) => (i === 0 ? c.moveTo(p.x, p.y) : c.lineTo(p.x, p.y)));
       else if (figura) {
         for (const pol of figura.anillos) {
           for (const anillo of pol) {
-            anillo.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
-            ctx.closePath();
+            anillo.forEach((p, i) => (i === 0 ? c.moveTo(p.x, p.y) : c.lineTo(p.x, p.y)));
+            c.closePath();
           }
         }
       }
     };
     const flash = this.flashQueda > 0;
-    pintarConEstilo(ctx, this.estilo(), w, h, trazar, {
+    const estilo = this.estilo();
+    const opciones: Parameters<typeof pintarConEstilo>[5] = {
       linea: figura?.trazo ? figura.trazo.grosor : undefined,
       imagen: img
         ? (c) => {
@@ -311,7 +308,102 @@ export class Sprite extends Componente {
             c.restore();
           }
         : undefined,
-    });
+    };
+    // Lo normal: con una ESTAMPA (el dibujo ya hecho; ver motor/Estampas.ts). Si no se puede, directamente
+    if (!flash && estilo.mezcla === 'normal' && this.dibujarEstampado(ctx, estilo, x, y, rotacion, w, h, figura, img, trazarEn, opciones)) return;
+    ctx.save();
+    ctx.globalAlpha = this.opacidad;
+    ctx.translate(x, y);
+    if (rotacion) ctx.rotate((rotacion * Math.PI) / 180);
+    ctx.scale(this.voltearX ? -1 : 1, this.voltearY ? 1 : -1); // la Y hacia arriba, como el mundo
+    pintarConEstilo(ctx, estilo, w, h, () => trazarEn(ctx), opciones);
     ctx.restore();
+  }
+
+  /** Las últimas estampas (y de qué eran), cuántos fotogramas seguidos han cambiado y cuántos quedan sin usar estampas. */
+  private ultimaEstampa: { datos: unknown[]; cuerpo: HTMLCanvasElement | null; sombra: HTMLCanvasElement | null } = { datos: [], cuerpo: null, sombra: null };
+  private cambiosDeEstampa = 0;
+  private sinEstampa = 0;
+
+  /**
+   * Dibuja con estampas: el cuerpo (con su resplandor, su borde y su contorno) es una
+   * imagen ya hecha, y la sombra otra. En cada fotograma solo se pegan en su sitio.
+   * Devuelve falso si no se puede (y entonces se pinta directamente).
+   *
+   * Si el aspecto cambia en cada fotograma (un color o un tamaño que se animan), hacer
+   * una estampa nueva cada vez sería MÁS lento: tras unos cambios seguidos, ese objeto
+   * se pinta directamente durante un rato.
+   */
+  private dibujarEstampado(
+    ctx: CanvasRenderingContext2D, e: Estilo, x: number, y: number, rotacion: number, w: number, h: number,
+    figura: Figura | null, img: HTMLImageElement | null, trazarEn: (c: CanvasRenderingContext2D) => void,
+    opciones: Parameters<typeof pintarConEstilo>[5],
+  ): boolean {
+    // Solo lo que no está girado: pegar una imagen girada es rapidísimo con tarjeta gráfica, pero muy lento
+    // sin ella (más que pintar la sombra de nuevo). Lo que gira se pinta directamente, como siempre
+    if (!estampasActivas() || !(w > 0 && h > 0) || rotacion % 360 !== 0) return false;
+    if (this.sinEstampa > 0) {
+      this.sinEstampa--;
+      return false;
+    }
+    const m = ctx.getTransform();
+    // Con el lienzo girado o del revés (no pasa en el motor, pero por si acaso), directamente
+    if (m.b !== 0 || m.c !== 0 || !(m.a > 0) || Math.abs(m.a - m.d) > 1e-6) return false;
+    // A cuántos píxeles del lienzo sale cada punto del dibujo (zoom de la cámara × tamaño del lienzo). La estampa se
+    // hace justo a ese tamaño: así pegarla es copiar píxeles tal cual, sin estirarla (que es lo que cuesta)
+    const k = Math.min(4, Math.max(0.1, Math.round(m.a * 1000) / 1000));
+    if (Math.abs(k - m.a) > 0.0005) return false;
+    const linea = figura?.trazo ? figura.trazo.grosor : 0;
+    // Lo que el dibujo se sale de su caja: lo borroso del resplandor, el contorno, medio borde, media línea
+    const margen = Math.max(e.resplandor ? e.tamanoResplandor * 1.5 : 0, e.contorno ? e.grosorContorno + Math.max(e.borde, linea) / 2 : 0, e.borde / 2, linea / 2) + 2;
+    const nitido = ctx.imageSmoothingEnabled === false;
+    // Todo lo que decide cómo se ve. Si es lo mismo que en el fotograma anterior, valen las mismas estampas (lo normal)
+    const datos: unknown[] = [
+      k, w, h, this.voltearX, this.voltearY, nitido, this.forma, figura, img, e.imagenRelleno,
+      e.color, e.relleno, e.color2, e.anguloDegradado, e.patron, e.borde, e.colorBorde, e.bordeDiscontinuo, e.resplandor, e.tamanoResplandor, e.contorno, e.grosorContorno,
+      e.sombra, e.sombra ? e.desenfoqueSombra : 0,
+    ];
+    const u = this.ultimaEstampa;
+    let cuerpo = u.cuerpo;
+    let sombra = u.sombra;
+    if (!cuerpo || u.datos.length !== datos.length || datos.some((d, i) => d !== u.datos[i])) {
+      // Ha cambiado algo. Si cambia en cada fotograma, las estampas no compensan
+      if (++this.cambiosDeEstampa > 3) {
+        this.cambiosDeEstampa = 0;
+        this.sinEstampa = 90;
+        u.cuerpo = null;
+        return false;
+      }
+      const clave = datos.map((d) => (d !== null && typeof d === 'object' ? numeroDe(d) : String(d))).join('|');
+      /** Una estampa con ese margen alrededor: su tamaño en píxeles (enteros) y cómo se pinta, con el dibujo en el centro. */
+      const hacer = (nombre: string, margenTotal: number, parte: 'cuerpo' | 'sombra') => {
+        const ancho = Math.ceil((w + margenTotal * 2) * k);
+        const alto = Math.ceil((h + margenTotal * 2) * k);
+        return estampa(nombre, ancho, alto, (c) => {
+          c.imageSmoothingEnabled = !nitido;
+          c.setTransform(k, 0, 0, k, ancho / 2, alto / 2);
+          c.scale(this.voltearX ? -1 : 1, this.voltearY ? 1 : -1); // la Y hacia arriba, como el mundo
+          pintarConEstilo(c, e, w, h, () => trazarEn(c), { ...opciones, parte });
+        });
+      };
+      cuerpo = hacer(`c|${clave}`, margen, 'cuerpo');
+      if (!cuerpo) return false;
+      sombra = e.sombra ? hacer(`s|${clave}`, margen + e.desenfoqueSombra * 1.5, 'sombra') : null;
+      if (e.sombra && !sombra) return false;
+      u.datos = datos;
+      u.cuerpo = cuerpo;
+      u.sombra = sombra;
+    } else this.cambiosDeEstampa = 0;
+
+    // Se pegan en píxeles enteros del lienzo (como mucho medio píxel de diferencia con su sitio exacto)
+    const px = m.a * x + m.e;
+    const py = m.d * y + m.f;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = this.opacidad;
+    if (sombra) ctx.drawImage(sombra, Math.round(px + e.sombraX * k - sombra.width / 2), Math.round(py - e.sombraY * k - sombra.height / 2));
+    ctx.drawImage(cuerpo, Math.round(px - cuerpo.width / 2), Math.round(py - cuerpo.height / 2));
+    ctx.restore();
+    return true;
   }
 }
