@@ -114,6 +114,44 @@ export function problemaDataURL(valor: string, esperado: TipoRecurso): string | 
   return null;
 }
 
+/** Por los primeros bytes: ¿es un archivo de letra (TTF, OTF, WOFF o WOFF2)? */
+export function formatoLetra(b: Uint8Array): string | null {
+  if (empieza(b, ascii('wOF2'))) return 'woff2';
+  if (empieza(b, ascii('wOFF'))) return 'woff';
+  if (empieza(b, ascii('OTTO'))) return 'otf';
+  if (empieza(b, [0x00, 0x01, 0x00, 0x00]) || empieza(b, ascii('true'))) return 'ttf';
+  return null;
+}
+
+/** Tamaño máximo de un archivo de letra (las letras normales ocupan mucho menos). */
+export const TAMANO_MAXIMO_LETRA = 4 * 1024 * 1024;
+const TIPOS_LETRA = ['font/ttf', 'font/otf', 'font/woff', 'font/woff2'];
+
+/** ¿Es una data URL buena para un tipo de letra? Devuelve el problema o null si está bien. */
+export function problemaLetra(valor: string): string | null {
+  if (!valor.startsWith('data:')) {
+    return /^(https?:|\/\/|ftp:|file:|blob:)/i.test(valor.trim())
+      ? `es una dirección de internet o del ordenador («${valor.slice(0, 60)}»). Por seguridad, los proyectos solo pueden llevar las letras dentro del propio archivo`
+      : 'no es un tipo de letra guardado dentro del proyecto';
+  }
+  const m = /^data:([a-z0-9.+/-]+);base64,([A-Za-z0-9+/]*={0,2})$/i.exec(valor);
+  if (!m) return 'no es un tipo de letra bien guardado (tiene que ser "data:font/...;base64,...")';
+  if (!TIPOS_LETRA.includes(m[1].toLowerCase())) return `es de tipo "${m[1]}", y las letras de Chispa solo pueden ser TTF, OTF, WOFF o WOFF2`;
+  const bytes = Math.floor((m[2].length * 3) / 4);
+  if (bytes > TAMANO_MAXIMO_LETRA) return `es demasiado grande (${(bytes / 1024 / 1024).toFixed(1)} MB; el máximo es ${TAMANO_MAXIMO_LETRA / 1024 / 1024} MB)`;
+  if (!m[2].length) return 'está vacío';
+  let inicio: Uint8Array;
+  try {
+    inicio = decodificar(m[2], 16);
+  } catch {
+    return 'no es un tipo de letra bien guardado (el base64 está roto)';
+  }
+  const real = formatoLetra(inicio);
+  if (!real) return 'dice ser un tipo de letra, pero por dentro no lo es';
+  if (`font/${real}` !== m[1].toLowerCase()) return `dice ser ${m[1]}, pero por dentro es ${real}`;
+  return null;
+}
+
 /** Para importar un archivo del ordenador: ¿es de verdad una imagen o un sonido? Mira sus primeros bytes. */
 export async function tipoRealDeArchivo(archivo: Blob & { name: string; type: string }): Promise<TipoRecurso | null> {
   const bytes = new Uint8Array(await archivo.slice(0, 64).arrayBuffer());

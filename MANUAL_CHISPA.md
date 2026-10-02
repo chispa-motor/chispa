@@ -852,6 +852,16 @@ El color que sale de mezclar dos: con 0 da el primero, con 1 el segundo y con 0.
 yo.color = mezclarColores("rojo", "amarillo", 0.5)
 ```
 
+#### `semilla(numero)`
+
+Hace que el azar SE REPITA: con la misma semilla, aleatorio(), elegir(), probabilidad() y lista.mezclar() dan siempre lo mismo y en el mismo orden. Sirve para mundos hechos al azar que son iguales para todos (el nivel del día) o para repetir una partida. semilla() sin nada vuelve al azar de verdad.
+
+```
+cuando empieza:
+    semilla(2026)
+    mostrar(aleatorio(1, 100))
+```
+
 #### `numero(texto)`
 
 Convierte un texto con un número ("42") en un número de verdad.
@@ -1129,6 +1139,14 @@ Si es verdadero, la imagen se ve boca abajo.
 
 ```
 yo.voltearVertical = verdadero
+```
+
+#### `yo.letra`
+
+El tipo de letra de su texto. Las listas: "normal", "redonda", "clasica", "maquina", "manuscrita", "titulo" y "pixel". También las tuyas, importadas en Proyecto > Letras (.ttf, .otf, .woff).
+
+```
+yo.letra = "pixel"
 ```
 
 #### `yo.colorTexto`
@@ -2108,6 +2126,15 @@ La cámara: qué parte del mundo se ve.
 escena.camara.seguir(yo)
 ```
 
+#### `escena.camaraDe(numero)`
+
+Con la pantalla dividida (pantalla.dividir), la cámara de ese trozo: la 1 es la de siempre (escena.camara), la 2 la del segundo trozo... Tiene lo mismo que escena.camara: seguir, zoom, x, y, limites y temblar.
+
+```
+pantalla.dividir(2)
+escena.camaraDe(2).seguir(buscar("Jugador2"))
+```
+
 #### `escena.oscuridad`
 
 Oscuridad de la escena, de 0 (de día: no hacen falta luces) a 1 (negro donde no llega ninguna luz). Para cuevas y noches, con objetos que llevan luz.
@@ -2440,6 +2467,56 @@ cuando toco Enemigo:
     tiempo.camaraLenta(0.3, 1)
 ```
 
+### `junta`
+
+Unir objetos con cuerdas, muelles y bisagras. El objeto que se une necesita Física (y no ser estático); el otro extremo puede ser otro objeto o un punto del mundo (un vector). Se dibujan solas (junta.visibles = falso para que no).
+
+```
+cuando empieza:
+    junta.cuerda(yo, vector(yo.x, yo.y + 200))
+```
+
+#### `junta.cuerda(objeto, otro, largo, color)`
+
+Una cuerda: no deja que se separen más de su largo (si no se dice, lo lejos que están ahora). Más cerca está floja. Para péndulos, lianas, ganchos y cadenas.
+
+```
+junta.cuerda(yo, buscar("Gancho"), 200)
+```
+
+#### `junta.muelle(objeto, otro, largo, rigidez, color)`
+
+Un muelle: tira hacia su largo, más fuerte cuanto más lejos, y se queda botando. La rigidez (60 si no se dice) es lo duro que es: 10 = goma blanda, 300 = muy duro.
+
+```
+junta.muelle(yo, buscar("Techo"), 120, 60)
+```
+
+#### `junta.bisagra(objeto, eje, color)`
+
+Una bisagra: el objeto se queda siempre a la misma distancia del eje (un punto u otro objeto) y gira a su alrededor, como una puerta, un péndulo rígido o un balancín.
+
+```
+junta.bisagra(yo, vector(yo.x, yo.y + 150))
+```
+
+#### `junta.quitar(objeto, otro)`
+
+Suelta las juntas de un objeto: todas, o solo las que lo unen con otro. Devuelve cuántas ha quitado.
+
+```
+cuando se pulsa "espacio":
+    junta.quitar(yo)
+```
+
+#### `junta.visibles`
+
+Si las juntas se dibujan (verdadero, lo normal) o no (falso: para dibujarlas a tu manera).
+
+```
+junta.visibles = falso
+```
+
 ### `efecto`
 
 Efectos especiales listos con un comando. El sitio puede ser un objeto (el efecto lo sigue), un vector, dos números (x, y) o nada (donde está este objeto). Los que duran (fuego, humo, burbujas, estela, lluvia, nieve, hojas) siguen hasta que se paran con efecto.parar o se acaban sus segundos.
@@ -2659,6 +2736,16 @@ Fundido: la pantalla se va poniendo de un color (negro si no se dice) durante es
 pantalla.oscurecer(0.2, "negro", 0.5)
 ```
 
+#### `pantalla.dividir(cuantas, como)`
+
+Divide la pantalla en 2, 3 o 4 trozos, cada uno con su cámara (escena.camaraDe(2)...): para jugar varios en el mismo ordenador. Con 2: "columnas" (lado a lado, lo normal) o "filas" (una encima de otra). pantalla.dividir(1) la deja entera. Al cambiar de escena vuelve a estar entera.
+
+```
+pantalla.dividir(2)
+escena.camara.seguir(buscar("Jugador1"))
+escena.camaraDe(2).seguir(buscar("Jugador2"))
+```
+
 #### `pantalla.flash(color, segundos)`
 
 Toda la pantalla de un color (blanco si no se dice) que se apaga enseguida: golpes fuertes, rayos, fotos.
@@ -2780,12 +2867,28 @@ Un rectángulo con su centro en (x, y), como los objetos.
 dibujar.rectangulo(yo.x, yo.y, 64, 64, "azul")
 ```
 
-#### `dibujar.texto(texto, x, y, color, tamano)`
+#### `dibujar.texto(texto, x, y, color, tamano, letra)`
 
-Un texto en ese sitio del mundo (por ejemplo, encima de un enemigo).
+Un texto en ese sitio del mundo (por ejemplo, encima de un enemigo). Al final se puede decir el tipo de letra ("pixel", "titulo"...).
 
 ```
 dibujar.texto(yo.vida, yo.x, yo.y + 40, "blanco")
+```
+
+#### `dibujar.elipse(x, y, ancho, alto, color, relleno)`
+
+Un círculo aplastado con su centro en (x, y): ancho y alto es lo que mide entera. Solo el borde; con verdadero al final, rellena.
+
+```
+dibujar.elipse(yo.x, yo.y - 30, 80, 20, "negro", verdadero)
+```
+
+#### `dibujar.poligono(puntos, color, relleno, grosor)`
+
+Una forma con los puntos que quieras: una lista de vectores, en orden (se cierra sola). Solo el borde; con verdadero, rellena.
+
+```
+dibujar.poligono([vector(100, 100), vector(200, 100), vector(150, 180)], "amarillo", verdadero)
 ```
 
 #### `dibujar.arco(x, y, radio, desde, hasta, color, relleno, grosor)`
@@ -2838,12 +2941,28 @@ Un rectangulo con el centro en (x, y) de la pantalla.
 dibujar.enPantalla.rectangulo(110, 700, 200, 16, "rojo", verdadero)
 ```
 
-#### `dibujar.enPantalla.texto(texto, x, y, color, tamano)`
+#### `dibujar.enPantalla.texto(texto, x, y, color, tamano, letra)`
 
-Un texto en la pantalla.
+Un texto en la pantalla. Al final se puede decir el tipo de letra.
 
 ```
 dibujar.enPantalla.texto("Vida", 20, 700, "blanco")
+```
+
+#### `dibujar.enPantalla.elipse(x, y, ancho, alto, color, relleno)`
+
+Una elipse en la pantalla, con el centro en (x, y).
+
+```
+dibujar.enPantalla.elipse(480, 60, 300, 40, "blanco")
+```
+
+#### `dibujar.enPantalla.poligono(puntos, color, relleno, grosor)`
+
+Una forma con los puntos que quieras (una lista de vectores) en la pantalla.
+
+```
+dibujar.enPantalla.poligono([vector(20, 20), vector(60, 20), vector(40, 55)], "rojo", verdadero)
 ```
 
 #### `dibujar.enPantalla.arco(x, y, radio, desde, hasta, color, relleno, grosor)`

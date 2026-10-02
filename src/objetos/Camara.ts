@@ -49,8 +49,9 @@ export class Camara {
   private sacudida = new Vector2(0, 0);
 
   constructor(
-    readonly anchoPantalla: number,
-    readonly altoPantalla: number,
+    /** El trozo de pantalla que ocupa (toda, o su parte si la pantalla está dividida). */
+    public anchoPantalla: number,
+    public altoPantalla: number,
   ) {
     this.posicion = new Vector2(anchoPantalla / 2, altoPantalla / 2);
   }
@@ -91,6 +92,7 @@ export class Camara {
     if (this.temblor.restante > 0) {
       this.temblor.restante = Math.max(0, this.temblor.restante - dt);
       const fuerza = this.temblor.intensidad * (this.temblor.restante / this.temblor.duracion);
+      // Azar de verdad (no el de semilla()): el temblor solo se ve, no cambia el juego
       this.sacudida = new Vector2((Math.random() * 2 - 1) * fuerza, (Math.random() * 2 - 1) * fuerza);
     } else {
       this.sacudida = new Vector2(0, 0);

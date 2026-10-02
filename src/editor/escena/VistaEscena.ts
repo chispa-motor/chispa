@@ -41,6 +41,7 @@ import { FORMAS_DIBUJO, type Forma } from '../../objetos/formas/figuras';
 import { botonIcono, h, icono } from '../interfaz/dom';
 import { notificar } from '../interfaz/dialogos';
 import { importarArchivos, resumenImportar, tipoDeArchivo } from '../recursos/importar';
+import { cargarLetra, olvidarLetras } from '../../motor/Letras';
 import { tiene } from '../../utilidades/seguro';
 import {
   ajustar,
@@ -281,6 +282,7 @@ export class VistaEscena {
   private reconstruir(): void {
     this.hayQueReconstruir = false;
     this.sincronizarImagenes();
+    this.sincronizarLetras();
     const p = this.estado.proyecto;
     // Un "falso" contenedor para que los sprites encuentren las imágenes
     const falsa = { motor: { recursos: this.recursos } } as unknown as ObjetoJuego['escena'];
@@ -316,6 +318,17 @@ export class VistaEscena {
       this.dibujarBarra();
       this.alCambiarHerramienta();
     }
+  }
+
+  /** Carga los tipos de letra nuevos del proyecto, para que los textos se vean en el editor como en el juego. */
+  private letrasCargadas = '';
+  private sincronizarLetras(): void {
+    const letras = this.estado.proyecto.letras ?? {};
+    const clave = Object.entries(letras).map(([n, d]) => `${n}:${d.length}`).join('|');
+    if (clave === this.letrasCargadas) return;
+    this.letrasCargadas = clave;
+    olvidarLetras(Object.keys(letras));
+    for (const [n, d] of Object.entries(letras)) void cargarLetra(n, d).then((ok) => ok && this.redibujar());
   }
 
   /** Carga las imágenes nuevas del proyecto (y olvida las borradas). */
@@ -945,7 +958,7 @@ export class VistaEscena {
       else if (imagen) this.estado.crearObjeto('imagen', m.x, m.y, imagen);
       else {
         // Los sonidos soltados en la escena se importan (no se pueden «colocar»)
-        const sonidos = [...dt.files].filter((f) => tipoDeArchivo(f) === 'sonido');
+        const sonidos = [...dt.files].filter((f) => tipoDeArchivo(f) === 'sonido' || tipoDeArchivo(f) === 'letra');
         if (sonidos.length) {
           void importarArchivos(this.estado, sonidos).then((r) => {
             const m = resumenImportar(r);

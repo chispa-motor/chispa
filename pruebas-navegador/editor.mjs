@@ -406,6 +406,54 @@ await prueba('día 2: oscuridad, luces y sombras se ven de verdad', async (p) =>
   comprobar(detras < cerca / 3, `detrás del muro no hay sombra: ${detras} (junto a la luz: ${cerca})`);
 });
 
+await prueba('día 2: pantalla dividida, cuerda y letra pixel se ven de verdad', async (p) => {
+  await estado(p, () => {
+    const e = window.chispa.estado;
+    e.cambiarEscenaPropiedad('colorFondo', '#204060');
+    // El cuadrado de siempre (rojo) y otro verde muy lejos: cada uno en su mitad de la pantalla
+    e.cambiarCodigo('cuadrado.chs', 'cuando empieza:\n    yo.color = "#ff0000"\n    pantalla.dividir(2)\n    escena.camara.seguir(yo)\n    escena.camaraDe(2).seguir(buscar("Lejos"))\n    junta.cuerda(buscar("Bola"), buscar("Lejos"), 60, "amarillo")\n');
+    e.crearObjeto('rectangulo', 3000, 2000);
+    e.renombrar(e.seleccion, 'Lejos');
+    e.cambiarPropiedad(e.seleccion, 'sprite.color', '#00ff00');
+    e.crearObjeto('circulo', 3000, 1990);
+    e.renombrar(e.seleccion, 'Bola');
+    e.activarComponente(e.seleccion, 'fisica', true);
+    e.crearObjeto('texto', 20, 520);
+    e.cambiarPropiedad(e.seleccion, 'sprite.texto', 'PUNTOS: 120 ñ');
+    e.cambiarPropiedad(e.seleccion, 'sprite.letra', 'pixel');
+  });
+  await p.keyboard.press('F5');
+  await p.waitForFunction(() => document.querySelector('.estado-juego')?.textContent?.startsWith('Jugando'));
+  await p.waitForTimeout(1200);
+  const color = (fx, fy) => estado(p, ([fx, fy]) => {
+    const c = document.querySelector('.lienzo-juego');
+    return [...c.getContext('2d').getImageData(Math.floor(c.width * fx), Math.floor(c.height * fy), 1, 1).data].slice(0, 3);
+  }, [fx, fy]);
+  const izquierda = await color(0.25, 0.5);
+  const derecha = await color(0.75 + 15 / 960, 0.5 - 15 / 540); // (en el centro justo acaba la cuerda)
+  const raya = await color(0.5, 0.3);
+  comprobar(izquierda[0] > 200 && izquierda[1] < 60, `en la mitad izquierda no está el cuadrado rojo: ${izquierda}`);
+  comprobar(derecha[1] > 200 && derecha[0] < 60, `en la mitad derecha no está el cuadrado verde: ${derecha}`);
+  comprobar(raya[0] + raya[1] + raya[2] < 100, `no hay raya entre las dos mitades: ${raya}`);
+  // La bola cuelga de la cuerda, 60 píxeles por debajo del cuadrado verde (y no se ha caído del mundo)
+  const bola = await estado(p, () => {
+    const o = window.chispa.juego?.escena.buscar('Bola');
+    return o ? [o.posicion.x, o.posicion.y] : null;
+  });
+  if (bola) comprobar(Math.abs(bola[1] - 1940) < 3 && Math.abs(bola[0] - 3000) < 3, `la bola no cuelga de la cuerda: ${bola}`);
+  // La letra pixel no tiene grises: en la zona del texto, cada punto es de un color «entero»
+  const tonos = await estado(p, () => {
+    const c = document.querySelector('.lienzo-juego');
+    const k = c.width / 960;
+    const d = c.getContext('2d').getImageData(Math.floor(20 * k), Math.floor(8 * k), Math.floor(200 * k), Math.floor(26 * k)).data;
+    const vistos = new Set();
+    for (let i = 0; i < d.length; i += 4) vistos.add(`${d[i]},${d[i + 1]},${d[i + 2]}`);
+    return [...vistos];
+  });
+  comprobar(tonos.includes('255,255,255'), 'el texto con letra pixel no se ve');
+  comprobar(tonos.length <= 4, `la letra pixel tiene bordes suaves (${tonos.length} tonos): ${tonos.slice(0, 8).join(' · ')}`);
+});
+
 await prueba('depurar: clic en el número de línea, el juego se para, se ven las variables y se va paso a paso', async (p) => {
   const codigo = 'variable vueltas = 0\ncuando cada fotograma:\n    vueltas += 1\n    variable doble = vueltas * 2\n    yo.x += 1\n';
   await estado(p, (c) => {

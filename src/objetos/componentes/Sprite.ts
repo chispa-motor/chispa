@@ -87,6 +87,8 @@ export class Sprite extends Componente {
   tamano = 24;
   /** Color de la letra de las etiquetas (en los objetos de texto se usa `color`). */
   colorTexto = 'blanco';
+  /** El tipo de letra del texto (ver Letras.ts). */
+  letra = 'normal';
   alinear: 'izquierda' | 'centro' | 'derecha' = 'centro';
   /**
    * Texto con huecos ("Puntos: {juego.puntos}"): se recalcula cada vez que se
@@ -224,8 +226,9 @@ export class Sprite extends Componente {
           color: esTexto ? this.color : this.colorTexto,
           tamano,
           alinear: esTexto ? this.alinear : 'centro',
-          negrita: true,
+          negrita: this.letra !== 'titulo' && this.letra !== 'pixel',
           sombra: true,
+          letra: this.letra,
           vertical: 'medio',
         }),
       );

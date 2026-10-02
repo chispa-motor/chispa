@@ -112,7 +112,12 @@ const ESTRELLA = Array.from({ length: 10 }, (_, i) => {
 
 export class Particulas {
   private lista: Particula[] = [];
-  /** Para las pruebas: la función de azar (cambia con escena.semilla para que se repita igual). */
+  /**
+   * El azar de las partículas es SIEMPRE el de verdad, aunque el juego tenga
+   * semilla(): lo que solo se ve no debe gastar números de la semilla (si no,
+   * el «nivel del día» cambiaría según cuántas chispas hubiera en pantalla).
+   * Las pruebas la cambian para que se repita.
+   */
   azar: () => number = Math.random;
 
   get cantidad(): number {

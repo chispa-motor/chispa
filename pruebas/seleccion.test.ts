@@ -233,6 +233,7 @@ describe('Deshacer y rehacer: TODO lo que cambia el proyecto', () => {
     e.crearAnimacion('andar', ['foto']);
     e.crearEscena('Nivel2');
     e.cambiarEscenaActual('Principal');
+    e.agregarLetra('MiLetra.ttf', 'data:font/ttf;base64,AAEAAAAAAAAAAAAA');
     e.guardarEfecto('magia', { cantidad: 10, colores: ['rosa'], velocidad: 100, vida: 1, tamano: 5, gravedad: 0, dispersion: 360, direccion: 90, encoger: true });
     e.seleccionarVarios([0, 2]);
     e.copiarSeleccionado();
@@ -297,6 +298,8 @@ describe('Deshacer y rehacer: TODO lo que cambia el proyecto', () => {
     insertarDeBiblioteca: (e) => e.insertarDeBiblioteca('nave', 0, 0),
     guardarEfecto: (e) => e.guardarEfecto('aura', { cantidad: 10, colores: ['rosa'], velocidad: 100, vida: 1, tamano: 5, gravedad: 0, dispersion: 360, direccion: 90, encoger: true }),
     borrarEfecto: (e) => e.borrarEfecto('magia'),
+    agregarLetra: (e) => e.agregarLetra('Comica.ttf', 'data:font/ttf;base64,AAEAAAAAAAAAAAAA'),
+    borrarLetra: (e) => e.borrarLetra('MiLetra'),
   };
 
   for (const [nombre, cambio] of Object.entries(cambios)) {

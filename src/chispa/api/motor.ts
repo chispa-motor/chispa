@@ -38,7 +38,10 @@ import { TIPOS_PARTICULAS, type ConfigParticulas } from '../../objetos/Particula
 import { deserializar, serializar } from './guardado';
 import { crearModuloEfecto } from './efectos';
 import { FILTROS_NORMALES } from '../../motor/Filtros';
-import { TRANSICIONES, type Transicion } from '../../objetos/Escena';
+import { letrasDisponibles } from '../../motor/Letras';
+import { DIVISIONES, MAXIMO_CAMARAS, TRANSICIONES, type Division, type Transicion } from '../../objetos/Escena';
+import type { Camara } from '../../objetos/Camara';
+import { crearModuloJunta } from './juntas';
 import { Tabla } from '../ejecucion/valores';
 import { lanzarRayo } from '../../objetos/Rayos';
 import { CajaDialogo } from '../../objetos/Dialogo';
@@ -462,9 +465,9 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
   );
 
   // ── escena (+ escena.camara) ──
-  const cam = () => ctx.escena.camara;
-  const camara = new Modulo(
-    'escena.camara',
+  /** El módulo de una cámara: la principal (escena.camara) o la de un trozo de la pantalla dividida (escena.camaraDe(2)). */
+  const moduloCamara = (nombre: string, cam: () => Camara) => new Modulo(
+    nombre,
     {
       x: { obtener: () => cam().posicion.x, asignar: (v, p) => (cam().posicion.x = comoNumero(v, 'x', p)) },
       y: { obtener: () => cam().posicion.y, asignar: (v, p) => (cam().posicion.y = comoNumero(v, 'y', p)) },
@@ -480,7 +483,7 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
     },
     {
       seguir: (a, p) => {
-        cam().seguir(a[0] === null ? null : argObjeto(a, 0, 'escena.camara.seguir', p, 'escena.camara.seguir(yo)'));
+        cam().seguir(a[0] === null ? null : argObjeto(a, 0, `${nombre}.seguir`, p, 'escena.camara.seguir(yo)'));
         return null;
       },
       limites: (a, p) => {
@@ -490,25 +493,31 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
           return null;
         }
         if (a.length === 1 && a[0] instanceof RefObjeto) {
-          const o = argObjeto(a, 0, 'escena.camara.limites', p, 'escena.camara.limites(buscar("Mapa"))');
+          const o = argObjeto(a, 0, `${nombre}.limites`, p, 'escena.camara.limites(buscar("Mapa"))');
           const l = o.obtener(MapaCasillas)?.limites() ?? ctx.escena.cajaDe(o);
           if (!l) throw new ErrorChispa(p, `'${o.nombre}' no ocupa ninguna zona (no tiene casillas pintadas ni tamaño).`, 'Pinta casillas en el mapa, o usa números: escena.camara.limites(0, 0, 3000, 540)');
           cam().limites = { ...l };
           return null;
         }
         const ej = 'escena.camara.limites(0, 0, 3000, 540)';
-        const n = (i: number) => argNumero(a, i, 'escena.camara.limites', p, ej);
+        const n = (i: number) => argNumero(a, i, `${nombre}.limites`, p, ej);
         cam().limites = { izquierda: n(0), abajo: n(1), derecha: n(2), arriba: n(3) };
         return null;
       },
       temblar: (a, p) => {
         const ej = 'escena.camara.temblar(8, 0.3)';
-        cam().temblar(argNumero(a, 0, 'escena.camara.temblar', p, ej, 8), argNumero(a, 1, 'escena.camara.temblar', p, ej, 0.3));
+        cam().temblar(argNumero(a, 0, `${nombre}.temblar`, p, ej, 8), argNumero(a, 1, `${nombre}.temblar`, p, ej, 0.3));
         return null;
       },
     },
     ['x', 'y', 'zoom', 'suavizado', 'seguir', 'limites', 'temblar'],
   );
+  const camara = moduloCamara('escena.camara', () => ctx.escena.camara);
+  /** Las cámaras de la pantalla dividida, por su número (se hacen una vez y se reutilizan). */
+  const modulosCamara = [camara, ...[2, 3, 4].map((n) => moduloCamara(`escena.camaraDe(${n})`, () => {
+    // Si ya no existe (la pantalla se ha vuelto a juntar), vale la principal
+    return ctx.escena.camaras[n - 1] ?? ctx.escena.camara;
+  }))];
   g.declarar(
     'escena',
     new Modulo(
@@ -547,6 +556,16 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
           ctx.pedirReinicio();
           return null;
         },
+        camarade: (a, p) => {
+          // escena.camaraDe(2): la cámara del segundo trozo de la pantalla dividida
+          const ej = 'escena.camaraDe(2).seguir(buscar("Jugador2"))';
+          const n = argNumero(a, 0, 'escena.camaraDe', p, ej);
+          const hay = ctx.escena.camaras.length;
+          if (!Number.isInteger(n) || n < 1 || n > hay) {
+            throw new ErrorChispa(p, `no hay cámara ${n}: ${hay === 1 ? 'la pantalla no está dividida, solo hay una cámara' : `hay ${hay} cámaras (de la 1 a la ${hay})`}.`, hay === 1 ? `Primero divide la pantalla: pantalla.dividir(2). Luego: ${ej}` : `Ejemplo: ${ej}`);
+          }
+          return modulosCamara[n - 1];
+        },
         cambiar: (a, p) => {
           const ej = 'escena.cambiar("Nivel2", 1, "circulo")';
           const segundos = Math.max(0, argNumero(a, 1, 'escena.cambiar', p, ej, 0));
@@ -565,7 +584,7 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
           return null;
         },
       },
-      ['objetos', 'nombre', 'gravedad', 'oscuridad', 'luzAmbiente', 'colorFondo', 'camara', 'reiniciar', 'cambiar'],
+      ['objetos', 'nombre', 'gravedad', 'oscuridad', 'luzAmbiente', 'colorFondo', 'camara', 'camaraDe', 'reiniciar', 'cambiar'],
     ).agregarSubmodulo('camara', camara),
   );
 
@@ -651,6 +670,9 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
 
   // ── efectos especiales (efectos.ts) ──
   g.declarar('efecto', crearModuloEfecto({ efectos: () => ctx.escena.efectos, aqui, propios: () => ctx.efectosPropios?.() ?? {} }));
+
+  // ── juntas: cuerdas, muelles y bisagras (juntas.ts) ──
+  g.declarar('junta', crearModuloJunta({ juntas: () => ctx.escena.juntas, yo: () => (interprete.objetoActual as ObjetoJuego | null) ?? null }));
 
   // ── partículas ──
   funcion('particulas', (a, p) => {
@@ -805,6 +827,21 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
           ctx.escena.destellar(color, segundos);
           return null;
         },
+        dividir: (a, p) => {
+          // pantalla.dividir(2): dos trozos, cada uno con su cámara (escena.camaraDe(2)). pantalla.dividir(1) la deja entera
+          const ej = 'pantalla.dividir(2, "filas")';
+          const n = argNumero(a, 0, 'pantalla.dividir', p, ej, 2);
+          if (!Number.isInteger(n) || n < 1 || n > MAXIMO_CAMARAS) throw new ErrorChispa(p, `la pantalla se puede dividir en 2, 3 o 4 trozos (1 = entera), y le das ${n}.`, `Ejemplo: ${ej}`);
+          let division: Division = 'columnas';
+          if (a[1] !== undefined) {
+            const d = normalizar(argTexto(a, 1, 'pantalla.dividir', p, ej));
+            const ok = DIVISIONES.find((x) => x === d);
+            if (!ok) throw new ErrorChispa(p, `la pantalla se divide en "columnas" (lado a lado) o en "filas" (una encima de otra), no en "${aTexto(a[1])}".`, `Ejemplo: ${ej}`);
+            division = ok;
+          }
+          ctx.escena.dividir(n, division);
+          return null;
+        },
         normal: () => {
           // Quita todos los filtros de pantalla
           ctx.escena.filtros = { ...FILTROS_NORMALES };
@@ -826,7 +863,7 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
           return null;
         },
       },
-      ['ancho', 'alto', 'completa', 'oscurecer', 'aclarar', 'flash', 'normal', 'grises', 'desenfoque', 'pixelado', 'brillo', 'vineta', 'aberracion', 'crt', 'bloom'],
+      ['ancho', 'alto', 'completa', 'dividir', 'oscurecer', 'aclarar', 'flash', 'normal', 'grises', 'desenfoque', 'pixelado', 'brillo', 'vineta', 'aberracion', 'crt', 'bloom'],
     ),
   );
 
@@ -862,7 +899,37 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
       texto: (a, p) => {
         const ej = `${m}.texto("aqui", yo.x, yo.y + 40, "blanco")`;
         const n = (i: number) => argNumero(a, i, `${m}.texto`, p, ej);
-        return dibujo({ tipo: 'texto', texto: aTexto(a[0] ?? null), x: n(1), y: n(2), color: colorDe(a, 3, `${m}.texto`, p, ej), tamano: argNumero(a, 4, `${m}.texto`, p, ej, 16) });
+        // El sexto valor, el tipo de letra: dibujar.texto("FIN", 400, 300, "blanco", 40, "pixel")
+        let letra: string | undefined;
+        if (a[5] !== undefined) {
+          const pedida = argTexto(a, 5, `${m}.texto`, p, `${m}.texto("FIN", 400, 300, "blanco", 40, "pixel")`);
+          const hay = letrasDisponibles();
+          letra = hay.find((l) => normalizar(l) === normalizar(pedida));
+          if (!letra) {
+            const parecida = sugerir(pedida, hay);
+            throw new ErrorChispa(p, `no hay ningún tipo de letra llamado "${pedida}".`, parecida ? `¿Querías decir "${parecida}"?` : `Las letras son: ${hay.join(', ')}.`);
+          }
+        }
+        return dibujo({ tipo: 'texto', texto: aTexto(a[0] ?? null), x: n(1), y: n(2), color: colorDe(a, 3, `${m}.texto`, p, ej), tamano: argNumero(a, 4, `${m}.texto`, p, ej, 16), letra });
+      },
+      elipse: (a, p) => {
+        // Un círculo aplastado: (x, y) es el centro; ancho y alto, lo que mide entera
+        const ej = `${m}.elipse(yo.x, yo.y, 120, 60, "verde")`;
+        const n = (i: number) => argNumero(a, i, `${m}.elipse`, p, ej);
+        return dibujo({ tipo: 'elipse', x: n(0), y: n(1), ancho: n(2), alto: n(3), color: colorDe(a, 4, `${m}.elipse`, p, ej), relleno: a[5] === true });
+      },
+      poligono: (a, p) => {
+        // Una forma con los puntos que quieras (una lista de vectores); se cierra sola
+        const ej = `${m}.poligono([vector(100, 100), vector(200, 100), vector(150, 180)], "amarillo")`;
+        const lista = a[0];
+        if (!Array.isArray(lista)) throw new ErrorChispa(p, `'${m}.poligono' necesita una lista de puntos, pero le das ${lista === undefined ? 'nada' : nombreTipo(lista)}.`, `Los puntos van en UNA lista, entre corchetes. Ejemplo: ${ej}`);
+        if (lista.length < 3) throw new ErrorChispa(p, `un polígono necesita 3 puntos o más, y le das ${lista.length}.`, `Ejemplo: ${ej}`);
+        if (lista.length > 500) throw new ErrorChispa(p, `un polígono puede tener 500 puntos como mucho, y le das ${lista.length}.`);
+        const puntos = lista.map((v, i) => {
+          if (!(v instanceof Vector2)) throw new ErrorChispa(p, `el punto ${i + 1} del polígono no es un vector: es ${nombreTipo(v)}.`, `Cada punto se escribe vector(x, y). Ejemplo: ${ej}`);
+          return { x: v.x, y: v.y };
+        });
+        return dibujo({ tipo: 'poligono', puntos, color: colorDe(a, 1, `${m}.poligono`, p, ej), relleno: a[2] === true, grosor: argNumero(a, 3, `${m}.poligono`, p, ej, 2) });
       },
       arco: (a, p) => {
         // Un trozo de círculo, de un ángulo a otro (0 = derecha, 90 = arriba). Relleno = un "quesito" (para enfriamientos y barras redondas)
@@ -872,7 +939,7 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
       },
     };
   };
-  const NOMBRES_DIBUJAR = ['linea', 'circulo', 'rectangulo', 'texto', 'arco'];
+  const NOMBRES_DIBUJAR = ['linea', 'circulo', 'rectangulo', 'elipse', 'poligono', 'texto', 'arco'];
   g.declarar(
     'dibujar',
     new Modulo('dibujar', {}, metodosDibujar(false), [...NOMBRES_DIBUJAR, 'enPantalla']).agregarSubmodulo(

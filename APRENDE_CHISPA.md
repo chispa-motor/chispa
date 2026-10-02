@@ -2,7 +2,7 @@
 
 > Este archivo se genera solo con `npm run manual`, a partir de la API de verdad (no lo cambies a mano: cambia `src/chispa/api/curso.ts`). Un test ejecuta cada ejemplo, cada ejercicio y cada mini proyecto para comprobar que funcionan.
 
-Un curso por niveles para aprender a programar juegos con Chispa, aunque no hayas programado nunca. Salen **todos** los comandos que existen (356), cada uno con qué hace, un ejemplo corto que funciona y el error que más se comete con él.
+Un curso por niveles para aprender a programar juegos con Chispa, aunque no hayas programado nunca. Salen **todos** los comandos que existen (369), cada uno con qué hace, un ejemplo corto que funciona y el error que más se comete con él.
 
 **Cómo usarlo:**
 
@@ -46,6 +46,7 @@ Una regla para todo el curso: en el código **no hacen falta tildes**. Se escrib
   - [Efectos especiales](#efectos-especiales)
   - [Efectos de pantalla y de objeto](#efectos-de-pantalla-y-de-objeto)
   - [Luces y oscuridad](#luces-y-oscuridad)
+  - [Letras, dibujo y azar que se repite](#letras-dibujo-y-azar-que-se-repite)
 - [Nivel 4: Avanzado](#nivel-4-avanzado)
   - [Mensajes entre objetos y datos globales](#mensajes-entre-objetos-y-datos-globales)
   - [Ir a sitios esquivando paredes](#ir-a-sitios-esquivando-paredes)
@@ -54,6 +55,8 @@ Una regla para todo el curso: en el código **no hacen falta tildes**. Se escrib
   - [Efectos: fundidos, sonidos y cámara lenta](#efectos-fundidos-sonidos-y-camara-lenta)
   - [Mando, móvil y web](#mando-movil-y-web)
   - [Guardar datos](#guardar-datos)
+  - [Juntas: cuerdas, muelles y bisagras](#juntas-cuerdas-muelles-y-bisagras)
+  - [Pantalla dividida y varias cámaras](#pantalla-dividida-y-varias-camaras)
   - [Depurar: encontrar los fallos](#depurar-encontrar-los-fallos)
 - [Soluciones de los ejercicios](#soluciones)
 
@@ -3575,7 +3578,7 @@ cuando cada fotograma:
     dibujar.rectangulo(yo.x, yo.y, 64)
 ```
 
-#### `dibujar.texto(texto, x, y, color, tamano)`
+#### `dibujar.texto(texto, x, y, color, tamano, letra)`
 
 Un texto en ese sitio del mundo (por ejemplo, encima de un enemigo).
 
@@ -3671,7 +3674,7 @@ cuando cada fotograma:
     dibujar.enPantalla.rectangulo(0, 0, 200, 16, "rojo", verdadero)
 ```
 
-#### `dibujar.enPantalla.texto(texto, x, y, color, tamano)`
+#### `dibujar.enPantalla.texto(texto, x, y, color, tamano, letra)`
 
 Un texto en la pantalla.
 
@@ -5650,6 +5653,108 @@ cuando empieza:
     yo.parpadeoLuz = 3
 ```
 
+### Letras, dibujo y azar que se repite
+
+Los textos pueden tener otro tipo de letra (hay 7 listas, y puedes importar las tuyas en Proyecto > Letras). Con dibujar también hay elipses y polígonos. Y con semilla() el azar se repite: para mundos al azar que son iguales para todos.
+
+#### `yo.letra`
+
+El tipo de letra de su texto.
+
+```
+cuando empieza:
+    yo.texto = "FIN"
+    yo.letra = "pixel"
+```
+
+**Error típico:** Escribirla mal: Chispa te dice la parecida ("pixel"). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    yo.letra = "pixels"
+```
+
+#### `dibujar.elipse(x, y, ancho, alto, color, relleno)`
+
+Un círculo aplastado con su centro en (x, y): ancho y alto es lo que mide entera.
+
+```
+cuando cada fotograma:
+    dibujar.elipse(yo.x, yo.y - 30, 80, 20, "negro", verdadero)
+```
+
+**Error típico:** Darle solo un tamaño: una elipse tiene ancho Y alto (con uno solo, usa dibujar.circulo). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando cada fotograma:
+    dibujar.elipse(yo.x, yo.y, 120)
+```
+
+#### `dibujar.poligono(puntos, color, relleno, grosor)`
+
+Una forma con los puntos que quieras: una lista de vectores, en orden (se cierra sola).
+
+```
+cuando cada fotograma:
+    dibujar.poligono([vector(100, 100), vector(200, 100), vector(150, 180)], "amarillo", verdadero)
+```
+
+**Error típico:** Darle solo 2 puntos: eso es una línea. Un polígono necesita 3 o más. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando cada fotograma:
+    dibujar.poligono([vector(100, 100), vector(200, 100)], "amarillo")
+```
+
+#### `dibujar.enPantalla.elipse(x, y, ancho, alto, color, relleno)`
+
+Una elipse en la pantalla, con el centro en (x, y).
+
+```
+cuando cada fotograma:
+    dibujar.enPantalla.elipse(480, 60, 300, 40, "blanco")
+```
+
+**Error típico:** Inventarse un color. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando cada fotograma:
+    dibujar.enPantalla.elipse(480, 60, 300, 40, "blanquito")
+```
+
+#### `dibujar.enPantalla.poligono(puntos, color, relleno, grosor)`
+
+Una forma con los puntos que quieras (una lista de vectores) en la pantalla.
+
+```
+cuando cada fotograma:
+    dibujar.enPantalla.poligono([vector(20, 20), vector(60, 20), vector(40, 55)], "rojo", verdadero)
+```
+
+**Error típico:** Olvidar los corchetes: los puntos van en UNA lista. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando cada fotograma:
+    dibujar.enPantalla.poligono(vector(20, 20), vector(60, 20), vector(40, 55))
+```
+
+#### `semilla(numero)`
+
+Hace que el azar SE REPITA: con la misma semilla, aleatorio(), elegir(), probabilidad() y lista.mezclar() dan siempre lo mismo y en el mismo orden.
+
+```
+cuando empieza:
+    semilla(2026)
+    mostrar(aleatorio(1, 100))
+```
+
+**Error típico:** Darle un texto: la semilla es un número. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    semilla("hoy")
+```
+
 ### Ejercicios del nivel 3
 
 1. **Disparos.** Cada medio segundo, crea una Bala donde está el objeto y dale velocidad hacia la derecha. (Para que no se acumulen, en el editor ponle a la plantilla Bala un script con «cuando salgo de la pantalla: destruir(yo)».)
@@ -6309,6 +6414,130 @@ cuando se pulsa "r":
 ```
 cuando empieza:
     borrarGuardado(record)
+```
+
+### Juntas: cuerdas, muelles y bisagras
+
+Para unir objetos: una cuerda (péndulos, ganchos), un muelle (cosas que botan) o una bisagra (puertas, balancines). El objeto que cuelga necesita Física; el otro extremo puede ser un objeto o un punto: vector(x, y).
+
+#### `junta.cuerda(objeto, otro, largo, color)`
+
+Una cuerda: no deja que se separen más de su largo (si no se dice, lo lejos que están ahora).
+
+```
+cuando empieza:
+    junta.cuerda(yo, vector(yo.x, yo.y + 200))
+```
+
+**Error típico:** Dar el punto con dos números: aquí el punto es un vector(400, 300). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    junta.cuerda(yo, 400, 300)
+```
+
+#### `junta.muelle(objeto, otro, largo, rigidez, color)`
+
+Un muelle: tira hacia su largo, más fuerte cuanto más lejos, y se queda botando.
+
+```
+cuando empieza:
+    junta.muelle(yo, vector(yo.x, yo.y + 150), 100, 60)
+```
+
+**Error típico:** Rigidez 0: un muelle que no tira no es un muelle (lo normal es 60). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    junta.muelle(yo, vector(yo.x, yo.y + 150), 100, 0)
+```
+
+#### `junta.bisagra(objeto, eje, color)`
+
+Una bisagra: el objeto se queda siempre a la misma distancia del eje (un punto u otro objeto) y gira a su alrededor, como una puerta, un péndulo rígido o un balancín.
+
+```
+cuando empieza:
+    junta.bisagra(yo, vector(yo.x, yo.y + 150))
+```
+
+**Error típico:** Unir un objeto consigo mismo: el eje tiene que ser otro objeto o un punto. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    junta.bisagra(yo, yo)
+```
+
+#### `junta.quitar(objeto, otro)`
+
+Suelta las juntas de un objeto: todas, o solo las que lo unen con otro.
+
+```
+cuando empieza:
+    junta.cuerda(yo, vector(yo.x, yo.y + 200))
+
+cuando se pulsa "espacio":
+    junta.quitar(yo)
+```
+
+**Error típico:** Darle el nombre entre comillas: quiere el objeto. Usa junta.quitar(buscar("Bola")). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    junta.quitar("Bola")
+```
+
+#### `junta.visibles`
+
+Si las juntas se dibujan (verdadero, lo normal) o no (falso: para dibujarlas a tu manera).
+
+```
+cuando empieza:
+    junta.visibles = falso
+```
+
+**Error típico:** Darle un texto: es verdadero o falso. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    junta.visibles = "no"
+```
+
+### Pantalla dividida y varias cámaras
+
+Para jugar varios en el mismo ordenador: la pantalla se divide en trozos y cada trozo tiene su cámara, que sigue a un jugador. La interfaz (lo fijo) se dibuja una sola vez, por encima de todo.
+
+#### `pantalla.dividir(cuantas, como)`
+
+Divide la pantalla en 2, 3 o 4 trozos, cada uno con su cámara (escena.camaraDe(2)...): para jugar varios en el mismo ordenador.
+
+```
+cuando empieza:
+    pantalla.dividir(2)
+```
+
+**Error típico:** Pedir demasiados trozos: como mucho son 4. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    pantalla.dividir(8)
+```
+
+#### `escena.camaraDe(numero)`
+
+Con la pantalla dividida (pantalla.dividir), la cámara de ese trozo: la 1 es la de siempre (escena.camara), la 2 la del segundo trozo...
+
+```
+cuando empieza:
+    pantalla.dividir(2)
+    escena.camaraDe(2).seguir(yo)
+```
+
+**Error típico:** Usar la cámara 2 sin dividir la pantalla: primero pantalla.dividir(2). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    escena.camaraDe(2).seguir(yo)
 ```
 
 ### Depurar: encontrar los fallos

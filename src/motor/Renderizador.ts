@@ -31,6 +31,7 @@
  * Rotaciones en GRADOS (más intuitivo que radianes para principiantes).
  */
 import { resolverColor } from './Color';
+import { escalaPixel, familiaCss, textoPixel } from './Letras';
 import { Vector2 } from './Vector2';
 import type { Figura } from '../objetos/formas/figuras';
 
@@ -52,6 +53,8 @@ export interface EstiloTexto {
   sombra?: boolean;
   /** Qué representa la Y: la parte de arriba del texto (por defecto) o su centro. */
   vertical?: 'arriba' | 'medio';
+  /** El tipo de letra: una de las listas ("redonda", "pixel"...) o una del proyecto (ver Letras.ts). */
+  letra?: string;
 }
 
 export interface EstiloImagen {
@@ -221,7 +224,8 @@ export class Renderizador {
   texto(texto: string, x: number, y: number, estilo: EstiloTexto = {}): void {
     const ctx = this.ctx;
     const tamano = estilo.tamano ?? 18;
-    ctx.font = `${estilo.negrita ? 'bold ' : ''}${tamano}px system-ui, "Segoe UI", sans-serif`;
+    if (estilo.letra === 'pixel' && this.textoPixel(texto, x, y, tamano, estilo)) return;
+    ctx.font = `${estilo.negrita ? 'bold ' : ''}${tamano}px ${familiaCss(estilo.letra)}`;
     ctx.fillStyle = resolverColor(estilo.color ?? 'blanco');
     ctx.textAlign = ALINEACIONES[estilo.alinear ?? 'izquierda'];
     ctx.textBaseline = estilo.vertical === 'medio' ? 'middle' : 'top';
@@ -232,6 +236,28 @@ export class Renderizador {
       ctx.restore();
     }
     ctx.fillText(texto, x, y);
+  }
+
+  /** El texto con la letra «pixel» (ver Letras.ts). false si aquí no se puede (se escribe con la letra normal). */
+  private textoPixel(texto: string, x: number, y: number, tamano: number, estilo: EstiloTexto): boolean {
+    const dibujo = textoPixel(texto, resolverColor(estilo.color ?? 'blanco'), !!estilo.negrita);
+    if (!dibujo) return false;
+    const ctx = this.ctx;
+    const k = escalaPixel(tamano);
+    const l = dibujo.lienzo;
+    const ancho = (l.width - dibujo.margen * 2) * k;
+    const alinear = estilo.alinear ?? 'izquierda';
+    const izquierda = Math.round(alinear === 'centro' ? x - ancho / 2 : alinear === 'derecha' ? x - ancho : x) - dibujo.margen * k;
+    const arriba = Math.round(estilo.vertical === 'medio' ? y - dibujo.centro * k : y - dibujo.arriba * k);
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    if (estilo.sombra) {
+      const sombra = textoPixel(texto, 'rgba(0,0,0,0.55)', !!estilo.negrita);
+      if (sombra) ctx.drawImage(sombra.lienzo, izquierda + k, arriba + k, l.width * k, l.height * k);
+    }
+    ctx.drawImage(l, izquierda, arriba, l.width * k, l.height * k);
+    ctx.restore();
+    return true;
   }
 
   /**

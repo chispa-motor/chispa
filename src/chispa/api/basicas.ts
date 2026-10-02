@@ -27,6 +27,7 @@ import type { Interprete } from '../ejecucion/interprete';
 import { FuncionNativa, PeticionEspera, Tabla, aTexto, nombreTipo, type Valor } from '../ejecucion/valores';
 import { Vector2 } from '../../motor/Vector2';
 import { normalizar } from '../../utilidades/texto';
+import { azar, ponerSemilla } from '../../utilidades/azar';
 
 type Nativa = (args: Valor[], pos: Posicion) => Valor | PeticionEspera;
 
@@ -44,6 +45,19 @@ export function instalarBasicas(interprete: Interprete): void {
     const s = argNumero(a, 0, 'esperar', p, 'esperar(1)', 0);
     if (s < 0) throw new ErrorChispa(p, 'no se puede esperar un tiempo negativo.');
     return new PeticionEspera(s);
+  });
+
+  // ── Azar con semilla ──
+  funcion('semilla', (a, p) => {
+    // semilla(1234): desde ahora el azar se repite (los mismos números, en el mismo orden). semilla() vuelve al azar de verdad
+    if (a[0] === undefined || a[0] === null) {
+      ponerSemilla(null);
+      return null;
+    }
+    const n = argNumero(a, 0, 'semilla', p, 'semilla(1234)');
+    if (!Number.isFinite(n)) throw new ErrorChispa(p, 'la semilla tiene que ser un número normal.', 'Ejemplo: semilla(1234)');
+    ponerSemilla(n);
+    return null;
   });
 
   // ── Colores ──
@@ -78,23 +92,23 @@ export function instalarBasicas(interprete: Interprete): void {
   // ── Matemáticas ──
   funcion('aleatorio', (a, p) => {
     // aleatorio() → decimal entre 0 y 1.  aleatorio(1, 6) → entero entre 1 y 6 (los dos incluidos)
-    if (a.length === 0) return Math.random();
+    if (a.length === 0) return azar();
     const min = Math.ceil(argNumero(a, 0, 'aleatorio', p, 'aleatorio(1, 6)'));
     const max = Math.floor(argNumero(a, 1, 'aleatorio', p, 'aleatorio(1, 6)'));
     if (max < min) throw new ErrorChispa(p, `en aleatorio(${min}, ${max}) el primer número es mayor que el segundo.`, 'Ejemplo: aleatorio(1, 6)');
-    return Math.floor(Math.random() * (max - min + 1)) + min;
+    return Math.floor(azar() * (max - min + 1)) + min;
   });
   funcion('elegir', (a, p) => {
     // elegir(["rojo", "verde", "azul"]) → uno al azar
     const lista = a[0];
     if (!Array.isArray(lista)) throw new ErrorChispa(p, `'elegir' necesita una lista, pero le das ${lista === undefined ? 'nada' : nombreTipo(lista)}.`, 'Ejemplo: elegir(["rojo", "verde", "azul"])');
     if (lista.length === 0) throw new ErrorChispa(p, "no se puede elegir nada de una lista vacía.");
-    return lista[Math.floor(Math.random() * lista.length)];
+    return lista[Math.floor(azar() * lista.length)];
   });
   funcion('probabilidad', (a, p) => {
     // probabilidad(30) → verdadero 30 de cada 100 veces
     const porcentaje = argNumero(a, 0, 'probabilidad', p, 'si probabilidad(30):');
-    return Math.random() * 100 < porcentaje;
+    return azar() * 100 < porcentaje;
   });
   funcion('redondear', (a, p) => {
     const decimales = argNumero(a, 1, 'redondear', p, 'redondear(3.14159, 2)', 0);
@@ -125,7 +139,7 @@ export function instalarBasicas(interprete: Interprete): void {
     const min = argNumero(a, 0, 'aleatorioDecimal', p, ej, 0);
     const max = argNumero(a, 1, 'aleatorioDecimal', p, ej, 1);
     if (max < min) throw new ErrorChispa(p, `en aleatorioDecimal(${min}, ${max}) el primer número es mayor que el segundo.`, `Ejemplo: ${ej}`);
-    return min + Math.random() * (max - min);
+    return min + azar() * (max - min);
   });
   funcion('limitar', (a, p) => {
     // limitar(vida, 0, 100): si se pasa de 100 da 100; si baja de 0 da 0

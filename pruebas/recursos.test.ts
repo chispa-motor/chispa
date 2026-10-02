@@ -193,7 +193,7 @@ describe('Importar archivos', () => {
     ]);
     expect(r.imagenes).toEqual(['MiNave']);
     expect(r.sonidos).toEqual(['pum']);
-    expect(r.rechazados).toEqual(['"deberes.txt" no es una imagen ni un sonido', '"trampa.png" no es de verdad una imagen (o está dañado)']);
+    expect(r.rechazados).toEqual(['"deberes.txt" no es una imagen, un sonido ni un tipo de letra', '"trampa.png" no es de verdad una imagen (o está dañado)']);
     // Se guarda con el tipo de verdad, no con el que decía el navegador
     expect(e.proyecto.imagenes.MiNave).toMatch(/^data:image\/png;base64,/);
     const m = resumenImportar(r)!;

@@ -40,6 +40,7 @@ import { sinPrototipo } from '../../utilidades/seguro';
 import { NOMBRES_MEZCLAS, PATRONES, TIPOS_RELLENO } from '../../motor/Estilo';
 import { EFECTOS_CONTINUOS, RECETAS } from '../../objetos/Efectos';
 import { Luz } from '../../objetos/Luces';
+import { letrasDisponibles } from '../../motor/Letras';
 import { NOMBRES_COLORES, esColorValido } from '../../motor/Color';
 import { FORMAS, MAX_LADOS, MAX_PUNTOS_CAMINO, POR_DEFECTO } from '../../objetos/formas/figuras';
 
@@ -303,6 +304,20 @@ const PROPIEDADES: Record<string, PropiedadObjeto> = sinPrototipo({
   colortexto: {
     obtener: (o, p) => necesitaSprite(o, 'colorTexto', p).colorTexto,
     asignar: (o, v, p) => (necesitaSprite(o, 'colorTexto', p).colorTexto = aTexto(v)),
+  },
+  letra: {
+    obtener: (o, p) => necesitaSprite(o, 'letra', p).letra,
+    asignar: (o, v, p) => {
+      const s = necesitaSprite(o, 'letra', p);
+      const pedida = aTexto(v);
+      const hay = letrasDisponibles();
+      const letra = hay.find((l) => normalizar(l) === normalizar(pedida));
+      if (!letra) {
+        const parecida = sugerir(pedida, hay);
+        throw new ErrorChispa(p, `no hay ningún tipo de letra llamado "${pedida}".`, parecida ? `¿Querías decir "${parecida}"?` : `Las letras son: ${hay.join(', ')}. Las tuyas se importan en Proyecto > Letras.`);
+      }
+      s.letra = letra;
+    },
   },
   moviendo: {
     obtener: (o, p) => necesitaRecorrido(o, p).moviendo,
@@ -951,7 +966,7 @@ const METODOS: Record<string, (o: ObjetoJuego, args: Valor[], pos: Posicion) => 
 
 const NOMBRES_BONITOS = [
   'nombre', 'tipo', 'x', 'y', 'posicion', 'rotacion', 'escala', 'velocidad', 'gravedad', 'enSuelo', 'tocaPared', 'tocaTecho',
-  'color', 'visible', 'ancho', 'alto', 'texto', 'tamaño', 'colorTexto', 'imagen', 'opacidad', 'voltear', 'capa', 'fijo',
+  'color', 'visible', 'ancho', 'alto', 'texto', 'tamaño', 'colorTexto', 'letra', 'imagen', 'opacidad', 'voltear', 'capa', 'fijo',
   'solido', 'fantasma', 'rozamiento', 'rebote', 'masa', 'estatico', 'moviendo', 'animacion', 'ratonEncima', 'destruido',
   'saltar', 'mover', 'rotar', 'destruir', 'distanciaA', 'empujar', 'animar', 'pararAnimacion', 'moverHacia', 'mirarA', 'direccionA',
   'moverConFlechas', 'casilla', 'ponerCasilla', 'quitarCasilla', 'casillaEn', 'columnaEn', 'filaEn', 'centroDeCasilla',

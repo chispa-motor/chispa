@@ -58,6 +58,7 @@ import { PeticionParada, type Depurador, type HiloDepurable } from './depurador'
 import { ErrorMotor } from '../../motor/Errores';
 import { Vector2 } from '../../motor/Vector2';
 import { sinPrototipo } from '../../utilidades/seguro';
+import { azar } from '../../utilidades/azar';
 
 /** Lo que devuelve un bloque: nada, o una orden de salir de un bucle o de una función. */
 type Senal = { tipo: 'devolver'; valor: Valor } | { tipo: 'romper' } | { tipo: 'continuar' } | undefined;
@@ -1049,7 +1050,7 @@ export const METODOS_LISTA: Record<string, (lista: Valor[], args: Valor[], pos: 
   ordenar: (l, _a, pos) => (l.sort((x, y) => comparar(x, y, pos)), l),
   mezclar: (l) => {
     for (let i = l.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = Math.floor(azar() * (i + 1));
       [l[i], l[j]] = [l[j], l[i]];
     }
     return l;

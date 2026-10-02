@@ -31,6 +31,10 @@ import type { VistaEscena } from '../escena/VistaEscena';
 import { botonIcono, fondoDeColor, h, icono, rellenar } from '../interfaz/dom';
 import { confirmar, notificar, pedirTexto } from '../interfaz/dialogos';
 import { campoCasilla, campoColor, campoLista, campoNumero, campoTexto, seccion } from './campos';
+import { LETRAS } from '../../motor/Letras';
+
+/** Cómo se llaman las letras listas en el inspector. */
+const NOMBRES_LETRAS: Record<string, string> = { normal: 'Normal', redonda: 'Redonda', clasica: 'Clásica', maquina: 'Máquina de escribir', manuscrita: 'Manuscrita', titulo: 'Título (gruesa)', pixel: 'Píxel' };
 import { tiene } from '../../utilidades/seguro';
 
 export class Inspector {
@@ -257,6 +261,9 @@ export class Inspector {
                   ? campoLista('alinear', 'sprite.alinear', s.alinear ?? 'centro', [['izquierda', 'Izquierda'], ['centro', 'Centro'], ['derecha', 'Derecha']], cambiar('sprite.alinear'))
                   : campoColor('letra', 'sprite.colorTexto', s.colorTexto ?? 'blanco', cambiar('sprite.colorTexto'), 'Color de la letra'),
               )
+            : null,
+          s.forma === 'texto' || s.texto
+            ? campoLista('tipo de letra', 'sprite.letra', s.letra ?? 'normal', [...LETRAS, ...Object.keys(this.estado.proyecto.letras ?? {})].map((l): [string, string] => [l, NOMBRES_LETRAS[l] ?? l]), (v) => cambiar('sprite.letra')(v === 'normal' ? undefined : v))
             : null,
           h('div', { class: 'dos-columnas' },
             campoNumero('capa', 'sprite.capa', s.capa ?? 0, (v) => cambiar('sprite.capa')(v || undefined), { ...largo, ayuda: 'Las capas más altas se dibujan encima' }),

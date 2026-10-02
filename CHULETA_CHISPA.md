@@ -2,7 +2,7 @@
 
 > Se genera sola con `npm run manual` (no la cambies a mano). Un test comprueba que no falta ningún comando y que cada ejemplo funciona.
 
-Todos los comandos de Chispa (356), una línea cada uno, para tenerla abierta mientras programas o imprimirla. Para aprender con calma, el [curso](APRENDE_CHISPA.md).
+Todos los comandos de Chispa (369), una línea cada uno, para tenerla abierta mientras programas o imprimirla. Para aprender con calma, el [curso](APRENDE_CHISPA.md).
 
 En los ejemplos se usan estas variables y esta función, como si ya las tuvieras (y en la escena hay un Jugador y un Mapa de casillas):
 
@@ -332,13 +332,13 @@ Las líneas que terminan en `:` empiezan un bloque: lo de dentro va debajo, con 
 | `dibujar.linea(x1, y1, x2, y2, color, grosor)` | Una línea de un punto a otro. | `dibujar.linea(0, 0, 100, 100, "rojo")` |
 | `dibujar.circulo(x, y, radio, color, relleno)` | Un círculo (solo el borde; con verdadero al final, relleno). | `dibujar.circulo(yo.x, yo.y, 50, "verde")` |
 | `dibujar.rectangulo(x, y, ancho, alto, color, relleno)` | Un rectángulo con su centro en (x, y), como los objetos. | `dibujar.rectangulo(yo.x, yo.y, 64, 64, "azul")` |
-| `dibujar.texto(texto, x, y, color, tamano)` | Un texto en ese sitio del mundo (por ejemplo, encima de un enemigo). | `dibujar.texto("Hola", yo.x, yo.y + 40)` |
+| `dibujar.texto(texto, x, y, color, tamano, letra)` | Un texto en ese sitio del mundo (por ejemplo, encima de un enemigo). | `dibujar.texto("Hola", yo.x, yo.y + 40)` |
 | `dibujar.arco(x, y, radio, desde, hasta, color, relleno, grosor)` | Un trozo de circulo de un angulo a otro, en grados (0 = derecha, 90 = arriba, y se cuenta al reves que las agujas del reloj). | `dibujar.arco(yo.x, yo.y, 30, 90, 180, "blanco", verdadero)` |
 | `dibujar.enPantalla` | Lo mismo, pero en la PANTALLA, como la interfaz: (0, 0) es la esquina de abajo a la izquierda y no se mueve con la camara. | `dibujar.enPantalla.rectangulo(120, 500, 200, 16, "rojo", verdadero)` |
 | `dibujar.enPantalla.linea(x1, y1, x2, y2, color, grosor)` | Una linea en la pantalla. | `dibujar.enPantalla.linea(0, 270, 960, 270, "blanco")` |
 | `dibujar.enPantalla.circulo(x, y, radio, color, relleno)` | Un circulo en la pantalla. | `dibujar.enPantalla.circulo(60, 60, 30, "blanco")` |
 | `dibujar.enPantalla.rectangulo(x, y, ancho, alto, color, relleno)` | Un rectangulo con el centro en (x, y) de la pantalla. | `dibujar.enPantalla.rectangulo(110, 500, 200, 16, "rojo", verdadero)` |
-| `dibujar.enPantalla.texto(texto, x, y, color, tamano)` | Un texto en la pantalla. | `dibujar.enPantalla.texto("Vida", 20, 500, "blanco")` |
+| `dibujar.enPantalla.texto(texto, x, y, color, tamano, letra)` | Un texto en la pantalla. | `dibujar.enPantalla.texto("Vida", 20, 500, "blanco")` |
 | `dibujar.enPantalla.arco(x, y, radio, desde, hasta, color, relleno, grosor)` | Un trozo de circulo en la pantalla (quesito si relleno = verdadero). | `dibujar.enPantalla.arco(60, 60, 30, 90, 270, "gris", verdadero)` |
 | `yo.ponerDelante()` | Se dibuja por encima de todos los demás (cambia su capa). | `yo.ponerDelante()` |
 | `yo.ponerDetras()` | Se dibuja por debajo de todos los demás. | `yo.ponerDetras()` |
@@ -495,6 +495,17 @@ Las líneas que terminan en `:` empiezan un bloque: lo de dentro va debajo, con 
 | `yo.luzConSombras` | Si es verdadero, lo sólido tapa la luz y hace sombra (las paredes de un laberinto). | `yo.luzConSombras = verdadero` |
 | `yo.parpadeoLuz` | La luz tiembla como una llama, de 0 (quieta) a 1 (mucho). | `yo.parpadeoLuz = 0.5` |
 
+### Letras, dibujo y azar que se repite
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `yo.letra` | El tipo de letra de su texto. | `yo.letra = "pixel"` |
+| `dibujar.elipse(x, y, ancho, alto, color, relleno)` | Un círculo aplastado con su centro en (x, y): ancho y alto es lo que mide entera. | `dibujar.elipse(yo.x, yo.y, 120, 60, "verde")` |
+| `dibujar.poligono(puntos, color, relleno, grosor)` | Una forma con los puntos que quieras: una lista de vectores, en orden (se cierra sola). | `dibujar.poligono([vector(0, 0), vector(100, 0), vector(50, 80)], "amarillo")` |
+| `dibujar.enPantalla.elipse(x, y, ancho, alto, color, relleno)` | Una elipse en la pantalla, con el centro en (x, y). | `dibujar.enPantalla.elipse(480, 60, 300, 40, "blanco")` |
+| `dibujar.enPantalla.poligono(puntos, color, relleno, grosor)` | Una forma con los puntos que quieras (una lista de vectores) en la pantalla. | `dibujar.enPantalla.poligono([vector(20, 20), vector(60, 20), vector(40, 55)], "rojo")` |
+| `semilla(numero)` | Hace que el azar SE REPITA: con la misma semilla, aleatorio(), elegir(), probabilidad() y lista.mezclar() dan siempre lo mismo y en el mismo orden. | `semilla(1234)` |
+
 ## Nivel 4: Avanzado
 
 ### Mensajes entre objetos y datos globales
@@ -563,3 +574,20 @@ Las líneas que terminan en `:` empiezan un bloque: lo de dentro va debajo, con 
 | `guardar("clave", valor)` | Guarda un dato del jugador en el navegador (se conserva al cerrar el juego): récords, niveles, opciones... | `guardar("record", puntos)` |
 | `cargar("clave", porDefecto)` | Lee un dato guardado con guardar(). | `variable record = cargar("record", 0)` |
 | `borrarGuardado("clave")` | Borra un dato guardado. | `borrarGuardado("record")` |
+
+### Juntas: cuerdas, muelles y bisagras
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `junta.cuerda(objeto, otro, largo, color)` | Una cuerda: no deja que se separen más de su largo (si no se dice, lo lejos que están ahora). | `junta.cuerda(yo, vector(400, 500), 200)` |
+| `junta.muelle(objeto, otro, largo, rigidez, color)` | Un muelle: tira hacia su largo, más fuerte cuanto más lejos, y se queda botando. | `junta.muelle(yo, vector(400, 500), 120)` |
+| `junta.bisagra(objeto, eje, color)` | Una bisagra: el objeto se queda siempre a la misma distancia del eje (un punto u otro objeto) y gira a su alrededor, como una puerta, un péndulo rígido o un balancín. | `junta.bisagra(yo, vector(400, 300))` |
+| `junta.quitar(objeto, otro)` | Suelta las juntas de un objeto: todas, o solo las que lo unen con otro. | `junta.quitar(yo)` |
+| `junta.visibles` | Si las juntas se dibujan (verdadero, lo normal) o no (falso: para dibujarlas a tu manera). | `junta.visibles = falso` |
+
+### Pantalla dividida y varias cámaras
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `pantalla.dividir(cuantas, como)` | Divide la pantalla en 2, 3 o 4 trozos, cada uno con su cámara (escena.camaraDe(2)...): para jugar varios en el mismo ordenador. | `pantalla.dividir(2, "filas")` |
+| `escena.camaraDe(numero)` | Con la pantalla dividida (pantalla.dividir), la cámara de ese trozo: la 1 es la de siempre (escena.camara), la 2 la del segundo trozo... | `escena.camaraDe(1).seguir(yo)` |

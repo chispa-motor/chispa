@@ -27,6 +27,7 @@
 import { Componente } from './Componente';
 import type { Renderizador } from '../motor/Renderizador';
 import { colorAComponentes, resolverColor } from '../motor/Color';
+import type { Camara } from './Camara';
 import type { Escena } from './Escena';
 import type { ObjetoJuego } from './ObjetoJuego';
 import { Colision, type Caja } from './componentes/Colision';
@@ -219,7 +220,7 @@ let lienzoLuz: HTMLCanvasElement | null = null;
  * Pone la oscuridad y las luces encima del mundo. `aLocal` pasa del mundo a
  * las coordenadas de dibujo de la cámara (ya con el zoom puesto en `ctx`).
  */
-export function dibujarLuces(r: Renderizador, escena: Escena, oscuridad: number, ambiente: string): void {
+export function dibujarLuces(r: Renderizador, escena: Escena, oscuridad: number, ambiente: string, cam: Camara = escena.camara): void {
   if (oscuridad <= 0) return;
   const ctx = r.ctx;
   // A la mitad de resolución: la luz es suave, no hace falta más (y es 4 veces más rápido)
@@ -232,7 +233,6 @@ export function dibujarLuces(r: Renderizador, escena: Escena, oscuridad: number,
   }
   const l = lienzoLuz.getContext('2d');
   if (!l) return;
-  const cam = escena.camara;
   const centro = cam.centroDibujo();
   const aPantalla = (x: number, y: number) => ({ x: (r.ancho / 2 + (x - centro.x) * cam.zoom) / 2, y: (r.alto / 2 - (y - centro.y) * cam.zoom) / 2 });
   const escalaRadio = cam.zoom / 2;
@@ -264,9 +264,9 @@ export function dibujarLuces(r: Renderizador, escena: Escena, oscuridad: number,
     for (const k of cajas) trazarLuz(l, luz, o, cajaComoForma(k), aPantalla, escalaRadio, 'blanco', 0.8);
   }
   ctx.save();
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  // Con la transformación de la pantalla (o del trozo, si está dividida): ocupa justo lo que mide `r`
   ctx.imageSmoothingEnabled = true;
-  ctx.drawImage(lienzoLuz, 0, 0, ctx.canvas.width, ctx.canvas.height);
+  ctx.drawImage(lienzoLuz, 0, 0, r.ancho, r.alto);
   ctx.restore();
 
   // Las luces de color tiñen un poco lo que iluminan
@@ -278,10 +278,9 @@ export function dibujarLuces(r: Renderizador, escena: Escena, oscuridad: number,
     l.globalCompositeOperation = 'lighter';
     for (const { luz, o, forma } of deColor) trazarLuz(l, luz, o, forma, aPantalla, escalaRadio, luz.color);
     ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalCompositeOperation = 'lighter';
     ctx.globalAlpha = 0.35;
-    ctx.drawImage(lienzoLuz, 0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.drawImage(lienzoLuz, 0, 0, r.ancho, r.alto);
     ctx.restore();
   }
 }

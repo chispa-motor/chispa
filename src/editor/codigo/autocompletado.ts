@@ -29,6 +29,7 @@ import { NOMBRES_COLORES } from '../../motor/Color';
 import { TIPOS_PARTICULAS } from '../../objetos/Particulas';
 import { EFECTOS_CONTINUOS, RECETAS } from '../../objetos/Efectos';
 import { FORMAS } from '../../objetos/formas/figuras';
+import { LETRAS } from '../../motor/Letras';
 import { NOMBRES_MEZCLAS, PATRONES, TIPOS_RELLENO } from '../../motor/Estilo';
 
 /** Datos de texto con pocas opciones: lo que se sugiere al escribir yo.forma = "…". */
@@ -111,6 +112,7 @@ function listaParaTexto(antesDeComillas: string, p: DefProyecto): { nombres: str
   // Lo que se escribe en un dato de texto con pocas opciones (yo.forma = "…", yo.mezcla = "…"...)
   for (const [dato, opciones] of OPCIONES_DE_DATOS) if (new RegExp(`\\.${dato}\\s*=$`).test(t)) return { nombres: opciones, tipo: 'constant' };
   if (/\.(colorborde|color2|sombra|resplandor|contorno|colorluz|luzambiente)\s*=$/.test(t)) return { nombres: NOMBRES_COLORES, tipo: 'constant' };
+  if (/\.letra\s*=$/.test(t)) return { nombres: [...LETRAS, ...Object.keys(p.letras ?? {})], tipo: 'constant' };
   if (/\.imagenrelleno\s*=$/.test(t)) return { nombres: Object.keys(p.imagenes), tipo: 'constant' };
   if (/\.efecto\s*=$/.test(t)) return { nombres: [...EFECTOS_CONTINUOS], tipo: 'constant' };
   if (final === 'ponercasilla') return { nombres: tiposDeCasilla(p), tipo: 'constant' };

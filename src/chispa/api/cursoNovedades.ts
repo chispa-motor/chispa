@@ -180,4 +180,36 @@ export function agregarNovedades(tema: Tema, c: Comando): void {
     'cuando empieza:\n    yo.luzConSombras = "si"', 'Darle un texto: es verdadero o falso.');
   c('objeto:parpadeoLuz', 'cuando empieza:\n    yo.luz = verdadero\n    yo.colorLuz = "naranja"\n    yo.parpadeoLuz = 0.5', 'yo.parpadeoLuz = 0.5',
     'cuando empieza:\n    yo.parpadeoLuz = 3', 'Pasarse: va de 0 a 1.');
+
+  tema(3, 'Letras, dibujo y azar que se repite', 'Los textos pueden tener otro tipo de letra (hay 7 listas, y puedes importar las tuyas en Proyecto > Letras). Con dibujar también hay elipses y polígonos. Y con semilla() el azar se repite: para mundos al azar que son iguales para todos.');
+  c('objeto:letra', 'cuando empieza:\n    yo.texto = "FIN"\n    yo.letra = "pixel"', 'yo.letra = "pixel"',
+    'cuando empieza:\n    yo.letra = "pixels"', 'Escribirla mal: Chispa te dice la parecida ("pixel").');
+  c('dibujar:elipse', 'cuando cada fotograma:\n    dibujar.elipse(yo.x, yo.y - 30, 80, 20, "negro", verdadero)', 'dibujar.elipse(yo.x, yo.y, 120, 60, "verde")',
+    'cuando cada fotograma:\n    dibujar.elipse(yo.x, yo.y, 120)', 'Darle solo un tamaño: una elipse tiene ancho Y alto (con uno solo, usa dibujar.circulo).');
+  c('dibujar:poligono', 'cuando cada fotograma:\n    dibujar.poligono([vector(100, 100), vector(200, 100), vector(150, 180)], "amarillo", verdadero)', 'dibujar.poligono([vector(0, 0), vector(100, 0), vector(50, 80)], "amarillo")',
+    'cuando cada fotograma:\n    dibujar.poligono([vector(100, 100), vector(200, 100)], "amarillo")', 'Darle solo 2 puntos: eso es una línea. Un polígono necesita 3 o más.');
+  c('dibujar.enPantalla:elipse', 'cuando cada fotograma:\n    dibujar.enPantalla.elipse(480, 60, 300, 40, "blanco")', 'dibujar.enPantalla.elipse(480, 60, 300, 40, "blanco")',
+    'cuando cada fotograma:\n    dibujar.enPantalla.elipse(480, 60, 300, 40, "blanquito")', 'Inventarse un color.');
+  c('dibujar.enPantalla:poligono', 'cuando cada fotograma:\n    dibujar.enPantalla.poligono([vector(20, 20), vector(60, 20), vector(40, 55)], "rojo", verdadero)', 'dibujar.enPantalla.poligono([vector(20, 20), vector(60, 20), vector(40, 55)], "rojo")',
+    'cuando cada fotograma:\n    dibujar.enPantalla.poligono(vector(20, 20), vector(60, 20), vector(40, 55))', 'Olvidar los corchetes: los puntos van en UNA lista.');
+  c('funcion:semilla', 'cuando empieza:\n    semilla(2026)\n    mostrar(aleatorio(1, 100))', 'semilla(1234)',
+    'cuando empieza:\n    semilla("hoy")', 'Darle un texto: la semilla es un número.');
+
+  tema(4, 'Juntas: cuerdas, muelles y bisagras', 'Para unir objetos: una cuerda (péndulos, ganchos), un muelle (cosas que botan) o una bisagra (puertas, balancines). El objeto que cuelga necesita Física; el otro extremo puede ser un objeto o un punto: vector(x, y).');
+  c('junta:cuerda', 'cuando empieza:\n    junta.cuerda(yo, vector(yo.x, yo.y + 200))', 'junta.cuerda(yo, vector(400, 500), 200)',
+    'cuando empieza:\n    junta.cuerda(yo, 400, 300)', 'Dar el punto con dos números: aquí el punto es un vector(400, 300).');
+  c('junta:muelle', 'cuando empieza:\n    junta.muelle(yo, vector(yo.x, yo.y + 150), 100, 60)', 'junta.muelle(yo, vector(400, 500), 120)',
+    'cuando empieza:\n    junta.muelle(yo, vector(yo.x, yo.y + 150), 100, 0)', 'Rigidez 0: un muelle que no tira no es un muelle (lo normal es 60).');
+  c('junta:bisagra', 'cuando empieza:\n    junta.bisagra(yo, vector(yo.x, yo.y + 150))', 'junta.bisagra(yo, vector(400, 300))',
+    'cuando empieza:\n    junta.bisagra(yo, yo)', 'Unir un objeto consigo mismo: el eje tiene que ser otro objeto o un punto.');
+  c('junta:quitar', 'cuando empieza:\n    junta.cuerda(yo, vector(yo.x, yo.y + 200))\n\ncuando se pulsa "espacio":\n    junta.quitar(yo)', 'junta.quitar(yo)',
+    'cuando empieza:\n    junta.quitar("Bola")', 'Darle el nombre entre comillas: quiere el objeto. Usa junta.quitar(buscar("Bola")).');
+  c('junta:visibles', 'cuando empieza:\n    junta.visibles = falso', 'junta.visibles = falso',
+    'cuando empieza:\n    junta.visibles = "no"', 'Darle un texto: es verdadero o falso.');
+
+  tema(4, 'Pantalla dividida y varias cámaras', 'Para jugar varios en el mismo ordenador: la pantalla se divide en trozos y cada trozo tiene su cámara, que sigue a un jugador. La interfaz (lo fijo) se dibuja una sola vez, por encima de todo.');
+  c('pantalla:dividir', 'cuando empieza:\n    pantalla.dividir(2)', 'pantalla.dividir(2, "filas")',
+    'cuando empieza:\n    pantalla.dividir(8)', 'Pedir demasiados trozos: como mucho son 4.');
+  c('escena:camaraDe', 'cuando empieza:\n    pantalla.dividir(2)\n    escena.camaraDe(2).seguir(yo)', 'escena.camaraDe(1).seguir(yo)',
+    'cuando empieza:\n    escena.camaraDe(2).seguir(yo)', 'Usar la cámara 2 sin dividir la pantalla: primero pantalla.dividir(2).');
 }

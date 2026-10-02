@@ -44,6 +44,8 @@ import { Comportamiento } from '../objetos/componentes/Comportamiento';
 import { Sprite } from '../objetos/componentes/Sprite';
 import { RECETAS } from '../objetos/Efectos';
 import { Luz } from '../objetos/Luces';
+import { ponerSemilla } from '../utilidades/azar';
+import { cargarLetra, declararLetras, olvidarLetras } from '../motor/Letras';
 import type { ConfigParticulas } from '../objetos/Particulas';
 import { normalizar } from '../utilidades/texto';
 import { migrarProyecto, tipoPorNombre, type DefObjeto, type DefProyecto } from './formato';
@@ -136,6 +138,8 @@ export class JuegoEnMarcha implements ContextoJuego {
     const p = migrarProyecto(datos);
     await motor.recursos.cargarImagenes(p.imagenes);
     await Promise.all(Object.entries(p.sonidos).map(([n, r]) => motor.sonido.cargar(n, r)));
+    olvidarLetras(Object.keys(p.letras ?? {}));
+    await Promise.all(Object.entries(p.letras ?? {}).map(([n, r]) => cargarLetra(n, r)));
   }
 
   /** Carga los recursos, revisa el código, monta la escena inicial y arranca el bucle. */
@@ -152,6 +156,9 @@ export class JuegoEnMarcha implements ContextoJuego {
    */
   static preparar(motor: Motor, datos: unknown, opciones: OpcionesJuego = {}): JuegoEnMarcha {
     const proyecto = migrarProyecto(datos);
+    // Cada partida empieza con azar de verdad (la semilla de la anterior no se queda)
+    ponerSemilla(null);
+    declararLetras(Object.keys(proyecto.letras ?? {}));
     const juego = new JuegoEnMarcha(motor, proyecto, opciones);
     // Revisamos TODOS los scripts al principio: así los errores salen todos
     // a la vez nada más pulsar Ejecutar, y no a los 5 minutos de partida.
@@ -356,7 +363,7 @@ export class JuegoEnMarcha implements ContextoJuego {
     const s = o.obtener(Sprite);
     const sc = copia.obtener(Sprite);
     if (s && sc) {
-      for (const k of ['imagen', 'forma', 'color', 'ancho', 'alto', 'visible', 'opacidad', 'voltearX', 'voltearY', 'capa', 'tamano', 'colorTexto', 'alinear'] as const) (sc as unknown as Record<string, unknown>)[k] = s[k];
+      for (const k of ['imagen', 'forma', 'color', 'ancho', 'alto', 'visible', 'opacidad', 'voltearX', 'voltearY', 'capa', 'tamano', 'colorTexto', 'alinear', 'letra'] as const) (sc as unknown as Record<string, unknown>)[k] = s[k];
       if (!s.textoVivo) sc.texto = s.texto;
     }
     for (const [k, v] of o.propiedades) copia.propiedades.set(k, typeof v === 'object' && v ? { ...(v as object) } : v);

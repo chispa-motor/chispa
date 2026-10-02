@@ -32,7 +32,8 @@ import type { DefAnimacion } from '../../objetos/componentes/Animador';
 import type { TipoCasilla } from '../../objetos/componentes/MapaCasillas';
 import { normalizar, quitarTildes } from '../../utilidades/texto';
 import { esNombreProhibido, tiene } from '../../utilidades/seguro';
-import { problemaDataURL, type TipoRecurso as TipoRecursoArchivo } from '../../proyecto/archivos';
+import { problemaDataURL, problemaLetra, type TipoRecurso as TipoRecursoArchivo } from '../../proyecto/archivos';
+import { LETRAS, MAXIMO_LETRAS } from '../../motor/Letras';
 import { ErrorMotor } from '../../motor/Errores';
 import { esColorValido } from '../../motor/Color';
 
@@ -1095,6 +1096,30 @@ export class EstadoEditor {
 
   borrarSonido(nombre: string): void {
     this.cambiar('recursos', () => delete this.proyecto.sonidos[nombre]);
+  }
+
+  /** Añade un tipo de letra (.ttf, .otf, .woff, .woff2, como "data URL"). Devuelve el nombre final. */
+  agregarLetra(nombre: string, datos: string): string {
+    const problema = problemaLetra(datos);
+    if (problema) throw new ErrorMotor(`No se puede añadir «${nombre}»: ${problema}.`);
+    const hay = Object.keys(this.proyecto.letras ?? {});
+    if (hay.length >= MAXIMO_LETRAS) throw new ErrorMotor(`No se puede añadir «${nombre}»: un proyecto puede llevar ${MAXIMO_LETRAS} tipos de letra como mucho.`);
+    // Que no se llame como una de las letras listas (redonda, pixel...)
+    const final = this.nombreLibre(nombreDeRecurso(nombre), [...hay, ...LETRAS]);
+    this.cambiar('recursos', () => ((this.proyecto.letras ??= {})[final] = datos));
+    return final;
+  }
+
+  /** Borra un tipo de letra; los textos que lo usaban vuelven a la letra normal. */
+  borrarLetra(nombre: string): void {
+    this.cambiar('recursos', () => {
+      if (this.proyecto.letras) {
+        delete this.proyecto.letras[nombre];
+        if (!Object.keys(this.proyecto.letras).length) delete this.proyecto.letras;
+      }
+      for (const o of this.todosLosObjetos()) if (o.sprite?.letra === nombre) delete o.sprite.letra;
+    });
+    this.avisar('escena');
   }
 
   crearAnimacion(nombre: string, fotogramas: string[] = []): string {

@@ -32,6 +32,7 @@ import { ObjetoJuego } from './ObjetoJuego';
 import type { Particulas } from './Particulas';
 import { Efectos } from './Efectos';
 import { dibujarLuces } from './Luces';
+import { Juntas } from './Juntas';
 import { FILTROS_NORMALES, dibujarConFiltros, hayFiltros, type Filtros } from '../motor/Filtros';
 
 /** Cómo se tapa la pantalla al cambiar de escena. */
@@ -52,7 +53,11 @@ export type DibujoDepuracion = (
   | { tipo: 'linea'; x1: number; y1: number; x2: number; y2: number; color: string; grosor: number }
   | { tipo: 'circulo'; x: number; y: number; radio: number; color: string; relleno: boolean }
   | { tipo: 'rectangulo'; x: number; y: number; ancho: number; alto: number; color: string; relleno: boolean }
-  | { tipo: 'texto'; texto: string; x: number; y: number; color: string; tamano: number }
+  | { tipo: 'texto'; texto: string; x: number; y: number; color: string; tamano: number; letra?: string }
+  /** (x, y) es el centro; ancho y alto, lo que mide entera. */
+  | { tipo: 'elipse'; x: number; y: number; ancho: number; alto: number; color: string; relleno: boolean }
+  /** Los puntos, en orden; se cierra sola (del último al primero). */
+  | { tipo: 'poligono'; puntos: { x: number; y: number }[]; color: string; relleno: boolean; grosor: number }
   /** Ángulos en grados, como en matemáticas: 0 = derecha, 90 = arriba. */
   | { tipo: 'arco'; x: number; y: number; radio: number; desde: number; hasta: number; color: string; relleno: boolean; grosor: number }
 ) & {
@@ -60,9 +65,30 @@ export type DibujoDepuracion = (
   fijo?: boolean;
 };
 
+/** Cómo se reparte la pantalla dividida: en columnas (lado a lado) o en filas (una encima de otra). */
+export const DIVISIONES = ['columnas', 'filas'] as const;
+export type Division = (typeof DIVISIONES)[number];
+/** Como mucho, estas cámaras (una por jugador). */
+export const MAXIMO_CAMARAS = 4;
+
+/** El trozo de pantalla de una cámara (en píxeles del juego, con la Y hacia abajo). */
+export interface Vista {
+  camara: Camara;
+  x: number;
+  y: number;
+  ancho: number;
+  alto: number;
+}
+
 export class Escena implements EscenaActiva {
   objetos: ObjetoJuego[] = [];
+  /** La cámara principal (la única, si la pantalla no está dividida). */
   readonly camara: Camara;
+  /** Todas las cámaras: con la pantalla dividida hay una por trozo (la primera es la principal). */
+  camaras: Camara[];
+  division: Division = 'columnas';
+  /** Las cuerdas, muelles y bisagras que unen objetos. */
+  readonly juntas = new Juntas();
   /** Efectos especiales: partículas, emisores (fuego, lluvia...), rayos, ondas, destellos y números de daño. */
   readonly efectos = new Efectos();
   /** Las partículas de los efectos (particulas("explosion", x, y)). */
@@ -99,6 +125,74 @@ export class Escena implements EscenaActiva {
 
   constructor(readonly motor: Motor) {
     this.camara = new Camara(motor.renderizador.ancho, motor.renderizador.alto);
+    this.camaras = [this.camara];
+  }
+
+  // ───────────────────────── Pantalla dividida ─────────────────────────
+
+  /**
+   * Divide la pantalla en 1 a 4 trozos, cada uno con su cámara. Con 2, lado a
+   * lado ("columnas") o una encima de otra ("filas"); con 3, dos arriba y una
+   * abajo; con 4, una en cada esquina. Las cámaras nuevas empiezan como la principal.
+   */
+  dividir(cuantas: number, division: Division = 'columnas'): void {
+    const n = Math.max(1, Math.min(MAXIMO_CAMARAS, Math.floor(cuantas)));
+    this.division = division;
+    while (this.camaras.length > n) this.camaras.pop();
+    while (this.camaras.length < n) {
+      const c = new Camara(this.camara.anchoPantalla, this.camara.altoPantalla);
+      c.posicion = this.camara.posicion.copiar();
+      c.suavizado = this.camara.suavizado;
+      c.limites = this.camara.limites ? { ...this.camara.limites } : null;
+      c.zoom = this.camara.zoom;
+      this.camaras.push(c);
+    }
+    // Cada cámara sabe el tamaño de su trozo (para centrar y para no salirse de sus límites)
+    for (const v of this.vistas()) {
+      v.camara.anchoPantalla = v.ancho;
+      v.camara.altoPantalla = v.alto;
+      v.camara.zoom = v.camara.zoom; // vuelve a aplicar los límites con el tamaño nuevo
+    }
+  }
+
+  /** El trozo de pantalla de cada cámara. */
+  vistas(): Vista[] {
+    const W = this.motor.renderizador.ancho;
+    const H = this.motor.renderizador.alto;
+    const c = this.camaras;
+    if (c.length <= 1) return [{ camara: c[0], x: 0, y: 0, ancho: W, alto: H }];
+    if (c.length === 2) {
+      return this.division === 'filas'
+        ? [{ camara: c[0], x: 0, y: 0, ancho: W, alto: H / 2 }, { camara: c[1], x: 0, y: H / 2, ancho: W, alto: H / 2 }]
+        : [{ camara: c[0], x: 0, y: 0, ancho: W / 2, alto: H }, { camara: c[1], x: W / 2, y: 0, ancho: W / 2, alto: H }];
+    }
+    const vistas: Vista[] = [
+      { camara: c[0], x: 0, y: 0, ancho: W / 2, alto: H / 2 },
+      { camara: c[1], x: W / 2, y: 0, ancho: W / 2, alto: H / 2 },
+      // Con 3, la de abajo ocupa todo el ancho
+      { camara: c[2], x: 0, y: H / 2, ancho: c.length === 3 ? W : W / 2, alto: H / 2 },
+    ];
+    if (c.length > 3) vistas.push({ camara: c[3], x: W / 2, y: H / 2, ancho: W / 2, alto: H / 2 });
+    return vistas;
+  }
+
+  /** La vista que hay debajo de un punto de la pantalla (la del ratón). */
+  private vistaEn(p: { x: number; y: number }): Vista {
+    const vistas = this.vistas();
+    return vistas.find((v) => p.x >= v.x && p.x < v.x + v.ancho && p.y >= v.y && p.y < v.y + v.alto) ?? vistas[0];
+  }
+
+  /** Todo lo que se ve del mundo ahora mismo (con varias cámaras, la zona que las abarca a todas). */
+  zonaVisible(): Caja {
+    const z = this.camara.zonaVisible();
+    for (const c of this.camaras.slice(1)) {
+      const o = c.zonaVisible();
+      z.izquierda = Math.min(z.izquierda, o.izquierda);
+      z.derecha = Math.max(z.derecha, o.derecha);
+      z.abajo = Math.min(z.abajo, o.abajo);
+      z.arriba = Math.max(z.arriba, o.arriba);
+    }
+    return z;
   }
 
   /** Crea un objeto vacío (solo con Transformación) y lo añade. */
@@ -137,7 +231,11 @@ export class Escena implements EscenaActiva {
 
   /** Posición del ratón en el MUNDO (teniendo en cuenta la cámara y el zoom). */
   ratonEnMundo(): Vector2 {
-    return this.camara.pantallaAMundo(this.motor.entrada.posicionRaton);
+    const p = this.motor.entrada.posicionRaton;
+    if (this.camaras.length === 1) return this.camara.pantallaAMundo(p);
+    // Con la pantalla dividida: el mundo que se ve en el trozo donde está el ratón
+    const v = this.vistaEn(p);
+    return v.camara.pantallaAMundo(new Vector2(p.x - v.x, p.y - v.y));
   }
 
   /** Posición del ratón en la PANTALLA, con la Y hacia arriba (para la interfaz fija). */
@@ -188,11 +286,12 @@ export class Escena implements EscenaActiva {
       for (const c of o.todosLosComponentes) if (c.activo && !o.destruido) c.actualizar?.(dt);
     }
     this.fisica.actualizar(this, dt);
+    this.juntas.actualizar(dt, (o) => this.arrastre?.objeto === o);
     this.animaciones.actualizar(dt);
     this.moverHijos();
     this.seguirArrastre();
-    this.efectos.actualizar(dt, this.camara.zonaVisible());
-    this.camara.actualizar(dt);
+    this.efectos.actualizar(dt, this.zonaVisible());
+    for (const c of this.camaras) c.actualizar(dt);
     this.actualizarFundido(this.motor.tiempo.deltaReal);
     this.quitarDestruidos();
   }
@@ -385,9 +484,48 @@ export class Escena implements EscenaActiva {
     ctx.restore();
   }
 
-  /** El mundo (con la cámara) y la interfaz. */
+  /** El mundo (con cada cámara en su trozo de pantalla) y la interfaz. */
   private dibujarEscena(r: Renderizador): void {
-    const cam = this.camara;
+    const ctx = r.ctx;
+    const vistas = this.vistas();
+    if (vistas.length === 1) this.dibujarMundo(r, this.camara);
+    else {
+      for (const v of vistas) {
+        // Un «renderizador» del tamaño del trozo: todo lo demás (ctx, funciones) es el de verdad
+        const trozo = Object.create(r) as Renderizador;
+        trozo.ancho = v.ancho;
+        trozo.alto = v.alto;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(v.x, v.y, v.ancho, v.alto);
+        ctx.clip();
+        ctx.translate(v.x, v.y);
+        this.dibujarMundo(trozo, v.camara);
+        ctx.restore();
+      }
+      // Las rayas que separan los trozos
+      ctx.fillStyle = '#000000';
+      for (const v of vistas) {
+        if (v.x > 0) ctx.fillRect(v.x - 2, v.y, 4, v.alto);
+        if (v.y > 0) ctx.fillRect(v.x, v.y - 2, v.ancho, 4);
+      }
+    }
+
+    // 2. La interfaz, pegada a la pantalla: (0,0) es la esquina inferior izquierda
+    //    Primero lo dibujado con dibujar.enPantalla (barras, iconos...) y encima los objetos
+    //    de la interfaz: así un texto o un panel de pausa siempre se ven por encima.
+    const interfaz: Sprite[] = [];
+    for (const o of this.objetos) {
+      const s = o.destruido ? undefined : o.obtener(Sprite);
+      if (s?.fijo && s.activo && s.visible) interfaz.push(s);
+    }
+    this.dibujarDepuracion(r, (x, y) => ({ x, y: r.alto - y }), true);
+    interfaz.sort((a, b) => a.capa - b.capa);
+    for (const s of interfaz) s.dibujarEn(r, s.objeto.posicion.x, r.alto - s.objeto.posicion.y);
+  }
+
+  /** El mundo visto por una cámara. `r` mide lo que mide su trozo de pantalla. */
+  private dibujarMundo(r: Renderizador, cam: Camara): void {
     const ctx = r.ctx;
     const visible = cam.zonaVisible();
     const margen = 64 / cam.zoom;
@@ -395,7 +533,6 @@ export class Escena implements EscenaActiva {
 
     // Qué se dibuja, ordenado por capa (sort es "estable": a igual capa, se respeta el orden de creación)
     const mundo: { capa: number; dibujar: () => void }[] = [];
-    const interfaz: Sprite[] = [];
     // Dentro de la transformación de la cámara, un punto del mundo se dibuja en (x - centroX, centroY - y)
     const aLocal = (x: number, y: number) => ({ x: x - centro.x, y: centro.y - y });
 
@@ -404,11 +541,7 @@ export class Escena implements EscenaActiva {
       const mapa = o.obtener(MapaCasillas);
       if (mapa?.activo) mundo.push({ capa: mapa.capa, dibujar: () => mapa.dibujarVisibles(r, visible, aLocal) });
       const s = o.obtener(Sprite);
-      if (!s || !s.activo || !s.visible) continue;
-      if (s.fijo) {
-        interfaz.push(s);
-        continue;
-      }
+      if (!s || !s.activo || !s.visible || s.fijo) continue;
       const p = o.posicion;
       const radio = Math.max(s.anchoFinal, s.altoFinal);
       if (p.x + radio < visible.izquierda - margen || p.x - radio > visible.derecha + margen) continue;
@@ -425,6 +558,7 @@ export class Escena implements EscenaActiva {
     ctx.translate(r.ancho / 2, r.alto / 2);
     ctx.scale(cam.zoom, cam.zoom);
     for (const m of mundo) m.dibujar();
+    this.juntas.dibujar(r, aLocal);
     const conLuces = this.oscuridad > 0;
     this.efectos.dibujar(r, aLocal, conLuces ? 'normal' : 'todo');
     if (!conLuces) this.dibujarDepuracion(r, aLocal, false);
@@ -432,7 +566,7 @@ export class Escena implements EscenaActiva {
 
     // 1b. La oscuridad y las luces, encima del mundo. Lo que da luz (fuego, chispas, rayos) va encima de la oscuridad
     if (conLuces) {
-      dibujarLuces(r, this, this.oscuridad, this.luzAmbiente);
+      dibujarLuces(r, this, this.oscuridad, this.luzAmbiente, cam);
       ctx.save();
       ctx.translate(r.ancho / 2, r.alto / 2);
       ctx.scale(cam.zoom, cam.zoom);
@@ -440,13 +574,6 @@ export class Escena implements EscenaActiva {
       this.dibujarDepuracion(r, aLocal, false);
       ctx.restore();
     }
-
-    // 2. La interfaz, pegada a la pantalla: (0,0) es la esquina inferior izquierda
-    //    Primero lo dibujado con dibujar.enPantalla (barras, iconos...) y encima los objetos
-    //    de la interfaz: así un texto o un panel de pausa siempre se ven por encima.
-    this.dibujarDepuracion(r, (x, y) => ({ x, y: r.alto - y }), true);
-    interfaz.sort((a, b) => a.capa - b.capa);
-    for (const s of interfaz) s.dibujarEn(r, s.objeto.posicion.x, r.alto - s.objeto.posicion.y);
   }
 
   /** Líneas, círculos, arcos... de dibujar.xxx(): los de este fotograma (se borran al empezar el siguiente). */
@@ -470,6 +597,29 @@ export class Escena implements EscenaActiva {
           ctx.lineWidth = d.grosor;
           ctx.stroke();
         }
+      } else if (d.tipo === 'elipse' || d.tipo === 'poligono') {
+        const ctx = r.ctx;
+        ctx.beginPath();
+        if (d.tipo === 'elipse') {
+          const c = aLocal(d.x, d.y);
+          ctx.ellipse(c.x, c.y, Math.abs(d.ancho) / 2, Math.abs(d.alto) / 2, 0, 0, Math.PI * 2);
+        } else {
+          d.puntos.forEach((p, i) => {
+            const l = aLocal(p.x, p.y);
+            if (i === 0) ctx.moveTo(l.x, l.y);
+            else ctx.lineTo(l.x, l.y);
+          });
+          ctx.closePath();
+        }
+        if (d.relleno) {
+          ctx.fillStyle = resolverColor(d.color);
+          ctx.fill();
+        } else {
+          ctx.strokeStyle = resolverColor(d.color);
+          ctx.lineWidth = d.tipo === 'poligono' ? d.grosor : 2;
+          ctx.lineJoin = 'round';
+          ctx.stroke();
+        }
       } else if (d.tipo === 'linea') {
         const a = aLocal(d.x1, d.y1);
         const b = aLocal(d.x2, d.y2);
@@ -483,7 +633,7 @@ export class Escena implements EscenaActiva {
         r.rectangulo(c.x - d.ancho / 2, c.y - d.alto / 2, d.ancho, d.alto, d.color, { relleno: d.relleno });
       } else {
         const c = aLocal(d.x, d.y);
-        r.texto(d.texto, c.x, c.y, { color: d.color, tamano: d.tamano });
+        r.texto(d.texto, c.x, c.y, { color: d.color, tamano: d.tamano, letra: d.letra });
       }
     }
   }
@@ -511,6 +661,10 @@ export class Escena implements EscenaActiva {
     this.dibujos = [];
     this.arrastre = null;
     this.dialogos = [];
+    this.juntas.vaciar();
+    this.camaras = [this.camara];
+    this.camara.anchoPantalla = this.motor.renderizador.ancho;
+    this.camara.altoPantalla = this.motor.renderizador.alto;
     this.camara.objetivo = null;
     this.camara.limites = null;
     this.camara.zoom = 1;

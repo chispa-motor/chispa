@@ -88,6 +88,8 @@ export interface DefSprite {
   tamano?: number;
   colorTexto?: string;
   alinear?: 'izquierda' | 'centro' | 'derecha';
+  /** El tipo de letra: una de las listas ("redonda", "pixel"...) o una del proyecto. */
+  letra?: string;
 }
 
 export interface DefColision {
@@ -234,6 +236,8 @@ export interface DefProyecto {
   /** nombre corto → ruta del archivo o "data URL" (.mp3, .ogg, .wav) */
   sonidos: Record<string, string>;
   animaciones: Record<string, DefAnimacion>;
+  /** Tipos de letra importados: nombre → "data URL" (.ttf, .otf, .woff, .woff2) */
+  letras?: Record<string, string>;
   /** nombre del archivo (.chs) → código */
   scripts: Record<string, string>;
   plantillas: Record<string, DefObjeto>;
@@ -320,6 +324,7 @@ function completar(p: DefProyecto): DefProyecto {
     datos: p.datos ?? {},
     ...(p.colores ? { colores: p.colores } : {}),
     ...(p.efectos && Object.keys(p.efectos).length ? { efectos: p.efectos } : {}),
+    ...(p.letras && Object.keys(p.letras).length ? { letras: p.letras } : {}),
   };
 }
 

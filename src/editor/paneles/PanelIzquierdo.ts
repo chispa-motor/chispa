@@ -79,7 +79,7 @@ export class PanelIzquierdo {
     if (this.pestana === 'escena') {
       return JSON.stringify([comun, Object.keys(p.escenas), p.escenaInicial, e.escena.objetos.map((o) => [o.nombre, o.script, o.script && o.script in p.scripts, iconoDe(o), o.sprite?.fijo, o.plantilla])]);
     }
-    return JSON.stringify([comun, Object.keys(p.efectos ?? {}), Object.keys(p.escenas), p.escenaInicial, Object.keys(p.scripts), Object.keys(p.plantillas), Object.keys(p.imagenes), Object.keys(p.sonidos), Object.entries(p.animaciones).map(([n, a]) => [n, a.fotogramas.length]), e.todosLosObjetos().map((o) => o.script)]);
+    return JSON.stringify([comun, Object.keys(p.efectos ?? {}), Object.keys(p.escenas), p.escenaInicial, Object.keys(p.scripts), Object.keys(p.plantillas), Object.keys(p.imagenes), Object.keys(p.sonidos), Object.keys(p.letras ?? {}), Object.entries(p.animaciones).map(([n, a]) => [n, a.fotogramas.length]), e.todosLosObjetos().map((o) => o.script)]);
   }
 
   /** Enseña la pestaña Proyecto (por ejemplo, después de importar algo, para verlo). */
@@ -342,6 +342,15 @@ export class PanelIzquierdo {
       ], Object.keys(p.imagenes).length ? imagenes : [], 'Dibuja una con el pincel, impórtala, o arrastra imágenes desde tu ordenador hasta el editor.'),
       this.grupo('Sonidos', 'sonido', [botonIcono('abrir', 'Importar sonidos (.mp3, .ogg, .wav)', () => this.importar('audio/*'), undefined, 'pequeno')],
         sonidos, 'Sin sonidos. Arrastra archivos de sonido hasta el editor para importarlos. También puedes usar sonido.tono(440, 0.2) sin importar nada.'),
+      this.grupo('Letras', 'texto', [botonIcono('abrir', 'Importar tipos de letra (.ttf, .otf, .woff, .woff2)', () => this.importar('.ttf,.otf,.woff,.woff2,font/*'), undefined, 'pequeno')],
+        Object.keys(p.letras ?? {}).map((n) =>
+          this.fila('texto', n, [
+            botonIcono('basura', 'Borrar el tipo de letra', async () => {
+              if (await confirmar('Borrar letra', `¿Borrar el tipo de letra «${n}»? Los textos que lo usan volverán a la letra normal.`, 'Borrar', true)) e.borrarLetra(n);
+            }, undefined, 'pequeno peligro'),
+          ], { title: `Elígela en el inspector de un texto · En el código: yo.letra = "${n}"` }),
+        ),
+        'Tipos de letra tuyos (.ttf, .otf, .woff). Sin importar nada ya hay 7 listas: normal, redonda, clasica, maquina, manuscrita, titulo y pixel.'),
       this.grupo('Animaciones', 'animacion', [botonIcono('mas', 'Nueva animación (con imágenes del proyecto)', async () => {
         const n = await pedirTexto('Nueva animación', 'Nombre (por ejemplo: andar, saltar):', 'andar');
         if (n) abrirEditorAnimacion(e, e.crearAnimacion(n));

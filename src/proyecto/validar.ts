@@ -27,7 +27,7 @@
 import { ErrorMotor } from '../motor/Errores';
 import { esColorValido } from '../motor/Color';
 import { esNombreProhibido } from '../utilidades/seguro';
-import { problemaDataURL } from './archivos';
+import { problemaDataURL, problemaLetra } from './archivos';
 import type { DefLuz } from './formato';
 import type { DatoInicial, DefCamara, DefColision, DefComportamiento, DefEscena, DefFisica, DefMapa, DefObjeto, DefProyecto, DefRecorrido, DefSprite } from './formato';
 import type { DefAnimacion } from '../objetos/componentes/Animador';
@@ -213,6 +213,7 @@ function sprite(v: unknown, ruta: Ruta): DefSprite {
     tamano: (x, r) => numero(x, r, 0, 10_000),
     colorTexto: color,
     alinear: (x, r) => unoDe(x, r, ['izquierda', 'centro', 'derecha'] as const),
+    letra: (x, r) => texto(x, r, 60),
   });
 }
 
@@ -405,6 +406,13 @@ const recurso = (tipo: 'imagen' | 'sonido') => (v: unknown, ruta: Ruta): string 
   return v;
 };
 
+const letra = (v: unknown, ruta: Ruta): string => {
+  if (typeof v !== 'string') fallo(ruta, `tendría que ser un tipo de letra, pero es ${describir(v)}`);
+  const problema = problemaLetra(v);
+  if (problema) fallo(ruta, problema);
+  return v;
+};
+
 // ───────────────────────── El proyecto entero ─────────────────────────
 
 /**
@@ -438,5 +446,6 @@ export function validarProyecto(datos: unknown): Partial<DefProyecto> {
     datos: (x, r) => registro(x, r, L.datos, dato),
     colores: (x, r) => lista(x, r, 200, color),
     efectos: (x, r) => registro(x, r, 500, efecto),
+    letras: (x, r) => registro(x, r, 20, letra),
   });
 }
