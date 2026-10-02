@@ -8,7 +8,7 @@
  */
 
 /**
- * «ACERCA DE CHISPA», «APOYA CHISPA» Y LA VERSIÓN 1.0.0.
+ * «ACERCA DE CHISPA», «APOYA CHISPA» Y LA VERSIÓN 1.1.0.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -27,7 +27,7 @@ afterEach(() => {
 
 describe('Versión', () => {
   it('es la 1.0.0, la misma en package.json y en package-lock.json', () => {
-    expect(VERSION).toBe('1.0.0');
+    expect(VERSION).toBe('1.1.0');
     expect(JSON.parse(readFileSync('package.json', 'utf8')).version).toBe(VERSION);
     expect(JSON.parse(readFileSync('package-lock.json', 'utf8')).version).toBe(VERSION);
   });

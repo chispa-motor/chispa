@@ -102,7 +102,7 @@ export function generarAprende(): string {
     '',
     `1. Abre el editor (${CONFIGURACION.web}, sin instalar nada) y lee [EMPIEZA_AQUI.md](EMPIEZA_AQUI.md) si es tu primera vez.`,
     '2. Ve nivel a nivel. Copia los ejemplos en un script y ejecútalos: cambia números y mira qué pasa. Así es como se aprende.',
-    '3. Al final de cada nivel hay **3 ejercicios** (las soluciones están [al final del todo](#soluciones), ¡inténtalo antes!) y un **mini proyecto** que junta todo lo del nivel.',
+    '3. Al final de cada nivel hay **ejercicios** (las soluciones están [al final del todo](#soluciones), ¡inténtalo antes!) y un **mini proyecto** que junta todo lo del nivel.',
     '4. Para buscar algo rápido, tienes la [chuleta](CHULETA_CHISPA.md): una línea por comando.',
     '',
     'Una regla para todo el curso: en el código **no hacen falta tildes**. Se escribe `funcion`, `ultimo`, `animacion`... (si pones la tilde también funciona, pero la forma oficial es sin ella). Los textos entre comillas sí pueden llevarlas.',
@@ -161,6 +161,8 @@ export function generarChuleta(): string {
     '',
   ];
   for (const n of NIVELES_CURSO) {
+    // El último nivel es de hacer un juego entero: no trae comandos nuevos
+    if (!TEMAS_CURSO.some((x) => x.nivel === n.numero)) continue;
     salida.push(`## ${TITULO_NIVEL(n.numero)}`, '');
     for (const t of TEMAS_CURSO.filter((x) => x.nivel === n.numero)) {
       salida.push(`### ${t.titulo}`, '', '| Comando | Qué hace | Ejemplo |', '|---|---|---|');

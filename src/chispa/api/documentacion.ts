@@ -803,6 +803,67 @@ export const RECETAS: Receta[] = [
     descripcion: "Mientras el juego está en marcha, abajo de la consola hay una línea para escribir una orden y pulsar Intro. Sirve para hacer trampas y probar: juego.vidas = 99, buscar(\"Jugador\").x = 500, crear(\"Enemigo\", 400, 300)... Lo mismo se puede poner en un script:",
     codigo: "cuando se pulsa \"t\":\n    juego.vidas = 99",
   },
+  // ── Lo nuevo de la 1.1 ──
+  {
+    titulo: 'Barra de vida sin dibujarla (interfaz)',
+    descripcion: 'Añadir > Interfaz > Barra. En su «dato» escribe Jugador.vida (la vida es una propiedad propia del jugador: inspector > Propiedades propias > vida = 100). La barra se mueve sola; el código solo cambia la vida. En el script del jugador:',
+    codigo: 'cuando toco Enemigo:\n    yo.vida -= 25\n    yo.flash("rojo", 0.15)\n    si yo.vida <= 0:\n        escena.reiniciar()',
+  },
+  {
+    titulo: 'Contador de monedas con un icono',
+    descripcion: 'Haz clic en el fondo de la escena y, en Datos del juego, crea «monedas» (0). Añadir > Interfaz > Icono con contador: elige su imagen y en «dato» pon juego.monedas. En el script del jugador:',
+    codigo: 'cuando toco Moneda:\n    destruir(otro)\n    juego.monedas += 1\n    sonido.efecto("moneda")',
+  },
+  {
+    titulo: 'Inventario: coger una llave y abrir una puerta',
+    descripcion: 'Añadir > Interfaz > Inventario. Lo que se mete se ve en sus casillas (si hay una imagen que se llame igual, «llave», sale su dibujo). En el script del jugador:',
+    codigo: 'cuando toco Llave:\n    destruir(otro)\n    buscar("Inventario").meter("llave")\n\ncuando toco Puerta:\n    variable mochila = buscar("Inventario")\n    si mochila.cuantos("llave") > 0:\n        mochila.sacar("llave")\n        destruir(otro)\n    sino:\n        dialogo("La puerta esta cerrada. Hace falta una llave.")',
+  },
+  {
+    titulo: 'Una cueva a oscuras con linterna',
+    descripcion: 'La escena se oscurece y el jugador lleva una luz. También se puede hacer sin código: fondo de la escena > Luz y oscuridad, y en el objeto, la sección Luz. Con «luzConSombras», las paredes del mapa tapan la luz.',
+    codigo: 'cuando empieza:\n    escena.oscuridad = 0.9\n    yo.luz = verdadero\n    yo.radioLuz = 220\n    yo.colorLuz = "naranja"\n    yo.luzConSombras = verdadero',
+  },
+  {
+    titulo: 'Dos jugadores en el mismo teclado',
+    descripcion: 'El jugador 1 usa W A S D y espacio; el 2, las flechas e Intro (el 3, I J K L; el 4, el teclado de números). Con mando, cada uno el suyo. Sin código: en cada objeto, Comportamiento > «Lo maneja un jugador». Para partir la pantalla: fondo de la escena > Cámara > jugadores. Con código, este es el script del jugador 2:',
+    codigo: 'cuando cada fotograma:\n    yo.moverConJugador(2, 280)\n    si controles(2).sePulso("a"):\n        yo.saltar(600)',
+  },
+  {
+    titulo: 'Menú, pausa, créditos y fin del juego (Pantallas listas)',
+    descripcion: 'En la pestaña Escena, el botón «Pantallas listas» (junto a las escenas) añade un menú principal, opciones, créditos, tabla de puntuaciones, fin del juego y pausa, ya conectados. Son escenas normales: se abren y se cambian. Tu juego solo tiene que sumar puntos en juego.puntos y, al acabar, ir a la escena Fin:',
+    codigo: 'cuando toco Meta:\n    juego.puntos += 100\n    escena.cambiar("Fin", 0.5)',
+  },
+  {
+    titulo: 'Apuntar la puntuación en la tabla de los mejores',
+    descripcion: 'puntuaciones guarda las 10 mejores, con su nombre, aunque se cierre el juego. (La pantalla lista «Fin del juego» ya lo hace, pidiendo el nombre.)',
+    codigo: 'cuando toco Meta:\n    si puntuaciones.entra(juego.puntos):\n        puntuaciones.guardar("Ana", juego.puntos)\n    para cada p en puntuaciones.lista():\n        mostrar(p.nombre, p.puntos)',
+  },
+  {
+    titulo: 'Hacer tus sonidos y tu música',
+    descripcion: 'En la pestaña Proyecto: el + de Sonidos abre el generador de efectos (pulsa «Salto», «Moneda», «Explosión»... hasta que te guste uno y guárdalo con su nombre), y el + de Música, la rejilla de notas. El botón del libro trae sonidos y canciones ya hechos. Luego se usan por su nombre:',
+    codigo: 'cuando empieza:\n    musica.reproducir("tema")\n\ncuando se pulsa "espacio":\n    sonido.reproducir("salto")',
+  },
+  {
+    titulo: 'Un sonido que se oye más cuanto más cerca estás',
+    descripcion: 'reproducirEn pone el sonido en un sitio: se oye más flojo cuanto más lejos está de lo que se ve, y por el lado que toca. bucleEn lo deja sonando pegado al objeto (una hoguera, un motor).',
+    codigo: 'cuando empieza:\n    sonido.bucleEn("motor", yo, 500)\n\ncuando toco Jugador:\n    sonido.reproducirEn("salto", yo, 800)',
+  },
+  {
+    titulo: 'Música que sube cuando hay peligro',
+    descripcion: 'Cada pista de una canción hecha en el editor de música es una capa. Con musica.intensidad = 0 suena solo la primera; con 1, todas. Aquí sube cuando hay enemigos cerca:',
+    codigo: 'cuando empieza:\n    musica.reproducir("tema")\n\ncuando cada 0.5 segundos:\n    si yo.cercanos(300, "Enemigo").longitud > 0:\n        musica.intensidad = 1\n    sino:\n        musica.intensidad = 0.3',
+  },
+  {
+    titulo: 'Colgar de una cuerda (péndulo o gancho)',
+    descripcion: 'El objeto necesita Física. La cuerda lo une a un punto (o a otro objeto) y no le deja alejarse más de su largo. Con espacio se suelta.',
+    codigo: 'cuando empieza:\n    junta.cuerda(yo, vector(yo.x + 120, yo.y + 160), 200)\n\ncuando se pulsa "espacio":\n    junta.quitar(yo)',
+  },
+  {
+    titulo: 'Empezar con una plantilla y publicar el juego',
+    descripcion: 'Nuevo > elige una plantilla (plataformas, vista desde arriba, naves, puzle, carreras, cartas o diálogos): es un juego pequeño que ya funciona, con el código comentado. Cámbialo. Para publicarlo: clic en el fondo de la escena > Proyecto > ponle nombre e icono, y pulsa «itch.io» en la barra de arriba: descarga el juego listo y te dice los pasos. El script más corto de una plantilla (una bala) es así:',
+    codigo: 'cuando cada fotograma:\n    yo.y += 700 * delta\n\ncuando salgo de la pantalla:\n    destruir(yo)',
+  },
   {
     titulo: "Programar con bloques",
     descripcion: "Con el botón «Bloques» de arriba del script (o Ctrl+B) el script se ve como bloques de colores. Arrastra un evento («cuando cada fotograma») y mete dentro acciones. Puedes volver al código cuando quieras: los dos son el mismo script. Este código se ve así en bloques:",

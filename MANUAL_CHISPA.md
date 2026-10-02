@@ -4112,6 +4112,156 @@ cuando se pulsa "t":
     juego.vidas = 99
 ```
 
+### Barra de vida sin dibujarla (interfaz)
+
+Añadir > Interfaz > Barra. En su «dato» escribe Jugador.vida (la vida es una propiedad propia del jugador: inspector > Propiedades propias > vida = 100). La barra se mueve sola; el código solo cambia la vida. En el script del jugador:
+
+```
+cuando toco Enemigo:
+    yo.vida -= 25
+    yo.flash("rojo", 0.15)
+    si yo.vida <= 0:
+        escena.reiniciar()
+```
+
+### Contador de monedas con un icono
+
+Haz clic en el fondo de la escena y, en Datos del juego, crea «monedas» (0). Añadir > Interfaz > Icono con contador: elige su imagen y en «dato» pon juego.monedas. En el script del jugador:
+
+```
+cuando toco Moneda:
+    destruir(otro)
+    juego.monedas += 1
+    sonido.efecto("moneda")
+```
+
+### Inventario: coger una llave y abrir una puerta
+
+Añadir > Interfaz > Inventario. Lo que se mete se ve en sus casillas (si hay una imagen que se llame igual, «llave», sale su dibujo). En el script del jugador:
+
+```
+cuando toco Llave:
+    destruir(otro)
+    buscar("Inventario").meter("llave")
+
+cuando toco Puerta:
+    variable mochila = buscar("Inventario")
+    si mochila.cuantos("llave") > 0:
+        mochila.sacar("llave")
+        destruir(otro)
+    sino:
+        dialogo("La puerta esta cerrada. Hace falta una llave.")
+```
+
+### Una cueva a oscuras con linterna
+
+La escena se oscurece y el jugador lleva una luz. También se puede hacer sin código: fondo de la escena > Luz y oscuridad, y en el objeto, la sección Luz. Con «luzConSombras», las paredes del mapa tapan la luz.
+
+```
+cuando empieza:
+    escena.oscuridad = 0.9
+    yo.luz = verdadero
+    yo.radioLuz = 220
+    yo.colorLuz = "naranja"
+    yo.luzConSombras = verdadero
+```
+
+### Dos jugadores en el mismo teclado
+
+El jugador 1 usa W A S D y espacio; el 2, las flechas e Intro (el 3, I J K L; el 4, el teclado de números). Con mando, cada uno el suyo. Sin código: en cada objeto, Comportamiento > «Lo maneja un jugador». Para partir la pantalla: fondo de la escena > Cámara > jugadores. Con código, este es el script del jugador 2:
+
+```
+cuando cada fotograma:
+    yo.moverConJugador(2, 280)
+    si controles(2).sePulso("a"):
+        yo.saltar(600)
+```
+
+### Menú, pausa, créditos y fin del juego (Pantallas listas)
+
+En la pestaña Escena, el botón «Pantallas listas» (junto a las escenas) añade un menú principal, opciones, créditos, tabla de puntuaciones, fin del juego y pausa, ya conectados. Son escenas normales: se abren y se cambian. Tu juego solo tiene que sumar puntos en juego.puntos y, al acabar, ir a la escena Fin:
+
+```
+cuando toco Meta:
+    juego.puntos += 100
+    escena.cambiar("Fin", 0.5)
+```
+
+### Apuntar la puntuación en la tabla de los mejores
+
+puntuaciones guarda las 10 mejores, con su nombre, aunque se cierre el juego. (La pantalla lista «Fin del juego» ya lo hace, pidiendo el nombre.)
+
+```
+cuando toco Meta:
+    si puntuaciones.entra(juego.puntos):
+        puntuaciones.guardar("Ana", juego.puntos)
+    para cada p en puntuaciones.lista():
+        mostrar(p.nombre, p.puntos)
+```
+
+### Hacer tus sonidos y tu música
+
+En la pestaña Proyecto: el + de Sonidos abre el generador de efectos (pulsa «Salto», «Moneda», «Explosión»... hasta que te guste uno y guárdalo con su nombre), y el + de Música, la rejilla de notas. El botón del libro trae sonidos y canciones ya hechos. Luego se usan por su nombre:
+
+```
+cuando empieza:
+    musica.reproducir("tema")
+
+cuando se pulsa "espacio":
+    sonido.reproducir("salto")
+```
+
+### Un sonido que se oye más cuanto más cerca estás
+
+reproducirEn pone el sonido en un sitio: se oye más flojo cuanto más lejos está de lo que se ve, y por el lado que toca. bucleEn lo deja sonando pegado al objeto (una hoguera, un motor).
+
+```
+cuando empieza:
+    sonido.bucleEn("motor", yo, 500)
+
+cuando toco Jugador:
+    sonido.reproducirEn("salto", yo, 800)
+```
+
+### Música que sube cuando hay peligro
+
+Cada pista de una canción hecha en el editor de música es una capa. Con musica.intensidad = 0 suena solo la primera; con 1, todas. Aquí sube cuando hay enemigos cerca:
+
+```
+cuando empieza:
+    musica.reproducir("tema")
+
+cuando cada 0.5 segundos:
+    si yo.cercanos(300, "Enemigo").longitud > 0:
+        musica.intensidad = 1
+    sino:
+        musica.intensidad = 0.3
+```
+
+### Colgar de una cuerda (péndulo o gancho)
+
+El objeto necesita Física. La cuerda lo une a un punto (o a otro objeto) y no le deja alejarse más de su largo. Con espacio se suelta.
+
+```
+cuando empieza:
+    junta.cuerda(yo, vector(yo.x + 120, yo.y + 160), 200)
+
+cuando se pulsa "espacio":
+    junta.quitar(yo)
+```
+
+### Empezar con una plantilla y publicar el juego
+
+Nuevo > elige una plantilla (plataformas, vista desde arriba, naves, puzle, carreras, cartas o diálogos): es un juego pequeño que ya funciona, con el código comentado. Cámbialo. Para publicarlo: clic en el fondo de la escena > Proyecto > ponle nombre e icono, y pulsa «itch.io» en la barra de arriba: descarga el juego listo y te dice los pasos. El script más corto de una plantilla (una bala) es así:
+
+```
+cuando cada fotograma:
+    yo.y += 700 * delta
+
+cuando salgo de la pantalla:
+    destruir(yo)
+```
+
 ### Programar con bloques
 
 Con el botón «Bloques» de arriba del script (o Ctrl+B) el script se ve como bloques de colores. Arrastra un evento («cuando cada fotograma») y mete dentro acciones. Puedes volver al código cuando quieras: los dos son el mismo script. Este código se ve así en bloques:

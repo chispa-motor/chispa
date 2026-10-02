@@ -14,6 +14,12 @@
 import { describe, expect, it } from 'vitest';
 import { RECETAS } from '../src/chispa/api/documentacion';
 import { juegoDePrueba } from './ayudantes';
+import { EstadoEditor } from '../src/editor/estado/EstadoEditor';
+import { Control } from '../src/objetos/componentes/Control';
+import { datoDeControl } from '../src/editor/paneles/Inspector';
+import { cancionDeEjemplo } from '../src/sonido/musica';
+import { migrarProyecto } from '../src/proyecto/formato';
+import { revisarProyecto } from '../src/proyecto/Revision';
 
 const receta = (inicio: string) => RECETAS.find((r) => r.titulo.startsWith(inicio))!.codigo;
 const caja = { sprite: { ancho: 20, alto: 20 }, colision: {} };
@@ -58,5 +64,76 @@ describe('Recetas que se juegan', () => {
     expect(j.errores).toEqual([]);
     expect(j.juego.escena.buscar('Puerta')).toBeFalsy();
     expect(j.juego.escena.objetos.filter((o) => o.nombre.startsWith('Moneda')).length).toBe(8);
+  });
+
+  it('las recetas de la 1.1 se juegan sin errores (barra, contador, inventario, luz, dos jugadores, puntuaciones, sonido con sitio, cuerda)', () => {
+    const e = new EstadoEditor();
+    const control = (tipo: 'barra' | 'icono' | 'inventario', dato?: string) => {
+      e.crearControl(tipo, 100, 500);
+      if (dato) e.cambiarPropiedad(e.seleccion!, 'control.dato', dato);
+    };
+    for (const n of ['salto', 'motor']) e.anadirRecursoListo('sonido', n);
+    e.guardarCancion('tema', cancionDeEjemplo());
+    e.cambiarDatoJuego('monedas', 0);
+    e.cambiarDatoJuego('puntos', 0);
+    e.cambiarEscenaPropiedad('gravedad', 0);
+    e.crearEscena('Fin');
+    e.cambiarEscenaActual('Principal');
+    const scripts: Record<string, string> = {
+      'vida.chs': receta('Barra de vida sin dibujarla'),
+      'monedas.chs': receta('Contador de monedas'),
+      'mochila.chs': receta('Inventario'),
+      'luz.chs': receta('Una cueva a oscuras'),
+      'dos.chs': receta('Dos jugadores'),
+      'tabla.chs': receta('Apuntar la puntuación'),
+      'sitio.chs': receta('Un sonido que se oye'),
+      'peligro.chs': receta('Música que sube'),
+      'cuerda.chs': receta('Colgar de una cuerda'),
+      'sonidos.chs': receta('Hacer tus sonidos'),
+    };
+    const objeto = (nombre: string, x: number, y: number, script?: string, extra: Record<string, unknown> = {}) => {
+      e.crearObjeto('rectangulo', x, y);
+      e.renombrar(e.seleccion!, nombre);
+      for (const [k, v] of Object.entries(extra)) e.cambiarPropiedad(e.seleccion!, k, v);
+      if (script) {
+        e.proyecto.scripts[script] = scripts[script];
+        e.asignarScript(e.seleccion!, script);
+      }
+    };
+    objeto('Jugador', 100, 100, 'vida.chs', { propiedades: { vida: 50 }, fisica: { gravedad: 0 } });
+    objeto('Enemigo', 100, 100, undefined, { 'colision.solido': false });
+    objeto('Recolector', 300, 100, 'monedas.chs');
+    objeto('Moneda', 300, 100, undefined, { 'colision.solido': false });
+    objeto('Aventurero', 500, 100, 'mochila.chs');
+    objeto('Llave', 500, 100, undefined, { 'colision.solido': false });
+    objeto('Linterna', 700, 100, 'luz.chs');
+    objeto('Segundo', 100, 300, 'dos.chs', { fisica: {} });
+    objeto('Corredor', 300, 300, 'tabla.chs');
+    objeto('Meta', 300, 300, undefined, { 'colision.solido': false });
+    objeto('Hoguera', 500, 300, 'sitio.chs');
+    objeto('Vigia', 700, 300, 'peligro.chs');
+    objeto('Pendulo', 800, 400, 'cuerda.chs', { fisica: {} });
+    objeto('Cantante', 900, 100, 'sonidos.chs');
+    // Lo que se escribe en el inspector («Jugador.vida») se guarda como buscar("Jugador").vida
+    control('barra', datoDeControl('Jugador.vida', [], ['Jugador']));
+    control('icono', 'juego.monedas');
+    control('inventario');
+    const proyecto = migrarProyecto(JSON.parse(e.aJSON()));
+    expect(revisarProyecto(proyecto).errores.map((x) => x.mensajeCorto)).toEqual([]);
+    const j = juegoDePrueba({ proyecto });
+    j.avanzar(30);
+    expect(j.errores.map((x) => x.error.mensajeCorto)).toEqual([]);
+    // La barra lee sola la vida del jugador, que ha bajado al tocar al enemigo (50 - 25)
+    expect(j.buscar('Barra').obtener(Control)!.numero).toBe(25);
+    expect(j.buscar('Icono').obtener(Control)!.numero).toBe(1);
+    expect(j.buscar('Inventario').obtener(Control)!.cuantos('llave')).toBe(1);
+    expect(j.juego.escena.oscuridad).toBeCloseTo(0.9);
+    expect(j.juego.escena.juntas.lista.length).toBe(1);
+    // El péndulo no se aleja de su punto más que el largo de la cuerda
+    const pendulo = j.buscar('Pendulo').posicion;
+    j.avanzar(120);
+    expect(Math.hypot(pendulo.x - 920, pendulo.y - 560)).toBeLessThanOrEqual(201);
+    expect(j.salida.join(' ')).toContain('Ana');
+    expect(j.errores.map((x) => x.error.mensajeCorto)).toEqual([]);
   });
 });

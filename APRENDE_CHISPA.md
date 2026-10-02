@@ -8,7 +8,7 @@ Un curso por niveles para aprender a programar juegos con Chispa, aunque no haya
 
 1. Abre el editor (https://chispa-motor.github.io/chispa/, sin instalar nada) y lee [EMPIEZA_AQUI.md](EMPIEZA_AQUI.md) si es tu primera vez.
 2. Ve nivel a nivel. Copia los ejemplos en un script y ejecútalos: cambia números y mira qué pasa. Así es como se aprende.
-3. Al final de cada nivel hay **3 ejercicios** (las soluciones están [al final del todo](#soluciones), ¡inténtalo antes!) y un **mini proyecto** que junta todo lo del nivel.
+3. Al final de cada nivel hay **ejercicios** (las soluciones están [al final del todo](#soluciones), ¡inténtalo antes!) y un **mini proyecto** que junta todo lo del nivel.
 4. Para buscar algo rápido, tienes la [chuleta](CHULETA_CHISPA.md): una línea por comando.
 
 Una regla para todo el curso: en el código **no hacen falta tildes**. Se escribe `funcion`, `ultimo`, `animacion`... (si pones la tilde también funciona, pero la forma oficial es sin ella). Los textos entre comillas sí pueden llevarlas.
@@ -62,6 +62,7 @@ Una regla para todo el curso: en el código **no hacen falta tildes**. Se escrib
   - [Pantallas listas y tabla de puntuaciones](#pantallas-listas-y-tabla-de-puntuaciones)
   - [Varios jugadores en el mismo ordenador](#varios-jugadores-en-el-mismo-ordenador)
   - [Depurar: encontrar los fallos](#depurar-encontrar-los-fallos)
+- [Nivel 5: Tu juego, de principio a fin](#nivel-5-tu-juego-de-principio-a-fin)
 - [Soluciones de los ejercicios](#soluciones)
 
 ## Nivel 1: Lo básico del lenguaje
@@ -6012,6 +6013,9 @@ cuando empieza:
 1. **Disparos.** Cada medio segundo, crea una Bala donde está el objeto y dale velocidad hacia la derecha. (Para que no se acumulen, en el editor ponle a la plantilla Bala un script con «cuando salgo de la pantalla: destruir(yo)».)
 2. **Cuenta atrás.** El objeto enseña «Tiempo: 10» y cada segundo baja uno. Al llegar a 0, cambia a la escena Fin.
 3. **Un buen golpe.** Al tocar un Enemigo: partículas de explosión, el efecto de sonido «explosion», la cámara tiembla y el objeto parpadea.
+4. **Barra de vida.** En la escena hay una barra llamada Barra (Añadir > Interfaz > Barra). Cada vez que el objeto toque un Enemigo, la barra baja 25; cuando llegue a 0, cambia a la escena Fin.
+5. **La linterna.** Al empezar, la escena se queda casi a oscuras y el objeto lleva una luz naranja de 250 de radio. Con la tecla L, la luz se apaga y se enciende.
+6. **Fiesta.** Cada segundo, confeti en un sitio al azar de la pantalla, un destello blanco de pantalla muy corto y el objeto brilla con un resplandor de un color al azar.
 
 Las soluciones, en [Soluciones](#soluciones) (nivel 3).
 
@@ -7228,6 +7232,9 @@ Un fallo (un *bug*) casi nunca es un misterio: es una línea que no hace lo que 
 1. **Mensajes con dato.** Al empezar, envía el mensaje «puntos» dos veces, con 10 y con 5. Al recibirlo, suma el dato a juego.total y enséñalo.
 2. **El récord.** Con unos puntos de 120, carga el récord guardado (0 si no hay). Si lo has superado, guárdalo y dilo; si no, di cuál sigue siendo el récord.
 3. **El vigilante.** Cada medio segundo, lanza un rayo hacia el Jugador. Si lo primero que toca es el Jugador (nada lo tapa), ve hacia él con irHacia.
+4. **Para dos.** El objeto lo maneja el jugador 2 (con las flechas) a 250 de rapidez. Cada vez que el jugador 2 pulse su botón «a» (Intro), el objeto cambia a un color al azar.
+5. **El péndulo.** Al empezar, cuelga el objeto con una cuerda de 150 de un punto que está 150 más arriba y 100 a la derecha. Con espacio, la cuerda se suelta.
+6. **La tabla de los mejores.** Con unos puntos de 120: si entran en la tabla de puntuaciones, apúntalos con el nombre «Ana». Después enseña en la consola toda la tabla, cada línea con su nombre y sus puntos.
 
 Las soluciones, en [Soluciones](#soluciones) (nivel 4).
 
@@ -7305,6 +7312,93 @@ cuando cada fotograma:
         yo.texto = "Busca la llave"
     sino:
         yo.texto = "Mision cumplida"
+```
+
+Cuando funcione, cámbialo: más enemigos, otro color, un sonido nuevo... ¡Es tuyo!
+
+## Nivel 5: Tu juego, de principio a fin
+
+Ya conoces todos los comandos. Este nivel no trae ninguno nuevo: es para hacer un juego ENTERO con las herramientas del editor, que hacen por ti lo más pesado. **Empezar:** botón Nuevo > una plantilla (plataformas, naves, puzle, carreras, cartas, diálogos...) y cambiarla, o En blanco. **Dibujos, sonidos y música:** en la pestaña Proyecto, el botón del libro trae dibujos, sonidos y canciones listos; con el + de Sonidos haces tus propios efectos (pulsa «Salto», «Moneda»... hasta que te guste uno) y con el + de Música, tus canciones en una rejilla de notas. **Marcadores sin código:** Añadir > Interfaz (barra, icono con contador, inventario...) y, en su «dato», juego.vidas o Jugador.vida. **Menú, pausa y puntuaciones:** el botón «Pantallas listas», junto a las escenas. **Para dos:** en cada personaje, Comportamiento > «Lo maneja un jugador», y en la Cámara de la escena, «2 jugadores». **Publicarlo:** haz clic en el fondo de la escena y, en Proyecto, ponle nombre e icono; luego, el botón itch.io de arriba descarga el juego listo para subir y te dice los pasos.
+
+### Ejercicios del nivel 5
+
+1. **Cambia una plantilla.** Abre la plantilla Naves (Nuevo > Naves). En el script de las oleadas, haz que salga un ovni cada medio segundo en vez de cada segundo. (Solo hay que cambiar un número.) Escribe aquí cómo queda ese script.
+2. **El contador de monedas.** En un juego con monedas: cada vez que el objeto toque una Moneda, la destruye, suma 1 a juego.monedas y suena el efecto «moneda». (En el editor, el dato juego.monedas se crea en Datos del juego, y un «icono con contador» con el dato juego.monedas lo enseña sin más código.)
+3. **Guardar la partida en la tabla.** Al tocar la Meta: si los puntos del juego entran en la tabla de puntuaciones, se apuntan con el nombre «Yo»; después se pasa a la escena Fin con un fundido de medio segundo.
+
+Las soluciones, en [Soluciones](#soluciones) (nivel 5).
+
+### Mini proyecto: Duelo para dos
+
+Dos jugadores en el mismo teclado: el 1 con W A S D y espacio, el 2 con las flechas e Intro. Cada uno dispara al otro; cada bala que acierta baja 20 la barra de vida del que la recibe. Quien se queda sin vida pierde: se apunta la victoria del otro (guardada, para que no se pierda) y se empieza otra vez. Junta los controles de varios jugadores, las barras de interfaz, las plantillas, los efectos y los datos guardados.
+
+**Qué poner en la escena:**
+
+- La escena con **gravedad 0**.
+- Dos cuadrados con Colisión: **Azul** (a la izquierda, con el script **azul.chs**) y **Rojo** (a la derecha, con **rojo.chs**).
+- Dos barras (**Añadir > Interfaz > Barra**) llamadas **VidaAzul** y **VidaRojo**, una en cada esquina de arriba.
+- Una **plantilla Bala** (un círculo pequeño) con Colisión sin «sólido», Física con gravedad 0 y el script **bala.chs**.
+- Un **Texto** llamado **Marcador** con el script **marcador.chs**.
+
+**azul.chs**
+
+```
+cuando cada fotograma:
+    yo.moverConJugador(1, 260)
+    si controles(1).sePulso("a"):
+        variable b = crear("Bala", yo.x + 40, yo.y)
+        b.velocidad = vector(500, 0)
+        sonido.efecto("laser")
+
+cuando toco Bala:
+    destruir(otro)
+    yo.flash("blanco", 0.1)
+    variable vida = buscar("VidaAzul")
+    vida.valor -= 20
+    si vida.valor <= 0:
+        guardar("duelo_rojo", cargar("duelo_rojo", 0) + 1)
+        efecto.explosion(yo)
+        esperar(1)
+        escena.reiniciar()
+```
+
+**rojo.chs**
+
+```
+cuando cada fotograma:
+    yo.moverConJugador(2, 260)
+    si controles(2).sePulso("a"):
+        variable b = crear("Bala", yo.x - 40, yo.y)
+        b.velocidad = vector(-500, 0)
+        sonido.efecto("laser")
+
+cuando toco Bala:
+    destruir(otro)
+    yo.flash("blanco", 0.1)
+    variable vida = buscar("VidaRojo")
+    vida.valor -= 20
+    si vida.valor <= 0:
+        guardar("duelo_azul", cargar("duelo_azul", 0) + 1)
+        efecto.explosion(yo)
+        esperar(1)
+        escena.reiniciar()
+```
+
+**bala.chs**
+
+```
+cuando salgo de la pantalla:
+    destruir(yo)
+```
+
+**marcador.chs**
+
+```
+# Las victorias se guardan: siguen ahi aunque la escena vuelva a empezar (y aunque cierres el juego)
+cuando empieza:
+    variable azul = cargar("duelo_azul", 0)
+    variable rojo = cargar("duelo_rojo", 0)
+    yo.texto = "Azul {azul} - {rojo} Rojo"
 ```
 
 Cuando funcione, cámbialo: más enemigos, otro color, un sonido nuevo... ¡Es tuyo!
@@ -7412,6 +7506,38 @@ cuando toco Enemigo:
     yo.parpadear(1)
 ```
 
+**4.** Barra de vida.
+
+```
+cuando toco Enemigo:
+    variable barra = buscar("Barra")
+    barra.valor -= 25
+    si barra.valor <= 0:
+        escena.cambiar("Fin")
+```
+
+**5.** La linterna.
+
+```
+cuando empieza:
+    escena.oscuridad = 0.9
+    yo.luz = verdadero
+    yo.radioLuz = 250
+    yo.colorLuz = "naranja"
+
+cuando se pulsa "l":
+    yo.luz = no yo.luz
+```
+
+**6.** Fiesta.
+
+```
+cuando cada 1 segundo:
+    efecto.confeti(vector(aleatorio(100, 860), aleatorio(100, 440)))
+    pantalla.flash("blanco", 0.1)
+    yo.resplandor = elegir(["cian", "rosa", "amarillo"])
+```
+
 ### Soluciones del nivel 4
 
 **1.** Mensajes con dato.
@@ -7450,4 +7576,67 @@ cuando cada 0.5 segundos:
         si r != nulo:
             si r.objeto == jugador:
                 yo.irHacia(jugador, 150)
+```
+
+**4.** Para dos.
+
+```
+cuando cada fotograma:
+    yo.moverConJugador(2, 250)
+    si controles(2).sePulso("a"):
+        yo.color = elegir(["rojo", "verde", "azul", "amarillo"])
+```
+
+**5.** El péndulo.
+
+```
+cuando empieza:
+    junta.cuerda(yo, vector(yo.x + 100, yo.y + 150), 150)
+
+cuando se pulsa "espacio":
+    junta.quitar(yo)
+```
+
+**6.** La tabla de los mejores.
+
+```
+cuando empieza:
+    variable puntos = 120
+    si puntuaciones.entra(puntos):
+        puntuaciones.guardar("Ana", puntos)
+    para cada p en puntuaciones.lista():
+        mostrar(p.nombre, p.puntos)
+```
+
+### Soluciones del nivel 5
+
+**1.** Cambia una plantilla.
+
+```
+cuando cada 0.5 segundos:
+    crear("Enemigo", aleatorio(40, pantalla.ancho - 40), pantalla.alto + 30)
+```
+
+**2.** El contador de monedas.
+
+```
+cuando empieza:
+    juego.monedas = 0
+
+cuando toco Moneda:
+    destruir(otro)
+    juego.monedas += 1
+    sonido.efecto("moneda")
+```
+
+**3.** Guardar la partida en la tabla.
+
+```
+cuando empieza:
+    juego.puntos = 50
+
+cuando toco Meta:
+    si puntuaciones.entra(juego.puntos):
+        puntuaciones.guardar("Yo", juego.puntos)
+    escena.cambiar("Fin", 0.5)
 ```

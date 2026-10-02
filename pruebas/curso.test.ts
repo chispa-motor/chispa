@@ -164,7 +164,7 @@ describe('El curso y la chuleta', () => {
   it('los ejercicios (con sus soluciones) y los mini proyectos funcionan', () => {
     const malos: string[] = [];
     for (const n of NIVELES_CURSO) {
-      expect(n.ejercicios.length, `nivel ${n.numero}`).toBe(3);
+      expect(n.ejercicios.length, `nivel ${n.numero}`).toBeGreaterThanOrEqual(3);
       n.ejercicios.forEach((e, i) => {
         const { errores } = ejecutar(comoScript(e.solucion));
         if (errores.length) malos.push(`nivel ${n.numero}, ejercicio ${i + 1}: ${errores[0]}`);

@@ -18,10 +18,10 @@ import { readFileSync } from 'node:fs';
 
 const PARTES = [
   ['Lenguaje (src/chispa)', (f) => f.startsWith('src/chispa/')],
-  ['Motor (motor, objetos, proyecto, reproductor, utilidades)', (f) => /^src\/(motor|objetos|proyecto|reproductor|utilidades)\//.test(f)],
+  ['Motor (motor, objetos, proyecto, reproductor, sonido, utilidades)', (f) => /^src\/(motor|objetos|proyecto|reproductor|sonido|utilidades)\//.test(f)],
   ['Editor (editor, exportar, main, estilos, index.html)', (f) => /^src\/(editor|exportar)\//.test(f) || /^src\/(main\.ts|estilos\.css|vite-env\.d\.ts)$/.test(f) || f === 'index.html'],
   ['Tests (pruebas y pruebas-navegador)', (f) => f.startsWith('pruebas/') || f.startsWith('pruebas-navegador/')],
-  ['Ejemplos y demos', (f) => /^src\/(ejemplos|demos)\//.test(f)],
+  ['Ejemplos, plantillas y recursos', (f) => /^src\/(ejemplos|demos|plantillas|recursos)\//.test(f) || f.startsWith('proyectos/')],
   ['Documentación (.md; MANUAL_CHISPA.md se genera solo)', (f) => f.endsWith('.md')],
   ['Configuración y herramientas', () => true],
 ];

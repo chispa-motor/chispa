@@ -25,7 +25,7 @@ archivo) y luego **Abrir**.
 ## 2. Conoce la ventana
 
 ```
-┌─── Nuevo · Abrir · Guardar · Exportar ·  ▶ Ejecutar  ⏸  ⏹  · Ajustes · Ayuda ───┐
+┌─ Nuevo · Abrir · Guardar · Exportar · itch.io · ▶ Ejecutar ⏸ ⏹ · Ajustes · Ayuda ─┐
 │ ESCENA /     │  Escena  |  jugador.chs                    │  JUEGO            │
 │ PROYECTO     │                                            │  (aquí se juega)  │
 │ (tus objetos │  la escena (colocar objetos)               ├───────────────────┤
@@ -56,7 +56,14 @@ La primera vez se abre un ejemplo. Pulsa **▶ Ejecutar** (o F5) para verlo.
 
 ## 3. Tu primer juego
 
-1. Pulsa **Nuevo → Vacío**.
+> **¿Prefieres empezar con un juego ya hecho?** Pulsa **Nuevo** y elige una
+> **plantilla**: plataformas, vista desde arriba, naves, puzle, carreras,
+> cartas o diálogos. Son juegos pequeños que ya funcionan, con el código
+> explicado línea a línea. Pulsa **▶ Ejecutar**, juega y luego cambia cosas:
+> los números del principio de cada script, los dibujos, el nivel… Lo que
+> sigue es para hacerlo tú desde cero.
+
+1. Pulsa **Nuevo → En blanco**.
 2. **El jugador.** Pulsa **Añadir → Cuadrado**. En *Propiedades*, cámbiale el
    nombre a `Jugador` y activa **Física** con su interruptor. Con Física, cae
    y choca.
@@ -148,6 +155,26 @@ Qué significa cada trozo:
 En **Guía → Recetas** tienes el código de lo más común, con un botón para
 copiarlo:
 
+- **Dibujos, sonidos y música ya hechos.** En la pestaña *Proyecto*, el botón
+  del **libro** (en Imágenes, Sonidos y Música) trae personajes, enemigos,
+  objetos, casillas para mapas, efectos de sonido y canciones. Un clic y están
+  en tu juego. Son de dominio público: úsalos como quieras.
+- **Tus propios sonidos y tu música.** El **+** de *Sonidos* abre un generador
+  de efectos: pulsa «Salto», «Moneda», «Explosión»… hasta que salga uno que te
+  guste. El **+** de *Música* es una rejilla donde pones notas con el ratón.
+- **Marcadores sin código.** **Añadir → Interfaz** tiene barras de vida,
+  iconos con contador, inventario, listas, casillas, deslizadores, ventanas,
+  campos para escribir y minimapa. En su «dato» escribes de dónde sacan el
+  número (`juego.monedas`, `Jugador.vida`) y se actualizan solos.
+- **Menú, pausa y puntuaciones.** El botón **Pantallas listas** (junto al
+  nombre de la escena) añade un menú principal, opciones, créditos, tabla de
+  puntuaciones, fin del juego y pausa, ya conectados entre sí.
+- **Para dos, tres o cuatro jugadores.** En cada personaje, activa
+  **Comportamiento** y elige «Lo maneja un jugador». Con la escena
+  seleccionada, en *Cámara → jugadores* eliges pantalla dividida o compartida.
+- **Cuevas y noches.** Con la escena seleccionada, en *Luz y oscuridad* sube la
+  oscuridad; en el jugador, activa **Luz**.
+
 - **Disparar.** Crea la bala y pulsa **Plantilla** para convertirla en
   plantilla. Luego, desde la nave: `crear("Bala")`.
 - **Enemigos que aparecen solos.** Usa un *Objeto vacío* con
@@ -174,7 +201,7 @@ copiarlo:
 - **Vidas, nivel…** Sin nada seleccionado, en **Datos del juego** añades datos
   con su valor de salida (`vidas = 3`), sin escribir código.
 - **Sonidos sin archivos:** `sonido.efecto("moneda")`, `sonido.efecto("salto")`…
-- **Barras de vida y marcadores:** `dibujar.enPantalla.rectangulo(…)`.
+- **Dibujar en la pantalla desde el código:** `dibujar.enPantalla.rectangulo(…)`.
 - **Mando y móvil.** `yo.moverConFlechas` ya funciona con la palanca de un
   mando, y los botones se leen con `mando.pulsado("a")`. Si abren tu juego
   exportado en un móvil, salen botones en la pantalla solos.
@@ -197,6 +224,14 @@ copiarlo:
     juego en una dirección tuya, gratis.
 
   No hace falta conectar ninguna cuenta al editor: tú subes el archivo.
+- **itch.io en un clic.** El botón **itch.io** de la barra de arriba hace lo
+  mismo que Exportar → itch.io, directamente: descarga el `.zip` y te enseña
+  los pasos. También te da una **portada** para la página del juego.
+- **El nombre y el icono de tu juego.** Haz clic en el fondo de la escena y,
+  abajo en *Propiedades → Proyecto*, escribe el **nombre** y elige el **icono**
+  (una de tus imágenes). Salen en la pestaña del navegador y en la pantalla de
+  carga del juego exportado, que dice «Hecho con Chispa» (si no la quieres,
+  quita la casilla «pantalla de carga»).
 
 ## ¿De quién son mis juegos?
 
@@ -225,8 +260,9 @@ Solo hay dos cosas que tener en cuenta:
    mejoras vuelven a todo el mundo. Tus juegos siguen siendo tuyos igual.
 
 ¿Y los juegos de ejemplo (la Arena de Habilidades, el ejemplo del
-principio)? Son de **dominio público**: cópialos, cámbialos y usa lo que
-quieras de ellos en tus juegos, sin pedir permiso.
+principio), las **plantillas** y los **dibujos, sonidos y canciones** que trae
+Chispa? Son de **dominio público**: cópialos, cámbialos y usa lo que quieras
+de ellos en tus juegos, sin pedir permiso.
 
 > Esto es una explicación sencilla, no un consejo legal. El texto que vale
 > es el de la licencia, en el archivo `LICENSE`.
@@ -241,8 +277,9 @@ quieras de ellos en tus juegos, sin pedir permiso.
   ayudar a que siga creciendo.
 
 ¿Quieres aprender de verdad, paso a paso? Sigue el curso
-**[APRENDE_CHISPA.md](APRENDE_CHISPA.md)**: 4 niveles, cada comando con un
+**[APRENDE_CHISPA.md](APRENDE_CHISPA.md)**: 5 niveles, cada comando con un
 ejemplo y el error que más se comete, ejercicios y un mini proyecto por nivel.
+Lo nuevo de esta versión está en **[NOVEDADES_1.1.md](NOVEDADES_1.1.md)**.
 Para buscar algo rápido, la **[chuleta](CHULETA_CHISPA.md)** (una línea por
 comando; también hay botones para los dos arriba de la pestaña **Guía**).
 

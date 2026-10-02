@@ -12,6 +12,8 @@
  * EXACTAMENTE con la API real: ni cosas sin documentar, ni fichas de cosas
  * que no existen. Y todo sin tildes (la forma oficial).
  */
+import { completarSonido } from '../src/sonido/generador';
+import { cancionDeEjemplo } from '../src/sonido/musica';
 import { describe, expect, it } from 'vitest';
 import { DOC_ESPECIALES, DOC_EVENTOS, DOC_FUNCIONES, DOC_MODULOS, DOC_OBJETO, DOC_PALABRAS, DOC_VALORES, RECETAS, buscarDoc, miembrosDe } from '../src/chispa/api/documentacion';
 import { METODOS_LISTA, METODOS_TEXTO } from '../src/chispa/ejecucion/interprete';
@@ -111,6 +113,9 @@ describe('Recetas de la guía', () => {
   p.escenas.Fin = { colorFondo: 'negro', objetos: [] };
   p.escenas.Nivel2 = { colorFondo: 'negro', objetos: [] };
   p.escenas.Principal.objetos = [{ nombre: 'Nave' }, { nombre: 'Jugador' }, { nombre: 'Moneda' }, { nombre: 'Mapa', mapa: { tamano: 32, tipos: { puerta: { solida: false } }, celdas: {} } }];
+  // Los sonidos y la canción de las recetas de la 1.1 (hechos con los editores de sonido y de música)
+  p.sonidosHechos = { salto: completarSonido({}), motor: completarSonido({}) };
+  p.canciones = { tema: cancionDeEjemplo() };
 
   for (const r of RECETAS) {
     it(r.titulo, () => {

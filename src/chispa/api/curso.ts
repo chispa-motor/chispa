@@ -808,7 +808,9 @@ export const NIVELES_CURSO: readonly NivelCurso[] = [
     ejercicios: [
       { enunciado: '**Disparos.** Cada medio segundo, crea una Bala donde está el objeto y dale velocidad hacia la derecha. (Para que no se acumulen, en el editor ponle a la plantilla Bala un script con «cuando salgo de la pantalla: destruir(yo)».)', solucion: 'cuando cada 0.5 segundos:\n    variable b = crear("Bala", yo.x, yo.y)\n    b.velocidad = vector(500, 0)' },
       { enunciado: '**Cuenta atrás.** El objeto enseña «Tiempo: 10» y cada segundo baja uno. Al llegar a 0, cambia a la escena Fin.', solucion: 'variable quedan = 10\n\ncuando empieza:\n    yo.texto = "Tiempo: {quedan}"\n\ncuando cada 1 segundo:\n    quedan -= 1\n    si quedan <= 0:\n        escena.cambiar("Fin")' },
-      { enunciado: '**Un buen golpe.** Al tocar un Enemigo: partículas de explosión, el efecto de sonido «explosion», la cámara tiembla y el objeto parpadea.', solucion: 'cuando toco Enemigo:\n    particulas("explosion", yo.x, yo.y)\n    sonido.efecto("explosion")\n    escena.camara.temblar(10, 0.3)\n    yo.parpadear(1)' },
+      { enunciado: '**Un buen golpe.** Al tocar un Enemigo: partículas de explosión, el efecto de sonido «explosion», la cámara tiembla y el objeto parpadea.', solucion: 'cuando toco Enemigo:\n    particulas("explosion", yo.x, yo.y)\n    sonido.efecto("explosion")\n    escena.camara.temblar(10, 0.3)\n    yo.parpadear(1)' },      { enunciado: '**Barra de vida.** En la escena hay una barra llamada Barra (Añadir > Interfaz > Barra). Cada vez que el objeto toque un Enemigo, la barra baja 25; cuando llegue a 0, cambia a la escena Fin.', solucion: 'cuando toco Enemigo:\n    variable barra = buscar("Barra")\n    barra.valor -= 25\n    si barra.valor <= 0:\n        escena.cambiar("Fin")' },
+      { enunciado: '**La linterna.** Al empezar, la escena se queda casi a oscuras y el objeto lleva una luz naranja de 250 de radio. Con la tecla L, la luz se apaga y se enciende.', solucion: 'cuando empieza:\n    escena.oscuridad = 0.9\n    yo.luz = verdadero\n    yo.radioLuz = 250\n    yo.colorLuz = "naranja"\n\ncuando se pulsa "l":\n    yo.luz = no yo.luz' },
+      { enunciado: '**Fiesta.** Cada segundo, confeti en un sitio al azar de la pantalla, un destello blanco de pantalla muy corto y el objeto brilla con un resplandor de un color al azar.', solucion: 'cuando cada 1 segundo:\n    efecto.confeti(vector(aleatorio(100, 860), aleatorio(100, 440)))\n    pantalla.flash("blanco", 0.1)\n    yo.resplandor = elegir(["cian", "rosa", "amarillo"])' },
     ],
     proyecto: {
       titulo: 'Esquiva los meteoritos',
@@ -843,6 +845,9 @@ export const NIVELES_CURSO: readonly NivelCurso[] = [
       { enunciado: '**Mensajes con dato.** Al empezar, envía el mensaje «puntos» dos veces, con 10 y con 5. Al recibirlo, suma el dato a juego.total y enséñalo.', solucion: 'cuando empieza:\n    juego.total = 0\n    enviar("puntos", 10)\n    enviar("puntos", 5)\n\ncuando recibo "puntos":\n    juego.total += dato\n    mostrar("Total:", juego.total)' },
       { enunciado: '**El récord.** Con unos puntos de 120, carga el récord guardado (0 si no hay). Si lo has superado, guárdalo y dilo; si no, di cuál sigue siendo el récord.', solucion: 'cuando empieza:\n    variable puntos = 120\n    variable record = cargar("record", 0)\n    si puntos > record:\n        guardar("record", puntos)\n        mostrar("Nuevo record:", puntos)\n    sino:\n        mostrar("El record sigue siendo", record)' },
       { enunciado: '**El vigilante.** Cada medio segundo, lanza un rayo hacia el Jugador. Si lo primero que toca es el Jugador (nada lo tapa), ve hacia él con irHacia.', solucion: 'cuando cada 0.5 segundos:\n    variable jugador = buscar("Jugador")\n    si jugador != nulo:\n        variable r = rayo(yo, jugador, 500)\n        si r != nulo:\n            si r.objeto == jugador:\n                yo.irHacia(jugador, 150)' },
+      { enunciado: '**Para dos.** El objeto lo maneja el jugador 2 (con las flechas) a 250 de rapidez. Cada vez que el jugador 2 pulse su botón «a» (Intro), el objeto cambia a un color al azar.', solucion: 'cuando cada fotograma:\n    yo.moverConJugador(2, 250)\n    si controles(2).sePulso("a"):\n        yo.color = elegir(["rojo", "verde", "azul", "amarillo"])' },
+      { enunciado: '**El péndulo.** Al empezar, cuelga el objeto con una cuerda de 150 de un punto que está 150 más arriba y 100 a la derecha. Con espacio, la cuerda se suelta.', solucion: 'cuando empieza:\n    junta.cuerda(yo, vector(yo.x + 100, yo.y + 150), 150)\n\ncuando se pulsa "espacio":\n    junta.quitar(yo)' },
+      { enunciado: '**La tabla de los mejores.** Con unos puntos de 120: si entran en la tabla de puntuaciones, apúntalos con el nombre «Ana». Después enseña en la consola toda la tabla, cada línea con su nombre y sus puntos.', solucion: 'cuando empieza:\n    variable puntos = 120\n    si puntuaciones.entra(puntos):\n        puntuaciones.guardar("Ana", puntos)\n    para cada p en puntuaciones.lista():\n        mostrar(p.nombre, p.puntos)' },
     ],
     proyecto: {
       titulo: 'La aldea',
@@ -869,6 +874,42 @@ export const NIVELES_CURSO: readonly NivelCurso[] = [
         'puerta.chs': 'cuando recibo "abrir_puerta":\n    juego.mision = 2\n    guardar("aldea_mision", 2)\n    sonido.efecto("subir")\n    animar(yo.opacidad, 0, 1)\n    esperar(1)\n    destruir(yo)',
         'perro.chs': 'cuando cada 0.5 segundos:\n    variable jugador = buscar("Jugador")\n    si jugador != nulo:\n        si yo.distanciaA(jugador) > 80:\n            yo.irHacia(jugador, 200)\n        sino:\n            yo.parar()',
         'marcador.chs': 'cuando empieza:\n    juego.mision = cargar("aldea_mision", 0)\n\ncuando cada fotograma:\n    si juego.mision == 0:\n        yo.texto = "Habla con Ana"\n    sino si juego.mision == 1:\n        yo.texto = "Busca la llave"\n    sino:\n        yo.texto = "Mision cumplida"',
+      },
+    },
+  },
+  {
+    numero: 5,
+    titulo: 'Tu juego, de principio a fin',
+    intro: 'Ya conoces todos los comandos. Este nivel no trae ninguno nuevo: es para hacer un juego ENTERO con las herramientas del editor, que hacen por ti lo más pesado. **Empezar:** botón Nuevo > una plantilla (plataformas, naves, puzle, carreras, cartas, diálogos...) y cambiarla, o En blanco. **Dibujos, sonidos y música:** en la pestaña Proyecto, el botón del libro trae dibujos, sonidos y canciones listos; con el + de Sonidos haces tus propios efectos (pulsa «Salto», «Moneda»... hasta que te guste uno) y con el + de Música, tus canciones en una rejilla de notas. **Marcadores sin código:** Añadir > Interfaz (barra, icono con contador, inventario...) y, en su «dato», juego.vidas o Jugador.vida. **Menú, pausa y puntuaciones:** el botón «Pantallas listas», junto a las escenas. **Para dos:** en cada personaje, Comportamiento > «Lo maneja un jugador», y en la Cámara de la escena, «2 jugadores». **Publicarlo:** haz clic en el fondo de la escena y, en Proyecto, ponle nombre e icono; luego, el botón itch.io de arriba descarga el juego listo para subir y te dice los pasos.',
+    ejercicios: [
+      { enunciado: '**Cambia una plantilla.** Abre la plantilla Naves (Nuevo > Naves). En el script de las oleadas, haz que salga un ovni cada medio segundo en vez de cada segundo. (Solo hay que cambiar un número.) Escribe aquí cómo queda ese script.', solucion: 'cuando cada 0.5 segundos:\n    crear("Enemigo", aleatorio(40, pantalla.ancho - 40), pantalla.alto + 30)' },
+      { enunciado: '**El contador de monedas.** En un juego con monedas: cada vez que el objeto toque una Moneda, la destruye, suma 1 a juego.monedas y suena el efecto «moneda». (En el editor, el dato juego.monedas se crea en Datos del juego, y un «icono con contador» con el dato juego.monedas lo enseña sin más código.)', solucion: 'cuando empieza:\n    juego.monedas = 0\n\ncuando toco Moneda:\n    destruir(otro)\n    juego.monedas += 1\n    sonido.efecto("moneda")' },
+      { enunciado: '**Guardar la partida en la tabla.** Al tocar la Meta: si los puntos del juego entran en la tabla de puntuaciones, se apuntan con el nombre «Yo»; después se pasa a la escena Fin con un fundido de medio segundo.', solucion: 'cuando empieza:\n    juego.puntos = 50\n\ncuando toco Meta:\n    si puntuaciones.entra(juego.puntos):\n        puntuaciones.guardar("Yo", juego.puntos)\n    escena.cambiar("Fin", 0.5)' },
+    ],
+    proyecto: {
+      titulo: 'Duelo para dos',
+      queHace: 'Dos jugadores en el mismo teclado: el 1 con W A S D y espacio, el 2 con las flechas e Intro. Cada uno dispara al otro; cada bala que acierta baja 20 la barra de vida del que la recibe. Quien se queda sin vida pierde: se apunta la victoria del otro (guardada, para que no se pierda) y se empieza otra vez. Junta los controles de varios jugadores, las barras de interfaz, las plantillas, los efectos y los datos guardados.',
+      montaje: [
+        'La escena con **gravedad 0**.',
+        'Dos cuadrados con Colisión: **Azul** (a la izquierda, con el script **azul.chs**) y **Rojo** (a la derecha, con **rojo.chs**).',
+        'Dos barras (**Añadir > Interfaz > Barra**) llamadas **VidaAzul** y **VidaRojo**, una en cada esquina de arriba.',
+        'Una **plantilla Bala** (un círculo pequeño) con Colisión sin «sólido», Física con gravedad 0 y el script **bala.chs**.',
+        'Un **Texto** llamado **Marcador** con el script **marcador.chs**.',
+      ],
+      gravedad: 0,
+      plantillas: { Bala: { sprite: { forma: 'circulo', ancho: 12, alto: 12, color: 'amarillo' }, colision: { solido: false }, fisica: { gravedad: 0 }, script: 'bala.chs' } },
+      objetos: [
+        { nombre: 'Azul', ...figura(150, 270, { sprite: { ancho: 40, alto: 40, color: 'azul' } }), script: 'azul.chs' },
+        { nombre: 'Rojo', ...figura(810, 270, { sprite: { ancho: 40, alto: 40, color: 'rojo' } }), script: 'rojo.chs' },
+        { nombre: 'VidaAzul', x: 130, y: 510, sprite: { color: 'azul', ancho: 200, alto: 24, fijo: true }, control: { tipo: 'barra', valor: 100 } },
+        { nombre: 'VidaRojo', x: 830, y: 510, sprite: { color: 'rojo', ancho: 200, alto: 24, fijo: true }, control: { tipo: 'barra', valor: 100 } },
+        { nombre: 'Marcador', x: 480, y: 510, sprite: { forma: 'texto', texto: 'Azul 0 - 0 Rojo', fijo: true }, script: 'marcador.chs' },
+      ],
+      scripts: {
+        'azul.chs': 'cuando cada fotograma:\n    yo.moverConJugador(1, 260)\n    si controles(1).sePulso("a"):\n        variable b = crear("Bala", yo.x + 40, yo.y)\n        b.velocidad = vector(500, 0)\n        sonido.efecto("laser")\n\ncuando toco Bala:\n    destruir(otro)\n    yo.flash("blanco", 0.1)\n    variable vida = buscar("VidaAzul")\n    vida.valor -= 20\n    si vida.valor <= 0:\n        guardar("duelo_rojo", cargar("duelo_rojo", 0) + 1)\n        efecto.explosion(yo)\n        esperar(1)\n        escena.reiniciar()',
+        'rojo.chs': 'cuando cada fotograma:\n    yo.moverConJugador(2, 260)\n    si controles(2).sePulso("a"):\n        variable b = crear("Bala", yo.x - 40, yo.y)\n        b.velocidad = vector(-500, 0)\n        sonido.efecto("laser")\n\ncuando toco Bala:\n    destruir(otro)\n    yo.flash("blanco", 0.1)\n    variable vida = buscar("VidaRojo")\n    vida.valor -= 20\n    si vida.valor <= 0:\n        guardar("duelo_azul", cargar("duelo_azul", 0) + 1)\n        efecto.explosion(yo)\n        esperar(1)\n        escena.reiniciar()',
+        'bala.chs': 'cuando salgo de la pantalla:\n    destruir(yo)',
+        'marcador.chs': '# Las victorias se guardan: siguen ahi aunque la escena vuelva a empezar (y aunque cierres el juego)\ncuando empieza:\n    variable azul = cargar("duelo_azul", 0)\n    variable rojo = cargar("duelo_rojo", 0)\n    yo.texto = "Azul {azul} - {rojo} Rojo"',
       },
     },
   },
