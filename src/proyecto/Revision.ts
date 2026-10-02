@@ -21,7 +21,7 @@ import type { Entorno } from '../chispa/ejecucion/entorno';
 import { Interprete } from '../chispa/ejecucion/interprete';
 import type { Programa } from '../chispa/sintaxis/ast';
 import { analizarSintaxis } from '../chispa/sintaxis/parser';
-import { nombresDeObjetos, type DefProyecto } from './formato';
+import { nombresDeObjetos, nombresDeSonidos, type DefProyecto } from './formato';
 import { revisarTextos } from './TextosConHuecos';
 import { recorrerExpresiones } from '../chispa/sintaxis/recorrer';
 import { sugerir } from '../chispa/errores/sugerencias';
@@ -76,7 +76,7 @@ function contextoDe(proyecto: DefProyecto, globales: Entorno) {
     esScript: true,
     plantillas: Object.keys(proyecto.plantillas),
     imagenes: Object.keys(proyecto.imagenes),
-    sonidos: Object.keys(proyecto.sonidos ?? {}),
+    sonidos: nombresDeSonidos(proyecto),
     escenas: Object.keys(proyecto.escenas),
     animaciones: Object.keys(proyecto.animaciones),
     efectos: Object.keys(proyecto.efectos ?? {}),

@@ -111,6 +111,12 @@ const RECURSOS_EN_LLAMADAS: Record<string, { lista: keyof ContextoAnalisis; que:
   'sonido.bucle': { lista: 'sonidos', que: 'sonido' },
   'sonido.sonando': { lista: 'sonidos', que: 'sonido' },
   'sonido.parar': { lista: 'sonidos', que: 'sonido' },
+  'sonido.reproduciren': { lista: 'sonidos', que: 'sonido' },
+  'sonido.bucleen': { lista: 'sonidos', que: 'sonido' },
+  'sonido.ponervolumen': { lista: 'sonidos', que: 'sonido' },
+  'sonido.ponertono': { lista: 'sonidos', que: 'sonido' },
+  'sonido.ponerpan': { lista: 'sonidos', que: 'sonido' },
+  'musica.cruzar': { lista: 'sonidos', que: 'sonido' },
   'yo.animar': { lista: 'animaciones', que: 'animación' },
 });
 

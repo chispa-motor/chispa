@@ -2,7 +2,7 @@
 
 > Se genera sola con `npm run manual` (no la cambies a mano). Un test comprueba que no falta ningún comando y que cada ejemplo funciona.
 
-Todos los comandos de Chispa (369), una línea cada uno, para tenerla abierta mientras programas o imprimirla. Para aprender con calma, el [curso](APRENDE_CHISPA.md).
+Todos los comandos de Chispa (379), una línea cada uno, para tenerla abierta mientras programas o imprimirla. Para aprender con calma, el [curso](APRENDE_CHISPA.md).
 
 En los ejemplos se usan estas variables y esta función, como si ya las tuvieras (y en la escena hay un Jugador y un Mapa de casillas):
 
@@ -354,7 +354,7 @@ Las líneas que terminan en `:` empiezan un bloque: lo de dentro va debajo, con 
 
 | Comando | Qué hace | Ejemplo |
 |---|---|---|
-| `sonido.reproducir("nombre", volumen, tono)` | Reproduce un sonido del proyecto. | `sonido.reproducir("salto", 0.5)` |
+| `sonido.reproducir("nombre", volumen, tono, lado)` | Reproduce un sonido del proyecto (importado, o hecho con el generador de efectos). | `sonido.reproducir("salto", 0.5)` |
 | `sonido.bucle("nombre", volumen)` | Reproduce un sonido una y otra vez, hasta que se pare con sonido.parar("nombre"). | `sonido.bucle("motor", 0.4)` |
 | `sonido.parar("nombre")` | Para un sonido (o todos, sin nombre). | `sonido.parar("motor")` |
 | `sonido.sonando("nombre")` | Verdadero si ese sonido está sonando ahora. | `si sonido.sonando("motor"):` |
@@ -591,3 +591,18 @@ Las líneas que terminan en `:` empiezan un bloque: lo de dentro va debajo, con 
 |---|---|---|
 | `pantalla.dividir(cuantas, como)` | Divide la pantalla en 2, 3 o 4 trozos, cada uno con su cámara (escena.camaraDe(2)...): para jugar varios en el mismo ordenador. | `pantalla.dividir(2, "filas")` |
 | `escena.camaraDe(numero)` | Con la pantalla dividida (pantalla.dividir), la cámara de ese trozo: la 1 es la de siempre (escena.camara), la 2 la del segundo trozo... | `escena.camaraDe(1).seguir(yo)` |
+
+### Sonido con sitio y música que cambia
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `sonido.reproducirEn("nombre", sitio, alcance, volumen)` | Reproduce un sonido EN UN SITIO del mundo (un objeto o un vector): suena más flojo cuanto más lejos está del oyente, y por el altavoz del lado donde está. | `sonido.reproducirEn("salto", yo, 900)` |
+| `sonido.bucleEn("nombre", sitio, alcance, volumen)` | Un sonido que no para, pegado a un objeto o a un punto: una cascada, un motor, una hoguera. | `sonido.bucleEn("salto", yo, 600)` |
+| `sonido.ponerVolumen("nombre", volumen, segundos)` | Cambia el volumen de un sonido QUE YA ESTÁ SONANDO (de 0 a 1). | `sonido.ponerVolumen("salto", 0.2, 1)` |
+| `sonido.ponerTono("nombre", tono, segundos)` | Cambia el tono (y la velocidad) de un sonido que ya está sonando: 1 = normal, 2 = más agudo y rápido. | `sonido.ponerTono("salto", 1.5)` |
+| `sonido.ponerPan("nombre", lado, segundos)` | Por qué lado suena un sonido que ya está sonando: -1 = izquierda, 0 = centro, 1 = derecha. | `sonido.ponerPan("salto", -1)` |
+| `sonido.oyente` | Quién escucha los sonidos con sitio (sonido.reproducirEn, sonido.bucleEn): un objeto, o nulo para que sea el centro de la cámara (lo normal). | `sonido.oyente = yo` |
+| `musica.cruzar("nombre", segundos)` | Pasa a otra música CRUZÁNDOLAS: la que suena baja mientras la nueva sube (2 segundos si no se dice). | `musica.cruzar("tema", 2)` |
+| `musica.capa(numero, volumen, segundos)` | Sube o baja UNA capa de la música que suena. | `musica.capa(1, 0.5, 2)` |
+| `musica.intensidad` | Música adaptativa con un solo número: con 0 solo suena la primera capa, con 1 todas, y en medio van entrando una a una. | `musica.intensidad = 0.5` |
+| `musica.tono` | La velocidad de la música (y su tono): 1 = normal, 1.2 = más rápida y aguda, 0.8 = más lenta y grave. | `musica.tono = 1.2` |

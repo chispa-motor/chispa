@@ -28,6 +28,8 @@ import { ErrorMotor } from '../motor/Errores';
 import { esColorValido } from '../motor/Color';
 import { esNombreProhibido } from '../utilidades/seguro';
 import { problemaDataURL, problemaLetra } from './archivos';
+import { LIMITES_SONIDO, ONDAS, completarSonido, type ParamsSonido } from '../sonido/generador';
+import { INSTRUMENTOS, LIMITES_CANCION, type DefCancion, type NotaCancion, type PistaCancion } from '../sonido/musica';
 import type { DefLuz } from './formato';
 import type { DatoInicial, DefCamara, DefColision, DefComportamiento, DefEscena, DefFisica, DefMapa, DefObjeto, DefProyecto, DefRecorrido, DefSprite } from './formato';
 import type { DefAnimacion } from '../objetos/componentes/Animador';
@@ -406,6 +408,40 @@ const recurso = (tipo: 'imagen' | 'sonido') => (v: unknown, ruta: Ruta): string 
   return v;
 };
 
+/** Un sonido del generador de efectos: cada número, dentro de sus límites. */
+function sonidoHecho(v: unknown, ruta: Ruta): ParamsSonido {
+  const o = objeto(v, ruta);
+  const reglas = Object.fromEntries(Object.entries(LIMITES_SONIDO).map(([k, [min, max]]) => [k, (x: unknown, r: Ruta) => numero(x, r, min, max)])) as { [K in keyof Omit<ParamsSonido, 'onda'>]: (x: unknown, r: Ruta) => number };
+  return completarSonido(campos<Partial<ParamsSonido>>(o, ruta, { onda: (x, r) => unoDe(x, r, ONDAS), ...reglas }));
+}
+
+/** Una canción del editor de música. */
+function cancion(v: unknown, ruta: Ruta): DefCancion {
+  const L = LIMITES_CANCION;
+  const c = campos<Partial<DefCancion>>(objeto(v, ruta), ruta, {
+    tempo: (x, r) => numero(x, r, L.tempoMin, L.tempoMax),
+    pasos: (x, r) => numero(x, r, L.pasosMin, L.pasosMax),
+    bucle: logico,
+    pistas: (x, r) => lista(x, r, L.pistas, (p, rp) => {
+      const pista = campos<Partial<PistaCancion>>(objeto(p, rp), rp, {
+        instrumento: (i, ri) => unoDe(i, ri, INSTRUMENTOS),
+        volumen: (n, rn) => numero(n, rn, 0, 1),
+        notas: (n, rn) => lista(n, rn, L.notasPorPista, (nota, rnota) => {
+          const d = campos<Partial<NotaCancion>>(objeto(nota, rnota), rnota, {
+            paso: (a, ra) => numero(a, ra, 0, L.pasosMax),
+            nota: (a, ra) => numero(a, ra, 0, L.notaMax),
+            largo: (a, ra) => numero(a, ra, 1, L.pasosMax),
+          });
+          return { paso: Math.floor(d.paso ?? 0), nota: Math.floor(d.nota ?? 60), largo: Math.floor(d.largo ?? 1) };
+        }),
+      });
+      return { instrumento: pista.instrumento ?? 'piano', volumen: pista.volumen ?? 0.8, notas: pista.notas ?? [] };
+    }),
+  });
+  if (c.tempo === undefined || c.pasos === undefined || !c.pistas) fallo(ruta, 'a la canción le falta el tempo, los pasos o las pistas');
+  return { tempo: c.tempo, pasos: Math.floor(c.pasos), pistas: c.pistas, ...(c.bucle !== undefined ? { bucle: c.bucle } : {}) };
+}
+
 const letra = (v: unknown, ruta: Ruta): string => {
   if (typeof v !== 'string') fallo(ruta, `tendría que ser un tipo de letra, pero es ${describir(v)}`);
   const problema = problemaLetra(v);
@@ -447,5 +483,7 @@ export function validarProyecto(datos: unknown): Partial<DefProyecto> {
     colores: (x, r) => lista(x, r, 200, color),
     efectos: (x, r) => registro(x, r, 500, efecto),
     letras: (x, r) => registro(x, r, 20, letra),
+    sonidosHechos: (x, r) => registro(x, r, L.sonidos, sonidoHecho),
+    canciones: (x, r) => registro(x, r, 200, cancion),
   });
 }

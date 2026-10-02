@@ -46,6 +46,8 @@ import { RECETAS } from '../objetos/Efectos';
 import { Luz } from '../objetos/Luces';
 import { ponerSemilla } from '../utilidades/azar';
 import { cargarLetra, declararLetras, olvidarLetras } from '../motor/Letras';
+import { FRECUENCIA_MUESTREO, generarSonido } from '../sonido/generador';
+import { FRECUENCIA_MUSICA, renderizarPista } from '../sonido/musica';
 import type { ConfigParticulas } from '../objetos/Particulas';
 import { normalizar } from '../utilidades/texto';
 import { migrarProyecto, tipoPorNombre, type DefObjeto, type DefProyecto } from './formato';
@@ -159,6 +161,12 @@ export class JuegoEnMarcha implements ContextoJuego {
     // Cada partida empieza con azar de verdad (la semilla de la anterior no se queda)
     ponerSemilla(null);
     declararLetras(Object.keys(proyecto.letras ?? {}));
+    // Los sonidos hechos en el editor y las canciones se convierten en sonido ahora (en el proyecto solo van sus números y sus notas)
+    const conAudio = motor.sonido.hayAudio;
+    for (const [n, s] of Object.entries(proyecto.sonidosHechos ?? {})) motor.sonido.registrarMuestras(n, conAudio ? generarSonido(s) : new Float32Array(0), FRECUENCIA_MUESTREO);
+    for (const [n, c] of Object.entries(proyecto.canciones ?? {})) {
+      motor.sonido.registrarCancion(n, c.pistas.map((p) => (conAudio ? renderizarPista(c, p) : new Float32Array(0))), FRECUENCIA_MUSICA, c.bucle !== false);
+    }
     const juego = new JuegoEnMarcha(motor, proyecto, opciones);
     // Revisamos TODOS los scripts al principio: así los errores salen todos
     // a la vez nada más pulsar Ejecutar, y no a los 5 minutos de partida.

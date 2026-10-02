@@ -91,6 +91,7 @@ const TRAZOS: Record<string, string> = {
   objeto: 'M5 5h14v14H5z',
   circulo: 'M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z',
   texto: 'M5 6V4h14v2M12 4v16M9 20h6',
+  nota: 'M9 18V6l10-2v12M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM19 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z',
   boton: 'M3 8h18v8H3zM8 12h8',
   mapa: 'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',
   vacio: 'M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z M12 9v6M9 12h6',

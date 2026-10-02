@@ -26,6 +26,11 @@ import { miniatura } from '../interfaz/iconosFormas';
 import { abrirEditorParticulas } from '../recursos/EditorParticulas';
 import { botonIcono, h, icono, rellenar } from '../interfaz/dom';
 import { confirmar, notificar, pedirTexto } from '../interfaz/dialogos';
+import { abrirEditorSonidos } from '../recursos/EditorSonidos';
+import { abrirEditorMusica } from '../recursos/EditorMusica';
+import { callar, tocar } from '../recursos/audioEditor';
+import { FRECUENCIA_MUESTREO, generarSonido } from '../../sonido/generador';
+import { FRECUENCIA_MUSICA, renderizarCancion } from '../../sonido/musica';
 import { tiene } from '../../utilidades/seguro';
 
 type Pestana = 'escena' | 'proyecto' | 'biblioteca';
@@ -79,7 +84,7 @@ export class PanelIzquierdo {
     if (this.pestana === 'escena') {
       return JSON.stringify([comun, Object.keys(p.escenas), p.escenaInicial, e.escena.objetos.map((o) => [o.nombre, o.script, o.script && o.script in p.scripts, iconoDe(o), o.sprite?.fijo, o.plantilla])]);
     }
-    return JSON.stringify([comun, Object.keys(p.efectos ?? {}), Object.keys(p.escenas), p.escenaInicial, Object.keys(p.scripts), Object.keys(p.plantillas), Object.keys(p.imagenes), Object.keys(p.sonidos), Object.keys(p.letras ?? {}), Object.entries(p.animaciones).map(([n, a]) => [n, a.fotogramas.length]), e.todosLosObjetos().map((o) => o.script)]);
+    return JSON.stringify([comun, Object.keys(p.efectos ?? {}), Object.keys(p.escenas), p.escenaInicial, Object.keys(p.scripts), Object.keys(p.plantillas), Object.keys(p.imagenes), Object.keys(p.sonidos), Object.keys(p.sonidosHechos ?? {}), Object.entries(p.canciones ?? {}).map(([n, c]) => [n, c.pistas.length]), Object.keys(p.letras ?? {}), Object.entries(p.animaciones).map(([n, a]) => [n, a.fotogramas.length]), e.todosLosObjetos().map((o) => o.script)]);
   }
 
   /** Enseña la pestaña Proyecto (por ejemplo, después de importar algo, para verlo). */
@@ -318,6 +323,34 @@ export class PanelIzquierdo {
       ], { title: `Doble clic: cambiar el nombre · En el código: sonido.reproducir("${n}")`, ondblclick: () => this.renombrarRecurso('sonido', n) }),
     );
 
+    // Sonidos hechos con el generador de efectos, y canciones del editor de música
+    const hechos = Object.entries(p.sonidosHechos ?? {}).map(([n, datos]) =>
+      this.fila('sonido', n, [
+        botonIcono('reproducir', 'Escuchar', () => void tocar(generarSonido(datos), FRECUENCIA_MUESTREO), undefined, 'pequeno'),
+        botonIcono('pincel', 'Cambiar el sonido', () => abrirEditorSonidos(e, n), undefined, 'pequeno'),
+        botonIcono('basura', 'Borrar el sonido', async () => {
+          if (await confirmar('Borrar sonido', `¿Borrar el sonido «${n}»? El código que lo usa dará un error.`, 'Borrar', true)) e.borrarSonidoHecho(n);
+        }, undefined, 'pequeno peligro'),
+      ], { title: `Hecho con el generador · Clic en el pincel: cambiarlo · En el código: sonido.reproducir("${n}")` }),
+    );
+    const canciones = Object.entries(p.canciones ?? {}).map(([n, c]) =>
+      this.fila('nota', n, [
+        h('span', { class: 'etiqueta', title: 'Pistas (capas)' }, `${c.pistas.length}`),
+        botonIcono('reproducir', 'Escuchar (otra vez: parar)', () => {
+          if (this.cancionSonando === n) {
+            this.cancionSonando = null;
+            callar();
+          } else {
+            this.cancionSonando = n;
+            tocar(renderizarCancion(c), FRECUENCIA_MUSICA, { alAcabar: () => this.cancionSonando === n && (this.cancionSonando = null) });
+          }
+        }, undefined, 'pequeno'),
+        botonIcono('basura', 'Borrar la canción', async () => {
+          if (await confirmar('Borrar canción', `¿Borrar la canción «${n}»? El código que la usa dará un error.`, 'Borrar', true)) e.borrarCancion(n);
+        }, undefined, 'pequeno peligro'),
+      ], { title: `Clic: abrirla en el editor de música · En el código: musica.reproducir("${n}")`, onclick: (ev: MouseEvent) => !(ev.target as HTMLElement).closest('button') && abrirEditorMusica(e, n) }),
+    );
+
     // Animaciones
     const animaciones = Object.entries(p.animaciones).map(([n, a]) =>
       this.fila('animacion', n, [
@@ -340,8 +373,12 @@ export class PanelIzquierdo {
         botonIcono('pincel', 'Dibujar un sprite nuevo, píxel a píxel', () => void abrirEditorPixelArt(e), undefined, 'pequeno'),
         botonIcono('abrir', 'Importar imágenes (.png, .jpg, .svg, .gif)', () => this.importar('image/*'), undefined, 'pequeno'),
       ], Object.keys(p.imagenes).length ? imagenes : [], 'Dibuja una con el pincel, impórtala, o arrastra imágenes desde tu ordenador hasta el editor.'),
-      this.grupo('Sonidos', 'sonido', [botonIcono('abrir', 'Importar sonidos (.mp3, .ogg, .wav)', () => this.importar('audio/*'), undefined, 'pequeno')],
-        sonidos, 'Sin sonidos. Arrastra archivos de sonido hasta el editor para importarlos. También puedes usar sonido.tono(440, 0.2) sin importar nada.'),
+      this.grupo('Sonidos', 'sonido', [
+        botonIcono('mas', 'Hacer un efecto de sonido (salto, moneda, explosión...) sin archivos', () => abrirEditorSonidos(e), undefined, 'pequeno'),
+        botonIcono('abrir', 'Importar sonidos (.mp3, .ogg, .wav)', () => this.importar('audio/*'), undefined, 'pequeno'),
+      ], [...hechos, ...sonidos], 'Sin sonidos. Pulsa + para HACER uno (salto, moneda, explosión...) o arrastra archivos de sonido hasta el editor.'),
+      this.grupo('Música', 'nota', [botonIcono('mas', 'Nueva canción (editor de música)', () => abrirEditorMusica(e), undefined, 'pequeno')],
+        canciones, 'Haz tu propia música en una rejilla de notas: pulsa +. También vale un archivo de sonido importado: musica.reproducir("nombre").'),
       this.grupo('Letras', 'texto', [botonIcono('abrir', 'Importar tipos de letra (.ttf, .otf, .woff, .woff2)', () => this.importar('.ttf,.otf,.woff,.woff2,font/*'), undefined, 'pequeno')],
         Object.keys(p.letras ?? {}).map((n) =>
           this.fila('texto', n, [
@@ -372,6 +409,9 @@ export class PanelIzquierdo {
     const n = await pedirTexto('Nueva escena', 'Nombre de la escena (por ejemplo: Menu, Nivel2, Fin). En el código: escena.cambiar("Nivel2")', 'Nivel2');
     if (n) this.estado.crearEscena(n);
   }
+
+  /** La canción que se está escuchando desde el panel (para pararla con el mismo botón). */
+  private cancionSonando: string | null = null;
 
   private escuchar(url: string): void {
     this.sonando?.pause();

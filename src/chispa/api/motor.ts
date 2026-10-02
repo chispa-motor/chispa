@@ -28,6 +28,7 @@ import { NOMBRES_SUAVIZADOS, SUAVIZADOS, mezclar, type ValorAnimable } from '../
 import type { DibujoDepuracion } from '../../objetos/Escena';
 import { esColorValido } from '../../motor/Color';
 import { BOTONES_MANDO, type BotonRaton } from '../../motor/Entrada';
+import { ALCANCE_NORMAL } from '../../motor/Sonido';
 import type { Motor } from '../../motor/Motor';
 import { Vector2 } from '../../motor/Vector2';
 import type { Escena } from '../../objetos/Escena';
@@ -226,6 +227,12 @@ function argBoton(args: Valor[], funcion: string, pos: Posicion): BotonRaton {
   const b = BOTONES[normalizar(argTexto(args, 0, funcion, pos, `raton.${funcion}("izquierdo")`))];
   if (!b) throw new ErrorChispa(pos, `no conozco el botón del ratón "${aTexto(args[0])}".`, 'Los botones son: "izquierdo", "derecho" y "medio".');
   return b;
+}
+
+/** Por qué lado suena: de -1 (izquierda) a 1 (derecha). */
+function panValido(pan: number, p: Posicion): number {
+  if (pan < -1 || pan > 1) throw new ErrorChispa(p, `el lado por el que suena va de -1 (izquierda) a 1 (derecha), y le das ${pan}.`, '0 = por los dos lados igual.');
+  return pan;
 }
 
 /** El tono de un sonido: 1 = normal. Tiene que ser mayor que 0. */
@@ -589,16 +596,79 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
   );
 
   // ── sonido ──
+  /** El tercer valor de los cambios en vivo: en cuántos segundos (0 = de golpe). */
+  const segundosDeCambio = (a: Valor[], f: string, p: Posicion, ej: string) => {
+    const s = argNumero(a, 2, f, p, ej, 0);
+    if (s < 0 || s > 60) throw new ErrorChispa(p, `el cambio dura de 0 a 60 segundos, y le das ${s}.`, `Ejemplo: ${ej}`);
+    return s;
+  };
+  /** El sitio de un sonido: un objeto (el sonido va con él) o un punto (un vector). */
+  const sitioDeSonido = (a: Valor[], f: string, p: Posicion, ej: string) => {
+    const v = a[1];
+    if (v instanceof RefObjeto) return v.objeto;
+    if (v instanceof Vector2) return { x: v.x, y: v.y };
+    if (v === undefined && aqui()) return interprete.objetoActual as ObjetoJuego;
+    throw new ErrorChispa(p, `'${f}' necesita DÓNDE suena: un objeto o un punto (un vector), y le das ${v === undefined ? 'nada' : v === null ? 'un objeto vacío (nulo): ese objeto no existe' : nombreTipo(v)}.`, `Ejemplo: ${ej}`);
+  };
+  const alcanceValido = (a: Valor[], f: string, p: Posicion, ej: string) => {
+    const alcance = argNumero(a, 2, f, p, ej, ALCANCE_NORMAL);
+    if (!(alcance > 0 && alcance <= 100_000)) throw new ErrorChispa(p, `el alcance (hasta dónde se oye, en píxeles) tiene que ser más de 0, y le das ${alcance}.`, `Ejemplo: ${ej}`);
+    return alcance;
+  };
   g.declarar(
     'sonido',
     new Modulo(
       'sonido',
-      { volumen: { obtener: () => ctx.motor.sonido.volumen, asignar: (v, p) => (ctx.motor.sonido.volumen = comoNumero(v, 'volumen', p)) } },
+      {
+        volumen: { obtener: () => ctx.motor.sonido.volumen, asignar: (v, p) => (ctx.motor.sonido.volumen = comoNumero(v, 'volumen', p)) },
+        // Quién escucha los sonidos con sitio: un objeto (el jugador), o nulo = el centro de la cámara
+        oyente: {
+          obtener: () => (ctx.escena.oyente && !ctx.escena.oyente.destruido ? referencia(ctx.escena.oyente) : null),
+          asignar: (v, p) => {
+            if (v !== null && !(v instanceof RefObjeto)) throw new ErrorChispa(p, `el oyente tiene que ser un objeto (o nulo, para que sea la cámara), y le das ${nombreTipo(v)}.`, 'Ejemplo: sonido.oyente = buscar("Jugador")');
+            ctx.escena.oyente = v === null ? null : v.objeto;
+          },
+        },
+      },
       {
         reproducir: (a, p) => {
+          // volumen, tono y, al final, por qué lado suena: de -1 (izquierda) a 1 (derecha)
           const ej = 'sonido.reproducir("salto", 0.5, 1.2)';
-          ctx.motor.sonido.reproducir(argTexto(a, 0, 'sonido.reproducir', p, ej), { volumen: argNumero(a, 1, 'sonido.reproducir', p, ej, 1), tono: tonoValido(argNumero(a, 2, 'sonido.reproducir', p, ej, 1), p) });
+          ctx.motor.sonido.reproducir(argTexto(a, 0, 'sonido.reproducir', p, ej), { volumen: argNumero(a, 1, 'sonido.reproducir', p, ej, 1), tono: tonoValido(argNumero(a, 2, 'sonido.reproducir', p, ej, 1), p), pan: panValido(argNumero(a, 3, 'sonido.reproducir', p, 'sonido.reproducir("salto", 1, 1, -1)', 0), p) });
           return null;
+        },
+        reproduciren: (a, p) => {
+          // Suena EN UN SITIO del mundo: más flojo cuanto más lejos del oyente, y por el lado donde está
+          const ej = 'sonido.reproducirEn("explosion", otro, 800)';
+          const nombre = argTexto(a, 0, 'sonido.reproducirEn', p, ej);
+          ctx.motor.sonido.reproducir(nombre, { sitio: sitioDeSonido(a, 'sonido.reproducirEn', p, ej), alcance: alcanceValido(a, 'sonido.reproducirEn', p, ej), volumen: argNumero(a, 3, 'sonido.reproducirEn', p, ej, 1) });
+          return null;
+        },
+        bucleen: (a, p) => {
+          // Un sonido que no para, pegado a un objeto (un motor, una cascada, una hoguera): se oye al acercarse
+          const ej = 'sonido.bucleEn("motor", yo, 600)';
+          const nombre = argTexto(a, 0, 'sonido.bucleEn', p, ej);
+          ctx.motor.sonido.reproducir(nombre, { bucle: true, sitio: sitioDeSonido(a, 'sonido.bucleEn', p, ej), alcance: alcanceValido(a, 'sonido.bucleEn', p, ej), volumen: argNumero(a, 3, 'sonido.bucleEn', p, ej, 1) });
+          return null;
+        },
+        ponervolumen: (a, p) => {
+          // Cambia el volumen de un sonido QUE YA SUENA (poco a poco, si se dicen los segundos)
+          const ej = 'sonido.ponerVolumen("motor", 0.3, 1)';
+          const v = argNumero(a, 1, 'sonido.ponerVolumen', p, ej);
+          if (v < 0 || v > 1) throw new ErrorChispa(p, `el volumen va de 0 (callado) a 1 (normal), y le das ${v}.`, `Ejemplo: ${ej}`);
+          return ctx.motor.sonido.ajustar(argTexto(a, 0, 'sonido.ponerVolumen', p, ej), { volumen: v }, segundosDeCambio(a, 'sonido.ponerVolumen', p, ej));
+        },
+        ponertono: (a, p) => {
+          // Cambia el tono (y la velocidad) de un sonido que ya suena: un motor que acelera
+          const ej = 'sonido.ponerTono("motor", 1.5, 0.5)';
+          const t = tonoValido(argNumero(a, 1, 'sonido.ponerTono', p, ej), p);
+          return ctx.motor.sonido.ajustar(argTexto(a, 0, 'sonido.ponerTono', p, ej), { tono: t }, segundosDeCambio(a, 'sonido.ponerTono', p, ej));
+        },
+        ponerpan: (a, p) => {
+          // Por qué lado suena un sonido que ya suena: -1 izquierda, 0 centro, 1 derecha
+          const ej = 'sonido.ponerPan("motor", -1)';
+          const pan = panValido(argNumero(a, 1, 'sonido.ponerPan', p, ej), p);
+          return ctx.motor.sonido.ajustar(argTexto(a, 0, 'sonido.ponerPan', p, ej), { pan }, segundosDeCambio(a, 'sonido.ponerPan', p, ej));
         },
         bucle: (a, p) => {
           const ej = 'sonido.bucle("motor", 0.5)';
@@ -632,7 +702,7 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
           return null;
         },
       },
-      ['volumen', 'reproducir', 'bucle', 'parar', 'sonando', 'pausar', 'seguir', 'tono', 'efecto'],
+      ['volumen', 'reproducir', 'bucle', 'parar', 'sonando', 'pausar', 'seguir', 'tono', 'efecto', 'reproducirEn', 'bucleEn', 'ponerVolumen', 'ponerTono', 'ponerPan', 'oyente'],
     ),
   );
 
@@ -644,6 +714,24 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
       {
         volumen: { obtener: () => ctx.motor.sonido.volumenMusica, asignar: (v, p) => (ctx.motor.sonido.volumenMusica = comoNumero(v, 'volumen', p)) },
         actual: { obtener: () => ctx.motor.sonido.musicaActual },
+        // La velocidad de la música (y su tono): 1 = normal
+        tono: {
+          obtener: () => ctx.motor.sonido.tonoMusica,
+          asignar: (v, p) => {
+            const t = comoNumero(v, 'musica.tono', p);
+            if (t < 0.25 || t > 4) throw new ErrorChispa(p, `el tono de la música va de 0.25 (muy lenta y grave) a 4 (muy rápida y aguda), y le das ${t}.`, 'Ejemplo: musica.tono = 1.2');
+            ctx.motor.sonido.tonoMusica = t;
+          },
+        },
+        // Música adaptativa en un número: 0 = solo la primera capa, 1 = todas
+        intensidad: {
+          obtener: () => ctx.motor.sonido.intensidad,
+          asignar: (v, p) => {
+            const x = comoNumero(v, 'musica.intensidad', p);
+            if (x < 0 || x > 1) throw new ErrorChispa(p, `la intensidad de la música va de 0 (tranquila: solo la primera capa) a 1 (todas las capas), y le das ${x}.`, 'Ejemplo: musica.intensidad = 0.5');
+            ctx.motor.sonido.ponerIntensidad(x, 1);
+          },
+        },
       },
       {
         reproducir: (a, p) => {
@@ -655,6 +743,23 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
           ctx.motor.sonido.pararMusica(Math.max(0, argNumero(a, 0, 'musica.parar', p, 'musica.parar(2)', 0)));
           return null;
         },
+        cruzar: (a, p) => {
+          // Pasa a otra música cruzándolas: la de ahora baja mientras la nueva sube
+          const ej = 'musica.cruzar("combate", 2)';
+          const segundos = argNumero(a, 1, 'musica.cruzar', p, ej, 2);
+          if (segundos < 0 || segundos > 60) throw new ErrorChispa(p, `el cruce dura de 0 a 60 segundos, y le das ${segundos}.`, `Ejemplo: ${ej}`);
+          ctx.motor.sonido.cruzarMusica(argTexto(a, 0, 'musica.cruzar', p, ej), segundos);
+          return null;
+        },
+        capa: (a, p) => {
+          // Sube o baja UNA capa de la música (una pista de la canción): musica.capa(3, 1, 2)
+          const ej = 'musica.capa(2, 1, 2)';
+          const capa = argNumero(a, 0, 'musica.capa', p, ej);
+          const v = argNumero(a, 1, 'musica.capa', p, ej);
+          if (v < 0 || v > 1) throw new ErrorChispa(p, `el volumen de una capa va de 0 (callada) a 1 (normal), y le das ${v}.`, `Ejemplo: ${ej}`);
+          ctx.motor.sonido.capaMusica(capa, v, segundosDeCambio(a, 'musica.capa', p, ej));
+          return null;
+        },
         pausar: () => {
           ctx.motor.sonido.pausarMusica();
           return null;
@@ -664,7 +769,7 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
           return null;
         },
       },
-      ['volumen', 'actual', 'reproducir', 'parar', 'pausar', 'seguir'],
+      ['volumen', 'actual', 'reproducir', 'parar', 'pausar', 'seguir', 'cruzar', 'capa', 'intensidad', 'tono'],
     ),
   );
 

@@ -454,6 +454,54 @@ await prueba('día 2: pantalla dividida, cuerda y letra pixel se ven de verdad',
   comprobar(tonos.length <= 4, `la letra pixel tiene bordes suaves (${tonos.length} tonos): ${tonos.slice(0, 8).join(' · ')}`);
 });
 
+await prueba('día 3: hacer un sonido y una canción en el editor, y usarlos en el juego', async (p) => {
+  await p.click('.pestana-panel:has-text("Proyecto")');
+  // El generador de efectos: un botón da un sonido, se ve su forma y se guarda
+  await p.click('button[title^="Hacer un efecto de sonido"]');
+  await p.waitForSelector('.editor-sonidos');
+  await p.click('.botones-sonido [data-tipo="explosion"]');
+  comprobar(await p.inputValue('[data-ruta="sonido.onda"]') === 'ruido', 'el botón Explosión no da un sonido de ruido');
+  const pintado = await estado(p, () => {
+    const c = document.querySelector('.lienzo-sonido');
+    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    let amarillos = 0;
+    for (let i = 0; i < d.length; i += 4) if (d[i] > 200 && d[i + 1] > 150 && d[i + 2] < 100) amarillos++;
+    return amarillos;
+  });
+  comprobar(pintado > 300, `no se ve la forma del sonido (${pintado} puntos)`);
+  await p.click('.botones-sonido [data-accion="variar"]');
+  await p.fill('[data-ruta="sonido.nombre"]', 'bum');
+  await p.click('.dialogo .boton.principal:has-text("Guardar")');
+  await p.waitForFunction(() => 'bum' in (window.chispa.estado.proyecto.sonidosHechos ?? {}));
+  // El editor de música: el ejemplo, una nota más con un clic, otra pista, y se guarda
+  await p.click('button[title^="Nueva canción"]');
+  await p.waitForSelector('.editor-musica');
+  await p.click('.editor-musica [data-accion="ejemplo"]');
+  const antes = await estado(p, () => document.querySelectorAll('.pista-musica').length);
+  comprobar(antes === 3, `el ejemplo debería tener 3 pistas, y tiene ${antes}`);
+  const rejilla = await p.locator('.rejilla-musica').boundingBox();
+  await p.mouse.click(rejilla.x + 22 * 14 + 11, rejilla.y + 9);
+  await p.click('.editor-musica [data-accion="nueva-pista"]');
+  comprobar((await estado(p, () => document.querySelectorAll('.pista-musica').length)) === 4, 'no se ha añadido la pista');
+  await p.click('.editor-musica [data-accion="tocar"]');
+  await p.waitForTimeout(400);
+  comprobar(await estado(p, () => getComputedStyle(document.querySelector('.raya-musica')).display !== 'none'), 'al escuchar la canción no avanza la raya');
+  await p.click('.editor-musica [data-accion="tocar"]');
+  await p.fill('[data-ruta="cancion.nombre"]', 'aventura');
+  await p.click('.dialogo .boton.principal:has-text("Guardar")');
+  await p.waitForFunction(() => 'aventura' in (window.chispa.estado.proyecto.canciones ?? {}));
+  const cancion = await estado(p, () => window.chispa.estado.proyecto.canciones.aventura);
+  comprobar(cancion.pistas.length === 4 && cancion.pistas[0].notas.length === 13, `la canción guardada no es la del editor: ${cancion.pistas.length} pistas, ${cancion.pistas[0].notas.length} notas`);
+  comprobar((await textoDe(p, '.panel-izquierdo')).includes('bum') && (await textoDe(p, '.panel-izquierdo')).includes('aventura'), 'el sonido y la canción no salen en el panel del proyecto');
+  // En el juego: suenan (de verdad: el navegador tiene audio) y la música tiene sus capas
+  await estado(p, () => window.chispa.estado.cambiarCodigo('cuadrado.chs', 'cuando empieza:\n    sonido.reproducir("bum")\n    sonido.bucleEn("bum", yo, 500)\n    musica.intensidad = 0.5\n    musica.reproducir("aventura")\n    musica.tono = 1.1\n    mostrar("suena " + musica.actual)\n'));
+  await p.keyboard.press('F5');
+  await p.waitForFunction(() => document.querySelector('.estado-juego')?.textContent?.startsWith('Jugando'));
+  await p.waitForTimeout(500);
+  comprobar((await textoDe(p, '.consola-editor')).includes('suena aventura'), 'la música no ha empezado');
+  comprobar(!(await p.$('.consola-editor .mensaje.error')), 'errores en la consola: ' + (await textoDe(p, '.consola-editor')).slice(-300));
+});
+
 await prueba('depurar: clic en el número de línea, el juego se para, se ven las variables y se va paso a paso', async (p) => {
   const codigo = 'variable vueltas = 0\ncuando cada fotograma:\n    vueltas += 1\n    variable doble = vueltas * 2\n    yo.x += 1\n';
   await estado(p, (c) => {

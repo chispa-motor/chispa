@@ -2,7 +2,7 @@
 
 > Este archivo se genera solo con `npm run manual`, a partir de la API de verdad (no lo cambies a mano: cambia `src/chispa/api/curso.ts`). Un test ejecuta cada ejemplo, cada ejercicio y cada mini proyecto para comprobar que funcionan.
 
-Un curso por niveles para aprender a programar juegos con Chispa, aunque no hayas programado nunca. Salen **todos** los comandos que existen (369), cada uno con qué hace, un ejemplo corto que funciona y el error que más se comete con él.
+Un curso por niveles para aprender a programar juegos con Chispa, aunque no hayas programado nunca. Salen **todos** los comandos que existen (379), cada uno con qué hace, un ejemplo corto que funciona y el error que más se comete con él.
 
 **Cómo usarlo:**
 
@@ -57,6 +57,7 @@ Una regla para todo el curso: en el código **no hacen falta tildes**. Se escrib
   - [Guardar datos](#guardar-datos)
   - [Juntas: cuerdas, muelles y bisagras](#juntas-cuerdas-muelles-y-bisagras)
   - [Pantalla dividida y varias cámaras](#pantalla-dividida-y-varias-camaras)
+  - [Sonido con sitio y música que cambia](#sonido-con-sitio-y-musica-que-cambia)
   - [Depurar: encontrar los fallos](#depurar-encontrar-los-fallos)
 - [Soluciones de los ejercicios](#soluciones)
 
@@ -3863,9 +3864,9 @@ cuando empieza:
 
 Los sonidos se importan en el editor (Proyecto > Sonidos) y se usan por su nombre. La música suena en bucle.
 
-#### `sonido.reproducir("nombre", volumen, tono)`
+#### `sonido.reproducir("nombre", volumen, tono, lado)`
 
-Reproduce un sonido del proyecto.
+Reproduce un sonido del proyecto (importado, o hecho con el generador de efectos).
 
 ```
 cuando se pulsa "espacio":
@@ -6538,6 +6539,180 @@ cuando empieza:
 ```
 cuando empieza:
     escena.camaraDe(2).seguir(yo)
+```
+
+### Sonido con sitio y música que cambia
+
+Los sonidos se pueden HACER en el editor (Proyecto > Sonidos > +) y la música también (Proyecto > Música > +). Un sonido puede sonar en un sitio del mundo (más flojo cuanto más lejos, y por su lado), cambiar mientras suena, y la música puede tener capas que entran y salen según lo que pasa en el juego.
+
+#### `sonido.reproducirEn("nombre", sitio, alcance, volumen)`
+
+Reproduce un sonido EN UN SITIO del mundo (un objeto o un vector): suena más flojo cuanto más lejos está del oyente, y por el altavoz del lado donde está.
+
+```
+cuando empieza:
+    sonido.reproducirEn("salto", yo, 900)
+```
+
+**Error típico:** Dar el sitio con dos números: aquí es un objeto o un vector(400, 300). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    sonido.reproducirEn("salto", 400, 300)
+```
+
+#### `sonido.bucleEn("nombre", sitio, alcance, volumen)`
+
+Un sonido que no para, pegado a un objeto o a un punto: una cascada, un motor, una hoguera.
+
+```
+cuando empieza:
+    sonido.bucleEn("salto", yo, 600)
+```
+
+**Error típico:** Alcance 0: no se oiría nunca. Es hasta dónde se oye, en píxeles. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    sonido.bucleEn("salto", yo, 0)
+```
+
+#### `sonido.ponerVolumen("nombre", volumen, segundos)`
+
+Cambia el volumen de un sonido QUE YA ESTÁ SONANDO (de 0 a 1).
+
+```
+cuando empieza:
+    sonido.bucle("salto")
+    sonido.ponerVolumen("salto", 0.2, 1)
+```
+
+**Error típico:** Darle un porcentaje: el volumen va de 0 a 1. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    sonido.ponerVolumen("salto", 20)
+```
+
+#### `sonido.ponerTono("nombre", tono, segundos)`
+
+Cambia el tono (y la velocidad) de un sonido que ya está sonando: 1 = normal, 2 = más agudo y rápido.
+
+```
+cuando empieza:
+    sonido.bucle("salto")
+    sonido.ponerTono("salto", 1.5, 0.5)
+```
+
+**Error típico:** Tono 0: el sonido se quedaría parado. Tiene que ser mayor que 0 (1 = normal). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    sonido.ponerTono("salto", 0)
+```
+
+#### `sonido.ponerPan("nombre", lado, segundos)`
+
+Por qué lado suena un sonido que ya está sonando: -1 = izquierda, 0 = centro, 1 = derecha.
+
+```
+cuando empieza:
+    sonido.bucle("salto")
+    sonido.ponerPan("salto", -1)
+```
+
+**Error típico:** Darle un texto: es un número de -1 (izquierda) a 1 (derecha). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    sonido.ponerPan("salto", "izquierda")
+```
+
+#### `sonido.oyente`
+
+Quién escucha los sonidos con sitio (sonido.reproducirEn, sonido.bucleEn): un objeto, o nulo para que sea el centro de la cámara (lo normal).
+
+```
+cuando empieza:
+    sonido.oyente = yo
+```
+
+**Error típico:** Darle el nombre entre comillas: quiere el objeto. Usa buscar("Jugador"). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    sonido.oyente = "Jugador"
+```
+
+#### `musica.cruzar("nombre", segundos)`
+
+Pasa a otra música CRUZÁNDOLAS: la que suena baja mientras la nueva sube (2 segundos si no se dice).
+
+```
+cuando empieza:
+    musica.reproducir("tema")
+
+cuando se pulsa "espacio":
+    musica.cruzar("salto", 2)
+```
+
+**Error típico:** Segundos negativos: el cruce dura de 0 a 60. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    musica.cruzar("tema", -1)
+```
+
+#### `musica.capa(numero, volumen, segundos)`
+
+Sube o baja UNA capa de la música que suena.
+
+```
+cuando empieza:
+    musica.reproducir("tema")
+    musica.capa(1, 0.5, 2)
+```
+
+**Error típico:** Pedir una capa que no hay: una canción tiene tantas capas como pistas (y un archivo importado, una). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    musica.reproducir("tema")
+    musica.capa(5, 1)
+```
+
+#### `musica.intensidad`
+
+Música adaptativa con un solo número: con 0 solo suena la primera capa, con 1 todas, y en medio van entrando una a una.
+
+```
+cuando empieza:
+    musica.reproducir("tema")
+    musica.intensidad = 0.5
+```
+
+**Error típico:** Darle un porcentaje: va de 0 a 1. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    musica.intensidad = 50
+```
+
+#### `musica.tono`
+
+La velocidad de la música (y su tono): 1 = normal, 1.2 = más rápida y aguda, 0.8 = más lenta y grave.
+
+```
+cuando empieza:
+    musica.reproducir("tema")
+    musica.tono = 1.2
+```
+
+**Error típico:** Pasarse: va de 0.25 a 4 (1 = normal). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    musica.tono = 10
 ```
 
 ### Depurar: encontrar los fallos

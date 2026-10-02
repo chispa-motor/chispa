@@ -87,6 +87,8 @@ export class Escena implements EscenaActiva {
   /** Todas las cámaras: con la pantalla dividida hay una por trozo (la primera es la principal). */
   camaras: Camara[];
   division: Division = 'columnas';
+  /** Quién escucha los sonidos con sitio: un objeto, o null (el centro de la cámara principal). */
+  oyente: ObjetoJuego | null = null;
   /** Las cuerdas, muelles y bisagras que unen objetos. */
   readonly juntas = new Juntas();
   /** Efectos especiales: partículas, emisores (fuego, lluvia...), rayos, ondas, destellos y números de daño. */
@@ -292,6 +294,9 @@ export class Escena implements EscenaActiva {
     this.seguirArrastre();
     this.efectos.actualizar(dt, this.zonaVisible());
     for (const c of this.camaras) c.actualizar(dt);
+    // Los sonidos con sitio: más flojos cuanto más lejos del oyente, y por su lado
+    if (this.oyente?.destruido) this.oyente = null;
+    this.motor.sonido?.actualizarSitios(this.oyente?.posicion ?? this.camara.posicion, this.camara.anchoPantalla / 2 / this.camara.zoom);
     this.actualizarFundido(this.motor.tiempo.deltaReal);
     this.quitarDestruidos();
   }
@@ -662,6 +667,7 @@ export class Escena implements EscenaActiva {
     this.arrastre = null;
     this.dialogos = [];
     this.juntas.vaciar();
+    this.oyente = null;
     this.camaras = [this.camara];
     this.camara.anchoPantalla = this.motor.renderizador.ancho;
     this.camara.altoPantalla = this.motor.renderizador.alto;

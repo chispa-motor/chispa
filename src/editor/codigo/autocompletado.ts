@@ -41,7 +41,10 @@ const OPCIONES_DE_DATOS: [string, string[]][] = [
   ['formacolision', ['auto', 'caja', 'figura']],
   ['tipoluz', ['punto', 'foco']],
 ];
-import { nombresDeObjetos, type DefProyecto } from '../../proyecto/formato';
+import { nombresDeObjetos, nombresDeSonidos, type DefProyecto } from '../../proyecto/formato';
+
+/** Las funciones cuyo primer valor es el nombre de un sonido. */
+const LLAMADAS_CON_SONIDO = new Set(['sonido.reproducir', 'sonido.parar', 'sonido.bucle', 'sonido.sonando', 'sonido.reproduciren', 'sonido.bucleen', 'sonido.ponervolumen', 'sonido.ponertono', 'sonido.ponerpan']);
 import { normalizar } from '../../utilidades/texto';
 
 /** Caja con la explicación que acompaña a cada sugerencia. */
@@ -105,7 +108,8 @@ function listaParaTexto(antesDeComillas: string, p: DefProyecto): { nombres: str
   if (llamada === 'crear') return { nombres: Object.keys(p.plantillas), tipo: 'class' };
   if (llamada === 'buscar' || llamada === 'buscartodos') return { nombres: nombresDeObjetos(p), tipo: 'class' };
   if (llamada === 'escena.cambiar') return { nombres: Object.keys(p.escenas), tipo: 'constant' };
-  if (llamada === 'sonido.reproducir' || llamada === 'sonido.parar' || llamada === 'musica.reproducir') return { nombres: Object.keys(p.sonidos), tipo: 'constant' };
+  if (LLAMADAS_CON_SONIDO.has(llamada ?? '')) return { nombres: nombresDeSonidos(p), tipo: 'constant' };
+  if (llamada === 'musica.cruzar' || llamada === 'musica.reproducir') return { nombres: [...Object.keys(p.canciones ?? {}), ...Object.keys(p.sonidos)], tipo: 'constant' };
   if (final === 'animar') return { nombres: Object.keys(p.animaciones), tipo: 'constant' };
   if (llamada === 'particulas') return { nombres: [...Object.keys(TIPOS_PARTICULAS), ...Object.keys(p.efectos ?? {})], tipo: 'constant' };
   if (llamada === 'efecto.usar' || llamada === 'efecto.parar') return { nombres: [...Object.keys(p.efectos ?? {}), ...Object.keys(RECETAS).filter((r) => r !== 'humoExplosion')], tipo: 'constant' };

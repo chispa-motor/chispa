@@ -2243,15 +2243,15 @@ escena.camara.suavizado = 3
 
 ### `sonido`
 
-Efectos de sonido.
+Efectos de sonido: los importados (.mp3, .ogg, .wav), los hechos con el generador de efectos (Proyecto > Sonidos > +) y los que se generan solos (sonido.efecto, sonido.tono).
 
 ```
 sonido.reproducir("salto")
 ```
 
-#### `sonido.reproducir("nombre", volumen, tono)`
+#### `sonido.reproducir("nombre", volumen, tono, lado)`
 
-Reproduce un sonido del proyecto. Volumen de 0 a 1; tono 1 = normal, 2 = más agudo, 0.5 = más grave (los dos se pueden dejar sin poner).
+Reproduce un sonido del proyecto (importado, o hecho con el generador de efectos). Volumen de 0 a 1; tono 1 = normal, 2 = más agudo, 0.5 = más grave; lado de -1 (izquierda) a 1 (derecha). Los tres se pueden dejar sin poner.
 
 ```
 sonido.reproducir("salto", 0.5, aleatorioDecimal(0.9, 1.1))
@@ -2323,9 +2323,60 @@ Volumen de los efectos, de 0 a 1.
 sonido.volumen = 0.5
 ```
 
+#### `sonido.reproducirEn("nombre", sitio, alcance, volumen)`
+
+Reproduce un sonido EN UN SITIO del mundo (un objeto o un vector): suena más flojo cuanto más lejos está del oyente, y por el altavoz del lado donde está. El alcance es hasta dónde se oye, en píxeles (800 si no se dice).
+
+```
+cuando toco Bala:
+    sonido.reproducirEn("explosion", otro, 900)
+```
+
+#### `sonido.bucleEn("nombre", sitio, alcance, volumen)`
+
+Un sonido que no para, pegado a un objeto o a un punto: una cascada, un motor, una hoguera. Se oye al acercarse y va con el objeto; si el objeto se destruye, se para. Se quita con sonido.parar("nombre").
+
+```
+cuando empieza:
+    sonido.bucleEn("cascada", yo, 600)
+```
+
+#### `sonido.ponerVolumen("nombre", volumen, segundos)`
+
+Cambia el volumen de un sonido QUE YA ESTÁ SONANDO (de 0 a 1). Con segundos, poco a poco. Devuelve cuántos sonidos ha cambiado.
+
+```
+sonido.ponerVolumen("motor", 0.2, 1)
+```
+
+#### `sonido.ponerTono("nombre", tono, segundos)`
+
+Cambia el tono (y la velocidad) de un sonido que ya está sonando: 1 = normal, 2 = más agudo y rápido. Un motor que acelera, una alarma que sube.
+
+```
+cuando cada fotograma:
+    sonido.ponerTono("motor", 1 + yo.velocidad.x / 400)
+```
+
+#### `sonido.ponerPan("nombre", lado, segundos)`
+
+Por qué lado suena un sonido que ya está sonando: -1 = izquierda, 0 = centro, 1 = derecha.
+
+```
+sonido.ponerPan("motor", -1)
+```
+
+#### `sonido.oyente`
+
+Quién escucha los sonidos con sitio (sonido.reproducirEn, sonido.bucleEn): un objeto, o nulo para que sea el centro de la cámara (lo normal).
+
+```
+sonido.oyente = buscar("Jugador")
+```
+
 ### `musica`
 
-Música de fondo: suena en bucle y solo una a la vez.
+Música de fondo: suena en bucle y solo una a la vez. Vale un archivo importado o una canción hecha en el editor de música (Proyecto > Música); las pistas de una canción son capas que se suben y se bajan mientras se juega.
 
 ```
 musica.reproducir("tema")
@@ -2369,6 +2420,41 @@ Volumen de la música, de 0 a 1.
 
 ```
 musica.volumen = 0.3
+```
+
+#### `musica.cruzar("nombre", segundos)`
+
+Pasa a otra música CRUZÁNDOLAS: la que suena baja mientras la nueva sube (2 segundos si no se dice). Para pasar de la música tranquila a la de combate sin cortes.
+
+```
+cuando recibo "jefe":
+    musica.cruzar("combate", 2)
+```
+
+#### `musica.capa(numero, volumen, segundos)`
+
+Sube o baja UNA capa de la música que suena. Las capas son las pistas de una canción hecha en el editor de música, en su orden (la 1 es la primera). Con segundos, poco a poco.
+
+```
+cuando recibo "peligro":
+    musica.capa(3, 1, 2)
+```
+
+#### `musica.intensidad`
+
+Música adaptativa con un solo número: con 0 solo suena la primera capa, con 1 todas, y en medio van entrando una a una. Para canciones del editor de música con varias pistas. Se recuerda: la música siguiente empieza con esa intensidad.
+
+```
+musica.intensidad = contar("Enemigo") / 10
+```
+
+#### `musica.tono`
+
+La velocidad de la música (y su tono): 1 = normal, 1.2 = más rápida y aguda, 0.8 = más lenta y grave. De 0.25 a 4.
+
+```
+si juego.tiempo < 10:
+    musica.tono = 1.3
 ```
 
 #### `musica.actual`

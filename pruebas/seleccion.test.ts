@@ -11,6 +11,8 @@
  * TESTS DEL EDITOR (sesión 3, bloque 3): selección múltiple, copias enlazadas
  * de plantillas y deshacer / rehacer para TODO lo que cambia el proyecto.
  */
+import { sonidoDeTipo } from '../src/sonido/generador';
+import { cancionDeEjemplo } from '../src/sonido/musica';
 import { describe, expect, it } from 'vitest';
 import { EstadoEditor } from '../src/editor/estado/EstadoEditor';
 import { imagenPrueba, sonidoPrueba } from './ayudantes';
@@ -233,6 +235,8 @@ describe('Deshacer y rehacer: TODO lo que cambia el proyecto', () => {
     e.crearAnimacion('andar', ['foto']);
     e.crearEscena('Nivel2');
     e.cambiarEscenaActual('Principal');
+    e.guardarSonidoHecho('tilin', sonidoDeTipo('moneda'));
+    e.guardarCancion('melodia', cancionDeEjemplo());
     e.agregarLetra('MiLetra.ttf', 'data:font/ttf;base64,AAEAAAAAAAAAAAAA');
     e.guardarEfecto('magia', { cantidad: 10, colores: ['rosa'], velocidad: 100, vida: 1, tamano: 5, gravedad: 0, dispersion: 360, direccion: 90, encoger: true });
     e.seleccionarVarios([0, 2]);
@@ -300,6 +304,10 @@ describe('Deshacer y rehacer: TODO lo que cambia el proyecto', () => {
     borrarEfecto: (e) => e.borrarEfecto('magia'),
     agregarLetra: (e) => e.agregarLetra('Comica.ttf', 'data:font/ttf;base64,AAEAAAAAAAAAAAAA'),
     borrarLetra: (e) => e.borrarLetra('MiLetra'),
+    guardarSonidoHecho: (e) => e.guardarSonidoHecho('pium', sonidoDeTipo('disparo')),
+    borrarSonidoHecho: (e) => e.borrarSonidoHecho('tilin'),
+    guardarCancion: (e) => e.guardarCancion('otra', cancionDeEjemplo()),
+    borrarCancion: (e) => e.borrarCancion('melodia'),
   };
 
   for (const [nombre, cambio] of Object.entries(cambios)) {
@@ -329,7 +337,7 @@ describe('Deshacer y rehacer: TODO lo que cambia el proyecto', () => {
       const d = Object.getOwnPropertyDescriptor(EstadoEditor.prototype, m);
       return typeof d?.value === 'function';
     });
-    const privados = new Set(['avisar', 'apuntar', 'restaurar', 'cambiarObjeto', 'propagar', 'objetosConSitio']);
+    const privados = new Set(['nombreDeSonidoLibre', 'renombrarEnElCodigo', 'avisar', 'apuntar', 'restaurar', 'cambiarObjeto', 'propagar', 'objetosConSitio']);
     const sinProbar = metodos.filter((m) => !sinDeshacer.has(m) && !privados.has(m) && !(m in cambios));
     expect(sinProbar).toEqual([]);
   });

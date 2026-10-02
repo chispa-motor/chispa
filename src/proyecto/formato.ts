@@ -24,6 +24,8 @@
  * Coordenadas: la Y crece hacia ARRIBA y (0,0) es la esquina inferior
  * izquierda de la pantalla al empezar.
  */
+import type { ParamsSonido } from '../sonido/generador';
+import type { DefCancion } from '../sonido/musica';
 import type { FormaSprite } from '../objetos/componentes/Sprite';
 import type { FormaColision } from '../objetos/componentes/Colision';
 import type { Punto, PuntoCamino } from '../objetos/formas/figuras';
@@ -216,6 +218,11 @@ export interface DefEscena {
   objetos: DefObjeto[];
 }
 
+/** Todos los nombres que valen en sonido.reproducir y musica.reproducir: importados, hechos y canciones. */
+export function nombresDeSonidos(p: Pick<DefProyecto, 'sonidos' | 'sonidosHechos' | 'canciones'>): string[] {
+  return [...Object.keys(p.sonidos ?? {}), ...Object.keys(p.sonidosHechos ?? {}), ...Object.keys(p.canciones ?? {})];
+}
+
 export interface DefProyecto {
   formato: 'chispa-proyecto';
   version: number;
@@ -236,6 +243,10 @@ export interface DefProyecto {
   /** nombre corto → ruta del archivo o "data URL" (.mp3, .ogg, .wav) */
   sonidos: Record<string, string>;
   animaciones: Record<string, DefAnimacion>;
+  /** Sonidos hechos con el generador de efectos: nombre → sus números (el sonido se calcula al cargar). */
+  sonidosHechos?: Record<string, ParamsSonido>;
+  /** Canciones del editor de música: nombre → sus notas (se convierten en sonido al cargar). */
+  canciones?: Record<string, DefCancion>;
   /** Tipos de letra importados: nombre → "data URL" (.ttf, .otf, .woff, .woff2) */
   letras?: Record<string, string>;
   /** nombre del archivo (.chs) → código */
@@ -325,6 +336,8 @@ function completar(p: DefProyecto): DefProyecto {
     ...(p.colores ? { colores: p.colores } : {}),
     ...(p.efectos && Object.keys(p.efectos).length ? { efectos: p.efectos } : {}),
     ...(p.letras && Object.keys(p.letras).length ? { letras: p.letras } : {}),
+    ...(p.sonidosHechos && Object.keys(p.sonidosHechos).length ? { sonidosHechos: p.sonidosHechos } : {}),
+    ...(p.canciones && Object.keys(p.canciones).length ? { canciones: p.canciones } : {}),
   };
 }
 

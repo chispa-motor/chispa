@@ -650,3 +650,28 @@ a.boton { text-decoration: none; display: inline-flex; align-items: center; }
 .color-particula { display: flex; align-items: center; gap: 4px; }
 .color-particula .fila { flex: 1; }
 @media (max-width: 860px) { .editor-particulas { grid-template-columns: 1fr; } .lienzo-particulas { width: 100%; } }
+
+/* ── Generador de efectos de sonido ── */
+.editor-particulas.editor-sonidos { max-height: 60vh; }
+.editor-sonidos .lienzo-sonido { width: 360px; height: 110px; border-radius: 8px; background: #141824; }
+.botones-sonido { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.botones-sonido .boton { padding: 5px 10px; }
+.titulo-grupo-sonido { margin: 10px 0 2px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--texto-suave); }
+
+/* ── Editor de música ── */
+.dialogo.dialogo-musica { width: min(1100px, 96vw); max-width: none; }
+.editor-musica { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.barra-musica { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.campo-musica { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--texto-suave); }
+.campo-musica input[type='number'] { width: 70px; }
+.pistas-musica { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.pista-musica { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 8px; border: 2px solid transparent; background: var(--fondo-2, #20242f); cursor: pointer; }
+.pista-musica.activa { border-color: var(--color-pista); }
+.pista-musica .numero-pista { width: 18px; height: 18px; border-radius: 50%; background: var(--color-pista); color: #10131a; font-size: 12px; font-weight: 700; display: grid; place-items: center; }
+.pista-musica select { width: 128px; }
+.pista-musica input[type='range'] { width: 64px; }
+.zona-musica { position: relative; display: flex; align-items: flex-start; overflow: auto; height: min(46vh, 420px); border-radius: 8px; background: #141824; }
+.teclas-musica { position: sticky; left: 0; z-index: 2; flex: none; }
+.rejilla-musica { flex: none; cursor: pointer; }
+.raya-musica { position: absolute; top: 0; width: 2px; height: 100%; min-height: 2000px; background: #ffffff; opacity: 0.8; pointer-events: none; display: none; z-index: 1; }
+.pie-musica { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }

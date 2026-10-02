@@ -21,7 +21,7 @@
  * El código de los scripts NO entra en este historial: el editor de código
  * tiene su propio deshacer, letra a letra (como en cualquier editor).
  */
-import { migrarProyecto, proyectoVacio, tipoPorNombre, type DatoInicial, type DefEscena, type DefObjeto, type DefProyecto, type DefSprite } from '../../proyecto/formato';
+import { migrarProyecto, nombresDeSonidos, proyectoVacio, tipoPorNombre, type DatoInicial, type DefEscena, type DefObjeto, type DefProyecto, type DefSprite } from '../../proyecto/formato';
 import { FORMAS, FORMAS_DIBUJO, type Forma, type PuntoCamino } from '../../objetos/formas/figuras';
 import { combinarFormas, encajarCamino, esFormaCombinable } from '../recursos/operacionesFormas';
 import { BIBLIOTECA } from '../biblioteca/biblioteca';
@@ -34,6 +34,8 @@ import { normalizar, quitarTildes } from '../../utilidades/texto';
 import { esNombreProhibido, tiene } from '../../utilidades/seguro';
 import { problemaDataURL, problemaLetra, type TipoRecurso as TipoRecursoArchivo } from '../../proyecto/archivos';
 import { LETRAS, MAXIMO_LETRAS } from '../../motor/Letras';
+import { completarSonido, type ParamsSonido } from '../../sonido/generador';
+import type { DefCancion } from '../../sonido/musica';
 import { ErrorMotor } from '../../motor/Errores';
 import { esColorValido } from '../../motor/Color';
 
@@ -1089,13 +1091,87 @@ export class EstadoEditor {
 
   agregarSonido(nombre: string, datos: string): string {
     comprobarRecurso(datos, 'sonido', nombre);
-    const final = this.nombreLibre(nombreDeRecurso(nombre), Object.keys(this.proyecto.sonidos));
+    const final = this.nombreLibre(nombreDeRecurso(nombre), nombresDeSonidos(this.proyecto));
     this.cambiar('recursos', () => (this.proyecto.sonidos[final] = datos));
     return final;
   }
 
   borrarSonido(nombre: string): void {
     this.cambiar('recursos', () => delete this.proyecto.sonidos[nombre]);
+  }
+
+  /**
+   * El nombre con el que se guarda un sonido hecho o una canción: fácil de
+   * escribir en el código y sin repetir entre sonidos importados, hechos y canciones.
+   * `anterior`: el nombre que tenía (ese sí puede «repetirse»: es él mismo).
+   */
+  private nombreDeSonidoLibre(nombre: string, anterior?: string): string | null {
+    const n = nombreDeRecurso(nombre.trim());
+    if (!nombre.trim() || n.length > 40 || esNombreProhibido(n)) return null;
+    return this.nombreLibre(n, nombresDeSonidos(this.proyecto).filter((x) => x !== anterior));
+  }
+
+  /** Al cambiar el nombre de un sonido o una canción: también en el código (el texto entre comillas). */
+  private renombrarEnElCodigo(viejo: string, nuevo: string): void {
+    for (const [archivo, codigo] of Object.entries(this.proyecto.scripts)) {
+      this.proyecto.scripts[archivo] = codigo.replace(/"([^"\n]*)"/g, (entero, dentro: string) => (normalizar(dentro) === normalizar(viejo) ? `"${nuevo}"` : entero));
+    }
+  }
+
+  /** Guarda un sonido del generador de efectos. Devuelve el nombre con el que queda (o null si el nombre no vale). */
+  guardarSonidoHecho(nombre: string, params: ParamsSonido, anterior?: string): string | null {
+    const n = this.nombreDeSonidoLibre(nombre, anterior);
+    if (!n) return null;
+    const limpio = completarSonido(params);
+    this.cambiar('recursos', () => {
+      const hechos = (this.proyecto.sonidosHechos ??= {});
+      if (anterior && anterior !== n && tiene(hechos, anterior)) {
+        delete hechos[anterior];
+        this.renombrarEnElCodigo(anterior, n);
+      }
+      hechos[n] = limpio;
+    });
+    if (anterior && anterior !== n) this.avisar('scripts');
+    return n;
+  }
+
+  borrarSonidoHecho(nombre: string): void {
+    if (!tiene(this.proyecto.sonidosHechos ?? {}, nombre)) return;
+    this.cambiar('recursos', () => {
+      delete this.proyecto.sonidosHechos![nombre];
+      if (!Object.keys(this.proyecto.sonidosHechos!).length) delete this.proyecto.sonidosHechos;
+    });
+  }
+
+  /** Guarda una canción del editor de música. Devuelve el nombre con el que queda (o null si no vale). */
+  guardarCancion(nombre: string, cancion: DefCancion, anterior?: string): string | null {
+    const n = this.nombreDeSonidoLibre(nombre, anterior);
+    if (!n) return null;
+    let limpia: DefCancion | undefined;
+    try {
+      limpia = migrarProyecto({ ...proyectoVacio(), canciones: { [n]: cancion } }).canciones?.[n];
+    } catch {
+      return null;
+    }
+    if (!limpia) return null;
+    this.cambiar('recursos', () => {
+      const canciones = (this.proyecto.canciones ??= {});
+      if (anterior && anterior !== n && tiene(canciones, anterior)) {
+        delete canciones[anterior];
+        this.renombrarEnElCodigo(anterior, n);
+      }
+      canciones[n] = limpia;
+    });
+    if (anterior && anterior !== n) this.avisar('scripts');
+    return n;
+  }
+
+  borrarCancion(nombre: string): void {
+    if (!tiene(this.proyecto.canciones ?? {}, nombre)) return;
+    this.cambiar('recursos', () => {
+      delete this.proyecto.canciones![nombre];
+      if (!Object.keys(this.proyecto.canciones!).length) delete this.proyecto.canciones;
+    });
   }
 
   /** Añade un tipo de letra (.ttf, .otf, .woff, .woff2, como "data URL"). Devuelve el nombre final. */

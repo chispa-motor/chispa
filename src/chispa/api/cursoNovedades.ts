@@ -212,4 +212,26 @@ export function agregarNovedades(tema: Tema, c: Comando): void {
     'cuando empieza:\n    pantalla.dividir(8)', 'Pedir demasiados trozos: como mucho son 4.');
   c('escena:camaraDe', 'cuando empieza:\n    pantalla.dividir(2)\n    escena.camaraDe(2).seguir(yo)', 'escena.camaraDe(1).seguir(yo)',
     'cuando empieza:\n    escena.camaraDe(2).seguir(yo)', 'Usar la cámara 2 sin dividir la pantalla: primero pantalla.dividir(2).');
+
+  tema(4, 'Sonido con sitio y música que cambia', 'Los sonidos se pueden HACER en el editor (Proyecto > Sonidos > +) y la música también (Proyecto > Música > +). Un sonido puede sonar en un sitio del mundo (más flojo cuanto más lejos, y por su lado), cambiar mientras suena, y la música puede tener capas que entran y salen según lo que pasa en el juego.');
+  c('sonido:reproducirEn', 'cuando empieza:\n    sonido.reproducirEn("salto", yo, 900)', 'sonido.reproducirEn("salto", yo, 900)',
+    'cuando empieza:\n    sonido.reproducirEn("salto", 400, 300)', 'Dar el sitio con dos números: aquí es un objeto o un vector(400, 300).');
+  c('sonido:bucleEn', 'cuando empieza:\n    sonido.bucleEn("salto", yo, 600)', 'sonido.bucleEn("salto", yo, 600)',
+    'cuando empieza:\n    sonido.bucleEn("salto", yo, 0)', 'Alcance 0: no se oiría nunca. Es hasta dónde se oye, en píxeles.');
+  c('sonido:ponerVolumen', 'cuando empieza:\n    sonido.bucle("salto")\n    sonido.ponerVolumen("salto", 0.2, 1)', 'sonido.ponerVolumen("salto", 0.2, 1)',
+    'cuando empieza:\n    sonido.ponerVolumen("salto", 20)', 'Darle un porcentaje: el volumen va de 0 a 1.');
+  c('sonido:ponerTono', 'cuando empieza:\n    sonido.bucle("salto")\n    sonido.ponerTono("salto", 1.5, 0.5)', 'sonido.ponerTono("salto", 1.5)',
+    'cuando empieza:\n    sonido.ponerTono("salto", 0)', 'Tono 0: el sonido se quedaría parado. Tiene que ser mayor que 0 (1 = normal).');
+  c('sonido:ponerPan', 'cuando empieza:\n    sonido.bucle("salto")\n    sonido.ponerPan("salto", -1)', 'sonido.ponerPan("salto", -1)',
+    'cuando empieza:\n    sonido.ponerPan("salto", "izquierda")', 'Darle un texto: es un número de -1 (izquierda) a 1 (derecha).');
+  c('sonido:oyente', 'cuando empieza:\n    sonido.oyente = yo', 'sonido.oyente = yo',
+    'cuando empieza:\n    sonido.oyente = "Jugador"', 'Darle el nombre entre comillas: quiere el objeto. Usa buscar("Jugador").');
+  c('musica:cruzar', 'cuando empieza:\n    musica.reproducir("tema")\n\ncuando se pulsa "espacio":\n    musica.cruzar("salto", 2)', 'musica.cruzar("tema", 2)',
+    'cuando empieza:\n    musica.cruzar("tema", -1)', 'Segundos negativos: el cruce dura de 0 a 60.');
+  c('musica:capa', 'cuando empieza:\n    musica.reproducir("tema")\n    musica.capa(1, 0.5, 2)', 'musica.capa(1, 0.5, 2)',
+    'cuando empieza:\n    musica.reproducir("tema")\n    musica.capa(5, 1)', 'Pedir una capa que no hay: una canción tiene tantas capas como pistas (y un archivo importado, una).');
+  c('musica:intensidad', 'cuando empieza:\n    musica.reproducir("tema")\n    musica.intensidad = 0.5', 'musica.intensidad = 0.5',
+    'cuando empieza:\n    musica.intensidad = 50', 'Darle un porcentaje: va de 0 a 1.');
+  c('musica:tono', 'cuando empieza:\n    musica.reproducir("tema")\n    musica.tono = 1.2', 'musica.tono = 1.2',
+    'cuando empieza:\n    musica.tono = 10', 'Pasarse: va de 0.25 a 4 (1 = normal).');
 }
