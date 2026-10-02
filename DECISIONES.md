@@ -479,3 +479,14 @@ Ver PROBLEMAS_PRINCIPIANTE.md para la lista completa de lo que se encontró.
 | Hasta 4 mandos: el primero es del jugador 1, el segundo del 2... El módulo `mando` sigue siendo el primero. Con varios jugadores, el primer mando deja de «hacer de teclado». | Si siguiera pulsando las flechas, el mando del jugador 1 movería al 2. Con un jugador, todo sigue como en la versión 1.0. |
 | Sin código: el Comportamiento «Lo maneja un jugador» (jugador, rapidez y salto) y, en la cámara de la escena, «jugadores»: pantalla dividida o compartida, con el objeto de cada uno. | Un juego para dos se puede montar entero desde el inspector, que es por donde empieza un principiante. |
 | Pantalla compartida: `escena.camara.encuadrar([...], margen)`. La cámara se pone en medio y se aleja lo justo para que quepan todos; al juntarse vuelve a acercarse, pero nunca más que el zoom que tenía. | Es la cámara de los juegos de lucha y de cooperar. Que no se acerque de más evita el «zoom en la cara» cuando los dos están pegados. |
+
+## Día 5 — Plantillas y recursos
+
+| Decisión | Por qué |
+|---|---|
+| Los recursos se hacen ANTES que las plantillas (el bloque 2 antes que el 1). | Las plantillas usan esos dibujos y sonidos: así no hay que hacerlas dos veces. |
+| Los dibujos (33: personajes, enemigos, objetos y casillas de mapa, de 16×16) están ESCRITOS en el código, letra a letra con una paleta de 24 colores (`src/recursos/dibujos.ts`), y se convierten en PNG al pedirlos con un codificador propio (`src/recursos/png.ts`, sin compresión). | No se añade ningún archivo binario ni ninguna dependencia, se ve en el código qué es cada dibujo, y es seguro que son originales. 33 dibujos ocupan unos 12 KB de código. |
+| Los personajes simétricos se escriben solo por la mitad (8 letras por fila) y se reflejan. Las casillas se pintan con una receta (color base + motas + detalles) con semilla fija. | Menos que escribir y que revisar; las casillas salen siempre iguales y encajan unas con otras. |
+| Los sonidos (11) son números del generador de efectos y las canciones (3), notas del editor de música (`src/recursos/sonidos.ts`). Al añadirlos al proyecto son como los hechos por uno mismo: se abren y se retocan. | Es lo que pedía el plan (hechos con el generador del día 3), y de paso enseñan cómo se hace cada sonido. |
+| Ventana «Recursos listos» (el botón del libro en Imágenes, Sonidos y Música): un clic añade el recurso; los personajes, enemigos y objetos, además, se ponen en la escena. Añadir dos veces el mismo no lo repite; si ya había OTRA imagen con ese nombre, no se pisa (se añade con otro nombre). | Lo más corto para un principiante: ver, pulsar y ya está en el juego. |
+| Los recursos son de dominio público (CC0), como los juegos de ejemplo: `src/recursos/LICENCIA.md`. **Rodrigo: es una decisión de licencia tomada por ti; cámbiala si prefieres otra antes de publicar.** | Quien hace un juego con Chispa tiene que poder usarlos sin preguntarse nada. |

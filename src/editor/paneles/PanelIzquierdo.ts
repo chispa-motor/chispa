@@ -28,6 +28,7 @@ import { botonIcono, h, icono, rellenar } from '../interfaz/dom';
 import { confirmar, notificar, pedirTexto } from '../interfaz/dialogos';
 import { abrirEditorSonidos } from '../recursos/EditorSonidos';
 import { abrirPantallasListas } from '../pantallas/dialogoPantallas';
+import { abrirRecursosListos } from '../recursos/RecursosListos';
 import { abrirEditorMusica } from '../recursos/EditorMusica';
 import { callar, tocar } from '../recursos/audioEditor';
 import { FRECUENCIA_MUESTREO, generarSonido } from '../../sonido/generador';
@@ -375,14 +376,19 @@ export class PanelIzquierdo {
         if (n) e.crearPlantillaVacia(n.replace(/\s+/g, ''));
       }, undefined, 'pequeno')], plantillas, 'Objetos para crear desde el código con crear("…"). Selecciona un objeto y pulsa «Plantilla».'),
       this.grupo('Imágenes', 'imagen', [
+        botonIcono('libro', 'Dibujos listos: personajes, enemigos, objetos y casillas', () => abrirRecursosListos(e, 'dibujos'), undefined, 'pequeno'),
         botonIcono('pincel', 'Dibujar un sprite nuevo, píxel a píxel', () => void abrirEditorPixelArt(e), undefined, 'pequeno'),
         botonIcono('abrir', 'Importar imágenes (.png, .jpg, .svg, .gif)', () => this.importar('image/*'), undefined, 'pequeno'),
       ], Object.keys(p.imagenes).length ? imagenes : [], 'Dibuja una con el pincel, impórtala, o arrastra imágenes desde tu ordenador hasta el editor.'),
       this.grupo('Sonidos', 'sonido', [
+        botonIcono('libro', 'Sonidos listos: salto, moneda, explosión, disparo...', () => abrirRecursosListos(e, 'sonidos'), undefined, 'pequeno'),
         botonIcono('mas', 'Hacer un efecto de sonido (salto, moneda, explosión...) sin archivos', () => abrirEditorSonidos(e), undefined, 'pequeno'),
         botonIcono('abrir', 'Importar sonidos (.mp3, .ogg, .wav)', () => this.importar('audio/*'), undefined, 'pequeno'),
       ], [...hechos, ...sonidos], 'Sin sonidos. Pulsa + para HACER uno (salto, moneda, explosión...) o arrastra archivos de sonido hasta el editor.'),
-      this.grupo('Música', 'nota', [botonIcono('mas', 'Nueva canción (editor de música)', () => abrirEditorMusica(e), undefined, 'pequeno')],
+      this.grupo('Música', 'nota', [
+        botonIcono('libro', 'Música lista: aventura, misterio y acción', () => abrirRecursosListos(e, 'musica'), undefined, 'pequeno'),
+        botonIcono('mas', 'Nueva canción (editor de música)', () => abrirEditorMusica(e), undefined, 'pequeno'),
+      ],
         canciones, 'Haz tu propia música en una rejilla de notas: pulsa +. También vale un archivo de sonido importado: musica.reproducir("nombre").'),
       this.grupo('Letras', 'texto', [botonIcono('abrir', 'Importar tipos de letra (.ttf, .otf, .woff, .woff2)', () => this.importar('.ttf,.otf,.woff,.woff2,font/*'), undefined, 'pequeno')],
         Object.keys(p.letras ?? {}).map((n) =>

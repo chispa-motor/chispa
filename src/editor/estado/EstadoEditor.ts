@@ -36,6 +36,8 @@ import { problemaDataURL, problemaLetra, type TipoRecurso as TipoRecursoArchivo 
 import { LETRAS, MAXIMO_LETRAS } from '../../motor/Letras';
 import type { TipoControl } from '../../objetos/componentes/Control';
 import { CONTROLES_NUEVOS } from '../interfaz/controlesNuevos';
+import { imagenDeDibujo } from '../../recursos/dibujos';
+import { CANCIONES_LISTAS, SONIDOS_LISTOS } from '../../recursos/sonidos';
 import { planDePantallas, type PlanPantallas, type TipoPantalla } from '../pantallas/pantallas';
 import { completarSonido, type ParamsSonido } from '../../sonido/generador';
 import type { DefCancion } from '../../sonido/musica';
@@ -1210,6 +1212,32 @@ export class EstadoEditor {
       delete this.proyecto.canciones![nombre];
       if (!Object.keys(this.proyecto.canciones!).length) delete this.proyecto.canciones;
     });
+  }
+
+  /**
+   * Añade al proyecto un recurso de los que trae Chispa (un dibujo, un sonido o una
+   * canción). Si ya está, no lo repite. `enEscena`: además, pone el dibujo en la
+   * escena (en el centro de la pantalla). Devuelve el nombre con el que queda.
+   */
+  anadirRecursoListo(tipo: 'dibujo' | 'sonido' | 'cancion', nombre: string, enEscena = false): string | null {
+    if (tipo === 'dibujo') {
+      const datos = imagenDeDibujo(nombre);
+      if (!datos) return null;
+      this.empezarCambioLargo();
+      // Si ya hay una imagen con ese nombre y es la misma, se usa esa; si es otra, se añade con otro nombre
+      const final = this.proyecto.imagenes[nombre] === datos && tiene(this.proyecto.imagenes, nombre) ? nombre : this.agregarImagen(nombre, datos);
+      if (enEscena) this.crearObjeto('imagen', this.proyecto.ancho / 2, this.proyecto.alto / 2, final);
+      this.terminarCambioLargo();
+      return final;
+    }
+    if (tipo === 'sonido') {
+      const s = SONIDOS_LISTOS.find((x) => x.nombre === nombre);
+      if (!s) return null;
+      return tiene(this.proyecto.sonidosHechos ?? {}, nombre) ? nombre : this.guardarSonidoHecho(nombre, s.sonido);
+    }
+    const c = CANCIONES_LISTAS.find((x) => x.nombre === nombre);
+    if (!c) return null;
+    return tiene(this.proyecto.canciones ?? {}, nombre) ? nombre : this.guardarCancion(nombre, structuredClone(c.cancion));
   }
 
   /** Añade un tipo de letra (.ttf, .otf, .woff, .woff2, como "data URL"). Devuelve el nombre final. */

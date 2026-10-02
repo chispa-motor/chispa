@@ -686,3 +686,17 @@ a.boton { text-decoration: none; display: inline-flex; align-items: center; }
 .fila-pantalla { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
 .fila-pantalla input { margin-top: 4px; }
 .fila-pantalla em { color: var(--texto-suave); font-style: normal; font-size: 12px; }
+
+/* ── Recursos listos (dibujos, sonidos y música que trae Chispa) ── */
+.dialogo.dialogo-recursos { width: min(720px, 96vw); max-width: none; }
+.recursos-listos { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.pestanas-recursos { display: flex; gap: 6px; }
+.cuerpo-recursos { max-height: 58vh; overflow-y: auto; padding-right: 4px; }
+.rejilla-dibujos { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+.ficha-dibujo { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px; border-radius: 8px; border: 1px solid transparent; background: var(--fondo-2, #20242f); color: inherit; cursor: pointer; font-size: 12px; }
+.ficha-dibujo:hover { border-color: var(--acento, #4aa3ff); }
+.ficha-dibujo img { width: 64px; height: 64px; image-rendering: pixelated; }
+.ficha-dibujo .marca-esta { position: absolute; top: 4px; right: 6px; color: #2ecc71; font-weight: 700; }
+.fila-recurso-listo { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+.fila-recurso-listo .nombre { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.fila-recurso-listo code { font-size: 12px; color: var(--texto-suave); }
