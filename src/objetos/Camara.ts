@@ -66,11 +66,31 @@ export class Camara {
 
   seguir(objeto: ObjetoJuego | null): void {
     this.objetivo = objeto;
+    this.grupo = null;
     if (objeto) {
       // Saltamos directamente al objetivo para que no "viaje" desde lejos al empezar.
       this.posicion = objeto.posicion.copiar();
       this.aplicarLimites();
     }
+  }
+
+  /** Los objetos que la cámara mantiene todos a la vista (pantalla compartida), y el margen alrededor. */
+  grupo: ObjetoJuego[] | null = null;
+  private margenGrupo = 120;
+  /** El zoom que tenía al empezar a encuadrar: nunca se acerca más que eso. */
+  private zoomDeCerca = 1;
+
+  /**
+   * PANTALLA COMPARTIDA: la cámara se coloca en medio de esos objetos y se
+   * aleja lo justo para que se vean todos (con un margen alrededor). Cuando
+   * se juntan, vuelve a acercarse (hasta el zoom que tenía). Con una lista
+   * vacía (o seguir(...)) deja de hacerlo.
+   */
+  encuadrar(objetos: ObjetoJuego[], margen = 120): void {
+    this.objetivo = null;
+    this.grupo = objetos.length ? [...objetos] : null;
+    this.margenGrupo = Math.max(0, margen);
+    this.zoomDeCerca = this._zoom;
   }
 
   /** Hace temblar la cámara (explosiones, golpes...). */
@@ -86,6 +106,23 @@ export class Camara {
       const destino = this.objetivo.posicion;
       this.posicion.x += (destino.x - this.posicion.x) * f;
       this.posicion.y += (destino.y - this.posicion.y) * f;
+    }
+    const vivos = this.grupo?.filter((o) => !o.destruido) ?? [];
+    if (vivos.length) {
+      let [izquierda, derecha, abajo, arriba] = [Infinity, -Infinity, Infinity, -Infinity];
+      for (const o of vivos) {
+        izquierda = Math.min(izquierda, o.posicion.x);
+        derecha = Math.max(derecha, o.posicion.x);
+        abajo = Math.min(abajo, o.posicion.y);
+        arriba = Math.max(arriba, o.posicion.y);
+      }
+      const f = 1 - Math.exp(-this.suavizado * dt);
+      this.posicion.x += ((izquierda + derecha) / 2 - this.posicion.x) * f;
+      this.posicion.y += ((abajo + arriba) / 2 - this.posicion.y) * f;
+      // El zoom con el que caben todos (con su margen), sin acercarse más que al empezar ni alejarse sin fin
+      const cabe = Math.min(this.anchoPantalla / (derecha - izquierda + this.margenGrupo * 2), this.altoPantalla / (arriba - abajo + this.margenGrupo * 2));
+      const destino = Math.max(0.2, Math.min(this.zoomDeCerca, cabe));
+      this._zoom += (destino - this._zoom) * f;
     }
     this.aplicarLimites();
 

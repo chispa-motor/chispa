@@ -23,7 +23,7 @@
  * explicación y su ejemplo. Y todo SIN TILDES (la forma oficial).
  */
 import { snippetCompletion, type Completion, type CompletionContext, type CompletionResult, type CompletionSource } from '@codemirror/autocomplete';
-import { DOC_ESPECIALES, DOC_EVENTOS, DOC_PALABRAS, docsGlobales, miembrosDe, type Doc } from '../../chispa/api/documentacion';
+import { DOC_ESPECIALES, DOC_EVENTOS, DOC_PALABRAS, DOC_VALORES, docsGlobales, miembrosDe, type Doc } from '../../chispa/api/documentacion';
 import { NOMBRES_TECLAS } from '../../motor/Entrada';
 import { NOMBRES_COLORES } from '../../motor/Color';
 import { TIPOS_PARTICULAS } from '../../objetos/Particulas';
@@ -161,6 +161,13 @@ export function fuenteAutocompletado(proyecto: () => DefProyecto): CompletionSou
     // Comentarios: nada
     if (/#/.test(antes.replace(/"[^"]*"|'[^']*'/g, ''))) return null;
 
+    // 2a. Después de una llamada: controles(2).  → los controles de un jugador;  buscar("Enemigo").  → lo de un objeto
+    const trasLlamada = /([\p{L}_][\p{L}\p{N}_]*)\([^()]*\)\.([\p{L}_\p{N}]*)$/u.exec(antes);
+    if (trasLlamada) {
+      const funcion = normalizar(trasLlamada[1]);
+      const miembros = funcion === 'controles' ? (DOC_VALORES.find((v) => v.tipo === 'controles')?.miembros ?? []) : ['buscar', 'crear', 'clonar', 'mascercano'].includes(funcion) ? miembrosDe('yo') : null;
+      if (miembros) return { from: c.pos - trasLlamada[2].length, options: miembros.map((d) => sugerencia(d)), validFor: /^[\p{L}\p{N}_]*$/u };
+    }
     // 2. Después de un punto: miembros del módulo u objeto
     const punto = /([\p{L}_][\p{L}\p{N}_]*(?:\.[\p{L}_][\p{L}\p{N}_]*)*)\.([\p{L}_\p{N}]*)$/u.exec(antes);
     if (punto) {

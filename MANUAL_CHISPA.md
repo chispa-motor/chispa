@@ -871,6 +871,16 @@ cuando empieza:
     mostrar(aleatorio(1, 100))
 ```
 
+#### `controles(jugador)`
+
+Los controles de un jugador (del 1 al 4), para jugar varios en el mismo ordenador. Cada uno tiene arriba, abajo, izquierda, derecha, a y b, en su trozo del teclado y en su mando. Jugador 1: W A S D, a = espacio, b = F. Jugador 2: flechas, a = Intro, b = Mayusculas. Jugador 3: I J K L, a = O, b = U. Jugador 4: 8 4 5 6, a = 0, b = 9. En el mando: cruceta o palanca, a = A, b = B.
+
+```
+cuando cada fotograma:
+    si controles(2).sePulso("a"):
+        yo.saltar(600)
+```
+
 #### `numero(texto)`
 
 Convierte un texto con un número ("42") en un número de verdad.
@@ -1685,6 +1695,15 @@ En un inventario: lo deja vacío.
 buscar("Inventario").vaciar()
 ```
 
+#### `yo.moverConJugador(numero, rapidez)`
+
+Como moverConFlechas, pero con los controles de UN jugador (del 1 al 4): su trozo del teclado o su mando. Si el objeto cae (Fisica con gravedad) solo se mueve a los lados. Sin codigo: Comportamiento > «Lo maneja un jugador».
+
+```
+cuando cada fotograma:
+    yo.moverConJugador(2, 300)
+```
+
 #### `yo.saltar(fuerza)`
 
 Salta, pero solo si está en el suelo. Devuelve verdadero si ha saltado.
@@ -2325,6 +2344,15 @@ La cámara no enseña nada fuera de esta zona. También se le puede dar un mapa 
 
 ```
 escena.camara.limites(buscar("Mapa"))
+```
+
+#### `escena.camara.encuadrar(objetos, margen)`
+
+PANTALLA COMPARTIDA: la cámara se pone en medio de esos objetos (una lista) y se aleja lo justo para que se vean todos, con un margen alrededor (120 si no se dice). Al juntarse vuelve a acercarse. Se quita con escena.camara.seguir(...) o con una lista vacía.
+
+```
+cuando empieza:
+    escena.camara.encuadrar([buscar("Jugador1"), buscar("Jugador2")])
 ```
 
 #### `escena.camara.temblar(intensidad, segundos)`
@@ -3335,6 +3363,70 @@ cuando hago clic encima:
 ```
 
 ## 9. Listas, textos, tablas y vectores
+
+### Controles de cada jugador (varios en el mismo ordenador)
+
+Lo que da controles(1), controles(2)...: los controles de ese jugador, juegue con su trozo del teclado o con su mando. Los controles se llaman siempre igual: "arriba", "abajo", "izquierda", "derecha", "a" (la acción principal) y "b" (la segunda).
+
+#### `controles(1).x`
+
+Hacia qué lado quiere ir: -1 izquierda, 0 quieto, 1 derecha (con la palanca del mando, valores intermedios).
+
+```
+yo.x += controles(1).x * 300 * delta
+```
+
+#### `controles(1).y`
+
+Hacia arriba (1) o hacia abajo (-1).
+
+```
+yo.y += controles(1).y * 300 * delta
+```
+
+#### `controles(1).pulsado("control")`
+
+Verdadero mientras ese jugador tiene pulsado ese control ("a", "b", "arriba"...).
+
+```
+si controles(1).pulsado("b"):
+    yo.color = "rojo"
+```
+
+#### `controles(1).sePulso("control")`
+
+Verdadero solo en el fotograma en que lo pulsa (para saltar o disparar una vez).
+
+```
+si controles(2).sePulso("a"):
+    yo.saltar(600)
+```
+
+#### `controles(1).seSolto("control")`
+
+Verdadero solo en el fotograma en que lo suelta.
+
+```
+si controles(1).seSolto("a"):
+    mostrar("soltado")
+```
+
+#### `controles(1).mando`
+
+Verdadero si ese jugador tiene un mando conectado (el primer mando es del jugador 1, el segundo del 2...).
+
+```
+si controles(2).mando:
+    mostrar("El jugador 2 juega con mando")
+```
+
+#### `controles(1).ponerTecla("control", "tecla")`
+
+Cambia la tecla de uno de sus controles.
+
+```
+controles(1).ponerTecla("a", "m")
+```
 
 ### Listas
 

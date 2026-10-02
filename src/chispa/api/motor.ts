@@ -44,6 +44,7 @@ import { DIVISIONES, MAXIMO_CAMARAS, TRANSICIONES, type Division, type Transicio
 import type { Camara } from '../../objetos/Camara';
 import { crearModuloJunta } from './juntas';
 import { crearModuloPuntuaciones } from './puntuaciones';
+import { ControlesJugador, numeroDeJugador } from './jugadores';
 import { Tabla } from '../ejecucion/valores';
 import { lanzarRayo } from '../../objetos/Rayos';
 import { CajaDialogo } from '../../objetos/Dialogo';
@@ -512,13 +513,27 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
         cam().limites = { izquierda: n(0), abajo: n(1), derecha: n(2), arriba: n(3) };
         return null;
       },
+      encuadrar: (a, p) => {
+        // PANTALLA COMPARTIDA: la cámara se pone en medio de esos objetos y se aleja lo justo para que se vean todos
+        const ej = 'escena.camara.encuadrar([buscar("Jugador1"), buscar("Jugador2")])';
+        const lista = a[0];
+        if (!Array.isArray(lista)) throw new ErrorChispa(p, `'${nombre}.encuadrar' necesita una lista de objetos, y le das ${lista === undefined ? 'nada' : nombreTipo(lista)}.`, `Los objetos van en UNA lista, entre corchetes. Ejemplo: ${ej}`);
+        const objetos = lista.map((v, i) => {
+          if (!(v instanceof RefObjeto)) throw new ErrorChispa(p, `lo ${i + 1}º de la lista no es un objeto: es ${v === null ? 'un objeto vacío (nulo): ese objeto no existe' : nombreTipo(v)}.`, `Ejemplo: ${ej}`);
+          return v.objeto;
+        });
+        const margen = argNumero(a, 1, `${nombre}.encuadrar`, p, ej, 120);
+        if (margen < 0) throw new ErrorChispa(p, `el margen no puede ser negativo, y le das ${margen}.`, `Ejemplo: ${ej}`);
+        cam().encuadrar(objetos, margen);
+        return null;
+      },
       temblar: (a, p) => {
         const ej = 'escena.camara.temblar(8, 0.3)';
         cam().temblar(argNumero(a, 0, `${nombre}.temblar`, p, ej, 8), argNumero(a, 1, `${nombre}.temblar`, p, ej, 0.3));
         return null;
       },
     },
-    ['x', 'y', 'zoom', 'suavizado', 'seguir', 'limites', 'temblar'],
+    ['x', 'y', 'zoom', 'suavizado', 'seguir', 'limites', 'temblar', 'encuadrar'],
   );
   const camara = moduloCamara('escena.camara', () => ctx.escena.camara);
   /** Las cámaras de la pantalla dividida, por su número (se hacen una vez y se reutilizan). */
@@ -776,6 +791,10 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
 
   // ── efectos especiales (efectos.ts) ──
   g.declarar('efecto', crearModuloEfecto({ efectos: () => ctx.escena.efectos, aqui, propios: () => ctx.efectosPropios?.() ?? {} }));
+
+  // ── varios jugadores: controles(2).sePulso("a") (jugadores.ts) ──
+  const controlesDeJugador = [0, 1, 2, 3].map((n) => new ControlesJugador(() => ctx.escena.jugadores, n));
+  funcion('controles', (a, p) => controlesDeJugador[numeroDeJugador(a[0], 'controles', p)]);
 
   // ── la tabla de las mejores puntuaciones (puntuaciones.ts) ──
   g.declarar('puntuaciones', crearModuloPuntuaciones(ctx));

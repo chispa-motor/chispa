@@ -23,7 +23,7 @@ import { NOMBRES_COLORES } from '../../motor/Color';
 import { TIPOS_PARTICULAS } from '../../objetos/Particulas';
 import { DOC_ESPECIALES, DOC_EVENTOS, DOC_FUNCIONES, DOC_MODULOS, DOC_OBJETO, DOC_PALABRAS, DOC_VALORES, RECETAS, type Doc } from './documentacion';
 
-const PLURALES: Record<string, string> = { lista: 'Listas', texto: 'Textos', tabla: 'Tablas', vector: 'Vectores' };
+const PLURALES: Record<string, string> = { lista: 'Listas', texto: 'Textos', tabla: 'Tablas', vector: 'Vectores', controles: 'Controles de cada jugador (varios en el mismo ordenador)' };
 
 /** Las fichas de acciones de los mapas empiezan por "mapa." en su firma. */
 const esDeMapa = (d: Doc) => d.firma.startsWith('mapa.');

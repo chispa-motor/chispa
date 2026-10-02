@@ -276,4 +276,26 @@ export function agregarNovedades(tema: Tema, c: Comando): void {
     'cuando empieza:\n    si puntuaciones.entra("muchos"):\n        mostrar("si")', 'Darle un texto: quiere los puntos (un número).');
   c('puntuaciones:borrar', 'cuando se pulsa "b":\n    puntuaciones.borrar()', 'puntuaciones.borrar()',
     'cuando cada fotograma:\n    puntuaciones.borrar()', 'Borrarla en cada fotograma: nunca se guardaría nada.', 'l');
+
+  tema(4, 'Varios jugadores en el mismo ordenador', 'De 2 a 4 jugadores, cada uno con su trozo del teclado o con su mando. Los controles de todos se llaman igual: arriba, abajo, izquierda, derecha, a y b. La pantalla se puede dividir (pantalla.dividir) o compartir (la cámara los encuadra a todos). Sin código: en el inspector, Comportamiento > «Lo maneja un jugador», y en la cámara de la escena, «jugadores».');
+  c('funcion:controles', 'cuando cada fotograma:\n    si controles(2).sePulso("a"):\n        mostrar("el jugador 2 pulsa su boton")', 'mostrar(controles(2).pulsado("a"))',
+    'cuando empieza:\n    mostrar(controles(5).x)', 'Pedir los controles del jugador 5: son 4 como mucho.');
+  c('objeto:moverConJugador', 'cuando cada fotograma:\n    yo.moverConJugador(2, 300)', 'yo.moverConJugador(2, 300)',
+    'cuando cada fotograma:\n    yo.moverConJugador(300)', 'Olvidar el número del jugador: primero qué jugador (1 a 4), luego la rapidez.');
+  c('controles:x', 'cuando cada fotograma:\n    yo.x += controles(1).x * 200 * delta', 'yo.x += controles(1).x * 200 * delta',
+    'cuando empieza:\n    controles(1).x = 1', 'Darle un valor: solo se lee (lo decide quien juega).');
+  c('controles:y', 'cuando cada fotograma:\n    yo.y += controles(1).y * 200 * delta', 'yo.y += controles(1).y * 200 * delta',
+    'cuando cada fotograma:\n    yo.y -= controles(1).y * 200 * delta', 'Restarla: en Chispa la Y va hacia ARRIBA, así que «arriba» es positivo y se suma.', 'l');
+  c('controles:pulsado', 'cuando cada fotograma:\n    si controles(1).pulsado("b"):\n        yo.color = "rojo"', 'mostrar(controles(1).pulsado("b"))',
+    'cuando empieza:\n    mostrar(controles(1).pulsado("espacio"))', 'Darle una tecla: quiere el CONTROL ("a", "b", "arriba"...), que es el mismo con teclado o con mando.');
+  c('controles:sePulso', 'cuando cada fotograma:\n    si controles(2).sePulso("a"):\n        yo.color = "verde"', 'mostrar(controles(2).sePulso("a"))',
+    'cuando cada fotograma:\n    si controles(2).pulsado("a"):\n        crear("Bala", yo.x, yo.y)', 'Usar pulsado para disparar: crea una bala en CADA fotograma mientras se mantiene. Para una vez por pulsación, sePulso.', 'l');
+  c('controles:seSolto', 'cuando cada fotograma:\n    si controles(1).seSolto("a"):\n        mostrar("soltado")', 'mostrar(controles(1).seSolto("a"))',
+    'cuando empieza:\n    mostrar(controles(1).seSolto())', 'Olvidar qué control: controles(1).seSolto("a").');
+  c('controles:mando', 'cuando empieza:\n    si controles(1).mando:\n        mostrar("con mando")\n    sino:\n        mostrar("con teclado")', 'mostrar(controles(1).mando)',
+    'cuando empieza:\n    controles(1).mando = verdadero', 'Darle un valor: solo dice si hay un mando conectado.');
+  c('controles:ponerTecla', 'cuando empieza:\n    controles(1).ponerTecla("a", "m")', 'controles(1).ponerTecla("a", "m")',
+    'cuando empieza:\n    controles(1).ponerTecla("saltar", "m")', 'Inventarse el control: son arriba, abajo, izquierda, derecha, a y b.');
+  c('escena.camara:encuadrar', 'cuando empieza:\n    escena.camara.encuadrar([yo, buscar("Jugador")])', 'escena.camara.encuadrar([yo, buscar("Jugador")])',
+    'cuando empieza:\n    escena.camara.encuadrar(yo, buscar("Jugador"))', 'Olvidar los corchetes: los objetos van en UNA lista.');
 }

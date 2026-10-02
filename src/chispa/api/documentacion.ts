@@ -134,6 +134,7 @@ export const DOC_FUNCIONES: Doc[] = [
   d('paleta', 'funcion', 'paleta("nombre", n)', 'Los colores de una paleta lista ("pastel", "retro", "neon", "natural", "oceano", "fuego", "bosque", "caramelo", "grises", "arcoiris"). Con un número, solo ese color (del 1 al 8).', 'yo.color = paleta("neon", 3)', 'paleta("${1:pastel}", ${2:1})'),
   d('mezclarColores', 'funcion', 'mezclarColores(color1, color2, cuanto)', 'El color que sale de mezclar dos: con 0 da el primero, con 1 el segundo y con 0.5 el de en medio.', 'yo.color = mezclarColores("rojo", "amarillo", 0.5)', 'mezclarColores("${1:rojo}", "${2:amarillo}", ${3:0.5})'),
   d('semilla', 'funcion', 'semilla(numero)', 'Hace que el azar SE REPITA: con la misma semilla, aleatorio(), elegir(), probabilidad() y lista.mezclar() dan siempre lo mismo y en el mismo orden. Sirve para mundos hechos al azar que son iguales para todos (el nivel del día) o para repetir una partida. semilla() sin nada vuelve al azar de verdad.', 'cuando empieza:\n    semilla(2026)\n    mostrar(aleatorio(1, 100))', 'semilla(${1:1234})'),
+  d('controles', 'funcion', 'controles(jugador)', 'Los controles de un jugador (del 1 al 4), para jugar varios en el mismo ordenador. Cada uno tiene arriba, abajo, izquierda, derecha, a y b, en su trozo del teclado y en su mando. Jugador 1: W A S D, a = espacio, b = F. Jugador 2: flechas, a = Intro, b = Mayusculas. Jugador 3: I J K L, a = O, b = U. Jugador 4: 8 4 5 6, a = 0, b = 9. En el mando: cruceta o palanca, a = A, b = B.', 'cuando cada fotograma:\n    si controles(2).sePulso("a"):\n        yo.saltar(600)', 'controles(${1:1})'),
   d('numero', 'funcion', 'numero(texto)', 'Convierte un texto con un número ("42") en un número de verdad.', 'variable n = numero("42") + 1', 'numero(${1})'),
 ];
 
@@ -200,6 +201,7 @@ export const DOC_MODULOS: DocModulo[] = [
     miembros: [
       d('seguir', 'accion', 'escena.camara.seguir(objeto)', 'La cámara sigue a un objeto (suavemente).', 'escena.camara.seguir(yo)', 'seguir(${1:yo})'),
       d('limites', 'accion', 'escena.camara.limites(izquierda, abajo, derecha, arriba)', 'La cámara no enseña nada fuera de esta zona. También se le puede dar un mapa de casillas (no sale de él), o nada para quitar los límites. En el editor: Cámara > «no salir del mapa».', 'escena.camara.limites(buscar("Mapa"))', 'limites(${1:0}, ${2:0}, ${3:3000}, ${4:540})'),
+      d('encuadrar', 'accion', 'escena.camara.encuadrar(objetos, margen)', 'PANTALLA COMPARTIDA: la cámara se pone en medio de esos objetos (una lista) y se aleja lo justo para que se vean todos, con un margen alrededor (120 si no se dice). Al juntarse vuelve a acercarse. Se quita con escena.camara.seguir(...) o con una lista vacía.', 'cuando empieza:\n    escena.camara.encuadrar([buscar("Jugador1"), buscar("Jugador2")])', 'encuadrar([${1:buscar("Jugador1"), buscar("Jugador2")}])'),
       d('temblar', 'accion', 'escena.camara.temblar(intensidad, segundos)', 'Hace temblar la pantalla (explosiones, golpes).', 'escena.camara.temblar(10, 0.3)', 'temblar(${1:8}, ${2:0.3})'),
       d('zoom', 'propiedad', 'escena.camara.zoom', '1 = normal, 2 = más cerca (todo el doble de grande), 0.5 = más lejos.', 'escena.camara.zoom = 2'),
       d('x', 'propiedad', 'escena.camara.x', 'Centro de la cámara (horizontal).', 'escena.camara.x = 480'),
@@ -452,6 +454,7 @@ export const DOC_OBJETO: Doc[] = [
   d('sacar', 'accion', 'yo.sacar("cosa", cantidad)', 'En un inventario: saca esa cosa (una si no se dice cuántas). Devuelve cuántas ha sacado de verdad (0 si no había).', 'si buscar("Inventario").sacar("llave") == 1:\n    mostrar("puerta abierta")', 'sacar("${1:llave}")'),
   d('cuantos', 'accion', 'yo.cuantos("cosa")', 'En un inventario: cuántas hay de esa cosa.', 'si buscar("Inventario").cuantos("moneda") >= 10:\n    mostrar("puedes comprar")', 'cuantos("${1:llave}")'),
   d('vaciar', 'accion', 'yo.vaciar()', 'En un inventario: lo deja vacío.', 'buscar("Inventario").vaciar()', 'vaciar()'),
+  d('moverConJugador', 'accion', 'yo.moverConJugador(numero, rapidez)', 'Como moverConFlechas, pero con los controles de UN jugador (del 1 al 4): su trozo del teclado o su mando. Si el objeto cae (Fisica con gravedad) solo se mueve a los lados. Sin codigo: Comportamiento > «Lo maneja un jugador».', 'cuando cada fotograma:\n    yo.moverConJugador(2, 300)', 'moverConJugador(${1:2}, ${2:300})'),
   d('fijo', 'propiedad', 'yo.fijo', 'Si es verdadero, se queda pegado a la pantalla (interfaz: vida, puntos, botones).', 'yo.fijo = verdadero'),
   d('animacion', 'propiedad', 'yo.animacion', 'La animación que suena ahora (o nulo). Darle valor es lo mismo que yo.animar(...).', 'si yo.animacion != "correr":\n    yo.animacion = "correr"'),
   d('ratonEncima', 'propiedad', 'yo.ratonEncima', 'Verdadero si el ratón está encima del objeto (para resaltar botones).', 'si yo.ratonEncima:\n    yo.color = "amarillo"'),
@@ -555,6 +558,19 @@ export const DOC_OBJETO: Doc[] = [
 
 /** Lo que tienen los valores del lenguaje (no los objetos del juego): lista.añadir(), texto.mayusculas... */
 export const DOC_VALORES: { tipo: string; descripcion: string; miembros: Doc[] }[] = [
+  {
+    tipo: 'controles',
+    descripcion: 'Lo que da controles(1), controles(2)...: los controles de ese jugador, juegue con su trozo del teclado o con su mando. Los controles se llaman siempre igual: "arriba", "abajo", "izquierda", "derecha", "a" (la acción principal) y "b" (la segunda).',
+    miembros: [
+      d('x', 'propiedad', 'controles(1).x', 'Hacia qué lado quiere ir: -1 izquierda, 0 quieto, 1 derecha (con la palanca del mando, valores intermedios).', 'yo.x += controles(1).x * 300 * delta'),
+      d('y', 'propiedad', 'controles(1).y', 'Hacia arriba (1) o hacia abajo (-1).', 'yo.y += controles(1).y * 300 * delta'),
+      d('pulsado', 'accion', 'controles(1).pulsado("control")', 'Verdadero mientras ese jugador tiene pulsado ese control ("a", "b", "arriba"...).', 'si controles(1).pulsado("b"):\n    yo.color = "rojo"', 'pulsado("${1:a}")'),
+      d('sePulso', 'accion', 'controles(1).sePulso("control")', 'Verdadero solo en el fotograma en que lo pulsa (para saltar o disparar una vez).', 'si controles(2).sePulso("a"):\n    yo.saltar(600)', 'sePulso("${1:a}")'),
+      d('seSolto', 'accion', 'controles(1).seSolto("control")', 'Verdadero solo en el fotograma en que lo suelta.', 'si controles(1).seSolto("a"):\n    mostrar("soltado")', 'seSolto("${1:a}")'),
+      d('mando', 'propiedad', 'controles(1).mando', 'Verdadero si ese jugador tiene un mando conectado (el primer mando es del jugador 1, el segundo del 2...).', 'si controles(2).mando:\n    mostrar("El jugador 2 juega con mando")'),
+      d('ponerTecla', 'accion', 'controles(1).ponerTecla("control", "tecla")', 'Cambia la tecla de uno de sus controles.', 'controles(1).ponerTecla("a", "m")', 'ponerTecla("${1:a}", "${2:m}")'),
+    ],
+  },
   {
     tipo: 'lista',
     descripcion: 'Una lista de valores en orden, entre corchetes: [1, 2, 3]. La primera posición es la 1.',

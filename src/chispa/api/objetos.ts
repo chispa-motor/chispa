@@ -41,6 +41,8 @@ import { NOMBRES_MEZCLAS, PATRONES, TIPOS_RELLENO } from '../../motor/Estilo';
 import { EFECTOS_CONTINUOS, RECETAS } from '../../objetos/Efectos';
 import { Luz } from '../../objetos/Luces';
 import { letrasDisponibles } from '../../motor/Letras';
+import { moverConEjes } from '../../objetos/moverConEjes';
+import { numeroDeJugador } from './jugadores';
 import { METODOS_CONTROL, NOMBRES_CONTROL, PROPIEDADES_CONTROL, controlDe, esDeControl } from './controles';
 import { NOMBRES_COLORES, esColorValido } from '../../motor/Color';
 import { FORMAS, MAX_LADOS, MAX_PUNTOS_CAMINO, POR_DEFECTO } from '../../objetos/formas/figuras';
@@ -800,43 +802,28 @@ const METODOS: Record<string, (o: ObjetoJuego, args: Valor[], pos: Posicion) => 
     return null;
   },
   moverconflechas: (o, a, p) => {
-    // Lo más fácil para empezar: flechas (o W A S D) y ya se mueve.
+    // Lo más fácil para empezar: flechas (o W A S D) y ya se mueve (ver moverConEjes.ts).
     //  - Si el objeto CAE (tiene física y hay gravedad): solo izquierda y derecha (para saltar, yo.saltar()).
     //  - Si no (juegos vistos desde arriba, naves...): en las cuatro direcciones.
-    // Con física cambia la velocidad (así choca bien con las paredes); sin física, la posición.
     const rapidez = argNumero(a, 0, 'moverConFlechas', p, 'yo.moverConFlechas(300)', 300);
     const escena = o.escena;
     if (!escena) return false;
     const pulsada = (...teclas: string[]) => teclas.some((t) => escena.motor.entrada.estaPulsada(t));
     let dx = (pulsada('derecha', 'd') ? 1 : 0) - (pulsada('izquierda', 'a') ? 1 : 0);
     let dy = (pulsada('arriba', 'w') ? 1 : 0) - (pulsada('abajo', 's') ? 1 : 0);
-    const f = o.obtener(Fisica);
-    const conFisica = !!f && f.activo && !f.estatico;
-    const cae = conFisica && f!.gravedad !== 0 && escena.gravedad !== 0;
     // Con la palanca del mando, poco inclinada = despacio (más fino que las flechas)
     const m = escena.motor.entrada.mando;
-    if (cae) dy = 0;
-    if (m.conectado && (m.ejeX !== 0 || m.ejeY !== 0)) {
-      const [ex, ey] = [m.ejeX, cae ? 0 : m.ejeY];
-      const largo = Math.hypot(ex, ey);
-      [dx, dy] = largo > 1 ? [ex / largo, ey / largo] : [ex, ey];
-    } else if (dx !== 0 && dy !== 0) {
-      // En diagonal, no más rápido que en recto
-      dx *= Math.SQRT1_2;
-      dy *= Math.SQRT1_2;
-    }
-    if (conFisica) {
-      f!.velocidad.x = dx * rapidez;
-      if (!cae) f!.velocidad.y = dy * rapidez;
-    } else {
-      const dt = escena.motor.tiempo.delta;
-      o.posicion.x += dx * rapidez * dt;
-      o.posicion.y += dy * rapidez * dt;
-    }
-    // Mira hacia donde anda (las imágenes se dan la vuelta al ir a la izquierda)
-    const s = o.obtener(Sprite);
-    if (s && dx !== 0) s.voltearX = dx < 0;
-    return dx !== 0 || dy !== 0;
+    if (m.conectado && (m.ejeX !== 0 || m.ejeY !== 0)) [dx, dy] = [m.ejeX, m.ejeY];
+    return moverConEjes(o, dx, dy, rapidez);
+  },
+  moverconjugador: (o, a, p) => {
+    // Como moverConFlechas, pero con los controles de UN jugador (su trozo del teclado o su mando)
+    const ej = 'yo.moverConJugador(2, 300)';
+    const n = numeroDeJugador(a[0], 'moverConJugador', p);
+    const rapidez = argNumero(a, 1, 'moverConJugador', p, ej, 300);
+    if (!o.escena) return false;
+    const ejes = o.escena.jugadores.ejes(n);
+    return moverConEjes(o, ejes.x, ejes.y, rapidez);
   },
   moverhacia: (o, a, p) => {
     // Avanza hacia el destino a esa rapidez (píxeles/segundo) sin pasarse. Devuelve verdadero al llegar.
@@ -970,7 +957,7 @@ const NOMBRES_BONITOS = [
   'color', 'visible', 'ancho', 'alto', 'texto', 'tamaño', 'colorTexto', 'letra', 'imagen', 'opacidad', 'voltear', 'capa', 'fijo',
   'solido', 'fantasma', 'rozamiento', 'rebote', 'masa', 'estatico', 'moviendo', 'animacion', 'ratonEncima', 'destruido',
   'saltar', 'mover', 'rotar', 'destruir', 'distanciaA', 'empujar', 'animar', 'pararAnimacion', 'moverHacia', 'mirarA', 'direccionA',
-  'moverConFlechas', 'casilla', 'ponerCasilla', 'quitarCasilla', 'casillaEn', 'columnaEn', 'filaEn', 'centroDeCasilla',
+  'moverConFlechas', 'moverConJugador', 'casilla', 'ponerCasilla', 'quitarCasilla', 'casillaEn', 'columnaEn', 'filaEn', 'centroDeCasilla',
   'tamanoLetra', 'transparencia', 'voltearVertical', 'etiquetas', 'padre', 'hijos', 'arrastrable', 'arrastrando',
   'teletransportar', 'irA', 'anguloA', 'rotarHacia', 'avanzar', 'ocultar', 'aparecer', 'parpadear', 'ponerDelante', 'ponerDetras',
   'tocando', 'cercanos', 'masCercano', 'clonar', 'ponerEtiqueta', 'quitarEtiqueta', 'tieneEtiqueta', 'pegarA', 'soltar',

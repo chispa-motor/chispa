@@ -285,12 +285,14 @@ function recorrido(v: unknown, ruta: Ruta): DefRecorrido {
 
 function comportamiento(v: unknown, ruta: Ruta): DefComportamiento {
   const c = campos<DefComportamiento>(objeto(v, ruta), ruta, {
-    tipo: (x, r) => unoDe(x, r, ['seguir', 'perseguir', 'huir'] as const),
+    tipo: (x, r) => unoDe(x, r, ['seguir', 'perseguir', 'huir', 'jugador'] as const),
     objetivo: nombre,
+    jugador: (x, r) => numero(x, r, 1, 4),
+    salto: (x, r) => numero(x, r, 0, 100_000),
     rapidez: numero,
     distancia: numero,
   });
-  if (!c.tipo) fallo([...ruta, 'tipo'], 'falta qué hace (seguir, perseguir o huir)');
+  if (!c.tipo) fallo([...ruta, 'tipo'], 'falta qué hace (seguir, perseguir, huir o jugador)');
   return { ...c, objetivo: c.objetivo ?? '' };
 }
 
@@ -367,6 +369,15 @@ function camara(v: unknown, ruta: Ruta): DefCamara {
       return { izquierda: numero(o.izquierda, [...r, 'izquierda']), abajo: numero(o.abajo, [...r, 'abajo']), derecha: numero(o.derecha, [...r, 'derecha']), arriba: numero(o.arriba, [...r, 'arriba']) };
     },
     limitarAlMapa: logico,
+    jugadores: (x, r) => {
+      const j = campos<Partial<NonNullable<DefCamara['jugadores']>>>(objeto(x, r), r, {
+        modo: (m, rm) => unoDe(m, rm, ['dividida', 'compartida'] as const),
+        seguir: (l, rl) => lista(l, rl, 4, nombre),
+        division: (d, rd) => unoDe(d, rd, ['columnas', 'filas'] as const),
+      });
+      if (!j.modo) fallo(r, 'falta decir si la pantalla es dividida o compartida');
+      return { modo: j.modo, seguir: j.seguir ?? [], ...(j.division ? { division: j.division } : {}) };
+    },
   });
 }
 

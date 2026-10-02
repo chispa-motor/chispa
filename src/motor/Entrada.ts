@@ -52,6 +52,20 @@ const TECLA_DE_BOTON: Record<string, string> = sinPrototipo({
 
 /** Palanca: por debajo de esto se considera que está en el centro (los mandos nunca dan 0 exacto). */
 const ZONA_MUERTA = 0.25;
+/** Como mucho, estos mandos (uno por jugador). */
+export const MAXIMO_MANDOS = 4;
+
+export interface EstadoMando {
+  conectado: boolean;
+  botones: Set<string>;
+  /** Los que se han pulsado, y los que se han soltado, justo en este fotograma. */
+  pulsados: Set<string>;
+  soltados: Set<string>;
+  ejeX: number;
+  ejeY: number;
+  ejeDerechoX: number;
+  ejeDerechoY: number;
+}
 
 /** Teclas especiales: código físico del navegador → nombre en español. */
 const NOMBRES_POR_CODIGO: Record<string, string> = sinPrototipo({
@@ -312,45 +326,72 @@ export class Entrada {
 
   // ───────────────────────── Mando ─────────────────────────
 
-  /** El primer mando conectado: sus botones pulsados y la palanca izquierda (-1 a 1, la Y positiva hacia arriba). */
-  readonly mando = { conectado: false, botones: new Set<string>(), pulsados: new Set<string>(), ejeX: 0, ejeY: 0, ejeDerechoX: 0, ejeDerechoY: 0 };
-  /** El mando del navegador, para vibrar. */
-  private mandoNavegador: Gamepad | null = null;
+  /**
+   * Los mandos conectados (hasta 4), en el orden en que los da el navegador: el
+   * primero es el del jugador 1, el segundo el del jugador 2... De cada uno:
+   * sus botones pulsados y las palancas (-1 a 1, la Y positiva hacia arriba).
+   */
+  readonly mandos: EstadoMando[] = Array.from({ length: MAXIMO_MANDOS }, () => ({ conectado: false, botones: new Set<string>(), pulsados: new Set<string>(), soltados: new Set<string>(), ejeX: 0, ejeY: 0, ejeDerechoX: 0, ejeDerechoY: 0 }));
+  /** El primer mando conectado (el del módulo `mando`, y el que hace de teclado). */
+  readonly mando = this.mandos[0];
+  /**
+   * El primer mando hace de teclado (cruceta = flechas, A = espacio...). Con
+   * varios jugadores se quita: si no, el mando del jugador 1 movería al 2 (que
+   * lleva las flechas).
+   */
+  private _mandoHaceDeTeclado = true;
+  get mandoHaceDeTeclado(): boolean {
+    return this._mandoHaceDeTeclado;
+  }
+  set mandoHaceDeTeclado(v: boolean) {
+    if (this._mandoHaceDeTeclado && !v) for (const b of this.mando.botones) if (TECLA_DE_BOTON[b]) this.soltarVirtual(`mando:${b}`);
+    this._mandoHaceDeTeclado = v;
+  }
+  /** Los mandos del navegador, para vibrar. */
+  private mandosNavegador: (Gamepad | null)[] = [];
 
-  /** Lee el mando (el navegador no avisa: hay que preguntarle en cada fotograma). */
+  /** Lee los mandos (el navegador no avisa: hay que preguntarle en cada fotograma). */
   leerMandos(): void {
     const lista = typeof navigator !== 'undefined' && navigator.getGamepads ? navigator.getGamepads() : [];
-    const g = [...lista].find((x): x is Gamepad => !!x && x.connected) ?? null;
-    this.mandoNavegador = g;
-    const botones = new Set<string>();
-    let [ejeX, ejeY, dx, dy] = [0, 0, 0, 0];
-    if (g) {
-      g.buttons.forEach((b, i) => {
-        if (b.pressed && BOTONES_MANDO[i]) botones.add(BOTONES_MANDO[i]);
-      });
-      const eje = (i: number) => (Math.abs(g.axes[i] ?? 0) < ZONA_MUERTA ? 0 : (g.axes[i] ?? 0));
-      [ejeX, ejeY, dx, dy] = [eje(0), -eje(1), eje(2), -eje(3)];
+    const conectados = [...lista].filter((x): x is Gamepad => !!x && x.connected).slice(0, MAXIMO_MANDOS);
+    this.mandosNavegador = conectados;
+    for (let i = 0; i < MAXIMO_MANDOS; i++) {
+      const g = conectados[i] ?? null;
+      const botones = new Set<string>();
+      let [ejeX, ejeY, dx, dy] = [0, 0, 0, 0];
+      if (g) {
+        g.buttons.forEach((b, n) => {
+          if (b.pressed && BOTONES_MANDO[n]) botones.add(BOTONES_MANDO[n]);
+        });
+        const eje = (n: number) => (Math.abs(g.axes[n] ?? 0) < ZONA_MUERTA ? 0 : (g.axes[n] ?? 0));
+        [ejeX, ejeY, dx, dy] = [eje(0), -eje(1), eje(2), -eje(3)];
+      }
+      this.ponerMando(g !== null, botones, ejeX, ejeY, dx, dy, i);
     }
-    this.ponerMando(g !== null, botones, ejeX, ejeY, dx, dy);
   }
 
-  /** Aplica un estado del mando (separado de leerMandos para poder probarlo sin mando de verdad). */
-  ponerMando(conectado: boolean, botones: Set<string>, ejeX: number, ejeY: number, ejeDerechoX = 0, ejeDerechoY = 0): void {
-    const m = this.mando;
+  /** Aplica el estado de un mando (separado de leerMandos para poder probarlo sin mando de verdad). `indice`: 0 = el primero. */
+  ponerMando(conectado: boolean, botones: Set<string>, ejeX: number, ejeY: number, ejeDerechoX = 0, ejeDerechoY = 0, indice = 0): void {
+    const m = this.mandos[indice];
+    if (!m) return;
     // La palanca también cuenta como la cruceta
     if (ejeX < -0.5) botones.add('izquierda');
     if (ejeX > 0.5) botones.add('derecha');
     if (ejeY > 0.5) botones.add('arriba');
     if (ejeY < -0.5) botones.add('abajo');
     m.pulsados = new Set([...botones].filter((b) => !m.botones.has(b)));
-    for (const b of m.botones) if (!botones.has(b) && TECLA_DE_BOTON[b]) this.soltarVirtual(`mando:${b}`);
-    for (const b of m.pulsados) if (TECLA_DE_BOTON[b]) this.pulsarVirtual(`mando:${b}`, TECLA_DE_BOTON[b]);
+    m.soltados = new Set([...m.botones].filter((b) => !botones.has(b)));
+    // Solo el primer mando hace de teclado (y solo si no hay varios jugadores)
+    if (indice === 0 && this._mandoHaceDeTeclado) {
+      for (const b of m.soltados) if (TECLA_DE_BOTON[b]) this.soltarVirtual(`mando:${b}`);
+      for (const b of m.pulsados) if (TECLA_DE_BOTON[b]) this.pulsarVirtual(`mando:${b}`, TECLA_DE_BOTON[b]);
+    }
     Object.assign(m, { conectado, botones, ejeX, ejeY, ejeDerechoX, ejeDerechoY });
   }
 
-  /** Hace vibrar el mando (si el navegador y el mando saben). */
-  vibrar(segundos: number, fuerza = 1): void {
-    const actuador = (this.mandoNavegador as (Gamepad & { vibrationActuator?: { playEffect(t: string, o: object): Promise<unknown> } }) | null)?.vibrationActuator;
+  /** Hace vibrar un mando (si el navegador y el mando saben). */
+  vibrar(segundos: number, fuerza = 1, indice = 0): void {
+    const actuador = (this.mandosNavegador[indice] as (Gamepad & { vibrationActuator?: { playEffect(t: string, o: object): Promise<unknown> } }) | null | undefined)?.vibrationActuator;
     void actuador?.playEffect('dual-rumble', { duration: segundos * 1000, strongMagnitude: fuerza, weakMagnitude: fuerza }).catch(() => {});
   }
 
@@ -377,7 +418,10 @@ export class Entrada {
     this.soltadasEsteFotograma.clear();
     this.botonesPulsados.clear();
     this.botonesSoltados.clear();
-    this.mando.pulsados.clear();
+    for (const m of this.mandos) {
+      m.pulsados.clear();
+      m.soltados.clear();
+    }
     this.rueda = 0;
   }
 

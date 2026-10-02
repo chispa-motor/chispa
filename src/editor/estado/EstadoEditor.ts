@@ -880,7 +880,7 @@ export class EstadoEditor {
     if (this.proyecto.escenas[nombre]) this.cambiar('escena', () => (this.proyecto.escenaInicial = nombre));
   }
 
-  cambiarEscenaPropiedad(ruta: 'oscuridad' | 'luzAmbiente' | 'colorFondo' | 'gravedad' | 'camara.zoom' | 'camara.seguir' | 'camara.x' | 'camara.y' | 'camara.limitarAlMapa' | 'clima' | `filtros.${keyof Filtros}`, valor: unknown): void {
+  cambiarEscenaPropiedad(ruta: 'oscuridad' | 'luzAmbiente' | 'colorFondo' | 'gravedad' | 'camara.zoom' | 'camara.seguir' | 'camara.x' | 'camara.y' | 'camara.limitarAlMapa' | 'camara.jugadores' | 'clima' | `filtros.${keyof Filtros}`, valor: unknown): void {
     this.cambiar('escena', () => {
       const e = this.escena;
       if (ruta === 'colorFondo') e.colorFondo = String(valor);
@@ -911,6 +911,9 @@ export class EstadoEditor {
         else if (ruta === 'camara.limitarAlMapa') {
           if (valor) e.camara.limitarAlMapa = true;
           else delete e.camara.limitarAlMapa;
+        } else if (ruta === 'camara.jugadores') {
+          if (valor) e.camara.jugadores = structuredClone(valor) as NonNullable<DefEscena['camara']>['jugadores'];
+          else delete e.camara.jugadores;
         } else if (ruta === 'camara.seguir') {
           if (valor) e.camara.seguir = String(valor);
           else delete e.camara.seguir;

@@ -2,7 +2,7 @@
 
 > Este archivo se genera solo con `npm run manual`, a partir de la API de verdad (no lo cambies a mano: cambia `src/chispa/api/curso.ts`). Un test ejecuta cada ejemplo, cada ejercicio y cada mini proyecto para comprobar que funcionan.
 
-Un curso por niveles para aprender a programar juegos con Chispa, aunque no hayas programado nunca. Salen **todos** los comandos que existen (398), cada uno con qué hace, un ejemplo corto que funciona y el error que más se comete con él.
+Un curso por niveles para aprender a programar juegos con Chispa, aunque no hayas programado nunca. Salen **todos** los comandos que existen (408), cada uno con qué hace, un ejemplo corto que funciona y el error que más se comete con él.
 
 **Cómo usarlo:**
 
@@ -60,6 +60,7 @@ Una regla para todo el curso: en el código **no hacen falta tildes**. Se escrib
   - [Pantalla dividida y varias cámaras](#pantalla-dividida-y-varias-camaras)
   - [Sonido con sitio y música que cambia](#sonido-con-sitio-y-musica-que-cambia)
   - [Pantallas listas y tabla de puntuaciones](#pantallas-listas-y-tabla-de-puntuaciones)
+  - [Varios jugadores en el mismo ordenador](#varios-jugadores-en-el-mismo-ordenador)
   - [Depurar: encontrar los fallos](#depurar-encontrar-los-fallos)
 - [Soluciones de los ejercicios](#soluciones)
 
@@ -7035,6 +7036,178 @@ cuando se pulsa "b":
 ```
 cuando cada fotograma:
     puntuaciones.borrar()
+```
+
+### Varios jugadores en el mismo ordenador
+
+De 2 a 4 jugadores, cada uno con su trozo del teclado o con su mando. Los controles de todos se llaman igual: arriba, abajo, izquierda, derecha, a y b. La pantalla se puede dividir (pantalla.dividir) o compartir (la cámara los encuadra a todos). Sin código: en el inspector, Comportamiento > «Lo maneja un jugador», y en la cámara de la escena, «jugadores».
+
+#### `controles(jugador)`
+
+Los controles de un jugador (del 1 al 4), para jugar varios en el mismo ordenador.
+
+```
+cuando cada fotograma:
+    si controles(2).sePulso("a"):
+        mostrar("el jugador 2 pulsa su boton")
+```
+
+**Error típico:** Pedir los controles del jugador 5: son 4 como mucho. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    mostrar(controles(5).x)
+```
+
+#### `yo.moverConJugador(numero, rapidez)`
+
+Como moverConFlechas, pero con los controles de UN jugador (del 1 al 4): su trozo del teclado o su mando.
+
+```
+cuando cada fotograma:
+    yo.moverConJugador(2, 300)
+```
+
+**Error típico:** Olvidar el número del jugador: primero qué jugador (1 a 4), luego la rapidez. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando cada fotograma:
+    yo.moverConJugador(300)
+```
+
+#### `controles(1).x`
+
+Hacia qué lado quiere ir: -1 izquierda, 0 quieto, 1 derecha (con la palanca del mando, valores intermedios).
+
+```
+cuando cada fotograma:
+    yo.x += controles(1).x * 200 * delta
+```
+
+**Error típico:** Darle un valor: solo se lee (lo decide quien juega). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    controles(1).x = 1
+```
+
+#### `controles(1).y`
+
+Hacia arriba (1) o hacia abajo (-1).
+
+```
+cuando cada fotograma:
+    yo.y += controles(1).y * 200 * delta
+```
+
+**Error típico:** Restarla: en Chispa la Y va hacia ARRIBA, así que «arriba» es positivo y se suma. Esto no da error: funciona, pero no hace lo que querías.
+
+```
+cuando cada fotograma:
+    yo.y -= controles(1).y * 200 * delta
+```
+
+#### `controles(1).pulsado("control")`
+
+Verdadero mientras ese jugador tiene pulsado ese control ("a", "b", "arriba"...).
+
+```
+cuando cada fotograma:
+    si controles(1).pulsado("b"):
+        yo.color = "rojo"
+```
+
+**Error típico:** Darle una tecla: quiere el CONTROL ("a", "b", "arriba"...), que es el mismo con teclado o con mando. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    mostrar(controles(1).pulsado("espacio"))
+```
+
+#### `controles(1).sePulso("control")`
+
+Verdadero solo en el fotograma en que lo pulsa (para saltar o disparar una vez).
+
+```
+cuando cada fotograma:
+    si controles(2).sePulso("a"):
+        yo.color = "verde"
+```
+
+**Error típico:** Usar pulsado para disparar: crea una bala en CADA fotograma mientras se mantiene. Para una vez por pulsación, sePulso. Esto no da error: funciona, pero no hace lo que querías.
+
+```
+cuando cada fotograma:
+    si controles(2).pulsado("a"):
+        crear("Bala", yo.x, yo.y)
+```
+
+#### `controles(1).seSolto("control")`
+
+Verdadero solo en el fotograma en que lo suelta.
+
+```
+cuando cada fotograma:
+    si controles(1).seSolto("a"):
+        mostrar("soltado")
+```
+
+**Error típico:** Olvidar qué control: controles(1).seSolto("a"). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    mostrar(controles(1).seSolto())
+```
+
+#### `controles(1).mando`
+
+Verdadero si ese jugador tiene un mando conectado (el primer mando es del jugador 1, el segundo del 2...).
+
+```
+cuando empieza:
+    si controles(1).mando:
+        mostrar("con mando")
+    sino:
+        mostrar("con teclado")
+```
+
+**Error típico:** Darle un valor: solo dice si hay un mando conectado. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    controles(1).mando = verdadero
+```
+
+#### `controles(1).ponerTecla("control", "tecla")`
+
+Cambia la tecla de uno de sus controles.
+
+```
+cuando empieza:
+    controles(1).ponerTecla("a", "m")
+```
+
+**Error típico:** Inventarse el control: son arriba, abajo, izquierda, derecha, a y b. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    controles(1).ponerTecla("saltar", "m")
+```
+
+#### `escena.camara.encuadrar(objetos, margen)`
+
+PANTALLA COMPARTIDA: la cámara se pone en medio de esos objetos (una lista) y se aleja lo justo para que se vean todos, con un margen alrededor (120 si no se dice).
+
+```
+cuando empieza:
+    escena.camara.encuadrar([yo, buscar("Jugador")])
+```
+
+**Error típico:** Olvidar los corchetes: los objetos van en UNA lista. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    escena.camara.encuadrar(yo, buscar("Jugador"))
 ```
 
 ### Depurar: encontrar los fallos

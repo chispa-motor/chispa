@@ -18,7 +18,7 @@
  */
 import { NOMBRES_COLORES } from '../../motor/Color';
 import { DISTANCIA_POR_DEFECTO } from '../../objetos/componentes/Comportamiento';
-import { leerDatoInicial, tipoPorNombre, type DatoInicial, type DefControl, type DefObjeto, type DefSprite } from '../../proyecto/formato';
+import { leerDatoInicial, tipoPorNombre, type DatoInicial, type DefControl, type DefEscena, type DefObjeto, type DefSprite } from '../../proyecto/formato';
 import { NOMBRES_CONTROLES } from '../../objetos/componentes/Control';
 import { CONTROLES_NUEVOS } from '../interfaz/controlesNuevos';
 import { FORMAS_DIBUJO, MAX_LADOS, POR_DEFECTO } from '../../objetos/formas/figuras';
@@ -483,26 +483,48 @@ export class Inspector {
     const c = def.comportamiento;
     const largo = { empezar: () => e.empezarCambioLargo(), terminar: () => e.terminarCambioLargo() };
     const otros = [...new Set([...e.escena.objetos.map((o) => o.nombre ?? ''), ...Object.keys(e.proyecto.plantillas)])].filter((n) => n && n !== def.nombre);
-    if (c && !otros.includes(c.objetivo)) otros.unshift(c.objetivo);
-    const que = { seguir: 'se queda a', perseguir: 'si está a menos de', huir: 'si está a menos de' };
-    const contenido = c
-      ? [
-          campoLista('qué hace', 'comportamiento.tipo', c.tipo, [['perseguir', 'Perseguir si está cerca'], ['huir', 'Huir si está cerca'], ['seguir', 'Seguir (como una mascota)']], (v) => {
-            e.cambiarPropiedad(ref, 'comportamiento.tipo', v);
-            e.cambiarPropiedad(ref, 'comportamiento.distancia', undefined);
-          }, 'Cómo se mueve según el otro objeto'),
-          campoLista('a quién', 'comportamiento.objetivo', c.objetivo, otros.map((n): [string, string] => [n, n]), (v) => e.cambiarPropiedad(ref, 'comportamiento.objetivo', v), 'El objeto (o el tipo: la plantilla) al que sigue, persigue o del que huye. Si hay varios, el más cercano'),
-          h('div', { class: 'dos-columnas' },
-            campoNumero('rapidez', 'comportamiento.rapidez', c.rapidez ?? 150, (v) => e.cambiarPropiedad(ref, 'comportamiento.rapidez', v === 150 ? undefined : v), { ...largo, min: 1, paso: 10, ayuda: 'Píxeles por segundo' }),
-            campoNumero(que[c.tipo], 'comportamiento.distancia', c.distancia ?? DISTANCIA_POR_DEFECTO[c.tipo], (v) => e.cambiarPropiedad(ref, 'comportamiento.distancia', v === DISTANCIA_POR_DEFECTO[c.tipo] ? undefined : v), { ...largo, min: 0, paso: 10, ayuda: c.tipo === 'seguir' ? 'Píxeles a los que se queda del otro' : 'Píxeles: si el otro está más cerca, reacciona' }),
-          ),
-          h('p', { class: 'nota' }, 'Si hay un mapa con paredes y el juego se ve desde arriba, las rodea. Con recorrido: patrulla y deja el camino mientras persigue. Desde el código: yo.irHacia(sitio).'),
-        ]
-      : [];
+    if (c && c.objetivo && !otros.includes(c.objetivo)) otros.unshift(c.objetivo);
+    const que = { seguir: 'se queda a', perseguir: 'si está a menos de', huir: 'si está a menos de', jugador: '' };
+    const tipos: [string, string][] = [['perseguir', 'Perseguir si está cerca'], ['huir', 'Huir si está cerca'], ['seguir', 'Seguir (como una mascota)'], ['jugador', 'Lo maneja un jugador']];
+    const cambiarTipo = (v: string) => {
+      e.empezarCambioLargo();
+      e.cambiarPropiedad(ref, 'comportamiento.tipo', v);
+      e.cambiarPropiedad(ref, 'comportamiento.distancia', undefined);
+      // «Lo maneja un jugador» no tiene objetivo; los demás, sí (y no tienen jugador)
+      if (v === 'jugador') e.cambiarPropiedad(ref, 'comportamiento.rapidez', 300);
+      else {
+        e.cambiarPropiedad(ref, 'comportamiento.jugador', undefined);
+        e.cambiarPropiedad(ref, 'comportamiento.salto', undefined);
+        if (!c?.objetivo) e.cambiarPropiedad(ref, 'comportamiento.objetivo', otros[0] ?? 'Jugador');
+      }
+      e.terminarCambioLargo();
+    };
+    const TECLAS = ['W A S D · salta con Espacio (y con las flechas si juega solo)', 'Flechas · salta con Intro', 'I J K L · salta con O', '8 4 5 6 · salta con 0'];
+    const contenido = !c
+      ? []
+      : c.tipo === 'jugador'
+        ? [
+            campoLista('qué hace', 'comportamiento.tipo', c.tipo, tipos, cambiarTipo, 'Cómo se mueve'),
+            campoLista('jugador', 'comportamiento.jugador', String(c.jugador ?? 1), [['1', 'Jugador 1'], ['2', 'Jugador 2'], ['3', 'Jugador 3'], ['4', 'Jugador 4']], (v) => e.cambiarPropiedad(ref, 'comportamiento.jugador', v === '1' ? undefined : Number(v)), 'Qué jugador lo maneja: cada uno tiene su trozo del teclado y, si hay, su mando'),
+            h('div', { class: 'dos-columnas' },
+              campoNumero('rapidez', 'comportamiento.rapidez', c.rapidez ?? 150, (v) => e.cambiarPropiedad(ref, 'comportamiento.rapidez', v === 150 ? undefined : v), { ...largo, min: 1, paso: 10, ayuda: 'Píxeles por segundo' }),
+              campoNumero('salto', 'comportamiento.salto', c.salto ?? 600, (v) => e.cambiarPropiedad(ref, 'comportamiento.salto', v === 600 ? undefined : v), { ...largo, min: 0, paso: 50, ayuda: 'Con qué fuerza salta al pulsar «a» (solo si cae: con Física y gravedad). 0 = no salta' }),
+            ),
+            h('p', { class: 'nota' }, `Teclas del jugador ${c.jugador ?? 1}: ${TECLAS[(c.jugador ?? 1) - 1]}. Con mando: la cruceta o la palanca, y el botón A. Desde el código: controles(${c.jugador ?? 1}).sePulso("b")`),
+          ]
+        : [
+            campoLista('qué hace', 'comportamiento.tipo', c.tipo, tipos, cambiarTipo, 'Cómo se mueve según el otro objeto'),
+            campoLista('a quién', 'comportamiento.objetivo', c.objetivo, otros.map((n): [string, string] => [n, n]), (v) => e.cambiarPropiedad(ref, 'comportamiento.objetivo', v), 'El objeto (o el tipo: la plantilla) al que sigue, persigue o del que huye. Si hay varios, el más cercano'),
+            h('div', { class: 'dos-columnas' },
+              campoNumero('rapidez', 'comportamiento.rapidez', c.rapidez ?? 150, (v) => e.cambiarPropiedad(ref, 'comportamiento.rapidez', v === 150 ? undefined : v), { ...largo, min: 1, paso: 10, ayuda: 'Píxeles por segundo' }),
+              campoNumero(que[c.tipo], 'comportamiento.distancia', c.distancia ?? DISTANCIA_POR_DEFECTO[c.tipo], (v) => e.cambiarPropiedad(ref, 'comportamiento.distancia', v === DISTANCIA_POR_DEFECTO[c.tipo] ? undefined : v), { ...largo, min: 0, paso: 10, ayuda: c.tipo === 'seguir' ? 'Píxeles a los que se queda del otro' : 'Píxeles: más lejos que eso, no hace caso' }),
+            ),
+            h('p', { class: 'nota' }, 'Si hay un mapa con paredes y el juego se ve desde arriba, las rodea. Con recorrido: patrulla y deja el camino mientras persigue. Desde el código: yo.irHacia(sitio).'),
+          ];
     return seccion('Comportamiento', contenido, {
       activo: !!c,
       alActivar: (v) => e.activarComponente(ref, 'comportamiento', v),
-      ayuda: 'Se mueve solo, sin código: persigue al jugador, huye de él o lo sigue',
+      ayuda: 'Se mueve sin código: persigue al jugador, huye de él, lo sigue... o lo maneja un jugador con sus teclas',
       plegada: !c,
     });
   }
@@ -639,7 +661,8 @@ export class Inspector {
       ], { plegada: !esc.filtros, ayuda: 'Filtros para todo lo que se ve en esta escena (se ven al jugar)' }),
       seccion('Cámara', [
         campoLista('seguir a', 'camara.seguir', esc.camara?.seguir ?? '', [['', '(nadie)'], ...nombres.map((n): [string, string] => [n, n])], (v) => e.cambiarEscenaPropiedad('camara.seguir', v || undefined), 'La cámara sigue a este objeto (desde el código: escena.camara.seguir(yo))'),
-        campoCasilla('no salir del mapa', 'camara.limitarAlMapa', esc.camara?.limitarAlMapa ?? false, (v) => e.cambiarEscenaPropiedad('camara.limitarAlMapa', v), 'La cámara no enseña nada fuera de los mapas de casillas de la escena (no se ve el vacío de los bordes)'),
+...this.camposJugadores(esc, nombres),
+                campoCasilla('no salir del mapa', 'camara.limitarAlMapa', esc.camara?.limitarAlMapa ?? false, (v) => e.cambiarEscenaPropiedad('camara.limitarAlMapa', v), 'La cámara no enseña nada fuera de los mapas de casillas de la escena (no se ve el vacío de los bordes)'),
         campoNumero('zoom', 'camara.zoom', esc.camara?.zoom ?? 1, (v) => e.cambiarEscenaPropiedad('camara.zoom', v ?? 1), { paso: 0.1, min: 0.1, max: 10, ayuda: '1 = normal, 2 = todo el doble de grande' }),
         h('div', { class: 'dos-columnas' },
           campoNumero('centro x', 'camara.x', esc.camara?.x, (v) => e.cambiarEscenaPropiedad('camara.x', v), { vacio: String(e.proyecto.ancho / 2), ayuda: 'Punto al que mira la cámara al empezar' }),
@@ -705,6 +728,35 @@ export class Inspector {
       t === 'deslizador' || t === 'minimapa' ? null : campoLista('tipo de letra', 'sprite.letra', s.letra ?? 'normal', [...LETRAS, ...Object.keys(this.estado.proyecto.letras ?? {})].map((l): [string, string] => [l, NOMBRES_LETRAS[l] ?? l]), (v) => cambiar('sprite.letra')(v === 'normal' ? undefined : v)),
       campoCasilla('activado', 'control.activado', c.activado ?? true, (v) => cambiar('control.activado')(v ? undefined : false), 'Si no está activado se ve apagado y no se puede usar (desde el código: yo.activado = falso)'),
     ], { ayuda: 'Lo que hace que este objeto sea un control de interfaz' });
+  }
+
+  /** En la cámara de la escena: varios jugadores, con la pantalla dividida o compartida. */
+  private camposJugadores(esc: DefEscena, nombres: string[]): (HTMLElement | null)[] {
+    const e = this.estado;
+    const j = esc.camara?.jugadores;
+    const cuantos = j ? Math.max(2, j.seguir.length) : 1;
+    const poner = (nuevo: NonNullable<NonNullable<DefEscena['camara']>['jugadores']> | undefined) => e.cambiarEscenaPropiedad('camara.jugadores', nuevo);
+    /** Los objetos que maneja cada jugador (los que tienen el comportamiento «lo maneja un jugador»), para proponerlos. */
+    const deJugador = (n: number) => esc.objetos.find((o) => o.comportamiento?.tipo === 'jugador' && (o.comportamiento.jugador ?? 1) === n)?.nombre ?? nombres[n - 1] ?? '';
+    const modo = j ? `${j.modo}:${cuantos}` : '';
+    return [
+      campoLista('jugadores', 'camara.jugadores', modo, [
+        ['', 'Un jugador (o todos en la misma pantalla quieta)'],
+        ['dividida:2', '2 jugadores, pantalla dividida'], ['dividida:3', '3 jugadores, pantalla dividida'], ['dividida:4', '4 jugadores, pantalla dividida'],
+        ['compartida:2', '2 jugadores, pantalla compartida'], ['compartida:3', '3 jugadores, pantalla compartida'], ['compartida:4', '4 jugadores, pantalla compartida'],
+      ], (v) => {
+        if (!v) return poner(undefined);
+        const [m, n] = v.split(':');
+        poner({ modo: m as 'dividida' | 'compartida', seguir: Array.from({ length: Number(n) }, (_, i) => j?.seguir[i] || deJugador(i + 1)), ...(j?.division ? { division: j.division } : {}) });
+      }, 'Dividida: un trozo de pantalla para cada jugador, con su cámara. Compartida: una sola cámara que se aleja para que se vean todos'),
+      ...(j ? j.seguir.map((nombre, i) =>
+        campoLista(`jugador ${i + 1}`, `camara.jugador${i + 1}`, nombre, [['', '(nadie)'], ...nombres.map((n): [string, string] => [n, n])], (v) => poner({ ...j, seguir: j.seguir.map((x, k) => (k === i ? v : x)) }), j.modo === 'dividida' ? `El objeto al que sigue la cámara del trozo ${i + 1}` : 'Uno de los objetos que la cámara mantiene a la vista'),
+      ) : []),
+      j?.modo === 'dividida' && cuantos === 2
+        ? campoLista('se divide en', 'camara.division', j.division ?? 'columnas', [['columnas', 'Columnas (lado a lado)'], ['filas', 'Filas (uno encima de otro)']], (v) => poner({ modo: j.modo, seguir: j.seguir, ...(v === 'filas' ? { division: 'filas' as const } : {}) }))
+        : null,
+      j ? h('p', { class: 'nota' }, 'Para que cada jugador mueva lo suyo sin código: en cada objeto, Comportamiento > «Lo maneja un jugador».') : null,
+    ];
   }
 }
 

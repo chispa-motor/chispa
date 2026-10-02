@@ -33,6 +33,7 @@ import type { Particulas } from './Particulas';
 import { Efectos } from './Efectos';
 import { dibujarLuces } from './Luces';
 import { Juntas } from './Juntas';
+import { Jugadores } from '../motor/Jugadores';
 import { FILTROS_NORMALES, dibujarConFiltros, hayFiltros, type Filtros } from '../motor/Filtros';
 
 /** Cómo se tapa la pantalla al cambiar de escena. */
@@ -87,6 +88,8 @@ export class Escena implements EscenaActiva {
   /** Todas las cámaras: con la pantalla dividida hay una por trozo (la primera es la principal). */
   camaras: Camara[];
   division: Division = 'columnas';
+  /** Los controles de cada jugador (su trozo del teclado y su mando). */
+  readonly jugadores: Jugadores;
   /** Quién escucha los sonidos con sitio: un objeto, o null (el centro de la cámara principal). */
   oyente: ObjetoJuego | null = null;
   /** Las cuerdas, muelles y bisagras que unen objetos. */
@@ -128,6 +131,7 @@ export class Escena implements EscenaActiva {
   constructor(readonly motor: Motor) {
     this.camara = new Camara(motor.renderizador.ancho, motor.renderizador.alto);
     this.camaras = [this.camara];
+    this.jugadores = new Jugadores(motor.entrada);
   }
 
   // ───────────────────────── Pantalla dividida ─────────────────────────

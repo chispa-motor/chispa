@@ -2,7 +2,7 @@
 
 > Se genera sola con `npm run manual` (no la cambies a mano). Un test comprueba que no falta ningún comando y que cada ejemplo funciona.
 
-Todos los comandos de Chispa (398), una línea cada uno, para tenerla abierta mientras programas o imprimirla. Para aprender con calma, el [curso](APRENDE_CHISPA.md).
+Todos los comandos de Chispa (408), una línea cada uno, para tenerla abierta mientras programas o imprimirla. Para aprender con calma, el [curso](APRENDE_CHISPA.md).
 
 En los ejemplos se usan estas variables y esta función, como si ya las tuvieras (y en la escena hay un Jugador y un Mapa de casillas):
 
@@ -635,3 +635,18 @@ Las líneas que terminan en `:` empiezan un bloque: lo de dentro va debajo, con 
 | `puntuaciones.lista()` | Las mejores puntuaciones, de mayor a menor: una lista de tablas con nombre y puntos. | `mostrar(puntuaciones.lista())` |
 | `puntuaciones.entra(puntos)` | Verdadero si esos puntos entrarían en la tabla (hay hueco, o superan a la última). | `mostrar(puntuaciones.entra(500))` |
 | `puntuaciones.borrar()` | Deja la tabla vacía. | `puntuaciones.borrar()` |
+
+### Varios jugadores en el mismo ordenador
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `controles(jugador)` | Los controles de un jugador (del 1 al 4), para jugar varios en el mismo ordenador. | `mostrar(controles(2).pulsado("a"))` |
+| `yo.moverConJugador(numero, rapidez)` | Como moverConFlechas, pero con los controles de UN jugador (del 1 al 4): su trozo del teclado o su mando. | `yo.moverConJugador(2, 300)` |
+| `controles(1).x` | Hacia qué lado quiere ir: -1 izquierda, 0 quieto, 1 derecha (con la palanca del mando, valores intermedios). | `yo.x += controles(1).x * 200 * delta` |
+| `controles(1).y` | Hacia arriba (1) o hacia abajo (-1). | `yo.y += controles(1).y * 200 * delta` |
+| `controles(1).pulsado("control")` | Verdadero mientras ese jugador tiene pulsado ese control ("a", "b", "arriba"...). | `mostrar(controles(1).pulsado("b"))` |
+| `controles(1).sePulso("control")` | Verdadero solo en el fotograma en que lo pulsa (para saltar o disparar una vez). | `mostrar(controles(2).sePulso("a"))` |
+| `controles(1).seSolto("control")` | Verdadero solo en el fotograma en que lo suelta. | `mostrar(controles(1).seSolto("a"))` |
+| `controles(1).mando` | Verdadero si ese jugador tiene un mando conectado (el primer mando es del jugador 1, el segundo del 2...). | `mostrar(controles(1).mando)` |
+| `controles(1).ponerTecla("control", "tecla")` | Cambia la tecla de uno de sus controles. | `controles(1).ponerTecla("a", "m")` |
+| `escena.camara.encuadrar(objetos, margen)` | PANTALLA COMPARTIDA: la cámara se pone en medio de esos objetos (una lista) y se aleja lo justo para que se vean todos, con un margen alrededor (120 si no se dice). | `escena.camara.encuadrar([yo, buscar("Jugador")])` |

@@ -38,6 +38,8 @@ function sugerencias(texto: string): string[] {
 /** Cómo se escribe el comando delante de su nombre: yo.forma, efecto.explosion... */
 function prefijo(grupo: string): string {
   if (grupo === 'objeto') return 'yo.';
+  // Los controles de un jugador se escriben detrás de controles(1), controles(2)...
+  if (grupo === 'controles') return 'controles(1).';
   if (grupo === 'funcion' || grupo === 'evento' || grupo === 'palabra' || grupo === 'especial') return '';
   return `${grupo}.`;
 }
@@ -73,7 +75,9 @@ describe('Comandos nuevos de Chispa 1.1', () => {
       const [grupo, nombre] = id.split(':');
       if (grupo === 'evento') return !EVENTOS.some((e) => e.texto.replace(' …', '').startsWith(nombre.split(' N ')[0]));
       const escrito = `${prefijo(grupo)}${nombre}`;
-      return !new RegExp(`(^|[^\\w.])${escrito.replace(/\./g, '\\.')}(\\(| =)`, 'm').test(codigo);
+      // Lo que solo se lee de los controles (controles(1).x) sale dentro del valor de un bloque
+      if (grupo === 'controles') return !new RegExp(`${escrito.replace(/[.()]/g, '\\$&')}(\\W|$)`, 'm').test(codigo);
+      return !new RegExp(`(^|[^\\w.])${escrito.replace(/[.()]/g, '\\$&')}(\\(| =)`, 'm').test(codigo);
     });
     expect(faltan).toEqual([]);
   });

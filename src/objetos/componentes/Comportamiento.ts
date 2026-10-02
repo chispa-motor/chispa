@@ -36,11 +36,12 @@ import { Colision } from './Colision';
 import { Fisica } from './Fisica';
 import { Recorrido } from './Recorrido';
 import { Sprite } from './Sprite';
+import { cae, moverConEjes } from '../moverConEjes';
 
-export type TipoComportamiento = 'seguir' | 'perseguir' | 'huir';
+export type TipoComportamiento = 'seguir' | 'perseguir' | 'huir' | 'jugador';
 
 /** Distancia por defecto de cada comportamiento (en píxeles). */
-export const DISTANCIA_POR_DEFECTO: Record<TipoComportamiento, number> = { seguir: 80, perseguir: 300, huir: 200 };
+export const DISTANCIA_POR_DEFECTO: Record<TipoComportamiento, number> = { seguir: 80, perseguir: 300, huir: 200, jugador: 0 };
 
 /** Cada cuánto se vuelve a buscar el camino si el objetivo se mueve (segundos). */
 const RECALCULAR = 0.4;
@@ -53,6 +54,10 @@ export class Comportamiento extends Componente {
   rapidez = 150;
   /** seguir: a qué distancia se queda. perseguir y huir: a partir de qué distancia reacciona. */
   distancia = 0;
+
+  /** tipo «jugador»: qué jugador lo maneja (1 a 4) y con qué fuerza salta al pulsar «a» si cae (0 = no salta). */
+  jugador = 1;
+  salto = 600;
 
   /** Destino puesto desde el código con yo.irHacia(): un objeto (lo sigue) o un punto (se para al llegar). */
   destino: ObjetoJuego | Vector2 | null = null;
@@ -92,6 +97,8 @@ export class Comportamiento extends Componente {
   }
 
   actualizar(dt: number): void {
+    // Lo maneja un jugador (con su trozo del teclado o su mando): no persigue a nadie
+    if (this.tipo === 'jugador' && !this.destino) return this.manejar();
     const accion = this.decidir();
     // Con recorrido: lo deja mientras persigue (o huye) y lo retoma al acabar
     const recorrido = this.objeto.obtener(Recorrido);
@@ -105,6 +112,26 @@ export class Comportamiento extends Componente {
     }
     if (accion.huir) this.mover(accion.punto.restar(this.objeto.posicion).normalizado(), accion.rapidez, dt, Infinity);
     else this.irPorCamino(accion.punto, accion.rapidez, dt, accion.pararA);
+  }
+
+  iniciar(): void {
+    // Si lo maneja el jugador 2, 3 o 4, se sabe desde el principio que hay varios (las flechas ya no son del 1)
+    if (this.tipo === 'jugador') this.objeto.escena?.jugadores.usar(Math.floor(this.jugador) - 1);
+  }
+
+  /** tipo «jugador»: se mueve con los controles de su jugador y, si cae, salta con «a» (o con «arriba»). */
+  private manejar(): void {
+    const escena = this.objeto.escena;
+    if (!escena) return;
+    const n = Math.min(3, Math.max(0, Math.floor(this.jugador) - 1));
+    const ejes = escena.jugadores.ejes(n);
+    moverConEjes(this.objeto, ejes.x, ejes.y, this.rapidez);
+    const f = this.objeto.obtener(Fisica);
+    if (this.salto > 0 && f && cae(this.objeto) && f.enSuelo && (escena.jugadores.sePulso(n, 'a') || escena.jugadores.sePulso(n, 'arriba'))) {
+      f.velocidad.y = this.salto;
+      f.enSuelo = false;
+      if (f.polvo) escena.efectos.polvo(this.objeto);
+    }
   }
 
   /** Qué toca hacer ahora: ir a un punto, huir de un punto o nada. */

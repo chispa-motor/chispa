@@ -222,6 +222,13 @@ export class JuegoEnMarcha implements ContextoJuego {
 
   // ───────────────────────── Escenas ─────────────────────────
 
+  /** ¿Algún script usa los controles de un jugador que no sea el 1? */
+  private get variosJugadores(): boolean {
+    this._varios ??= Object.values(this.proyecto.scripts).some((c) => /(controles|moverConJugador)\(\s*[2-4]/i.test(c));
+    return this._varios;
+  }
+  private _varios: boolean | null = null;
+
   /** Crea los objetos de una escena desde cero. */
   private construir(nombre: string): void {
     const def = propio(this.proyecto.escenas, nombre)!;
@@ -233,6 +240,9 @@ export class JuegoEnMarcha implements ContextoJuego {
     this.escena.oscuridad = def.oscuridad ?? 0;
     this.escena.luzAmbiente = def.luzAmbiente ?? 'negro';
     this.motor.colorFondo = def.colorFondo;
+
+    // Si algún script usa a los jugadores 2, 3 o 4, hay varios desde el primer fotograma (las flechas no son del 1)
+    if (this.variosJugadores) this.escena.jugadores.usar(1);
 
     // La cámara empieza siempre como diga ESTA escena (nada se queda de la anterior)
     const cam = this.escena.camara;
@@ -248,6 +258,18 @@ export class JuegoEnMarcha implements ContextoJuego {
     if (def.camara?.seguir) {
       const objetivo = this.escena.buscar(def.camara.seguir);
       if (objetivo) cam.seguir(objetivo);
+    }
+    // Varios jugadores: un trozo de pantalla para cada uno, o una cámara que los encuadra a todos
+    const varios = def.camara?.jugadores;
+    if (varios) {
+      const suyos = varios.seguir.map((n) => this.escena.buscar(n));
+      if (varios.modo === 'dividida' && suyos.length >= 2) {
+        this.escena.dividir(suyos.length, varios.division ?? 'columnas');
+        suyos.forEach((o, i) => o && this.escena.camaras[i].seguir(o));
+      } else if (varios.modo === 'compartida') {
+        const hay = suyos.filter((o): o is ObjetoJuego => !!o);
+        if (hay.length) cam.encuadrar(hay);
+      }
     }
     this.escena.iniciar();
   }
@@ -592,6 +614,8 @@ export function crearObjetoDesdeDefinicion(def: DefObjeto, nombrePorDefecto: str
   if (def.comportamiento) {
     const c = o.agregar(new Comportamiento());
     c.tipo = def.comportamiento.tipo;
+    c.jugador = def.comportamiento.jugador ?? 1;
+    c.salto = def.comportamiento.salto ?? 600;
     c.objetivo = def.comportamiento.objetivo;
     c.rapidez = def.comportamiento.rapidez ?? 150;
     c.distancia = def.comportamiento.distancia ?? 0;

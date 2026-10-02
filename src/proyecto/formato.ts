@@ -110,9 +110,13 @@ export interface DefColision {
 
 /** Se mueve solo según otro objeto: lo sigue, lo persigue si está cerca o huye de él. */
 export interface DefComportamiento {
-  tipo: 'seguir' | 'perseguir' | 'huir';
+  /** «jugador»: lo maneja un jugador con sus controles (sin código). */
+  tipo: 'seguir' | 'perseguir' | 'huir' | 'jugador';
   /** Nombre, tipo o etiqueta del otro objeto. */
   objetivo: string;
+  /** tipo «jugador»: qué jugador lo maneja (de 1 a 4) y con qué fuerza salta al pulsar «a» si el objeto cae (0 = no salta). */
+  jugador?: number;
+  salto?: number;
   /** Píxeles por segundo (150 si no se dice). */
   rapidez?: number;
   /** seguir: a qué distancia se queda. perseguir y huir: desde qué distancia reacciona. */
@@ -236,6 +240,12 @@ export interface DefCamara {
   limites?: Limites;
   /** La cámara no enseña nada fuera de los mapas de casillas de la escena. */
   limitarAlMapa?: boolean;
+  /**
+   * Varios jugadores: «dividida» = un trozo de pantalla por jugador, cada uno con su
+   * cámara; «compartida» = una sola cámara que los mantiene a todos a la vista.
+   * `seguir`: el objeto de cada jugador, en orden.
+   */
+  jugadores?: { modo: 'dividida' | 'compartida'; seguir: string[]; division?: 'columnas' | 'filas' };
 }
 
 export interface DefEscena {
