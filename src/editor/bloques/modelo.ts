@@ -82,7 +82,7 @@ export const EVENTOS: { clase: ClaseEvento; texto: string; dato?: { nombre: stri
  */
 export interface Accion {
   id: string;
-  categoria: 'movimiento' | 'apariencia' | 'efectos' | 'sonido' | 'objetos' | 'control' | 'interfaz';
+  categoria: 'movimiento' | 'apariencia' | 'efectos' | 'sonido' | 'objetos' | 'control' | 'interfaz' | 'movil';
   /** Texto y huecos: ['mostrar', 0] */
   partes: (string | number)[];
   /** Lo que se escribe: el nombre de la función (con su «yo.» si es de yo) */
@@ -151,6 +151,14 @@ export const ACCIONES: Accion[] = [
   { id: 'guardarPuntuacion', categoria: 'interfaz', partes: ['apuntar en la tabla de puntuaciones a', 0, 'con', 1, 'puntos'], funcion: 'puntuaciones.guardar', porDefecto: ['"Ana"', 'juego.puntos'] },
   { id: 'borrarPuntuaciones', categoria: 'interfaz', partes: ['borrar la tabla de puntuaciones'], funcion: 'puntuaciones.borrar', porDefecto: [] },
   { id: 'encuadrar', categoria: 'efectos', partes: ['que la cámara encuadre a', 0], funcion: 'escena.camara.encuadrar', porDefecto: ['[buscar("Jugador1"), buscar("Jugador2")]'] },
+  // ── Jugar en el móvil (1.2) ──
+  { id: 'joystick', categoria: 'movil', partes: ['poner una palanca (joystick) a la', 0], funcion: 'tactil.joystick', porDefecto: ['"izquierda"'] },
+  { id: 'botonTactil', categoria: 'movil', partes: ['poner un botón', 0, 'que pulsa la tecla', 1], funcion: 'tactil.boton', porDefecto: ['"Saltar"', '"espacio"'] },
+  { id: 'mirar', categoria: 'movil', partes: ['arrastrar el dedo para mirar'], funcion: 'tactil.mirar', porDefecto: [] },
+  { id: 'moverControl', categoria: 'movil', partes: ['poner el control', 0, 'en x', 1, 'y', 2, '(de 0 a 100)'], funcion: 'tactil.mover', porDefecto: ['"Saltar"', '85', '20'] },
+  { id: 'quitarControl', categoria: 'movil', partes: ['quitar el control', 0], funcion: 'tactil.quitar', porDefecto: ['"Saltar"'] },
+  { id: 'colocarControles', categoria: 'movil', partes: ['dejar que quien juega coloque los controles'], funcion: 'tactil.colocar', porDefecto: [] },
+  { id: 'vibrar', categoria: 'movil', partes: ['vibrar', 0, 'segundos'], funcion: 'tactil.vibrar', porDefecto: ['0.2'] },
   { id: 'ponerTecla', categoria: 'control', partes: ['el jugador 1 usa para', 0, 'la tecla', 1], funcion: 'controles(1).ponerTecla', porDefecto: ['"a"', '"m"'] },
   { id: 'pantallaNormal', categoria: 'efectos', partes: ['quitar los filtros de pantalla'], funcion: 'pantalla.normal', porDefecto: [] },
   { id: 'flashObjeto', categoria: 'efectos', partes: ['flash del objeto', 0, 'durante', 1, 'segundos'], funcion: 'yo.flash', porDefecto: ['"blanco"', '0.1'] },
@@ -264,6 +272,29 @@ export const DATOS_CON_BLOQUE: DatoConBloque[] = [
   { categoria: 'efectos', objetivo: 'yo.grises', valor: '1' },
   { categoria: 'efectos', objetivo: 'yo.desenfoque', valor: '3' },
 ];
+
+DATOS_CON_BLOQUE.push(
+  // ── Jugar en el móvil (1.2) ──
+  { categoria: 'movil', objetivo: 'yo.x', valor: 'yo.x + tactil.x * 5' },
+  { categoria: 'movil', objetivo: 'yo.y', valor: 'yo.y + tactil.y * 5' },
+  { categoria: 'movil', objetivo: 'yo.visible', valor: 'tactil.pulsado("Fuego")' },
+  { categoria: 'movil', objetivo: 'yo.visible', valor: 'tactil.sePulso("Fuego")' },
+  { categoria: 'movil', objetivo: 'yo.visible', valor: 'tactil.seSolto("Fuego")' },
+  { categoria: 'movil', objetivo: 'yo.visible', valor: 'tactil.hay' },
+  { categoria: 'movil', objetivo: 'yo.rotacion', valor: 'yo.rotacion - tactil.miraX' },
+  { categoria: 'movil', objetivo: 'yo.y', valor: 'yo.y + tactil.miraY' },
+  { categoria: 'movil', objetivo: 'juego.gesto', valor: 'tactil.gesto' },
+  { categoria: 'movil', objetivo: 'escena.camara.zoom', valor: 'escena.camara.zoom * tactil.pellizco' },
+  { categoria: 'movil', objetivo: 'juego.dedos', valor: 'tactil.dedos' },
+  { categoria: 'movil', objetivo: 'juego.toques', valor: 'tactil.toques' },
+  { categoria: 'movil', objetivo: 'tactil.mostrar', valor: '"siempre"' },
+  { categoria: 'movil', objetivo: 'tactil.tamano', valor: '1.3' },
+  { categoria: 'movil', objetivo: 'tactil.opacidad', valor: '0.4' },
+  { categoria: 'movil', objetivo: 'pantalla.calidad', valor: '"baja"' },
+  { categoria: 'movil', objetivo: 'juego.calidad', valor: 'pantalla.nivelCalidad' },
+  { categoria: 'movil', objetivo: 'pantalla.maximoFps', valor: '30' },
+  { categoria: 'movil', objetivo: 'pantalla.orientacion', valor: '"horizontal"' },
+);
 
 export const datoPorObjetivo = (objetivo: string) => DATOS_CON_BLOQUE.find((d) => d.objetivo === objetivo.trim());
 

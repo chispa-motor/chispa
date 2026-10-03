@@ -55,6 +55,8 @@ async function arrancarEditor(): Promise<void> {
   const raiz = document.getElementById('editor')!;
   raiz.hidden = false;
   const app = new Aplicacion(raiz);
+  // Chispa como app: funcionar sin internet y poder instalarse (solo en el editor compilado)
+  void import('./editor/interfaz/instalar').then((m) => m.prepararApp());
   // ?limpio = empezar con el ejemplo, sin recuperar lo guardado (lo usan las pruebas del navegador)
   const parametros = new URLSearchParams(location.search);
   if (!parametros.has('limpio')) await app.recuperar();

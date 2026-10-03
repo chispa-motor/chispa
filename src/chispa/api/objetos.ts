@@ -823,6 +823,9 @@ const METODOS: Record<string, (o: ObjetoJuego, args: Valor[], pos: Posicion) => 
     // Con la palanca del mando, poco inclinada = despacio (más fino que las flechas)
     const m = escena.motor.entrada.mando;
     if (m.conectado && (m.ejeX !== 0 || m.ejeY !== 0)) [dx, dy] = [m.ejeX, m.ejeY];
+    // Y lo mismo con la palanca de la pantalla (tactil.joystick()), para jugar con el dedo
+    const t = escena.motor.entrada.tactil;
+    if (t && (t.x !== 0 || t.y !== 0)) [dx, dy] = [t.x, t.y];
     return moverConEjes(o, dx, dy, rapidez);
   },
   moverconjugador: (o, a, p) => {

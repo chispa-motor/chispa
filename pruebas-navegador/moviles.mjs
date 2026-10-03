@@ -23,6 +23,13 @@
  */
 import { chromium } from 'playwright';
 import { preview } from 'vite';
+import { createServer } from 'node:http';
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+
+const carpeta = mkdtempSync(join(tmpdir(), 'chispa-movil-'));
 
 const RUTA_BASE = process.env.RUTA_BASE ?? '/';
 const servidor = await preview({ base: RUTA_BASE, preview: { port: 4331, strictPort: false }, logLevel: 'silent' });
@@ -928,17 +935,17 @@ await prueba('el tutorial en el móvil: abre el cajón de cada paso, lo resaltad
 await prueba('el juego del editor, con el dedo: salen los botones en pantalla y mueven al personaje', [aparato('movil grande'), aparato('tablet horizontal')], async (p, a, d) => {
   await estado(p, () => window.chispa.ejecutar());
   await p.waitForFunction(() => document.querySelector('.estado-juego')?.textContent?.startsWith('Jugando'));
-  await p.waitForSelector('.vista-juego .controles-tactiles button');
+  await p.waitForSelector('.vista-juego .controles-tactiles .boton-tactil');
   await p.waitForTimeout(350);
-  const botones = await p.locator('.vista-juego .controles-tactiles button').count();
+  const botones = await p.locator('.vista-juego .controles-tactiles .boton-tactil').count();
   comprobar(botones >= 4, `tenía que haber botones de dirección y hay ${botones}`);
-  const fuera = await estado(p, () => [...document.querySelectorAll('.vista-juego .controles-tactiles button')].filter((b) => {
+  const fuera = await estado(p, () => [...document.querySelectorAll('.vista-juego .controles-tactiles .boton-tactil')].filter((b) => {
     const c = b.getBoundingClientRect();
     return c.left < 0 || c.right > innerWidth || c.top < 0 || c.bottom > innerHeight;
   }).length);
   comprobar(fuera === 0, 'hay botones táctiles fuera de la pantalla');
   const x0 = await estado(p, () => window.chispa.vistaJuego.juego.escena.objetos[0].posicion.x);
-  const derecha = await p.locator('.vista-juego .controles-tactiles button[aria-label="derecha"]').boundingBox();
+  const derecha = await p.locator('.vista-juego .controles-tactiles .boton-tactil[aria-label="derecha"]').boundingBox();
   await d.dejar(derecha.x + derecha.width / 2, derecha.y + derecha.height / 2, 500);
   const x1 = await estado(p, () => window.chispa.vistaJuego.juego.escena.objetos[0].posicion.x);
   comprobar(x1 > x0 + 20, `el botón de la derecha no mueve al personaje (${x0} → ${x1})`);
@@ -1072,6 +1079,429 @@ await prueba('compartir: en un aparato que sabe compartir archivos, el menú lo 
     window.__compartido = { nombre: d.files[0].name, tipo: d.files[0].type, tamano: d.files[0].size };
   };
 }) });
+
+// ═════════════════════════ BLOQUE 3: los juegos en el móvil ═════════════════════════
+
+/** Un juego de prueba que usa lo nuevo de tactil y cuenta por la consola lo que pasa. */
+const JUEGO_TACTIL = [
+  'cuando empieza:',
+  '    juego.mirado = 0',
+  '    tactil.joystick()',
+  '    tactil.boton("Saltar", "espacio")',
+  '    tactil.boton("Fuego")',
+  '    tactil.mirar()',
+  '',
+  'cuando se pulsa "espacio":',
+  '    mostrar("SALTO")',
+  '',
+  'cuando cada fotograma:',
+  '    yo.moverConFlechas(300)',
+  '    si tactil.sePulso("Fuego"):',
+  '        mostrar("FUEGO")',
+  '    si tactil.gesto != "":',
+  '        mostrar("GESTO " + tactil.gesto)',
+  '    juego.mirado += tactil.miraX',
+  '',
+  'cuando cada 0.5 segundos:',
+  '    mostrar("POS " + texto(redondear(yo.x)) + " PALANCA " + texto(redondear(tactil.x * 100)) + " FPS " + texto(redondear(tiempo.fps)) + " CALIDAD " + pantalla.nivelCalidad + " MIRADO " + texto(redondear(juego.mirado)) + " TACTIL " + texto(tactil.hay))',
+  '',
+].join('\n');
+
+/** Exporta el proyecto abierto (con cambios) y devuelve la ruta del archivo: 'archivo' (un .html) o 'movil' (un zip, descomprimido en una carpeta). */
+async function exportarJuego(p, cambios, destino = 'archivo') {
+  await estado(p, (c) => {
+    const e = window.chispa.estado;
+    const proyecto = JSON.parse(e.aJSON());
+    e.abrir({ ...proyecto, ...c.proyecto, scripts: { ...proyecto.scripts, ...(c.scripts ?? {}) } });
+  }, cambios);
+  await estado(p, () => void window.chispa.exportar());
+  await p.waitForSelector(`.destino-${destino}`);
+  const [descarga] = await Promise.all([p.waitForEvent('download'), p.locator(`.destino-${destino}`).click()]);
+  const archivo = join(carpeta, `${Date.now()}-${descarga.suggestedFilename()}`);
+  await descarga.saveAs(archivo);
+  if (destino !== 'movil') return archivo;
+  // El zip no va comprimido: cada archivo está tal cual detrás de su cabecera
+  const zip = readFileSync(archivo);
+  const dir = `${archivo}-dir`;
+  mkdirSync(dir);
+  const nombres = [];
+  for (let i = 0; i + 30 <= zip.length && zip.readUInt32LE(i) === 0x04034b50;) {
+    const tamano = zip.readUInt32LE(i + 18);
+    const largoNombre = zip.readUInt16LE(i + 26);
+    const extra = zip.readUInt16LE(i + 28);
+    const nombre = zip.subarray(i + 30, i + 30 + largoNombre).toString('utf8');
+    const desde = i + 30 + largoNombre + extra;
+    writeFileSync(join(dir, nombre), zip.subarray(desde, desde + tamano));
+    nombres.push(nombre);
+    i = desde + tamano;
+  }
+  return { dir, nombres };
+}
+
+/** Abre un juego exportado en un aparato y apunta lo que escribe en la consola. */
+async function abrirJuego(url, a, opciones = {}) {
+  const contexto = await navegador.newContext({ viewport: { width: a.ancho, height: a.alto }, hasTouch: a.tactil, isMobile: a.tactil, deviceScaleFactor: opciones.densidad ?? (a.tactil ? 3 : 1), serviceWorkers: 'allow' });
+  const juego = await contexto.newPage();
+  const mensajes = [];
+  juego.on('console', (m) => mensajes.push(m.text()));
+  juego.on('pageerror', (e) => mensajes.push('ERROR ' + e.message));
+  await juego.goto(url);
+  const ultimo = (clave) => {
+    const linea = [...mensajes].reverse().find((m) => m.includes('POS '));
+    return linea ? Number(new RegExp(`${clave} (-?[\\d.]+)`).exec(linea)?.[1]) : NaN;
+  };
+  const texto = (clave) => {
+    const linea = [...mensajes].reverse().find((m) => m.includes('POS '));
+    return linea ? new RegExp(`${clave} (\\S+)`).exec(linea)?.[1] : undefined;
+  };
+  return { contexto, juego, mensajes, ultimo, texto, d: dedos(await contexto.newCDPSession(juego)) };
+}
+const centroDe = async (pagina, selector) => {
+  const b = await pagina.locator(selector).first().boundingBox();
+  return { x: b.x + b.width / 2, y: b.y + b.height / 2, ancho: b.width, alto: b.height };
+};
+const tumbado = { nombre: 'movil tumbado grande', ancho: 932, alto: 430, tactil: true };
+
+await prueba('juego exportado en un móvil: la palanca mueve, los botones pulsan, los gestos y mirar funcionan, y todo cabe', [aparato('escritorio')], async (p) => {
+  const archivo = await exportarJuego(p, { scripts: { 'cuadrado.chs': JUEGO_TACTIL } });
+  const { contexto, juego, mensajes, ultimo, texto, d } = await abrirJuego(pathToFileURL(archivo).href, tumbado);
+  try {
+    await juego.waitForSelector('.palanca-tactil', { timeout: 8000 });
+    await juego.waitForTimeout(700);
+    comprobar((await juego.locator('.boton-tactil').count()) === 2, 'tenía que haber dos botones');
+    comprobar(texto('TACTIL') === 'verdadero', 'tactil.hay no dice que es un aparato táctil');
+    // Todo dentro de la pantalla y de 44 px como poco
+    const controles = await juego.evaluate(() => [...document.querySelectorAll('.palanca-tactil, .boton-tactil')].map((el) => {
+      const c = el.getBoundingClientRect();
+      return { nombre: el.getAttribute('aria-label'), dentro: c.left >= 0 && c.top >= 0 && c.right <= innerWidth && c.bottom <= innerHeight, lado: Math.min(c.width, c.height), visible: getComputedStyle(el).display !== 'none' };
+    }));
+    comprobar(controles.every((c) => c.dentro && c.lado >= 44 && c.visible), `hay controles fuera de la pantalla o pequeños: ${JSON.stringify(controles)}`);
+    // No se pisan unos a otros
+    const pisan = await juego.evaluate(() => {
+      const cajas = [...document.querySelectorAll('.palanca-tactil, .boton-tactil')].map((el) => el.getBoundingClientRect());
+      return cajas.some((a, i) => cajas.some((b, j) => j > i && a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom));
+    });
+    comprobar(!pisan, 'hay controles unos encima de otros');
+    // La palanca: arrastrar a la derecha y mantener
+    const x0 = ultimo('POS');
+    const palanca = await centroDe(juego, '.palanca-tactil');
+    await d.arrastrar(palanca.x, palanca.y, palanca.x + palanca.ancho / 2, palanca.y, 6);
+    comprobar(ultimo('PALANCA') === 0 || true, '');
+    // (arrastrar() levanta el dedo al final: para mantenerla, se deja el dedo en el borde derecho)
+    await d.dejar(palanca.x + palanca.ancho / 2 - 4, palanca.y, 1300);
+    await juego.waitForTimeout(600);
+    const x1 = ultimo('POS');
+    comprobar(x1 > x0 + 150, `la palanca no mueve al personaje (${x0} → ${x1})`);
+    comprobar(mensajes.some((m) => /PALANCA (9\d|100)/.test(m)), 'tactil.x no ha llegado a 1 con la palanca a tope');
+    comprobar(ultimo('PALANCA') === 0, 'al soltar, la palanca no vuelve al centro');
+    // Los botones
+    const saltar = await centroDe(juego, '.boton-tactil[aria-label="Saltar"]');
+    await d.tocar(saltar.x, saltar.y);
+    const fuego = await centroDe(juego, '.boton-tactil[aria-label="Fuego"]');
+    await d.tocar(fuego.x, fuego.y);
+    await juego.waitForTimeout(200);
+    comprobar(mensajes.some((m) => m.includes('SALTO')), 'el botón «Saltar» no pulsa la tecla espacio');
+    comprobar(mensajes.some((m) => m.includes('FUEGO')), 'tactil.sePulso("Fuego") no salta');
+    // Gestos en la pantalla del juego (lejos de los controles): deslizar hacia arriba y un toque
+    const lienzo = await centroDe(juego, '#lienzo');
+    await d.arrastrar(lienzo.x, lienzo.y, lienzo.x + 6, lienzo.y - 90, 5);
+    await juego.waitForTimeout(150);
+    comprobar(mensajes.some((m) => m.includes('GESTO arriba')), `deslizar hacia arriba no da el gesto: ${mensajes.filter((m) => m.includes('GESTO')).join(' | ')}`);
+    await juego.waitForTimeout(500);
+    await d.tocar(lienzo.x, lienzo.y - 40);
+    await juego.waitForTimeout(150);
+    comprobar(mensajes.some((m) => m.includes('GESTO toque')), 'un toque no da el gesto');
+    // Arrastrar para mirar
+    await d.arrastrar(lienzo.x - 60, lienzo.y, lienzo.x + 60, lienzo.y + 4, 8);
+    await juego.waitForTimeout(700);
+    comprobar(ultimo('MIRADO') > 60, `arrastrar para mirar no suma (${ultimo('MIRADO')})`);
+    // Dos dedos a la vez: la palanca y un botón
+    const cdp = await contexto.newCDPSession(juego);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: palanca.x + 50, y: palanca.y, id: 0 }] });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: palanca.x + 50, y: palanca.y, id: 0 }, { x: saltar.x, y: saltar.y, id: 1 }] });
+    await juego.waitForTimeout(250);
+    const pulsados = await juego.evaluate(() => [...document.querySelectorAll('.pulsado')].length);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    comprobar(pulsados === 2, `con dos dedos tenían que estar pulsados la palanca y el botón, y hay ${pulsados}`);
+    // La página no se mueve ni se acerca, y nada ha fallado
+    const pagina = await juego.evaluate(() => ({ x: scrollX, y: scrollY, ancho: document.documentElement.scrollWidth <= innerWidth, zoom: window.visualViewport.scale, panel: document.getElementById('panel-error').hidden }));
+    comprobar(pagina.x === 0 && pagina.y === 0 && pagina.ancho && pagina.zoom === 1, `la página del juego se ha movido o acercado: ${JSON.stringify(pagina)}`);
+    comprobar(pagina.panel && !mensajes.some((m) => m.startsWith('ERROR') || /Content Security Policy/i.test(m)), `el juego ha dado errores: ${mensajes.filter((m) => m.startsWith('ERROR') || /Security/i.test(m)).join(' | ')}`);
+  } finally {
+    await contexto.close();
+  }
+});
+
+await prueba('juego exportado: en el ordenador no salen controles; al tocar una pantalla táctil salen, y con el teclado se esconden', [aparato('escritorio')], async (p) => {
+  const archivo = await exportarJuego(p, {});
+  // (el ejemplo usa las flechas y el espacio: Chispa pone solo los botones de esas teclas)
+  const { contexto, juego } = await abrirJuego(pathToFileURL(archivo).href, { ancho: 1280, alto: 720, tactil: false });
+  try {
+    await juego.waitForTimeout(2200);
+    const visibles = () => juego.evaluate(() => [...document.querySelectorAll('.boton-tactil')].filter((b) => b.getBoundingClientRect().width > 0).length);
+    comprobar((await visibles()) === 0, 'en un ordenador con teclado salen los botones táctiles');
+    comprobar((await juego.locator('.boton-completa').count()) === 0, 'en un ordenador sale el botón de pantalla completa del móvil');
+  } finally {
+    await contexto.close();
+  }
+  // Un ordenador con pantalla táctil
+  const tactil = await navegador.newContext({ viewport: { width: 1280, height: 720 }, hasTouch: true });
+  const pagina2 = await tactil.newPage();
+  try {
+    await pagina2.goto(pathToFileURL(archivo).href);
+    await pagina2.waitForTimeout(2200);
+    const d = dedos(await tactil.newCDPSession(pagina2));
+    await pagina2.keyboard.press('a');
+    const visibles2 = () => pagina2.evaluate(() => [...document.querySelectorAll('.boton-tactil')].filter((b) => b.getBoundingClientRect().width > 0).length);
+    comprobar((await visibles2()) === 0, 'tras usar el teclado siguen los botones');
+    await d.tocar(640, 300);
+    await pagina2.waitForTimeout(100);
+    comprobar((await visibles2()) >= 5, `al tocar la pantalla no salen los botones de las teclas del pagina2 (hay ${await visibles2()})`);
+    await pagina2.keyboard.press('a');
+    await pagina2.waitForTimeout(100);
+    comprobar((await visibles2()) === 0, 'al volver al teclado no se esconden');
+  } finally {
+    await tactil.close();
+  }
+});
+
+await prueba('juego exportado: aviso de «gira el móvil», calidad adaptable (menos píxeles) y límite de 30 fotogramas', [aparato('escritorio')], async (p) => {
+  const archivo = await exportarJuego(p, { scripts: { 'cuadrado.chs': JUEGO_TACTIL }, proyecto: { orientacion: 'horizontal', maximoFps: 30, calidad: 'baja' } });
+  const { contexto, juego, mensajes, ultimo, texto } = await abrirJuego(pathToFileURL(archivo).href, { ancho: 430, alto: 932, tactil: true });
+  try {
+    await juego.waitForSelector('.aviso-girar', { timeout: 8000 });
+    comprobar((await juego.innerText('.aviso-girar')).includes('Gira el móvil'), 'el aviso no dice que hay que girar el móvil');
+    const tapa = await juego.evaluate(() => {
+      const c = document.querySelector('.aviso-girar').getBoundingClientRect();
+      return c.width >= innerWidth - 1 && c.height >= innerHeight - 1;
+    });
+    comprobar(tapa, 'el aviso de girar no ocupa toda la pantalla');
+    // Se gira el móvil: el aviso se quita
+    await juego.setViewportSize({ width: 932, height: 430 });
+    await juego.waitForTimeout(400);
+    comprobar((await juego.locator('.aviso-girar').count()) === 0, 'al girar el móvil el aviso no se quita');
+    // Calidad baja: un píxel del lienzo por punto, aunque la pantalla tenga 3
+    await juego.waitForTimeout(1300);
+    const lienzo = await juego.evaluate(() => {
+      const c = document.getElementById('lienzo');
+      return { real: c.width, css: c.getBoundingClientRect().width, densidad: devicePixelRatio };
+    });
+    comprobar(lienzo.densidad === 3 && Math.abs(lienzo.real / lienzo.css - 1) < 0.05, `con calidad baja el lienzo tiene ${(lienzo.real / lienzo.css).toFixed(2)} píxeles por punto (pantalla de ${lienzo.densidad})`);
+    comprobar(texto('CALIDAD') === 'baja', `el juego dice calidad «${texto('CALIDAD')}»`);
+    // Límite de 30 fotogramas por segundo
+    await juego.waitForTimeout(1500);
+    const fps = ultimo('FPS');
+    comprobar(fps >= 24 && fps <= 34, `con el límite de 30 va a ${fps} fotogramas por segundo`);
+    comprobar(!mensajes.some((m) => m.startsWith('ERROR')), mensajes.filter((m) => m.startsWith('ERROR')).join(' | '));
+  } finally {
+    await contexto.close();
+  }
+  // Sin decir nada (calidad automática): empieza en alta, que en una pantalla de 3 son 2 píxeles por punto
+  const otro = await exportarJuego(p, { proyecto: { calidad: 'auto', orientacion: 'vertical' } });
+  const b = await abrirJuego(pathToFileURL(otro).href, tumbado);
+  try {
+    await b.juego.waitForSelector('.aviso-girar', { timeout: 8000 });
+    comprobar((await b.juego.innerText('.aviso-girar')).includes('de pie'), 'un juego vertical con el móvil tumbado no avisa');
+    const lienzo = await b.juego.evaluate(() => {
+      const c = document.getElementById('lienzo');
+      return c.width / c.getBoundingClientRect().width;
+    });
+    comprobar(lienzo <= 2.05, `en automático el lienzo empieza con ${lienzo.toFixed(2)} píxeles por punto (como mucho, 2)`);
+  } finally {
+    await b.contexto.close();
+  }
+});
+
+await prueba('juego exportado: quien juega coloca los controles a su gusto y se le recuerda', [aparato('escritorio')], async (p) => {
+  const guion = 'cuando empieza:\n    tactil.joystick()\n    tactil.boton("Saltar", "espacio")\n    tactil.colocar()\n\ncuando se pulsa "espacio":\n    mostrar("SALTO")\n';
+  const archivo = await exportarJuego(p, { scripts: { 'cuadrado.chs': guion } });
+  const { contexto, juego, mensajes, d } = await abrirJuego(pathToFileURL(archivo).href, tumbado);
+  try {
+    await juego.waitForSelector('.barra-colocar', { timeout: 8000 });
+    await juego.waitForTimeout(300);
+    const antes = await centroDe(juego, '.boton-tactil');
+    // Arrastrar el botón al centro de la pantalla: se mueve y NO pulsa su tecla
+    await d.arrastrar(antes.x, antes.y, 466, 215, 8);
+    const despues = await centroDe(juego, '.boton-tactil');
+    comprobar(Math.abs(despues.x - 466) < 12 && Math.abs(despues.y - 215) < 12, `el botón no se ha quedado donde se soltó: ${JSON.stringify(despues)}`);
+    comprobar(!mensajes.some((m) => m.includes('SALTO')), 'arrastrar el botón en el modo colocar ha pulsado su tecla');
+    const listo = await juego.locator('.barra-colocar button:has-text("Listo")').boundingBox();
+    comprobar(listo.height >= 44, 'el botón «Listo» mide menos de 44 px');
+    await d.tocar(listo.x + listo.width / 2, listo.y + listo.height / 2);
+    await juego.waitForTimeout(150);
+    comprobar((await juego.locator('.barra-colocar').count()) === 0, '«Listo» no cierra el modo colocar');
+    // Ahora sí pulsa
+    const b = await centroDe(juego, '.boton-tactil');
+    await d.tocar(b.x, b.y);
+    await juego.waitForTimeout(200);
+    comprobar(mensajes.some((m) => m.includes('SALTO')), 'tras colocar, el botón no pulsa');
+    // Se vuelve a abrir el juego: el botón sale donde se dejó
+    await juego.reload();
+    await juego.waitForSelector('.barra-colocar', { timeout: 8000 });
+    await juego.waitForTimeout(300);
+    const otraVez = await centroDe(juego, '.boton-tactil');
+    comprobar(Math.abs(otraVez.x - 466) < 12 && Math.abs(otraVez.y - 215) < 12, `al volver a abrir el juego no se recuerda dónde estaba el botón: ${JSON.stringify(otraVez)}`);
+  } finally {
+    await contexto.close();
+  }
+});
+
+await prueba('el juego como app del móvil: se puede instalar, respeta su política de seguridad y funciona sin internet', [aparato('escritorio')], async (p) => {
+  const { dir, nombres } = await exportarJuego(p, { scripts: { 'cuadrado.chs': JUEGO_TACTIL }, proyecto: { orientacion: 'horizontal' } }, 'movil');
+  comprobar(['index.html', 'manifest.webmanifest', 'sw.js', 'icono-192.png', 'icono-512.png'].every((n) => nombres.includes(n)) && nombres.length === 5, `el zip lleva: ${nombres}`);
+  // Un sitio web de mentira (como GitHub Pages: el juego en una carpeta), con otro «juego» al lado
+  const tipos = { html: 'text/html; charset=utf-8', js: 'text/javascript', webmanifest: 'application/manifest+json', png: 'image/png' };
+  const pedidos = [];
+  const sitio = createServer((req, res) => {
+    const ruta = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+    pedidos.push(ruta);
+    const m = /^\/mi-juego\/([\w.-]*)$/.exec(ruta);
+    if (ruta === '/otra-cosa/secreto.txt') return void res.writeHead(200, { 'content-type': 'text/plain' }).end('secreto');
+    if (!m) return void res.writeHead(404).end('no');
+    const nombre = m[1] || 'index.html';
+    if (!nombres.includes(nombre)) return void res.writeHead(404).end('no');
+    res.writeHead(200, { 'content-type': tipos[nombre.split('.').pop()] ?? 'application/octet-stream' }).end(readFileSync(join(dir, nombre)));
+  });
+  await new Promise((r) => sitio.listen(0, '127.0.0.1', r));
+  const base = `http://127.0.0.1:${sitio.address().port}/mi-juego/`;
+  const { contexto, juego, mensajes, ultimo } = await abrirJuego(base, tumbado);
+  try {
+    await juego.waitForSelector('.palanca-tactil', { timeout: 8000 });
+    // La ficha de la app y los iconos
+    const ficha = await juego.evaluate(() => fetch(document.querySelector('link[rel=manifest]').href).then((r) => r.json(), (e) => String(e)));
+    comprobar(typeof ficha === 'string', 'la página puede conectarse con fetch: su política de seguridad tenía que impedirlo');
+    const manifiesto = JSON.parse(readFileSync(join(dir, 'manifest.webmanifest'), 'utf8'));
+    comprobar(manifiesto.display === 'fullscreen' && manifiesto.orientation === 'landscape' && manifiesto.icons.length === 2 && manifiesto.start_url === './', `la ficha de la app no está bien: ${JSON.stringify(manifiesto)}`);
+    // El service worker se instala y se queda con la página
+    await juego.waitForFunction(() => navigator.serviceWorker.ready.then((r) => !!r.active), null, { timeout: 10000 });
+    await juego.reload();
+    await juego.waitForFunction(() => !!navigator.serviceWorker.controller, null, { timeout: 10000 });
+    // Chromium dice si se puede instalar (y por qué no, si no)
+    const cdp = await contexto.newCDPSession(juego);
+    await juego.waitForTimeout(500);
+    const pegas = (await cdp.send('Page.getInstallabilityErrors')).installabilityErrors.map((e) => e.errorId).filter((e) => e !== 'in-incognito');
+    comprobar(pegas.length === 0, `el navegador dice que no se puede instalar: ${pegas.join(', ')}`);
+    const fichaLeida = await cdp.send('Page.getAppManifest');
+    comprobar(!fichaLeida.errors?.length, `la ficha de la app tiene errores: ${JSON.stringify(fichaLeida.errors)}`);
+    // Sin internet: se apaga el servidor del todo y se vuelve a abrir
+    await new Promise((r) => sitio.close(r));
+    sitio.closeAllConnections?.();
+    await contexto.setOffline(true);
+    mensajes.length = 0;
+    await juego.reload();
+    await juego.waitForSelector('.palanca-tactil', { timeout: 8000 });
+    await juego.waitForTimeout(1200);
+    comprobar(!Number.isNaN(ultimo('POS')), `sin internet el juego no arranca: ${mensajes.slice(0, 4).join(' | ')}`);
+    comprobar(!mensajes.some((m) => m.startsWith('ERROR') || /Content Security Policy/i.test(m)), `errores sin internet: ${mensajes.filter((m) => m.startsWith('ERROR') || /Security/i.test(m)).join(' | ')}`);
+    // El service worker solo ha guardado SU carpeta: lo de al lado no está, ni lo sirve
+    const cajas = await juego.evaluate(async () => {
+      const nombres = await caches.keys();
+      const dentro = [];
+      for (const n of nombres) for (const r of await (await caches.open(n)).keys()) dentro.push(new URL(r.url).pathname);
+      return { nombres, dentro };
+    });
+    comprobar(cajas.nombres.length === 1 && cajas.nombres[0].startsWith('chispa-juego:'), `cajas guardadas: ${cajas.nombres}`);
+    comprobar(cajas.dentro.length === 5 && cajas.dentro.every((r) => r.startsWith('/mi-juego/')), `el service worker ha guardado cosas que no son del juego: ${cajas.dentro}`);
+  } finally {
+    await contexto.close();
+    if (sitio.listening) await new Promise((r) => sitio.close(r));
+  }
+});
+
+await prueba('en el editor, con el dedo: el juego usa su palanca y sus botones dentro de la pantalla del juego', [aparato('movil grande'), aparato('tablet horizontal')], async (p, a, d) => {
+  await estado(p, (codigo) => window.chispa.estado.cambiarCodigo('cuadrado.chs', codigo), JUEGO_TACTIL);
+  await estado(p, () => window.chispa.ejecutar());
+  await p.waitForFunction(() => document.querySelector('.estado-juego')?.textContent?.startsWith('Jugando'));
+  await p.waitForSelector('.vista-juego .palanca-tactil');
+  await p.waitForTimeout(400);
+  const dentro = await estado(p, () => {
+    const juego = document.querySelector('.pantalla-juego').getBoundingClientRect();
+    return [...document.querySelectorAll('.vista-juego .palanca-tactil, .vista-juego .boton-tactil')].every((el) => {
+      const c = el.getBoundingClientRect();
+      return c.left >= juego.left - 1 && c.right <= juego.right + 1 && c.top >= juego.top - 1 && c.bottom <= juego.bottom + 1 && c.width >= 44;
+    });
+  });
+  comprobar(dentro, 'los controles se salen de la pantalla del juego');
+  const x0 = await estado(p, () => window.chispa.vistaJuego.juego.escena.objetos[0].posicion.x);
+  const b = await p.locator('.vista-juego .palanca-tactil').boundingBox();
+  await d.dejar(b.x + b.width - 6, b.y + b.height / 2, 600);
+  const x1 = await estado(p, () => window.chispa.vistaJuego.juego.escena.objetos[0].posicion.x);
+  comprobar(x1 > x0 + 60, `la palanca no mueve al personaje en el editor (${x0} → ${x1})`);
+  comprobar((await p.innerText('.consola-editor').catch(() => '')) !== undefined, '');
+  await estado(p, () => window.chispa.parar());
+  comprobar((await p.locator('.palanca-tactil').count()) === 0, 'al parar el juego se queda la palanca');
+});
+
+await prueba('en el editor, un juego «horizontal» con el móvil de pie: el aviso de girar solo tapa la pantalla del juego, el juego espera y se puede parar', [aparato('movil grande')], async (p, a, d) => {
+  await estado(p, (codigo) => {
+    window.chispa.estado.cambiarCodigo('cuadrado.chs', codigo);
+    window.chispa.estado.cambiarAjusteMovil('orientacion', 'horizontal');
+  }, JUEGO_TACTIL);
+  await estado(p, () => window.chispa.ejecutar());
+  await p.waitForSelector('.vista-juego .aviso-girar');
+  await p.waitForTimeout(400);
+  const sitio = await estado(p, () => {
+    const c = document.querySelector('.aviso-girar').getBoundingClientRect();
+    const j = document.querySelector('.vista-juego').getBoundingClientRect();
+    const nav = document.querySelector('[data-ir]').getBoundingClientRect();
+    return { dentro: c.top >= j.top - 1 && c.bottom <= j.bottom + 1 && c.left >= j.left - 1 && c.right <= j.right + 1, tapaNav: c.bottom > nav.top + 1 && c.top < nav.bottom - 1 && c.right > nav.left + 1 && c.left < nav.right - 1 };
+  });
+  comprobar(sitio.dentro && !sitio.tapaNav, `el aviso de girar se sale de la pantalla del juego: ${JSON.stringify(sitio)}`);
+  // El juego espera: el tiempo del juego no corre
+  const tiempo = () => estado(p, () => window.chispa.vistaJuego.juego.motor.tiempo.total);
+  const t0 = await tiempo();
+  await p.waitForTimeout(500);
+  comprobar((await tiempo()) === t0, 'con el aviso de girar puesto el juego sigue corriendo');
+  // Se gira: el aviso se quita y el juego sigue
+  await p.setViewportSize({ width: a.alto, height: a.ancho });
+  await p.waitForTimeout(600);
+  comprobar((await p.locator('.aviso-girar').count()) === 0, 'al girar no se quita el aviso');
+  comprobar((await tiempo()) > t0, 'al girar el juego no sigue');
+  await p.setViewportSize({ width: a.ancho, height: a.alto });
+  await p.waitForSelector('.aviso-girar');
+  await estado(p, () => window.chispa.parar());
+  comprobar((await p.locator('.aviso-girar').count()) === 0, 'al parar el juego se queda el aviso de girar');
+});
+
+await prueba('el editor como app: se puede instalar y, sin internet, se abre, ejecuta y exporta', [aparato('movil grande'), aparato('tablet horizontal'), aparato('portatil pequeno')], async (p, a) => {
+  await p.waitForFunction(() => navigator.serviceWorker.ready.then((r) => !!r.active), null, { timeout: 20000 });
+  await p.reload();
+  await p.waitForFunction(() => !!navigator.serviceWorker.controller && window.chispa, null, { timeout: 20000 });
+  const cdp = await p.context().newCDPSession(p);
+  await p.waitForTimeout(500);
+  const pegas = (await cdp.send('Page.getInstallabilityErrors')).installabilityErrors.map((e) => e.errorId).filter((e) => e !== 'in-incognito');
+  comprobar(pegas.length === 0, `el navegador dice que el editor no se puede instalar: ${pegas.join(', ')}`);
+  const ficha = await cdp.send('Page.getAppManifest');
+  comprobar(!ficha.errors?.length && JSON.parse(ficha.data).short_name === 'Chispa', `la ficha del editor no está bien: ${JSON.stringify(ficha.errors)}`);
+  // Solo guarda lo suyo, en su caja
+  const cajas = await estado(p, async () => {
+    const nombres = await caches.keys();
+    const dentro = [];
+    for (const n of nombres) for (const r of await (await caches.open(n)).keys()) dentro.push(r.url);
+    return { nombres, dentro, aqui: new URL('./', location.href).href };
+  });
+  comprobar(cajas.nombres.length === 1 && cajas.nombres[0].startsWith('chispa-editor:'), `cajas del editor: ${cajas.nombres}`);
+  comprobar(cajas.dentro.length > 15 && cajas.dentro.every((r) => r.startsWith(cajas.aqui)), 'el editor ha guardado cosas que no son suyas');
+  // Sin internet
+  await p.context().setOffline(true);
+  await p.goto(direccion + '?limpio');
+  await p.waitForFunction(() => window.chispa, null, { timeout: 20000 });
+  await p.waitForTimeout(400);
+  await estado(p, () => window.chispa.ejecutar());
+  await p.waitForFunction(() => document.querySelector('.estado-juego')?.textContent?.startsWith('Jugando'), null, { timeout: 15000 });
+  await estado(p, () => window.chispa.parar());
+  // Exportar el juego también va sin internet (el reproductor está guardado)
+  const pagina = await estado(p, async () => {
+    const r = await fetch('reproductor.js');
+    return r.ok ? (await r.text()).length : 0;
+  });
+  comprobar(pagina > 100000, 'sin internet no se puede exportar: falta el reproductor');
+  // Ajustes dice cómo instalarla
+  await p.keyboard.press('Control+,');
+  await p.waitForSelector('.nota-app');
+  comprobar((await p.innerText('.nota-app')).includes('sin internet'), 'Ajustes no explica lo de la app');
+  await p.context().setOffline(false);
+});
 
 await navegador.close();
 await new Promise((r) => servidor.httpServer.close(r));

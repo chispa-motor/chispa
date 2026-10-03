@@ -15,6 +15,7 @@
  * CSS en <html>: el tema con data-tema="claro", la letra del código con
  * --tamano-codigo y la del editor con --zoom-interfaz.
  */
+import { abiertoComoApp, comoInstalar, instalar, sePuedeInstalarConBoton } from './interfaz/instalar';
 import { h } from './interfaz/dom';
 import { abrirDialogo } from './interfaz/dialogos';
 
@@ -109,11 +110,19 @@ export function abrirAjustes(alCambiar: () => void = () => {}): void {
     valorInterfaz.textContent = `${a.letraInterfaz} px`;
   };
   rellenarValores();
+  // Chispa como app (instalar.ts): con botón donde el navegador deja, y con palabras donde no
+  const notaApp = h('p', { class: 'nota nota-app' }, abiertoComoApp() ? 'Ya estás usando Chispa como app. Funciona sin internet.' : `Chispa se puede instalar como una app y usarse sin internet. ${comoInstalar()}`);
+  const botonApp = h('button', { class: 'boton boton-instalar', onclick: () => void instalar().then((abierta) => {
+    if (!abierta) notaApp.textContent = comoInstalar();
+    botonApp.hidden = true;
+  }) }, '📲 Instalar Chispa');
+  botonApp.hidden = abiertoComoApp() || !sePuedeInstalarConBoton();
   abrirDialogo('Ajustes', h('div', { class: 'ajustes' },
     h('h3', {}, 'Tema'), temas,
     h('h3', {}, 'Letra del código'), h('div', { class: 'fila-ajuste' }, deslizador('letraCodigo'), valorCodigo),
     h('h3', {}, 'Letra del editor'), h('div', { class: 'fila-ajuste' }, deslizador('letraInterfaz'), valorInterfaz),
     h('h3', {}, 'Botones grandes (para el dedo)'), grandes,
+    h('h3', {}, 'Chispa como app'), notaApp, botonApp,
     h('p', { class: 'nota' }, 'Se guardan en este navegador (no van dentro del proyecto). Atajo: Ctrl + ,'),
   ), [
     { texto: 'Volver a lo de siempre', alPulsar: () => cambiar({ ...AJUSTES_POR_DEFECTO }) },

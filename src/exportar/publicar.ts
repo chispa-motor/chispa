@@ -19,8 +19,9 @@
 import type { DefProyecto } from '../proyecto/formato';
 import { generarPaginaJuego } from './exportar';
 import { crearZip } from './zip';
+import { archivosDeApp, type IconosDeApp } from './pwa';
 
-export type DestinoPublicar = 'archivo' | 'itch' | 'github';
+export type DestinoPublicar = 'archivo' | 'itch' | 'github' | 'movil';
 
 export interface Descarga {
   nombre: string;
@@ -54,10 +55,36 @@ export function nombreCorto(nombre: string): string {
 }
 
 /** Prepara lo que hay que descargar y los pasos, para cada sitio. */
-export function prepararPublicacion(proyecto: DefProyecto, reproductor: string, destino: DestinoPublicar, portada?: Uint8Array | null): Publicacion {
+export function prepararPublicacion(proyecto: DefProyecto, reproductor: string, destino: DestinoPublicar, portada?: Uint8Array | null, iconos?: IconosDeApp | null): Publicacion {
   const html = generarPaginaJuego(proyecto, reproductor);
   const corto = nombreCorto(proyecto.nombre);
   const tamano = `${proyecto.ancho} × ${proyecto.alto}`;
+
+  if (destino === 'movil') {
+    // La app instalable: la página (con su ficha enlazada) y, al lado, la ficha, el service worker y los iconos
+    const pagina = generarPaginaJuego(proyecto, reproductor, true);
+    const archivos = [{ nombre: 'index.html', contenido: pagina }, ...archivosDeApp(proyecto, pagina, iconos)];
+    const nombre = `${corto}-movil.zip`;
+    return {
+      destino,
+      titulo: 'Tu juego como app para el móvil',
+      descarga: { nombre, contenido: crearZip(archivos), tipo: 'application/zip' },
+      enlace: { texto: 'Abrir GitHub', url: 'https://github.com/new' },
+      pasos: [
+        `Ya se ha descargado **${nombre}**. Lleva ${archivos.length} archivos: el juego (index.html), su ficha de app, sus iconos y un archivo (sw.js) que lo guarda en el móvil para jugar **sin internet**.`,
+        '**Descomprime** el zip en una carpeta (en el ordenador: clic derecho → Extraer; en el móvil: tocarlo en Archivos).',
+        'Para que un móvil lo instale, el juego tiene que estar en una **dirección https**. La manera gratis: **GitHub Pages**. Entra en **github.com** (si no tienes cuenta, créala).',
+        `Crea un repositorio nuevo: botón **+** → **New repository**. En **Repository name** escribe, por ejemplo, **${corto}**. Déjalo en **Public** y pulsa **Create repository**.`,
+        `Pulsa **uploading an existing file** y sube **los ${archivos.length} archivos de la carpeta** (todos a la vez, sin meterlos en otra carpeta). Pulsa **Commit changes**.`,
+        'Ve a **Settings** → **Pages**. En **Branch** elige **main** y **/ (root)**, y pulsa **Save**. Espera uno o dos minutos.',
+        `Abre en el **móvil** la dirección que te da GitHub: **https://TU-USUARIO.github.io/${corto}/**. El juego ya se puede jugar.`,
+        '**Para instalarlo en Android** (Chrome): menú de los tres puntos → **Instalar aplicación** (o «Añadir a pantalla de inicio»).',
+        '**Para instalarlo en iPhone o iPad** (Safari): botón de **Compartir** (el cuadrado con la flecha) → **Añadir a pantalla de inicio**.',
+        'Ya está en la pantalla de inicio con su icono. Se abre a pantalla completa y funciona **sin internet**.',
+      ],
+      nota: `Para subir una versión nueva: exporta otra vez y sube los ${archivos.length} archivos al mismo repositorio. Los móviles que lo tengan instalado cogen la versión nueva la siguiente vez que lo abran con internet (y la usan desde la vez siguiente). Lo que el juego guarda (récords, opciones) se queda en cada móvil.`,
+    };
+  }
 
   if (destino === 'itch') {
     const nombre = `${corto}-itch.zip`;

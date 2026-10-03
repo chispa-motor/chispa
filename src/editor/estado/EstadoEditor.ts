@@ -221,6 +221,27 @@ export class EstadoEditor {
     });
   }
 
+  /**
+   * Los ajustes del juego para móviles: cómo hay que tener el aparato, la calidad con la que empieza y el
+   * límite de fotogramas. Lo normal (da igual, automática, sin límite) no se apunta en el proyecto.
+   */
+  cambiarAjusteMovil(ajuste: 'orientacion' | 'calidad' | 'maximoFps', valor: string | number): void {
+    this.cambiar('proyecto', () => {
+      const p = this.proyecto;
+      if (ajuste === 'orientacion') {
+        if (valor === 'horizontal' || valor === 'vertical') p.orientacion = valor;
+        else delete p.orientacion;
+      } else if (ajuste === 'calidad') {
+        if (valor === 'alta' || valor === 'media' || valor === 'baja') p.calidad = valor;
+        else delete p.calidad;
+      } else {
+        const n = Math.round(Number(valor) || 0);
+        if (n >= 15 && n <= 240) p.maximoFps = n;
+        else delete p.maximoFps;
+      }
+    });
+  }
+
   /** El icono del juego: una de las imágenes del proyecto (null o un nombre que no existe = sin icono). */
   ponerIcono(nombre: string | null): void {
     const vale = !!nombre && tiene(this.proyecto.imagenes, nombre);

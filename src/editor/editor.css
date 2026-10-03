@@ -517,7 +517,7 @@ kbd { display: inline-block; padding: 1px 6px; border-radius: 4px; border: 1px s
 
 /* ═════════ Exportar y publicar ═════════ */
 .publicar { max-width: 620px; }
-.opciones-publicar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+.opciones-publicar { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 12px; }
 .opcion-publicar {
   display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left;
   padding: 14px; border-radius: 10px; border: 1px solid var(--borde-fuerte); background: var(--fondo-panel);
@@ -980,3 +980,7 @@ html, body { overscroll-behavior: none; }
 @media (max-width: 1320px) {
   .barra-principal .grupo-barra [aria-label^="Abrir un proyecto"] span, .barra-principal .grupo-barra [aria-label^="Exportar el juego"] span { display: none; }
 }
+
+/* El aviso de «Gira el móvil» de un juego, dentro del editor: solo tapa la pantalla del juego
+   (en el juego exportado tapa la página entera), para que se pueda parar y seguir editando. */
+.editor-chispa .aviso-girar { position: absolute; font-size: 15px; padding: 12px; gap: 10px; }

@@ -22,7 +22,7 @@ import { botonIcono, h, icono, rellenar } from '../interfaz/dom';
 import { analizarSintaxis } from '../../chispa/sintaxis/parser';
 import { ACCIONES, DATOS_CON_BLOQUE, EVENTOS, accionPorId, aCodigo, datoPorObjetivo, type Accion, type Bloque, type ClaseEvento } from './modelo';
 
-export type Categoria = 'eventos' | 'control' | 'movimiento' | 'apariencia' | 'efectos' | 'sonido' | 'objetos' | 'interfaz' | 'variables' | 'funciones';
+export type Categoria = 'eventos' | 'control' | 'movimiento' | 'apariencia' | 'efectos' | 'sonido' | 'objetos' | 'interfaz' | 'movil' | 'variables' | 'funciones';
 
 export const CATEGORIAS: { id: Categoria; nombre: string; color: string }[] = [
   { id: 'eventos', nombre: 'Eventos', color: '#e6a817' },
@@ -33,6 +33,7 @@ export const CATEGORIAS: { id: Categoria; nombre: string; color: string }[] = [
   { id: 'sonido', nombre: 'Sonido', color: '#cf63cf' },
   { id: 'objetos', nombre: 'Objetos', color: '#2eb872' },
   { id: 'interfaz', nombre: 'Interfaz', color: '#14a3a3' },
+  { id: 'movil', nombre: 'Móvil', color: '#d6457a' },
   { id: 'variables', nombre: 'Variables', color: '#ff8c1a' },
   { id: 'funciones', nombre: 'Funciones', color: '#e6556b' },
 ];

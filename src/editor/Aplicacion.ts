@@ -29,6 +29,8 @@ import { prepararPublicacion, type DestinoPublicar } from '../exportar/publicar'
 import { proyectoMinimo } from '../ejemplos/minimo/proyecto';
 import { elegirPlantilla } from './plantillas/elegirPlantilla';
 import { hacerPortada } from './exportar/portada';
+import { hacerIconos } from './exportar/iconos';
+import type { IconosDeApp } from '../exportar/pwa';
 import { cuantasEstampas, usarEstampas } from '../motor/Estampas';
 import { proyectoVacio } from '../proyecto/formato';
 import { borrarDeMisProyectos, cargarAutomatico, cargarDeMisProyectos, compartir, descargar, elegirArchivo, guardarAutomatico, guardarEnMisProyectos, misProyectos, nombreDeArchivo, pedirQueNoSeBorre, sePuedeCompartir } from './Almacen';
@@ -777,11 +779,13 @@ export class Aplicacion {
     }
     // La portada para itch.io se dibuja ya (hace falta un lienzo: si el navegador no deja, no hay portada)
     const portada = await hacerPortada(this.estado.proyecto);
-    this.dialogoPublicar(reproductor, portada, directo);
+    // Y los iconos de la app para el móvil (si el juego tiene icono)
+    const iconos = await hacerIconos(this.estado.proyecto);
+    this.dialogoPublicar(reproductor, portada, directo, iconos);
   }
 
   /** Exportar: un archivo, itch.io o GitHub Pages. Descarga lo que hace falta y enseña los pasos en la web de cada sitio. */
-  private dialogoPublicar(reproductor: string, portada: Uint8Array | null, directo?: DestinoPublicar): void {
+  private dialogoPublicar(reproductor: string, portada: Uint8Array | null, directo?: DestinoPublicar, iconos: IconosDeApp | null = null): void {
     const cuerpo = h('div', { class: 'publicar' });
     const elegir = () =>
       rellenar(cuerpo,
@@ -790,13 +794,14 @@ export class Aplicacion {
           opcion('archivo', 'descargar', 'Un archivo', 'Una página (.html) con el juego dentro. Para jugar en tu ordenador o mandárselo a alguien.'),
           opcion('itch', 'estrella', 'itch.io', 'La web de juegos independientes. Tu juego tendrá su página y se juega en el navegador.'),
           opcion('github', 'mundo', 'GitHub Pages', 'Una página web gratis, con tu propia dirección, para compartir el enlace.'),
+          opcion('movil', 'objeto', 'App para el móvil', 'Se instala en la pantalla de inicio del móvil o la tableta, con su icono, y funciona sin internet.'),
         ),
       );
     const opcion = (destino: DestinoPublicar, ic: string, titulo: string, texto: string) =>
       h('button', { class: `opcion-publicar destino-${destino}`, onclick: () => pasos(destino) },
         icono(ic, 26), h('strong', {}, titulo), h('span', {}, texto));
     const pasos = (destino: DestinoPublicar) => {
-      const p = prepararPublicacion(this.estado.proyecto, reproductor, destino, portada);
+      const p = prepararPublicacion(this.estado.proyecto, reproductor, destino, portada, iconos);
       const bajar = () => descargar(p.descarga.nombre, p.descarga.contenido, p.descarga.tipo);
       const bajarPortada = p.portada ? () => descargar(p.portada!.nombre, p.portada!.contenido, p.portada!.tipo) : null;
       bajar();

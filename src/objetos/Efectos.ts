@@ -25,6 +25,7 @@
  * se usan desde Chispa (efecto.fuego(yo)), desde el editor (la sección
  * Efecto de un objeto, el clima de una escena) y en el editor de partículas.
  */
+import { calidad } from '../motor/Calidad';
 import type { Renderizador } from '../motor/Renderizador';
 import { resolverColor } from '../motor/Color';
 import type { ObjetoJuego } from './ObjetoJuego';
@@ -237,7 +238,8 @@ export class Efectos {
         e.restante = 0;
         continue;
       }
-      e.acumulado += (e.config.porSegundo ?? 0) * e.intensidad * dt;
+      // (con la calidad media o baja salen menos por segundo)
+      e.acumulado += (e.config.porSegundo ?? 0) * e.intensidad * dt * calidad.ajustes.particulas;
       const n = Math.floor(e.acumulado);
       if (n <= 0) continue;
       e.acumulado -= n;
@@ -249,10 +251,10 @@ export class Efectos {
         // La estela: copias del objeto (su color y su tamaño) que se quedan atrás y se apagan
         const s = sitio.obtener(Sprite);
         const config = s ? { ...e.config, colores: [s.imagen ? 'blanco' : s.color], tamano: Math.min(s.anchoFinal, s.altoFinal) * 0.9 } : e.config;
-        this.particulas.emitir(config, sitio.transformacion.posicion.x, sitio.transformacion.posicion.y, n);
+        this.particulas.emitir(config, sitio.transformacion.posicion.x, sitio.transformacion.posicion.y, n, true);
       } else {
         const p = posicionDe(sitio);
-        this.particulas.emitir(e.config, p.x, p.y, n);
+        this.particulas.emitir(e.config, p.x, p.y, n, true);
       }
     }
     this.emisores = this.emisores.filter((e) => e.restante > 0);

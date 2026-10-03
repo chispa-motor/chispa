@@ -9,6 +9,10 @@
 
 /// <reference types="vitest/config" />
 import { defineConfig, type Plugin } from 'vite';
+import { createHash } from 'node:crypto';
+import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { join, relative, sep } from 'node:path';
+import { ARCHIVO_MANIFIESTO, ARCHIVO_SERVICIO, LADOS_ICONO, archivoIcono, iconoPorDefecto, manifiestoDelEditor, servicioSinInternet } from './src/exportar/pwa';
 
 /**
  * POLÍTICA DE SEGURIDAD (CSP) del editor compilado (ver AUDITORIA_SEGURIDAD.md).
@@ -44,11 +48,45 @@ function politicaDeSeguridad(): Plugin {
   };
 }
 
+/**
+ * EL EDITOR COMO APP (Chispa 1.2): se puede instalar en la pantalla de inicio del móvil o de la tablet
+ * y funciona SIN INTERNET después de la primera vez. Al compilar se añaden a `dist`:
+ *   manifest.webmanifest, icono-192.png, icono-512.png   la ficha y el icono de la app
+ *   sw.js   el service worker: guarda los archivos del editor (una lista fija, hecha aquí) y los sirve
+ *           desde el aparato. Es el mismo que el de los juegos exportados (src/exportar/pwa.ts).
+ * No cambia la política de seguridad: todo sale de la propia carpeta ('self').
+ */
+function archivosDe(carpeta: string, raiz = carpeta): string[] {
+  return readdirSync(carpeta).flatMap((nombre) => {
+    const ruta = join(carpeta, nombre);
+    return statSync(ruta).isDirectory() ? archivosDe(ruta, raiz) : [relative(raiz, ruta).split(sep).join('/')];
+  });
+}
+
+function appDelEditor(): Plugin {
+  let salida = 'dist';
+  return {
+    name: 'chispa-app',
+    apply: 'build',
+    configResolved: (c) => void (salida = join(c.root, c.build.outDir)),
+    transformIndexHtml: (html) => html.replace('</head>', `  <link rel="manifest" href="${ARCHIVO_MANIFIESTO}" />\n    <link rel="apple-touch-icon" href="${archivoIcono(192)}" />\n    <meta name="mobile-web-app-capable" content="yes" />\n    <meta name="apple-mobile-web-app-capable" content="yes" />\n    <meta name="apple-mobile-web-app-title" content="Chispa" />\n    <meta name="theme-color" content="#12141c" />\n  </head>`),
+    closeBundle() {
+      writeFileSync(join(salida, ARCHIVO_MANIFIESTO), manifiestoDelEditor());
+      for (const lado of LADOS_ICONO) writeFileSync(join(salida, archivoIcono(lado)), iconoPorDefecto(lado));
+      const archivos = archivosDe(salida).filter((a) => a !== ARCHIVO_SERVICIO).sort();
+      // La versión es la huella de TODO lo que hay: si cambia un solo archivo, el navegador guarda la versión nueva
+      const huella = createHash('sha256');
+      for (const a of archivos) huella.update(a).update('\0').update(readFileSync(join(salida, a)));
+      writeFileSync(join(salida, ARCHIVO_SERVICIO), servicioSinInternet({ version: huella.digest('hex').slice(0, 12), archivos, prefijo: 'chispa-editor', enSeguida: false }));
+    },
+  };
+}
+
 export default defineConfig({
   // base: './' hace que las rutas del juego compilado sean relativas.
   // Lo necesitaremos en la Fase 5 para exportar el juego como página independiente.
   base: './',
-  plugins: [politicaDeSeguridad()],
+  plugins: [politicaDeSeguridad(), appDelEditor()],
   server: { open: true },
   // El editor (con CodeMirror) ocupa unos 500 KB: es normal, no hace falta avisar
   build: { chunkSizeWarningLimit: 1000 },

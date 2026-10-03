@@ -250,6 +250,7 @@ describe('Deshacer y rehacer: TODO lo que cambia el proyecto', () => {
   const cambios: Record<string, (e: EstadoEditor) => void> = {
     renombrarProyecto: (e) => e.renombrarProyecto('Otro'),
     cambiarAjusteProyecto: (e) => e.cambiarAjusteProyecto('ancho', 640),
+    cambiarAjusteMovil: (e) => e.cambiarAjusteMovil('orientacion', 'horizontal'),
     cambiarDatoJuego: (e) => e.cambiarDatoJuego('vidas', 3),
     crearObjeto: (e) => e.crearObjeto('texto', 0, 0),
     borrarSeleccionado: (e) => e.borrarSeleccionado(),

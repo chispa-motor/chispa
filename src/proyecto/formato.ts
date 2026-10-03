@@ -284,6 +284,12 @@ export interface DefProyecto {
   pixelArt?: boolean;
   /** En el juego exportado, botones en la pantalla de los móviles (si no se dice: sí). */
   controlesTactiles?: boolean;
+  /** Cómo hay que tener el móvil para jugar: "horizontal" (tumbado) o "vertical" (de pie). Si no se dice: da igual. */
+  orientacion?: 'horizontal' | 'vertical';
+  /** La calidad con la que empieza el juego: "auto" (la que aguante el aparato; si no se dice, esta), "alta", "media" o "baja". */
+  calidad?: 'auto' | 'alta' | 'media' | 'baja';
+  /** Fotogramas por segundo como mucho (30 gasta la mitad de batería). Si no se dice: los que dé la pantalla. */
+  maximoFps?: number;
   /** El icono del juego: el nombre de una de sus imágenes. Sale en la pestaña del navegador y en la pantalla de carga del juego exportado. */
   icono?: string;
   /** En el juego exportado, la pantalla «Hecho con Chispa» mientras carga (si no se dice: sí). */
@@ -374,6 +380,10 @@ function completar(p: DefProyecto): DefProyecto {
     alto: p.alto ?? 540,
     pixelArt: p.pixelArt ?? false,
     controlesTactiles: p.controlesTactiles ?? true,
+    // Los ajustes para móviles solo se guardan si se han cambiado
+    ...(p.orientacion === 'horizontal' || p.orientacion === 'vertical' ? { orientacion: p.orientacion } : {}),
+    ...(p.calidad && p.calidad !== 'auto' ? { calidad: p.calidad } : {}),
+    ...(p.maximoFps ? { maximoFps: p.maximoFps } : {}),
     // El icono solo vale si es una imagen del proyecto; la pantalla de carga solo se guarda si se ha quitado
     ...(p.icono && Object.prototype.hasOwnProperty.call(p.imagenes ?? {}, p.icono) ? { icono: p.icono } : {}),
     ...(p.pantallaDeCarga === false ? { pantallaDeCarga: false } : {}),

@@ -100,7 +100,9 @@ function lineaDeChuleta(corto: string): string {
   if (/^(romper|continuar)$/.test(corto)) dentro = `mientras falso:\n${sangrar(cuerpo)}`;
   if (/^devolver\b/.test(corto)) return `funcion f(n):\n${sangrar(cuerpo)}`;
   const evento = /\botro\b|\bcasilla\b/.test(corto) ? 'cuando toco:' : /\bdato\b/.test(corto) ? 'cuando recibo "algo":' : 'cuando empieza:';
-  return `${FUNCION_BASE}\n\n${evento}\n${sangrar(EJEMPLO_BASE)}\n${sangrar(dentro)}`;
+  // Las líneas que hablan de un control de la pantalla (tactil.pulsado("Fuego")) dan por hecho que ya está puesto
+  const controles = /\btactil\./.test(corto) ? 'tactil.joystick()\ntactil.boton("Saltar", "espacio")\ntactil.boton("Fuego")\ntactil.boton("Cargar")\n' : '';
+  return `${FUNCION_BASE}\n\n${evento}\n${sangrar(EJEMPLO_BASE)}\n${sangrar(controles + dentro)}`;
 }
 
 /** Código sin los textos entre comillas ni los comentarios (para buscar tildes). */

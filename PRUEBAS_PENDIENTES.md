@@ -37,3 +37,27 @@ desde un ordenador de la misma red, o la web publicada).
 | Que no se pierda el trabajo | Android y iPhone | Cambiar algo, pasar a otra app unos minutos (o apagar la pantalla) y volver: el proyecto sigue. Cerrar el navegador del todo y abrirlo: «Mis proyectos» lo tiene. |
 | El navegador no borra lo guardado | Safari de iPhone | Safari borra lo guardado de las webs que no se visitan en 7 días (salvo si están en la pantalla de inicio). El editor pide al navegador que no lo haga, pero puede negarse: por eso conviene «Guardar» o «Compartir» una copia de vez en cuando. |
 
+## Bloque 3 — Juegos en móvil
+
+Para probar: publica un juego con «App para móvil» (o «Una página»), súbelo a un sitio con https y
+ábrelo en el aparato. Un juego de prueba rápido: `tactil.joystick()` y `tactil.boton("Saltar", "espacio")`
+en «cuando empieza», y `yo.moverConFlechas(200)` en «cuando cada fotograma».
+
+| Qué | Dónde | Qué hay que mirar |
+|---|---|---|
+| La palanca y los botones con los pulgares | Android y iPhone, de pie y tumbado | Mover con un pulgar y pulsar con el otro A LA VEZ, durante un rato. Que no se «enganche» una dirección al levantar el dedo fuera de la palanca, y que la página no se mueva, no se acerque ni seleccione texto. Simulado con dos toques a la vez; el tacto real (dedos gordos, bordes de la pantalla, fundas) no. |
+| Gestos del sistema | iPhone (rayita de abajo, borde izquierdo = atrás), Android con gestos | Que deslizar cerca de los bordes no saque al jugador del juego sin querer. Los controles se apartan de la zona segura, pero el gesto de «atrás» del borde no se puede quitar desde una web. |
+| Vibración | Android (Chrome) | `tactil.vibrar(0.2)` tiene que notarse y devolver verdadero. **En iPhone y iPad NO vibra**: Safari no deja a las webs (devuelve falso y el juego sigue). Está dicho en el manual. |
+| El sonido | iPhone e iPad | Tiene que sonar tras el primer toque. Con el interruptor de silencio puesto, Safari NO suena (es cosa del aparato). Al volver de otra app o de la pantalla apagada, tiene que volver a sonar al tocar. |
+| Pantalla completa | Android, iPad, iPhone | El botón ⛶: en Android y iPad pone el juego a pantalla completa. **En iPhone Safari no hay pantalla completa para webs**: el botón no sale; la manera es instalar el juego en la pantalla de inicio. |
+| El aviso «Gira el móvil» | Android y iPhone | Con un juego «horizontal» y el móvil de pie: sale el aviso; al girar, se quita y el juego sigue donde estaba. Instalado como app en Android, se gira solo. |
+| Instalar el juego | Android (Chrome) | Abrir la dirección del juego: menú > «Instalar app». Sale con su icono y su nombre, se abre sin barras. Poner el modo avión y abrirlo: funciona. |
+| Instalar el juego | iPhone e iPad (Safari) | Compartir > «Añadir a pantalla de inicio». Sale con su icono; se abre sin barras; modo avión: funciona. Mirar que lo guardado (récords, sitio de los controles) sigue al cerrar y abrir: en iPhone, la app instalada tiene su propio almacén, distinto del de Safari. |
+| Subir una versión nueva del juego | Android y iPhone | Subir el juego cambiado al mismo sitio, abrir la app con internet y cerrarla; a la segunda vez tiene que salir la versión nueva. |
+| Instalar el EDITOR y usarlo sin internet | Android, iPhone, iPad, Chromebook | Ajustes > «Chispa como app». Instalar, poner modo avión, abrir: se abre, deja editar, ejecutar, exportar y están «Mis proyectos». |
+| Calidad automática en un móvil lento | Un Android de gama baja | Un juego con muchas partículas y luces en "auto": a los pocos segundos tiene que bajar a "media" o "baja" (`pantalla.nivelCalidad`) y dejar de ir a tirones. En las pruebas se simula diciéndole cuánto tarda cada fotograma; cuánto mejora de verdad solo se ve en el aparato. |
+| 30 fotogramas, batería y calor | Cualquier móvil, 15 minutos de juego | Con «30 por segundo» el móvil tiene que calentarse menos. No se puede medir sin el aparato. |
+| Pantallas de 120 Hz | Móviles y tabletas recientes | Que el juego vaya a la misma velocidad que en uno de 60 (el movimiento usa el tiempo, no los fotogramas) y que «60 por segundo como mucho» lo limite. |
+| Mandos | Bluetooth y USB, en móvil, tablet y PC | Conectar un mando con los controles en pantalla puestos: al usar el mando se esconden; al tocar la pantalla, vuelven. Simulado con un mando de mentira; uno de verdad, no. |
+| Colocar los controles | Android y iPhone | `tactil.colocar()`: arrastrar cada control a otro sitio, «Listo», cerrar y abrir: siguen donde se dejaron. Girar el móvil: no se salen de la pantalla. |
+| Pantallas plegables | Móvil plegable | Abrir y cerrar a media partida: el juego sigue y los controles se recolocan. |

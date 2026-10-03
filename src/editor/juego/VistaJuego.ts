@@ -20,7 +20,7 @@
 import { Motor } from '../../motor/Motor';
 import type { DefProyecto } from '../../proyecto/formato';
 import { ErrorMotor } from '../../motor/Errores';
-import { esPantallaTactil, ponerControlesTactiles, teclasDelJuego } from '../../reproductor/ControlesTactiles';
+import { ponerControlesTactiles, teclasDelJuego } from '../../reproductor/ControlesTactiles';
 import { JuegoEnMarcha, type OpcionesJuego } from '../../proyecto/JuegoEnMarcha';
 import { h, icono } from '../interfaz/dom';
 import { confirmar } from '../interfaz/dialogos';
@@ -52,8 +52,6 @@ export class VistaJuego {
     return this.juego?.datoDelJuego(nombre);
   }
   private intervalo = 0;
-  /** Los botones táctiles del juego en marcha (si se usa con el dedo). */
-  private controles: HTMLElement | null = null;
   private ampliada = false;
 
   /** Aviso cuando el juego está en marcha pero las teclas van a otro sitio (al código, a la escena...). */
@@ -117,7 +115,8 @@ export class VistaJuego {
     canvas.focus();
     canvas.addEventListener('pointerdown', () => canvas.focus());
     // Con el dedo: los mismos botones en pantalla que tendrá el juego exportado en un móvil
-    if (copia.controlesTactiles !== false && esPantallaTactil()) this.controles = ponerControlesTactiles(motor.entrada, copia, this.elemento);
+    // (solo se ven al tocar la pantalla: ver motor/Tactil.ts. Al parar el juego se quitan con el motor)
+    if (copia.controlesTactiles !== false) ponerControlesTactiles(motor.entrada, copia);
     this.cambiarEstado('jugando');
     this.intervalo = window.setInterval(() => this.actualizarBarra(), 500);
   }
@@ -167,8 +166,6 @@ export class VistaJuego {
 
   parar(): void {
     clearInterval(this.intervalo);
-    this.controles?.remove();
-    this.controles = null;
     if (this.juego) this.juego.detener();
     if (this.motor) this.motor.destruir();
     const habia = this.motor !== null;

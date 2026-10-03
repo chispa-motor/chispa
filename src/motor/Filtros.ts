@@ -17,6 +17,7 @@
  * y luego se copia a la pantalla con los filtros. Si no hay ningún filtro
  * puesto, se dibuja directamente, sin coste.
  */
+import { calidad } from './Calidad';
 import { resolverColor } from './Color';
 
 export interface Filtros {
@@ -67,6 +68,8 @@ function auxiliar(nombre: string, ancho: number, alto: number): HTMLCanvasElemen
 export function dibujarConFiltros(ctx: CanvasRenderingContext2D, f: Filtros, fondo: string, dibujar: (otro: CanvasRenderingContext2D) => void): void {
   const ancho = ctx.canvas.width;
   const alto = ctx.canvas.height;
+  // Con la calidad baja no se hacen los filtros que más cuestan (los que emborronan toda la pantalla)
+  const caros = calidad.ajustes.filtrosCaros;
   const escena = auxiliar('escena', ancho, alto);
   const ectx = escena.getContext('2d');
   if (!ectx) return dibujar(ctx); // sin lienzos aparte (no debería pasar en un navegador)
@@ -103,7 +106,7 @@ export function dibujarConFiltros(ctx: CanvasRenderingContext2D, f: Filtros, fon
   }
 
   const filtro = [
-    f.desenfoque > 0 ? `blur(${f.desenfoque * k}px)` : '',
+    f.desenfoque > 0 && caros ? `blur(${f.desenfoque * k}px)` : '',
     f.grises > 0 ? `grayscale(${Math.min(1, f.grises)})` : '',
     f.brillo !== 1 ? `brightness(${Math.max(0, f.brillo)})` : '',
     f.crt ? 'contrast(1.1) saturate(1.15)' : '',
@@ -114,7 +117,7 @@ export function dibujarConFiltros(ctx: CanvasRenderingContext2D, f: Filtros, fon
 
   // Aberración cromática: una copia rojiza a un lado y una azulada al otro, sumando luz
   const aberracion = f.aberracion + (f.crt ? 1.5 : 0);
-  if (aberracion > 0) {
+  if (aberracion > 0 && caros) {
     const d = aberracion * k;
     for (const [color, dx] of [['#ff0000', d], ['#00b4ff', -d]] as const) {
       const tinte = auxiliar(`tinte${color}`, ancho, alto);
@@ -134,7 +137,7 @@ export function dibujarConFiltros(ctx: CanvasRenderingContext2D, f: Filtros, fon
   }
 
   // Bloom: la escena borrosa y más clara, sumada encima (lo brillante brilla más)
-  if (f.bloom > 0) {
+  if (f.bloom > 0 && caros) {
     ctx.globalCompositeOperation = 'lighter';
     ctx.globalAlpha = Math.min(1, f.bloom) * 0.6;
     ctx.filter = `blur(${10 * k}px) brightness(1.1)`;

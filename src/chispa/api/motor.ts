@@ -44,6 +44,9 @@ import { DIVISIONES, MAXIMO_CAMARAS, TRANSICIONES, type Division, type Transicio
 import type { Camara } from '../../objetos/Camara';
 import { crearModuloJunta } from './juntas';
 import { crearModuloPuntuaciones } from './puntuaciones';
+import { crearModuloTactil } from './tactil';
+import { FPS_MAXIMO, FPS_MINIMO, MODOS_CALIDAD, calidad, type ModoCalidad } from '../../motor/Calidad';
+import { ORIENTACIONES, type Orientacion } from '../../motor/Tactil';
 import { ControlesJugador, numeroDeJugador } from './jugadores';
 import { Tabla } from '../ejecucion/valores';
 import { lanzarRayo } from '../../objetos/Rayos';
@@ -799,6 +802,13 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
 
   // ── la tabla de las mejores puntuaciones (puntuaciones.ts) ──
   g.declarar('puntuaciones', crearModuloPuntuaciones(ctx));
+  // ── jugar con el dedo: palanca, botones, gestos, vibrar (tactil.ts) ──
+  g.declarar('tactil', crearModuloTactil({
+    tactil: () => ctx.motor.entrada.tactil,
+    aMundo: (x, y) => ctx.escena.camara.pantallaAMundo(new Vector2(x, y)),
+    guardarDato: (clave, texto) => ctx.guardarDato(clave, texto),
+    cargarDato: (clave) => ctx.cargarDato(clave),
+  }));
 
   // ── juntas: cuerdas, muelles y bisagras (juntas.ts) ──
   g.declarar('junta', crearModuloJunta({ juntas: () => ctx.escena.juntas, yo: () => (interprete.objetoActual as ObjetoJuego | null) ?? null }));
@@ -933,6 +943,37 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
           obtener: () => ctx.escena.filtros.crt,
           asignar: (v, p) => (ctx.escena.filtros.crt = comoLogico(v, 'pantalla.crt', p)),
         },
+        // Calidad adaptable y límite de fotogramas (Calidad.ts): para móviles lentos, batería y calor
+        calidad: {
+          obtener: () => calidad.modo,
+          asignar: (v, p) => {
+            const m = normalizar(aTexto(v)) as ModoCalidad;
+            if (typeof v !== 'string' || !MODOS_CALIDAD.includes(m)) {
+              const parecida = typeof v === 'string' ? sugerir(v, MODOS_CALIDAD) : null;
+              throw new ErrorChispa(p, `'pantalla.calidad' es "auto" (la que aguante el aparato), "alta", "media" o "baja", y le das ${typeof v === 'string' ? `"${v}"` : nombreTipo(v)}.`, parecida ? `¿Querías decir "${parecida}"?` : 'Ejemplo: pantalla.calidad = "baja"');
+            }
+            calidad.modo = m;
+          },
+        },
+        nivelcalidad: { obtener: () => calidad.nivel },
+        maximofps: {
+          obtener: () => calidad.maximoFps,
+          asignar: (v, p) => {
+            const n = comoNumero(v, 'pantalla.maximoFps', p);
+            if (n !== 0 && !(n >= FPS_MINIMO && n <= FPS_MAXIMO)) throw new ErrorChispa(p, `'pantalla.maximoFps' va de ${FPS_MINIMO} a ${FPS_MAXIMO} fotogramas por segundo (0 = sin límite), y le das ${n}.`, 'Ejemplo: pantalla.maximoFps = 30  (gasta la mitad de batería)');
+            calidad.maximoFps = n;
+          },
+        },
+        orientacion: {
+          obtener: () => ctx.motor.entrada.tactil.orientacion,
+          asignar: (v, p) => {
+            const o = normalizar(aTexto(v)) as Orientacion;
+            if (typeof v !== 'string' || !ORIENTACIONES.includes(o)) {
+              throw new ErrorChispa(p, `'pantalla.orientacion' es "horizontal" (el móvil tumbado), "vertical" (de pie) o "cualquiera", y le das ${typeof v === 'string' ? `"${v}"` : nombreTipo(v)}.`, 'Ejemplo: pantalla.orientacion = "horizontal"');
+            }
+            ctx.motor.entrada.tactil.orientacion = o;
+          },
+        },
         completa: {
           obtener: () => typeof document !== 'undefined' && !!document.fullscreenElement,
           asignar: (v, p) => {
@@ -992,7 +1033,7 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
           return null;
         },
       },
-      ['ancho', 'alto', 'completa', 'dividir', 'oscurecer', 'aclarar', 'flash', 'normal', 'grises', 'desenfoque', 'pixelado', 'brillo', 'vineta', 'aberracion', 'crt', 'bloom'],
+      ['ancho', 'alto', 'completa', 'dividir', 'oscurecer', 'aclarar', 'flash', 'normal', 'grises', 'desenfoque', 'pixelado', 'brillo', 'vineta', 'aberracion', 'crt', 'bloom', 'calidad', 'nivelCalidad', 'maximoFps', 'orientacion'],
     ),
   );
 

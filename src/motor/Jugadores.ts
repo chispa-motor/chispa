@@ -111,6 +111,9 @@ export class Jugadores {
     this.usar(n);
     const m = this.entrada.mandos[n];
     if (m.conectado && (m.ejeX !== 0 || m.ejeY !== 0)) return { x: m.ejeX, y: m.ejeY };
+    // La palanca de la pantalla (para jugar con el dedo) es del jugador 1, e igual de fina que la del mando
+    const t = this.entrada.tactil;
+    if (n === 0 && (t.x !== 0 || t.y !== 0)) return { x: t.x, y: t.y };
     const tecla = (accion: AccionJugador) => (this.teclasDe(n, accion).some((t) => this.entrada.estaPulsada(t)) || m.botones.has(accion) ? 1 : 0);
     return { x: tecla('derecha') - tecla('izquierda'), y: tecla('arriba') - tecla('abajo') };
   }

@@ -20,6 +20,7 @@
 import type { DefProyecto } from '../proyecto/formato';
 import { ESTILOS_TACTILES } from '../reproductor/ControlesTactiles';
 import { huellaCSP } from '../utilidades/sha256';
+import { ARCHIVO_MANIFIESTO, archivoIcono, colorDeLaApp } from './pwa';
 import { CONFIGURACION, LICENCIA } from '../configuracion';
 import { VERSION } from '../version';
 
@@ -41,8 +42,9 @@ export function avisoDeLicencia(): string {
 /** Estilos de la página del juego (pantalla completa, bandas negras, panel de errores). */
 const ESTILOS = `
 *{box-sizing:border-box}
-html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:system-ui,"Segoe UI",sans-serif}
-#contenedor-juego{width:100vw;height:100vh;display:flex;align-items:center;justify-content:center}
+html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:system-ui,"Segoe UI",sans-serif;touch-action:none;overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+body{height:100vh;height:100dvh;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+#contenedor-juego{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center}
 #lienzo{display:block;touch-action:none;outline:none}
 #panel-error{position:fixed;left:50%;top:24px;transform:translateX(-50%);max-width:min(680px,calc(100vw - 32px));max-height:calc(100vh - 48px);overflow:auto;padding:16px 20px;background:#3a1216;border:2px solid #e74c3c;border-radius:10px;color:#ffe9e9;box-shadow:0 10px 30px rgba(0,0,0,.5)}
 #panel-error h2{margin:0 0 8px;font-size:18px;color:#ff8a80}
@@ -107,38 +109,46 @@ export function jsonParaScript(datos: unknown): string {
  *   - la página no puede conectarse a ningún sitio de internet, ni cargar
  *     fuentes, ni enviar formularios, ni meter otras páginas dentro.
  */
-export function politicaDeSeguridad(codigo: string, estilos: string[]): string {
+export function politicaDeSeguridad(codigo: string, estilos: string[], app = false): string {
+  // Como app instalable (pwa.ts) se permiten TRES cosas más, todas de la propia carpeta del juego y nada de fuera:
+  // su ficha (manifest), su service worker (para ir sin internet) y sus iconos.
   return [
     "default-src 'none'",
     `script-src ${huellaCSP(codigo)}`,
     `style-src ${estilos.map(huellaCSP).join(' ')}`,
-    'img-src data: blob:',
+    app ? "img-src 'self' data: blob:" : 'img-src data: blob:',
     'media-src data: blob:',
     "connect-src 'none'",
     "font-src 'none'",
     "object-src 'none'",
     "frame-src 'none'",
-    "worker-src 'none'",
-    "manifest-src 'none'",
+    app ? "worker-src 'self'" : "worker-src 'none'",
+    app ? "manifest-src 'self'" : "manifest-src 'none'",
     "base-uri 'none'",
     "form-action 'none'",
   ].join('; ');
 }
 
-/** Genera la página completa. `reproductor` es el código de public/reproductor.js. */
-export function generarPaginaJuego(proyecto: DefProyecto, reproductor: string): string {
+/**
+ * Genera la página completa. `reproductor` es el código de public/reproductor.js.
+ * `app`: la página va a ir con su ficha, su service worker y sus iconos (pwa.ts), para instalarla en el móvil.
+ */
+export function generarPaginaJuego(proyecto: DefProyecto, reproductor: string, app = false): string {
   const codigo = reproductor.replace(/<\/script/gi, '<\\/script').replace(/<!--/g, '<\\!--');
-  const csp = politicaDeSeguridad(codigo, [ESTILOS, ESTILOS_TACTILES]);
+  const csp = politicaDeSeguridad(codigo, [ESTILOS, ESTILOS_TACTILES], app);
   const icono = iconoDelJuego(proyecto);
+  // Para el móvil: color de la barra del navegador y, como app, su ficha y su icono para la pantalla de inicio
+  const movil = `\n<meta name="theme-color" content="${escaparHTML(colorDeLaApp(proyecto))}">\n<meta name="mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">\n<meta name="apple-mobile-web-app-title" content="${escaparHTML([...proyecto.nombre].slice(0, 12).join(''))}">`
+    + (app ? `\n<link rel="manifest" href="${ARCHIVO_MANIFIESTO}">\n<link rel="apple-touch-icon" href="${archivoIcono(192)}">` : '');
   return `<!doctype html>
 ${avisoDeLicencia()}
 <html lang="es">
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="${escaparHTML(csp)}">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="generator" content="Chispa ${VERSION}">
-<meta name="referrer" content="no-referrer">
+<meta name="referrer" content="no-referrer">${movil}
 <title>${escaparHTML(proyecto.nombre)}</title>${icono ? `\n<link rel="icon" href="${escaparHTML(icono)}">` : ''}
 <style>${ESTILOS}</style>
 <style data-controles-tactiles>${ESTILOS_TACTILES}</style>

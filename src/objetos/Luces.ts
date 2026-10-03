@@ -24,6 +24,7 @@
  * («polígono de visibilidad»). Los objetos sólidos tapan la luz; los
  * fantasmas, no.
  */
+import { calidad } from '../motor/Calidad';
 import { Componente } from './Componente';
 import type { Renderizador } from '../motor/Renderizador';
 import { colorAComponentes, resolverColor } from '../motor/Color';
@@ -258,7 +259,8 @@ export function dibujarLuces(r: Renderizador, escena: Escena, oscuridad: number,
     const p = o.transformacion.posicion;
     const rad = luz.radioActual;
     if (p.x + rad < visible.izquierda || p.x - rad > visible.derecha || p.y + rad < visible.abajo || p.y - rad > visible.arriba) continue;
-    const tapa = luz.sombras ? queTapa(escena, p.x, p.y, rad, o) : null;
+    // (con la calidad baja las luces no hacen sombras: es lo que más cuesta de las luces)
+    const tapa = luz.sombras && calidad.ajustes.sombrasDeLuz ? queTapa(escena, p.x, p.y, rad, o) : null;
     luces.push({ luz, o, forma: tapa ? visibilidad(p.x, p.y, rad, tapa.segmentos) : null, cajas: tapa?.cajas ?? [] });
   }
 

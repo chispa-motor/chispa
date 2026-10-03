@@ -20,6 +20,7 @@ import { describe, expect, it } from 'vitest';
 import { EditorState } from '@codemirror/state';
 import { CompletionContext } from '@codemirror/autocomplete';
 import { agregarNovedades } from '../src/chispa/api/cursoNovedades';
+import { agregarNovedades12 } from '../src/chispa/api/cursoNovedades12';
 import { fichasDeLaApi } from '../src/chispa/api/aprende';
 import { generarManual } from '../src/chispa/api/manual';
 import { fuenteAutocompletado } from '../src/editor/codigo/autocompletado';
@@ -28,6 +29,10 @@ import { proyectoVacio } from '../src/proyecto/formato';
 
 const nuevos: string[] = [];
 agregarNovedades(() => {}, (id) => void nuevos.push(id));
+/** Los de Chispa 1.2 (jugar en el móvil): los mismos requisitos. */
+const nuevos12: string[] = [];
+agregarNovedades12(() => {}, (id) => void nuevos12.push(id));
+nuevos.push(...nuevos12);
 
 function sugerencias(texto: string): string[] {
   const estado = EditorState.create({ doc: texto });
@@ -77,6 +82,8 @@ describe('Comandos nuevos de Chispa 1.1', () => {
       const escrito = `${prefijo(grupo)}${nombre}`;
       // Lo que solo se lee de los controles (controles(1).x) sale dentro del valor de un bloque
       if (grupo === 'controles') return !new RegExp(`${escrito.replace(/[.()]/g, '\\$&')}(\\W|$)`, 'm').test(codigo);
+      // Lo que solo se lee del móvil (tactil.x, tactil.gesto...) también sale dentro del valor de un bloque
+      if (nuevos12.includes(id) && new RegExp(`(^|[^\\w.])${escrito.replace(/[.()]/g, '\\$&')}(\\W|$)`, 'm').test(codigo)) return false;
       return !new RegExp(`(^|[^\\w.])${escrito.replace(/[.()]/g, '\\$&')}(\\(| =)`, 'm').test(codigo);
     });
     expect(faltan).toEqual([]);

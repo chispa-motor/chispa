@@ -2,7 +2,7 @@
 
 > Se genera sola con `npm run manual` (no la cambies a mano). Un test comprueba que no falta ningún comando y que cada ejemplo funciona.
 
-Todos los comandos de Chispa (408), una línea cada uno, para tenerla abierta mientras programas o imprimirla. Para aprender con calma, el [curso](APRENDE_CHISPA.md).
+Todos los comandos de Chispa (434), una línea cada uno, para tenerla abierta mientras programas o imprimirla. Para aprender con calma, el [curso](APRENDE_CHISPA.md).
 
 En los ejemplos se usan estas variables y esta función, como si ya las tuvieras (y en la escena hay un Jugador y un Mapa de casillas):
 
@@ -650,3 +650,44 @@ Las líneas que terminan en `:` empiezan un bloque: lo de dentro va debajo, con 
 | `controles(1).mando` | Verdadero si ese jugador tiene un mando conectado (el primer mando es del jugador 1, el segundo del 2...). | `mostrar(controles(1).mando)` |
 | `controles(1).ponerTecla("control", "tecla")` | Cambia la tecla de uno de sus controles. | `controles(1).ponerTecla("a", "m")` |
 | `escena.camara.encuadrar(objetos, margen)` | PANTALLA COMPARTIDA: la cámara se pone en medio de esos objetos (una lista) y se aleja lo justo para que se vean todos, con un margen alrededor (120 si no se dice). | `escena.camara.encuadrar([yo, buscar("Jugador")])` |
+
+### Jugar con el dedo
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `tactil.joystick(lado)` | Pone una palanca en la pantalla, a la "izquierda" (si no se dice) o a la "derecha". | `tactil.joystick()` |
+| `tactil.boton("nombre", "tecla")` | Pone un botón en la pantalla con ese nombre (12 letras como mucho). | `tactil.boton("Saltar", "espacio")` |
+| `tactil.pulsado("nombre")` | Verdadero mientras se tiene el dedo en ese botón. | `si tactil.pulsado("Fuego"):` |
+| `tactil.sePulso("nombre")` | Verdadero solo en el fotograma en que se toca ese botón (una vez por toque). | `si tactil.sePulso("Fuego"):` |
+| `tactil.seSolto("nombre")` | Verdadero solo en el fotograma en que se levanta el dedo de ese botón. | `si tactil.seSolto("Cargar"):` |
+| `tactil.x` | Cuánto está inclinada la palanca a los lados: de -1 (izquierda) a 1 (derecha). | `yo.x += tactil.x * 300 * delta` |
+| `tactil.y` | Cuánto está inclinada la palanca arriba o abajo: de -1 (abajo) a 1 (arriba). | `yo.y += tactil.y * 300 * delta` |
+| `tactil.mover("nombre", x, y)` | Pone un control ("joystick" o el nombre de un botón) en un sitio de la pantalla: x de 0 (izquierda) a 100 (derecha) e y de 0 (abajo) a 100 (arriba). | `tactil.mover("Saltar", 85, 20)` |
+| `tactil.quitar("nombre")` | Quita un control ("joystick" o un botón). | `tactil.quitar("Saltar")` |
+| `tactil.colocar()` | Abre el modo colocar: quien juega arrastra cada control a donde le venga bien y pulsa «Listo». | `tactil.colocar()` |
+| `tactil.mostrar` | Cuándo se ven los controles: "auto" (solo cuando se juega con el dedo: lo normal), "siempre" o "nunca". | `tactil.mostrar = "siempre"` |
+| `tactil.tamano` | El tamaño de los controles: 1 = normal, de 0.5 (la mitad) a 2 (el doble). | `tactil.tamano = 1.3` |
+| `tactil.opacidad` | Cuánto se ven los controles: de 0.1 (casi nada) a 1 (del todo). | `tactil.opacidad = 0.4` |
+| `tactil.hay` | Verdadero si el aparato se maneja con el dedo (un móvil, una tableta) o se está tocando la pantalla ahora. | `si tactil.hay:` |
+
+### Gestos, mirar y vibrar
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `tactil.gesto` | El gesto que se ha hecho con el dedo en este fotograma: "toque", "doble" (dos toques seguidos), "largo" (dedo quieto), "arriba", "abajo", "izquierda" o "derecha" (deslizar). | `si tactil.gesto == "toque":` |
+| `tactil.pellizco` | Pellizcar con dos dedos: cuánto se han separado en este fotograma. | `escena.camara.zoom = escena.camara.zoom * tactil.pellizco` |
+| `tactil.dedos` | Cuántos dedos están tocando la pantalla del juego ahora. | `si tactil.dedos == 2:` |
+| `tactil.toques` | Dónde está cada dedo que toca la pantalla, en el mundo: una lista de vectores (vacía si no hay ninguno). | `para cada dedo en tactil.toques:` |
+| `tactil.mirar()` | Activa «arrastrar para mirar»: lo que se mueve el dedo por la pantalla (fuera de los controles) se lee en tactil.miraX y tactil.miraY. | `tactil.mirar()` |
+| `tactil.miraX` | Con tactil.mirar(): cuánto se ha movido el dedo a los lados en este fotograma, en píxeles del juego (positivo = a la derecha). | `escena.camara.x -= tactil.miraX` |
+| `tactil.miraY` | Con tactil.mirar(): cuánto se ha movido el dedo arriba o abajo en este fotograma (positivo = hacia arriba). | `escena.camara.y -= tactil.miraY` |
+| `tactil.vibrar(segundos)` | Hace vibrar el móvil (0,1 segundos si no se dice; como mucho 5). | `tactil.vibrar(0.2)` |
+
+### Calidad, batería y cómo se sujeta el móvil
+
+| Comando | Qué hace | Ejemplo |
+|---|---|---|
+| `pantalla.calidad` | La calidad con la que se pinta el juego: "auto" (la que aguante el aparato: si va a trompicones se baja sola, y si va sobrado vuelve a subir), "alta", "media" o "baja". | `pantalla.calidad = "auto"` |
+| `pantalla.nivelCalidad` | La calidad que hay puesta ahora mismo: "alta", "media" o "baja" (con pantalla.calidad = "auto" puede ir cambiando). | `mostrar(pantalla.nivelCalidad)` |
+| `pantalla.maximoFps` | Cuántos fotogramas por segundo se pintan como mucho (0 = los que dé la pantalla). | `pantalla.maximoFps = 30` |
+| `pantalla.orientacion` | Cómo hay que tener el móvil para jugar: "horizontal" (tumbado), "vertical" (de pie) o "cualquiera". | `pantalla.orientacion = "horizontal"` |

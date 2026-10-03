@@ -26,6 +26,7 @@
  * "ñ") y números ("1"). Se aceptan con o sin tilde y en mayúsculas.
  */
 import { ErrorMotor } from './Errores';
+import { Tactil } from './Tactil';
 import { Vector2 } from './Vector2';
 import { normalizar } from '../utilidades/texto';
 import { sugerir } from '../chispa/errores/sugerencias';
@@ -187,6 +188,8 @@ export class Entrada {
    * como `textoEscrito`, igual que con un teclado de verdad.
    */
   zonasDeTexto = new Set<() => string | null>();
+  /** Los controles en pantalla y los gestos, para jugar con el dedo (Tactil.ts). */
+  readonly tactil: Tactil;
   private teclado: HTMLInputElement | null = null;
   /** Lo que tenía el campo invisible la última vez (para saber qué se ha escrito o borrado). */
   private textoTeclado = '';
@@ -290,6 +293,13 @@ export class Entrada {
     private aCoordenadasJuego: (x: number, y: number) => Vector2,
   ) {
     const signal = this.eventos.signal;
+    this.tactil = new Tactil(this, canvas);
+    this.tactil.aJuego = (x, y) => this.aCoordenadasJuego(x, y);
+    this.tactil.escalaJuego = () => {
+      const a = this.aCoordenadasJuego(0, 0);
+      const b = this.aCoordenadasJuego(100, 0);
+      return Math.abs(b.x - a.x) / 100 || 1;
+    };
 
     // ── Teclado (en window, para que funcione aunque no hayas hecho clic en el lienzo)
     window.addEventListener(
@@ -497,6 +507,8 @@ export class Entrada {
     if (ejeY > 0.5) botones.add('arriba');
     if (ejeY < -0.5) botones.add('abajo');
     m.pulsados = new Set([...botones].filter((b) => !m.botones.has(b)));
+    // Se está jugando con un mando: los controles de la pantalla sobran (vuelven al tocarla)
+    if (m.pulsados.size) this.tactil.usandoDedo(false);
     m.soltados = new Set([...m.botones].filter((b) => !botones.has(b)));
     // Solo el primer mando hace de teclado (y solo si no hay varios jugadores)
     if (indice === 0 && this._mandoHaceDeTeclado) {
@@ -531,6 +543,7 @@ export class Entrada {
   /** El motor lo llama al terminar cada fotograma: borra lo que solo dura un fotograma. */
   finDeFotograma(): void {
     this.pulsadasEsteFotograma.clear();
+    this.tactil.finDeFotograma();
     this.textoEscrito = [];
     this.soltadasEsteFotograma.clear();
     this.botonesPulsados.clear();
@@ -544,6 +557,7 @@ export class Entrada {
 
   /** Quita todos los eventos del navegador. */
   destruir(): void {
+    this.tactil.destruir();
     this.eventos.abort();
   }
 

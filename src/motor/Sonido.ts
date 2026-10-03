@@ -367,6 +367,17 @@ export class Sonido {
     if (this.contexto?.state === 'suspended') void this.contexto.resume();
   }
 
+  /**
+   * Los navegadores (Safari de iPhone el que más) no dejan sonar NADA hasta que la persona toca la
+   * pantalla o pulsa una tecla, y hay que pedirlo justo EN ese toque. El motor llama aquí en cada
+   * toque y cada tecla: si el audio estaba esperando (o lo ha parado una llamada de teléfono), arranca.
+   * La música que el juego puso al empezar suena desde ese momento.
+   */
+  despertar(): void {
+    const estado = this.contexto?.state as string | undefined;
+    if (estado === 'suspended' || estado === 'interrupted') void this.contexto!.resume().catch(() => {});
+  }
+
   /** Suelta el audio del navegador (al destruir el motor). */
   cerrar(): void {
     this.pararTodo();

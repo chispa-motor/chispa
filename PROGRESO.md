@@ -7,7 +7,7 @@ se ve por dónde iba. La regla que manda en todo es `DISPOSITIVOS.md`.
 |---|---|---|---|
 | 1 | Editor adaptable (cajones, barra de abajo, escena con el dedo, teclado de pantalla) | **Hecho** | `m12-bloque-1` |
 | 2 | Programar con el dedo (barra de atajos, bloques para tacto, tutorial, archivos) | **Hecho** | `m12-bloque-2` |
-| 3 | Juegos en móvil (joystick, botones, gestos, vibración, calidad, 30 fps, PWA) | Sin empezar | |
+| 3 | Juegos en móvil (joystick, botones, gestos, vibración, calidad, 30 fps, PWA) | **Hecho** | `m12-bloque-3` |
 | 4 | Pruebas, seguridad y documentación (versión 1.2.0) | Sin empezar | |
 
 No se ha hecho push de nada. La web sigue como estaba.
@@ -49,6 +49,32 @@ No se ha hecho push de nada. La web sigue como estaba.
   la cámara se reducen a 1024 px al importarlas, y se guarda al mandar la página al fondo.
 - **Pruebas**: `pruebas/dedo.test.ts` (19) y 22 comprobaciones más en `pruebas-navegador/moviles.mjs`
   (91 en total).
+
+## Bloque 3 — Juegos en móvil (hecho)
+
+- **Módulo `tactil`** (22 comandos, generales para cualquier juego; `src/motor/Tactil.ts` y
+  `src/chispa/api/tactil.ts`): `tactil.joystick()` (hace de flechas), `tactil.boton("Saltar", "espacio")`
+  (pulsa teclas: el resto del código no cambia), `pulsado / sePulso / seSolto`, `tactil.mirar()` con
+  `miraX / miraY` (arrastrar para mirar), `gesto` (toque, doble, largo, deslizar a los cuatro lados),
+  `pellizco`, `dedos`, `toques`, `x / y`, `mover`, `quitar`, `colocar` (quien juega mueve los controles
+  y se le recuerda), `vibrar`, `mostrar` (auto, siempre, nunca), `tamano`, `opacidad`, `hay`.
+- **Solo salen cuando hacen falta**: con el dedo, sí; con teclado, ratón o mando, se esconden solos.
+  Un juego que no pone controles sigue teniendo los automáticos (los de las teclas que usa).
+- **`pantalla`** (4 comandos nuevos): `calidad` ("auto", "alta", "media", "baja"), `nivelCalidad`,
+  `maximoFps` (30 para gastar menos batería) y `orientacion` (aviso «Gira el móvil»). También están en
+  las Propiedades del proyecto, sin escribir código.
+- **Calidad adaptable** (`src/motor/Calidad.ts`): en "auto" mide los fotogramas y baja o sube sola
+  (menos píxeles, menos partículas, sin sombras de luces ni filtros caros).
+- **El juego como app del móvil** (`src/exportar/pwa.ts`): destino «App para móvil» al publicar: zip con
+  la página, la ficha, los iconos y un service worker que solo sirve los archivos del juego. Se instala y
+  funciona sin internet. Botón de pantalla completa, zona segura del iPhone, el audio se despierta al
+  primer toque.
+- **El editor como app**: al compilar se hace su ficha y su service worker (`vite.config.ts`): el editor
+  se instala en la pantalla de inicio y abre, ejecuta y exporta sin internet. Ajustes explica cómo
+  instalarlo en cada aparato (`src/editor/interfaz/instalar.ts`).
+- **Pruebas**: `pruebas/juegos-movil.test.ts` (39) y 11 comprobaciones más en
+  `pruebas-navegador/moviles.mjs` (102 en total): juego exportado con dos dedos a la vez, PC táctil,
+  girar, calidad, 30 fps, colocar controles, app sin internet e instalable, editor sin internet.
 
 ## Cómo seguir si se corta
 

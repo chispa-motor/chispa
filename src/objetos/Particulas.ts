@@ -17,6 +17,7 @@
  * moverse de lado a lado (vaivén) y frenar con el aire. Las que «suman luz»
  * (fuego, chispas, magia) se dibujan con la mezcla «sumar»: brillan.
  */
+import { calidad } from '../motor/Calidad';
 import type { Renderizador } from '../motor/Renderizador';
 import { colorAComponentes, resolverColor } from '../motor/Color';
 import { sinPrototipo } from '../utilidades/seguro';
@@ -124,9 +125,13 @@ export class Particulas {
     return this.lista.length;
   }
 
-  /** Lanza las partículas de golpe. `cuantas` cambia la cantidad (si no, la de la configuración). */
-  emitir(c: ConfigParticulas, x: number, y: number, cuantas = c.cantidad): void {
-    const n = Math.min(Math.max(0, Math.floor(cuantas)), MAXIMO_PARTICULAS - this.lista.length);
+  /** Lanza las partículas de golpe. `cuantas` cambia la cantidad (si no, la de la configuración). `exactas`: sin reducirlas por la calidad (ya vienen reducidas). */
+  emitir(c: ConfigParticulas, x: number, y: number, cuantas = c.cantidad, exactas = false): void {
+    // Con la calidad baja se lanzan menos (pero siempre alguna: una explosión sin chispas no es una explosión)
+    const pedidas = Math.max(0, Math.floor(cuantas));
+    // (las que salen de pocas en pocas —el fuego, la lluvia— se reducen donde se cuentan por segundo: ver Efectos.ts)
+    const reducidas = !exactas && calidad.ajustes.particulas < 1 && pedidas >= 4 ? Math.max(1, Math.round(pedidas * calidad.ajustes.particulas)) : pedidas;
+    const n = Math.min(reducidas, MAXIMO_PARTICULAS - this.lista.length);
     const azar = this.azar;
     const rgbFinal = c.colorFinal ? rgb(c.colorFinal) : null;
     const tamanoFinal = c.tamanoFinal ?? (c.encoger ? 0 : 1);

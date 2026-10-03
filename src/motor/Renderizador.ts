@@ -30,6 +30,7 @@
  *
  * Rotaciones en GRADOS (más intuitivo que radianes para principiantes).
  */
+import { calidad } from './Calidad';
 import { resolverColor } from './Color';
 import { escalaPixel, familiaCss, textoPixel } from './Letras';
 import { Vector2 } from './Vector2';
@@ -120,7 +121,9 @@ export class Renderizador {
     this.canvas.style.height = `${altoCss}px`;
 
     // Tamaño real en píxeles de la pantalla.
-    const dpr = window.devicePixelRatio || 1;
+    // Los píxeles de verdad por cada punto: los de la pantalla, pero no más de los que deja la calidad
+    // (un móvil tiene 3: pintarlos todos es pintar 9 veces más que con 1)
+    const dpr = Math.min(window.devicePixelRatio || 1, calidad.ajustes.resolucion);
     this.canvas.width = Math.round(anchoCss * dpr);
     this.canvas.height = Math.round(altoCss * dpr);
 

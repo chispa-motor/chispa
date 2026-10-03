@@ -33,6 +33,7 @@
  * Limitarlo es una protección sencilla. En la Fase 2, para la física,
  * valoraremos un "paso fijo" (fixed timestep) como el FixedUpdate de Unity.
  */
+import { calidad } from './Calidad';
 import { Entrada } from './Entrada';
 import { mostrarError } from './Errores';
 import { Recursos } from './Recursos';
@@ -89,6 +90,8 @@ export class Motor {
    */
   alFallar: (error: unknown) => void = mostrarError;
 
+  /** Para quitar de golpe lo que el motor escucha en la ventana. */
+  private eventos = new AbortController();
   private actualizadores: FuncionActualizar[] = [];
   private dibujadores: FuncionDibujar[] = [];
   private corriendo = false;
@@ -106,6 +109,13 @@ export class Motor {
       opciones.pixelArt ?? false,
     );
     this.entrada = new Entrada(opciones.canvas, (x, y) => this.renderizador.aCoordenadasJuego(x, y));
+    // El sonido solo puede arrancar dentro de un toque o una tecla (sobre todo en Safari de iPhone): ver Sonido.despertar
+    const despertar = () => this.sonido.despertar();
+    for (const evento of ['pointerdown', 'pointerup', 'touchend', 'keydown', 'click']) window.addEventListener(evento, despertar, { signal: this.eventos.signal, capture: true, passive: true });
+    document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && despertar(), { signal: this.eventos.signal });
+    // Al cambiar la calidad cambia cuántos píxeles tiene el lienzo
+    calidad.reiniciar();
+    calidad.alCambiar = () => this.renderizador.ajustarTamano();
     this.colorFondo = opciones.colorFondo ?? 'negro';
   }
 
@@ -134,6 +144,9 @@ export class Motor {
   /** Para el motor y suelta todo lo que usa (eventos del teclado, sonidos...). No se puede volver a usar. */
   destruir(): void {
     this.detener();
+    this.eventos.abort();
+    calidad.alCambiar = () => {};
+    calidad.reiniciar();
     this.sonido.cerrar();
     this.entrada.destruir();
     this.renderizador.destruir();
@@ -146,6 +159,20 @@ export class Motor {
    */
   private bucle = (ahora: number): void => {
     if (!this.corriendo) return;
+    // Con límite de fotogramas (pantalla.maximoFps = 30): los que sobran se saltan enteros, sin calcular ni pintar
+    if (calidad.saltar(ahora - this.instanteAnterior)) {
+      this.idFotograma = requestAnimationFrame(this.bucle);
+      return;
+    }
+    // Con el aviso de «Gira el móvil» puesto, el juego espera: nadie lo ve, y al girar sigue donde estaba
+    if (this.entrada.tactil.malGirado) {
+      this.instanteAnterior = ahora;
+      this.entrada.finDeFotograma();
+      this.idFotograma = requestAnimationFrame(this.bucle);
+      return;
+    }
+    // En calidad automática: si va a trompicones se baja un nivel; si va sobrado, se sube
+    calidad.medir((ahora - this.instanteAnterior) / 1000);
 
     // 1. Calcular el delta time
     const dtReal = Math.min((ahora - this.instanteAnterior) / 1000, DT_MAXIMO);

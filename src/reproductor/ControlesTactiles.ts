@@ -63,54 +63,32 @@ export function esPantallaTactil(): boolean {
   return typeof window !== 'undefined' && (window.matchMedia?.('(pointer: coarse)').matches || 'ontouchstart' in window);
 }
 
-/** Los estilos de los botones táctiles. */
-export const ESTILOS_TACTILES = `.controles-tactiles { position: fixed; inset: auto 0 0 0; height: 0; z-index: 10; user-select: none; -webkit-user-select: none; touch-action: none; } .controles-tactiles button { position: fixed; border: 2px solid rgba(255,255,255,.55); background: rgba(20,24,40,.45); color: #fff; font: bold 20px system-ui, sans-serif; border-radius: 16px; width: 64px; height: 64px; touch-action: none; } .controles-tactiles button.pulsado { background: rgba(255,255,255,.35); } .controles-tactiles button.accion { border-radius: 50%; width: 72px; height: 72px; font-size: 15px; } .controles-tactiles.en-caja, .controles-tactiles.en-caja button { position: absolute; }`;
+/** Los estilos de los controles en pantalla (los mismos para los automáticos y para los que pone el juego). */
+export { ESTILOS_TACTILES } from '../motor/Tactil';
 
 const FLECHAS = { arriba: '▲', abajo: '▼', izquierda: '◀', derecha: '▶' };
 
-/** Pone los botones en la página. Devuelve el contenedor (o null si el juego no usa teclas). */
-export function ponerControlesTactiles(entrada: Entrada, proyecto: DefProyecto, dentroDe: HTMLElement | null = null): HTMLElement | null {
+/**
+ * Pone los botones que hacen falta para las teclas que usa el juego: una cruceta abajo a la
+ * izquierda y los de acción abajo a la derecha. Devuelve cuántos ha puesto.
+ *
+ * Son «automáticos»: si el script del juego pone sus propios controles (tactil.joystick(),
+ * tactil.boton()...), estos se quitan solos. Y, como todos los controles en pantalla, solo se
+ * ven cuando se juega con el dedo.
+ */
+export function ponerControlesTactiles(entrada: Entrada, proyecto: DefProyecto): number {
+  const t = entrada.tactil;
+  // Si el juego ya ha puesto los suyos (en «cuando empieza»), no se añade nada
+  if (t.conControlesPropios) return 0;
   const teclas = teclasDelJuego(proyecto);
-  if (!Object.keys(teclas.direcciones).length && !teclas.acciones.length) return null;
-  const capa = document.createElement('div');
-  // En el editor van DENTRO de la vista del juego (no pegados a la ventana entera)
-  capa.className = `controles-tactiles${dentroDe ? ' en-caja' : ''}`;
-  // Los estilos van en la página del juego exportado (exportar.ts), con la política de
-  // seguridad (CSP). Si no están (en el editor, en los tests), se ponen aquí como texto.
-  if (!document.querySelector('style[data-controles-tactiles]')) {
-    const estilo = document.createElement('style');
-    estilo.dataset.controlesTactiles = '';
-    estilo.textContent = ESTILOS_TACTILES;
-    document.head.appendChild(estilo);
-  }
-  const boton = (texto: string, id: string, pulsa: string[], estilo: Partial<CSSStyleDeclaration>, clase = '') => {
-    const b = document.createElement('button');
-    b.textContent = texto;
-    b.className = clase;
-    b.setAttribute('aria-label', pulsa.join(' + '));
-    Object.assign(b.style, estilo);
-    const abajo = (e: Event) => {
-      e.preventDefault();
-      b.classList.add('pulsado');
-      pulsa.forEach((t, i) => entrada.pulsarVirtual(`tactil:${id}:${i}`, t));
-    };
-    const arriba = (e: Event) => {
-      e.preventDefault();
-      b.classList.remove('pulsado');
-      pulsa.forEach((_, i) => entrada.soltarVirtual(`tactil:${id}:${i}`));
-    };
-    b.addEventListener('pointerdown', abajo);
-    for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, arriba);
-    capa.appendChild(b);
-  };
-  const sitio = { arriba: { left: '84px', bottom: '160px' }, abajo: { left: '84px', bottom: '16px' }, izquierda: { left: '12px', bottom: '88px' }, derecha: { left: '156px', bottom: '88px' } };
+  let puestos = 0;
+  const sitio = { arriba: { dx: 116, dy: 192 }, abajo: { dx: 116, dy: 48 }, izquierda: { dx: 44, dy: 120 }, derecha: { dx: 188, dy: 120 } };
   for (const [d, pulsa] of Object.entries(teclas.direcciones) as ['arriba' | 'abajo' | 'izquierda' | 'derecha', string[]][]) {
-    boton(FLECHAS[d], d, pulsa, sitio[d]);
+    if (t.boton(d, pulsa, { texto: FLECHAS[d], clase: 'flecha', sitio: { x: 0, y: 0, ...sitio[d] }, automatico: true })) puestos++;
   }
-  // Los de acción, en dos filas desde la esquina de abajo a la derecha
-  teclas.acciones.forEach((t, i) => {
-    boton(t === 'espacio' ? '⎵' : t, t, [t], { right: `${16 + (i % 3) * 84}px`, bottom: `${20 + Math.floor(i / 3) * 84}px` }, 'accion');
+  // Los de acción, en filas de tres desde la esquina de abajo a la derecha
+  teclas.acciones.forEach((tecla, i) => {
+    if (t.boton(tecla, [tecla], { texto: tecla === 'espacio' ? '⎵' : tecla, sitio: { x: 1, y: 0, dx: -(52 + (i % 3) * 84), dy: 56 + Math.floor(i / 3) * 84 }, automatico: true })) puestos++;
   });
-  (dentroDe ?? document.body).appendChild(capa);
-  return capa;
+  return puestos;
 }

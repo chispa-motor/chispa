@@ -2,7 +2,7 @@
 
 > Este archivo se genera solo con `npm run manual`, a partir de la API de verdad (no lo cambies a mano: cambia `src/chispa/api/curso.ts`). Un test ejecuta cada ejemplo, cada ejercicio y cada mini proyecto para comprobar que funcionan.
 
-Un curso por niveles para aprender a programar juegos con Chispa, aunque no hayas programado nunca. Salen **todos** los comandos que existen (408), cada uno con qué hace, un ejemplo corto que funciona y el error que más se comete con él.
+Un curso por niveles para aprender a programar juegos con Chispa, aunque no hayas programado nunca. Salen **todos** los comandos que existen (434), cada uno con qué hace, un ejemplo corto que funciona y el error que más se comete con él.
 
 **Cómo usarlo:**
 
@@ -61,6 +61,9 @@ Una regla para todo el curso: en el código **no hacen falta tildes**. Se escrib
   - [Sonido con sitio y música que cambia](#sonido-con-sitio-y-musica-que-cambia)
   - [Pantallas listas y tabla de puntuaciones](#pantallas-listas-y-tabla-de-puntuaciones)
   - [Varios jugadores en el mismo ordenador](#varios-jugadores-en-el-mismo-ordenador)
+  - [Jugar con el dedo](#jugar-con-el-dedo)
+  - [Gestos, mirar y vibrar](#gestos-mirar-y-vibrar)
+  - [Calidad, batería y cómo se sujeta el móvil](#calidad-bateria-y-como-se-sujeta-el-movil)
   - [Depurar: encontrar los fallos](#depurar-encontrar-los-fallos)
 - [Nivel 5: Tu juego, de principio a fin](#nivel-5-tu-juego-de-principio-a-fin)
 - [Soluciones de los ejercicios](#soluciones)
@@ -7212,6 +7215,493 @@ cuando empieza:
 ```
 cuando empieza:
     escena.camara.encuadrar(yo, buscar("Jugador"))
+```
+
+### Jugar con el dedo
+
+En un móvil no hay teclado. Con tactil se pone una palanca y botones en la pantalla: la palanca hace de flechas y cada botón pulsa una tecla, así que el resto del juego no cambia. Solo se ven cuando se juega con el dedo. Si no pones ninguno, Chispa pone solo los botones de las teclas que usa tu juego.
+
+#### `tactil.joystick(lado)`
+
+Pone una palanca en la pantalla, a la "izquierda" (si no se dice) o a la "derecha".
+
+```
+cuando empieza:
+    tactil.joystick()
+
+cuando cada fotograma:
+    yo.moverConFlechas(300)
+```
+
+**Error típico:** Inventarse el lado: la palanca va a la "izquierda" o a la "derecha". Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    tactil.joystick("abajo")
+```
+
+#### `tactil.boton("nombre", "tecla")`
+
+Pone un botón en la pantalla con ese nombre (12 letras como mucho).
+
+```
+cuando empieza:
+    tactil.boton("Saltar", "espacio")
+
+cuando se pulsa "espacio":
+    mostrar("salto")
+```
+
+**Error típico:** Escribir mal la tecla: Chispa dice cuál se parece. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    tactil.boton("Saltar", "espasio")
+```
+
+#### `tactil.pulsado("nombre")`
+
+Verdadero mientras se tiene el dedo en ese botón.
+
+```
+cuando empieza:
+    tactil.boton("Fuego")
+
+cuando cada fotograma:
+    si tactil.pulsado("Fuego"):
+        mostrar("fuego")
+```
+
+**Error típico:** Preguntar por un botón que no se ha puesto: primero tactil.boton("Fuego"). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando cada fotograma:
+    si tactil.pulsado("Fuego"):
+        mostrar("fuego")
+```
+
+#### `tactil.sePulso("nombre")`
+
+Verdadero solo en el fotograma en que se toca ese botón (una vez por toque).
+
+```
+cuando empieza:
+    tactil.boton("Fuego")
+
+cuando cada fotograma:
+    si tactil.sePulso("Fuego"):
+        mostrar("¡pum!")
+```
+
+**Error típico:** Preguntarlo en cuando empieza: solo se mira una vez. Tiene que ir en cuando cada fotograma. Esto no da error: funciona, pero no hace lo que querías.
+
+```
+cuando empieza:
+    tactil.boton("Fuego")
+    si tactil.sePulso("Fuego"):
+        mostrar("¡pum!")
+```
+
+#### `tactil.seSolto("nombre")`
+
+Verdadero solo en el fotograma en que se levanta el dedo de ese botón.
+
+```
+cuando empieza:
+    tactil.boton("Cargar")
+
+cuando cada fotograma:
+    si tactil.seSolto("Cargar"):
+        mostrar("¡suelta!")
+```
+
+**Error típico:** Olvidar el nombre del botón. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    tactil.boton("Cargar")
+
+cuando cada fotograma:
+    si tactil.seSolto():
+        mostrar("¡suelta!")
+```
+
+#### `tactil.x`
+
+Cuánto está inclinada la palanca a los lados: de -1 (izquierda) a 1 (derecha).
+
+```
+cuando empieza:
+    tactil.joystick("izquierda", falso)
+
+cuando cada fotograma:
+    yo.x += tactil.x * 300 * delta
+```
+
+**Error típico:** Intentar cambiarla: la inclinación de la palanca solo se lee. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando cada fotograma:
+    tactil.x = 1
+```
+
+#### `tactil.y`
+
+Cuánto está inclinada la palanca arriba o abajo: de -1 (abajo) a 1 (arriba).
+
+```
+cuando empieza:
+    tactil.joystick("izquierda", falso)
+
+cuando cada fotograma:
+    yo.y += tactil.y * 300 * delta
+```
+
+**Error típico:** Restarla: tactil.y ya es positiva hacia ARRIBA, como la Y de Chispa. Restando, va al revés. Esto no da error: funciona, pero no hace lo que querías.
+
+```
+cuando cada fotograma:
+    yo.y -= tactil.y * 300 * delta
+```
+
+#### `tactil.mover("nombre", x, y)`
+
+Pone un control ("joystick" o el nombre de un botón) en un sitio de la pantalla: x de 0 (izquierda) a 100 (derecha) e y de 0 (abajo) a 100 (arriba).
+
+```
+cuando empieza:
+    tactil.boton("Saltar", "espacio")
+    tactil.mover("Saltar", 85, 20)
+```
+
+**Error típico:** Darlo en píxeles: el sitio va de 0 a 100 (un tanto por ciento de la pantalla). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    tactil.boton("Saltar", "espacio")
+    tactil.mover("Saltar", 800, 400)
+```
+
+#### `tactil.quitar("nombre")`
+
+Quita un control ("joystick" o un botón).
+
+```
+cuando empieza:
+    tactil.boton("Saltar", "espacio")
+    tactil.quitar("Saltar")
+```
+
+**Error típico:** Quitar un botón que no existe: Chispa dice cuáles hay. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    tactil.quitar("Saltar")
+```
+
+#### `tactil.colocar()`
+
+Abre el modo colocar: quien juega arrastra cada control a donde le venga bien y pulsa «Listo».
+
+```
+cuando empieza:
+    tactil.joystick()
+
+cuando se pulsa "c":
+    tactil.colocar()
+```
+
+**Error típico:** Ponerlo en cada fotograma: el modo colocar no se podría cerrar nunca. Esto no da error: funciona, pero no hace lo que querías.
+
+```
+cuando cada fotograma:
+    tactil.colocar()
+```
+
+#### `tactil.mostrar`
+
+Cuándo se ven los controles: "auto" (solo cuando se juega con el dedo: lo normal), "siempre" o "nunca".
+
+```
+cuando empieza:
+    tactil.joystick()
+    tactil.mostrar = "siempre"
+```
+
+**Error típico:** Darle verdadero o falso: es "auto", "siempre" o "nunca". Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    tactil.mostrar = verdadero
+```
+
+#### `tactil.tamano`
+
+El tamaño de los controles: 1 = normal, de 0.5 (la mitad) a 2 (el doble).
+
+```
+cuando empieza:
+    tactil.joystick()
+    tactil.tamano = 1.3
+```
+
+**Error típico:** Darlo en píxeles: 1 es el tamaño normal, y va de 0.5 a 2. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    tactil.tamano = 80
+```
+
+#### `tactil.opacidad`
+
+Cuánto se ven los controles: de 0.1 (casi nada) a 1 (del todo).
+
+```
+cuando empieza:
+    tactil.joystick()
+    tactil.opacidad = 0.4
+```
+
+**Error típico:** Ponerla a 0: no se verían. Va de 0.1 a 1 (para quitarlos, tactil.mostrar = "nunca"). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    tactil.opacidad = 0
+```
+
+#### `tactil.hay`
+
+Verdadero si el aparato se maneja con el dedo (un móvil, una tableta) o se está tocando la pantalla ahora.
+
+```
+cuando empieza:
+    si tactil.hay:
+        mostrar("con el dedo")
+    sino:
+        mostrar("con teclado")
+```
+
+**Error típico:** Intentar cambiarlo: lo dice el aparato, solo se lee. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    tactil.hay = verdadero
+```
+
+### Gestos, mirar y vibrar
+
+Además de botones, el dedo hace gestos (un toque, deslizar, pellizcar) y puede arrastrar por la pantalla para mirar o apuntar. Y el móvil puede vibrar.
+
+#### `tactil.gesto`
+
+El gesto que se ha hecho con el dedo en este fotograma: "toque", "doble" (dos toques seguidos), "largo" (dedo quieto), "arriba", "abajo", "izquierda" o "derecha" (deslizar).
+
+```
+cuando cada fotograma:
+    si tactil.gesto == "arriba":
+        mostrar("deslizar hacia arriba")
+```
+
+**Error típico:** Inventarse el gesto: son "toque", "doble", "largo", "arriba", "abajo", "izquierda" y "derecha". Esto no da error: funciona, pero no hace lo que querías.
+
+```
+cuando cada fotograma:
+    si tactil.gesto == "saltar":
+        mostrar("salto")
+```
+
+#### `tactil.pellizco`
+
+Pellizcar con dos dedos: cuánto se han separado en este fotograma.
+
+```
+cuando cada fotograma:
+    escena.camara.zoom = escena.camara.zoom * tactil.pellizco
+```
+
+**Error típico:** Poner el zoom IGUAL al pellizco: vale 1 casi siempre (nadie pellizca). Hay que multiplicar. Esto no da error: funciona, pero no hace lo que querías.
+
+```
+cuando cada fotograma:
+    escena.camara.zoom = tactil.pellizco
+```
+
+#### `tactil.dedos`
+
+Cuántos dedos están tocando la pantalla del juego ahora.
+
+```
+cuando cada fotograma:
+    si tactil.dedos == 2:
+        mostrar("dos dedos")
+```
+
+**Error típico:** Ponerle paréntesis: es un número, no una orden. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando cada fotograma:
+    si tactil.dedos():
+        mostrar("toca")
+```
+
+#### `tactil.toques`
+
+Dónde está cada dedo que toca la pantalla, en el mundo: una lista de vectores (vacía si no hay ninguno).
+
+```
+cuando cada fotograma:
+    para cada dedo en tactil.toques:
+        dibujar.circulo(dedo.x, dedo.y, 30, "amarillo")
+```
+
+**Error típico:** Pedirle la x a la lista entera: hay que recorrerla (para cada dedo en ...) o coger uno: tactil.toques[1].x Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando cada fotograma:
+    mostrar(tactil.toques.x)
+```
+
+#### `tactil.mirar()`
+
+Activa «arrastrar para mirar»: lo que se mueve el dedo por la pantalla (fuera de los controles) se lee en tactil.miraX y tactil.miraY.
+
+```
+cuando empieza:
+    tactil.mirar()
+
+cuando cada fotograma:
+    yo.rotacion -= tactil.miraX
+```
+
+**Error típico:** Olvidar tactil.mirar(): sin activarlo, miraX vale siempre 0. Esto no da error: funciona, pero no hace lo que querías.
+
+```
+cuando cada fotograma:
+    yo.rotacion -= tactil.miraX
+```
+
+#### `tactil.miraX`
+
+Con tactil.mirar(): cuánto se ha movido el dedo a los lados en este fotograma, en píxeles del juego (positivo = a la derecha).
+
+```
+cuando empieza:
+    tactil.mirar()
+
+cuando cada fotograma:
+    escena.camara.x -= tactil.miraX
+```
+
+**Error típico:** Leerlo en cuando empieza: es lo que se mueve el dedo en CADA fotograma. Esto no da error: funciona, pero no hace lo que querías.
+
+```
+cuando empieza:
+    tactil.mirar()
+    escena.camara.x -= tactil.miraX
+```
+
+#### `tactil.miraY`
+
+Con tactil.mirar(): cuánto se ha movido el dedo arriba o abajo en este fotograma (positivo = hacia arriba).
+
+```
+cuando empieza:
+    tactil.mirar()
+
+cuando cada fotograma:
+    escena.camara.y -= tactil.miraY
+```
+
+**Error típico:** Intentar cambiarlo: solo se lee. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando cada fotograma:
+    tactil.miraY = 0
+```
+
+#### `tactil.vibrar(segundos)`
+
+Hace vibrar el móvil (0,1 segundos si no se dice; como mucho 5).
+
+```
+cuando se pulsa "espacio":
+    tactil.vibrar(0.2)
+```
+
+**Error típico:** Pedir un minuto: se puede vibrar 5 segundos como mucho. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    tactil.vibrar(60)
+```
+
+### Calidad, batería y cómo se sujeta el móvil
+
+Un móvil barato no puede pintar tanto como un ordenador, y pintar gasta batería. Chispa adapta la calidad sola; con estos datos se decide desde el juego (también están en el inspector > Proyecto).
+
+#### `pantalla.calidad`
+
+La calidad con la que se pinta el juego: "auto" (la que aguante el aparato: si va a trompicones se baja sola, y si va sobrado vuelve a subir), "alta", "media" o "baja".
+
+```
+cuando empieza:
+    pantalla.calidad = "baja"
+```
+
+**Error típico:** Escribirla mal: es "auto", "alta", "media" o "baja" (Chispa propone la parecida). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    pantalla.calidad = "bajo"
+```
+
+#### `pantalla.nivelCalidad`
+
+La calidad que hay puesta ahora mismo: "alta", "media" o "baja" (con pantalla.calidad = "auto" puede ir cambiando).
+
+```
+cuando empieza:
+    pantalla.calidad = "media"
+    mostrar(pantalla.nivelCalidad)
+```
+
+**Error típico:** Intentar cambiarla: solo se lee. La que se cambia es pantalla.calidad. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    pantalla.nivelCalidad = "baja"
+```
+
+#### `pantalla.maximoFps`
+
+Cuántos fotogramas por segundo se pintan como mucho (0 = los que dé la pantalla).
+
+```
+cuando empieza:
+    pantalla.maximoFps = 30
+```
+
+**Error típico:** Pedir muy pocos: va de 15 a 240 (0 = sin límite). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    pantalla.maximoFps = 5
+```
+
+#### `pantalla.orientacion`
+
+Cómo hay que tener el móvil para jugar: "horizontal" (tumbado), "vertical" (de pie) o "cualquiera".
+
+```
+cuando empieza:
+    pantalla.orientacion = "horizontal"
+```
+
+**Error típico:** Inventarse el valor: es "horizontal", "vertical" o "cualquiera". Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    pantalla.orientacion = "tumbado"
 ```
 
 ### Depurar: encontrar los fallos

@@ -19,6 +19,7 @@
  * de escena y al reiniciar. Así "pasar al nivel 2" no pierde los puntos. Para
  * empezar de cero, un script les da su valor inicial en "cuando empieza".
  */
+import { calidad } from '../motor/Calidad';
 import { DatosJuego, instalarAPIMotor, type ContextoJuego } from '../chispa/api/motor';
 import { Interprete } from '../chispa/ejecucion/interprete';
 import { ScriptChispa } from '../chispa/ScriptChispa';
@@ -162,6 +163,10 @@ export class JuegoEnMarcha implements ContextoJuego {
     // Cada partida empieza con azar de verdad (la semilla de la anterior no se queda)
     ponerSemilla(null);
     declararLetras(Object.keys(proyecto.letras ?? {}));
+    // Los ajustes para móviles: calidad (automática si no se dice), límite de fotogramas y cómo hay que tener el aparato
+    calidad.maximoFps = proyecto.maximoFps ?? 0;
+    calidad.modo = proyecto.calidad ?? 'auto';
+    if (motor.entrada.tactil) motor.entrada.tactil.orientacion = proyecto.orientacion ?? 'cualquiera';
     // Los sonidos hechos en el editor y las canciones se convierten en sonido ahora (en el proyecto solo van sus números y sus notas)
     const conAudio = motor.sonido.hayAudio;
     // Lo que no cabe en el tope de audio se queda en silencio (ver `audioQueCabe`)
