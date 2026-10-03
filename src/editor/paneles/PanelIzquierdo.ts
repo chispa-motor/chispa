@@ -25,6 +25,7 @@ import { CATEGORIAS_BIBLIOTECA, buscarEnBiblioteca, type CategoriaBiblioteca } f
 import { miniatura } from '../interfaz/iconosFormas';
 import { abrirEditorParticulas } from '../recursos/EditorParticulas';
 import { botonIcono, h, icono, rellenar } from '../interfaz/dom';
+import { elegirArchivos } from '../Almacen';
 import { conMenu, type OpcionMenu } from '../interfaz/menu';
 import { confirmar, notificar, pedirTexto } from '../interfaz/dialogos';
 import { abrirEditorSonidos } from '../recursos/EditorSonidos';
@@ -462,12 +463,11 @@ export class PanelIzquierdo {
 
   /** Abre el selector de archivos e importa los elegidos. */
   private importar(tipos: string): void {
-    const entrada = h('input', { type: 'file', accept: tipos, multiple: true });
-    entrada.addEventListener('change', async () => {
-      const m = resumenImportar(await importarArchivos(this.estado, entrada.files ?? []));
+    // (en un móvil, «image/*» abre la galería de fotos y la cámara, y «audio/*», los sonidos y la grabadora)
+    void elegirArchivos(tipos, true).then(async (archivos) => {
+      const m = resumenImportar(await importarArchivos(this.estado, archivos));
       if (m) notificar(m.texto, m.tipo);
     });
-    entrada.click();
   }
 
   /** Cambia el nombre de un recurso (y en todos los sitios donde se usa, también en el código). */

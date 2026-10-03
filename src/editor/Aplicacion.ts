@@ -31,7 +31,7 @@ import { elegirPlantilla } from './plantillas/elegirPlantilla';
 import { hacerPortada } from './exportar/portada';
 import { cuantasEstampas, usarEstampas } from '../motor/Estampas';
 import { proyectoVacio } from '../proyecto/formato';
-import { cargarAutomatico, descargar, elegirArchivo, guardarAutomatico, nombreDeArchivo } from './Almacen';
+import { borrarDeMisProyectos, cargarAutomatico, cargarDeMisProyectos, compartir, descargar, elegirArchivo, guardarAutomatico, guardarEnMisProyectos, misProyectos, nombreDeArchivo, pedirQueNoSeBorre, sePuedeCompartir } from './Almacen';
 import { EditorCodigo } from './codigo/EditorCodigo';
 import { EstadoEditor } from './estado/EstadoEditor';
 import { VistaEscena } from './escena/VistaEscena';
@@ -146,6 +146,14 @@ export class Aplicacion {
     this.errores = this.inferior.revisar();
     this.atajos();
     window.addEventListener('beforeunload', () => void guardarAutomatico(e.aJSON()));
+    // En un móvil la página no se «cierra»: se manda al fondo y el sistema la mata cuando quiere, sin avisar.
+    // Así que se guarda en cuanto deja de verse (al cambiar de app, al apagar la pantalla, al girar a otra pestaña)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden' && this.cambioSinGuardarDesde !== null) void this.guardarEnNavegador();
+    });
+    window.addEventListener('pagehide', () => {
+      if (this.cambioSinGuardarDesde !== null) void this.guardarEnNavegador();
+    });
   }
 
   /**
@@ -234,6 +242,8 @@ export class Aplicacion {
         this.editorCodigo.sincronizar();
       },
       hayErrores: () => [...revisarProyecto(this.estado.proyecto).porArchivo.values()].flat().some((d) => d.gravedad === 'error'),
+      tactil: () => this.dispositivo.tactil,
+      abrirCajon: (c) => this.dispositivo.disposicion !== 'escritorio' && this.abrirCajon(c),
     }, () => (this.tutorial = null));
   }
 
@@ -382,7 +392,9 @@ export class Aplicacion {
     const r = boton.getBoundingClientRect();
     abrirMenu(r.left, r.bottom + 4, [
       { texto: 'Proyecto nuevo', icono: 'nuevo', alPulsar: () => void this.nuevo() },
-      { texto: 'Abrir un proyecto', icono: 'abrir', ayuda: 'Abre un archivo .chispa.json', alPulsar: () => void this.abrirArchivo() },
+      { texto: 'Mis proyectos', icono: 'carpeta', ayuda: 'Los proyectos guardados en este aparato (se guardan solos)', alPulsar: () => void this.abrirMisProyectos() },
+      { texto: 'Abrir un archivo', icono: 'abrir', ayuda: 'Abre un archivo .chispa.json', alPulsar: () => void this.abrirArchivo() },
+      sePuedeCompartir() ? { texto: 'Compartir o guardar copia', icono: 'exportar', ayuda: 'Manda el archivo del proyecto por el menú de compartir: guardarlo en Archivos o en Drive, enviarlo...', alPulsar: () => void this.compartirProyecto() } : null,
       { texto: 'Guardar (descargar)', icono: 'guardar', ayuda: 'Descarga el proyecto como archivo .chispa.json', alPulsar: () => this.descargarProyecto() },
       { texto: 'Exportar el juego', icono: 'exportar', alPulsar: () => void this.exportar() },
       { texto: 'itch.io en un toque', icono: 'estrella', alPulsar: () => void this.exportar('itch') },
@@ -439,6 +451,7 @@ export class Aplicacion {
       h('div', { class: 'marca' }, icono('estrella', 20), h('span', {}, 'Chispa')),
       h('div', { class: 'grupo-barra' },
         botonIcono('nuevo', 'Proyecto nuevo', () => this.nuevo(), 'Nuevo'),
+        botonIcono('carpeta', 'Mis proyectos: los que están guardados en este navegador (se guardan solos)', () => void this.abrirMisProyectos(), 'Mis proyectos', 'boton-mis-proyectos'),
         botonIcono('abrir', 'Abrir un proyecto (.chispa.json)', () => this.abrirArchivo(), 'Abrir'),
         botonIcono('guardar', 'Descargar el proyecto como archivo .chispa.json (Ctrl+S)', () => this.descargarProyecto(), 'Guardar'),
         botonIcono('exportar', 'Exportar el juego como una página web que funciona sola', () => this.exportar(), 'Exportar'),
@@ -610,11 +623,25 @@ export class Aplicacion {
     this.temporizadorGuardado = window.setTimeout(() => void this.guardarEnNavegador(), espera);
   }
   private cambioSinGuardarDesde: number | null = null;
+  /** El proyecto abierto ya tiene su copia en «Mis proyectos» (se sigue actualizando aunque se deshaga todo). */
+  private enMisProyectos = false;
 
   async guardarEnNavegador(avisar = false): Promise<void> {
     try {
       this.cambioSinGuardarDesde = null;
-      await guardarAutomatico(this.estado.aJSON());
+      // (todo lo que hay que saber del proyecto se mira AHORA: mientras se guarda, puede abrirse otro)
+      const json = this.estado.aJSON();
+      const id = this.estado.proyecto.id;
+      // Su copia en «Mis proyectos» (el ejemplo sin tocar no se guarda: no es de nadie)
+      const aMisProyectos = this.estado.modificado || this.recuperado || this.enMisProyectos;
+      const primeraVez = aMisProyectos && !this.enMisProyectos;
+      if (aMisProyectos) this.enMisProyectos = true;
+      await guardarAutomatico(json);
+      if (aMisProyectos) {
+        await guardarEnMisProyectos(json);
+        if (primeraVez) void pedirQueNoSeBorre();
+      }
+      if (this.estado.proyecto.id !== id) return;
       this.guardadoEn = Date.now();
       this.dibujarBarra();
       if (avisar) notificar('Guardado en este navegador', 'ok');
@@ -626,11 +653,67 @@ export class Aplicacion {
   private async nuevo(): Promise<void> {
     const proyecto = await elegirPlantilla(true);
     if (!proyecto) return;
+    // Lo que había se guarda (sin esperar: se guarda tal como está ahora) y se abre el nuevo
+    void this.guardarEnNavegador();
     this.parar();
     this.estado.abrir(proyecto);
+    this.recuperado = false;
+    this.enMisProyectos = false;
     this.vistaEscena.encuadrar();
     this.inferior.limpiar();
     notificar(`Proyecto nuevo: ${this.estado.proyecto.nombre}. Pulsa «Ejecutar» (F5) para probarlo.`, 'ok');
+  }
+
+  /**
+   * MIS PROYECTOS: los proyectos guardados en este navegador (se guardan solos). Para tener varios
+   * juegos a medias sin descargar ni abrir archivos, que en un móvil es incómodo.
+   */
+  async abrirMisProyectos(): Promise<void> {
+    await this.guardarEnNavegador();
+    const cuerpo = h('div', { class: 'mis-proyectos' });
+    let cerrar = () => {};
+    const tamano = (n: number) => (n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
+    const pintar = async () => {
+      const lista = await misProyectos();
+      const actual = this.estado.proyecto.id;
+      rellenar(cuerpo,
+        h('p', { class: 'nota' }, 'Se guardan solos en este navegador, en este aparato. Para llevarte uno a otro sitio o tener una copia segura, ábrelo y usa «Guardar».'),
+        lista.length ? h('div', { class: 'lista-mis-proyectos' }, lista.map((p) =>
+          h('div', { class: `fila-mi-proyecto ${p.id === actual ? 'actual' : ''}`, 'data-proyecto': p.id },
+            h('button', { class: 'abrir-mi-proyecto', title: p.id === actual ? 'Es el que tienes abierto' : `Abrir «${p.nombre}»`, onclick: async () => {
+              if (p.id === actual) return cerrar();
+              const json = await cargarDeMisProyectos(p.id);
+              if (!json) return notificar('Ese proyecto ya no está guardado.', 'error');
+              try {
+                const datos = JSON.parse(json);
+                this.parar();
+                this.estado.abrir(datos);
+                this.recuperado = true;
+                this.enMisProyectos = true;
+                this.vistaEscena.encuadrar(false);
+                this.inferior.limpiar();
+                cerrar();
+                notificar(`Abierto: ${this.estado.proyecto.nombre}`, 'ok');
+              } catch (err) {
+                avisar('No he podido abrir el proyecto', err instanceof ErrorMotor ? `${err.message} ${err.pista ?? ''}` : 'Lo guardado está dañado.');
+              }
+            } },
+              h('strong', {}, p.nombre),
+              h('span', {}, `${p.id === actual ? 'Abierto ahora · ' : ''}${new Date(p.fecha).toLocaleString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} · ${tamano(p.tamano)}`),
+            ),
+            p.id === actual ? null : botonIcono('basura', `Borrar «${p.nombre}» de este navegador`, async () => {
+              if (!(await confirmar('Borrar proyecto', `¿Borrar «${p.nombre}» de este navegador? No se puede deshacer. (Si lo descargaste con «Guardar», ese archivo no se toca.)`, 'Borrar', true))) return;
+              await borrarDeMisProyectos(p.id);
+              void pintar();
+            }, undefined, 'peligro'),
+          ))) : h('p', {}, 'Todavía no hay ninguno. En cuanto cambies algo de un proyecto, aparecerá aquí.'),
+      );
+    };
+    await pintar();
+    cerrar = abrirDialogo('Mis proyectos', cuerpo, [
+      { texto: 'Abrir un archivo…', alPulsar: () => void this.abrirArchivo() },
+      { texto: 'Cerrar', clase: 'principal' },
+    ], 'dialogo-ancho');
   }
 
   private async abrirArchivo(): Promise<void> {
@@ -644,8 +727,12 @@ export class Aplicacion {
       const datos = JSON.parse(texto);
       this.parar();
       this.estado.abrir(datos);
+      // Un archivo abierto es trabajo de alguien: se guarda su copia en «Mis proyectos» sin esperar a que cambie algo
+      this.recuperado = true;
+      this.enMisProyectos = false;
       this.vistaEscena.encuadrar();
       this.inferior.limpiar();
+      void this.guardarEnNavegador();
       notificar(`Abierto: ${this.estado.proyecto.nombre}`, 'ok');
     } catch (err) {
       avisar('No he podido abrir el archivo', err instanceof ErrorMotor ? `${err.message} ${err.pista ?? ''}` : 'El archivo no es un proyecto de Chispa válido (debe ser un .chispa.json guardado desde el editor).');
@@ -657,6 +744,21 @@ export class Aplicacion {
     this.estado.marcarGuardado();
     void this.guardarEnNavegador();
     notificar('Proyecto descargado. Para abrirlo otra vez: botón «Abrir».', 'ok');
+  }
+
+  /**
+   * Móviles y tabletas: manda el archivo del proyecto por el menú de compartir del aparato (guardarlo
+   * en Archivos o en Drive, enviarlo por mensaje...). Si el aparato no sabe, se descarga como siempre.
+   */
+  async compartirProyecto(): Promise<void> {
+    // (.json a secas: hay aparatos que no dejan compartir archivos con una extensión que no conocen)
+    const nombre = nombreDeArchivo(this.estado.proyecto.nombre, '.chispa.json');
+    const r = await compartir(nombre, this.estado.aJSON(), 'application/json', this.estado.proyecto.nombre);
+    if (r === 'no') return this.descargarProyecto();
+    if (r === 'compartido') {
+      this.estado.marcarGuardado();
+      void this.guardarEnNavegador();
+    }
   }
 
   /** Exportar. Con un destino (el botón «itch.io»), va directo: descarga lo de ese sitio y enseña sus pasos. */

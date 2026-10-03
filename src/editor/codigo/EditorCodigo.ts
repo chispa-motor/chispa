@@ -39,6 +39,7 @@ import { coloresChispa, lenguajeChispa, sangriaChispa, sangriaEscritaAMano } fro
 import { fuenteAutocompletado } from './autocompletado';
 import { ayudaAlPasar, ayudaAlTocarCodigo, posicionEnDocumento, revisionEnVivo } from './ayudaYErrores';
 import { marcarParada, puntosDeParada } from './puntosDeParada';
+import { barraDeAtajos } from './barraAtajos';
 import type { Depurador } from '../../chispa/ejecucion/depurador';
 import { EditorBloques } from '../bloques/EditorBloques';
 import { desdeCodigo } from '../bloques/modelo';
@@ -112,6 +113,8 @@ interface Pestana {
   caja: HTMLElement;
   barra: HTMLElement;
   cajaCodigo: HTMLElement;
+  /** La barra de atajos para escribir con el dedo. */
+  atajos: HTMLElement;
   /** El editor de bloques (se crea la primera vez que se pasa a bloques). */
   bloques: EditorBloques | null;
 }
@@ -201,7 +204,10 @@ export class EditorCodigo {
         state: EditorState.create({ doc: this.estado.proyecto.scripts[archivo] ?? '', extensions: this.extensiones(nombre) }),
         parent: cajaCodigo,
       });
-      p = { vista, archivo: nombre, caja, barra, cajaCodigo, bloques: null };
+      // La barra de atajos para escribir con el dedo (solo se ve en móvil y tablet), justo debajo del código: encima del teclado
+      const atajos = barraDeAtajos(() => vista);
+      caja.append(atajos);
+      p = { vista, archivo: nombre, caja, barra, cajaCodigo, atajos, bloques: null };
       this.pestanas.set(archivo, p);
       // Si se guardó en modo bloques, se abre en bloques (si todavía se puede)
       if (this.estado.enBloques(archivo) && !this.aBloques(p)) this.estado.ponerEnBloques(archivo, false);
@@ -222,6 +228,7 @@ export class EditorCodigo {
       boton(true, 'Bloques', 'Ver y editar el script con bloques, como en Scratch (el código se escribe solo)'),
     );
     p.cajaCodigo.style.display = enBloques ? 'none' : '';
+    p.atajos.hidden = enBloques;
     if (p.bloques) p.bloques.elemento.style.display = enBloques ? '' : 'none';
   }
 

@@ -64,16 +64,17 @@ export function esPantallaTactil(): boolean {
 }
 
 /** Los estilos de los botones táctiles. */
-export const ESTILOS_TACTILES = `.controles-tactiles { position: fixed; inset: auto 0 0 0; height: 0; z-index: 10; user-select: none; -webkit-user-select: none; touch-action: none; } .controles-tactiles button { position: fixed; border: 2px solid rgba(255,255,255,.55); background: rgba(20,24,40,.45); color: #fff; font: bold 20px system-ui, sans-serif; border-radius: 16px; width: 64px; height: 64px; touch-action: none; } .controles-tactiles button.pulsado { background: rgba(255,255,255,.35); } .controles-tactiles button.accion { border-radius: 50%; width: 72px; height: 72px; font-size: 15px; }`;
+export const ESTILOS_TACTILES = `.controles-tactiles { position: fixed; inset: auto 0 0 0; height: 0; z-index: 10; user-select: none; -webkit-user-select: none; touch-action: none; } .controles-tactiles button { position: fixed; border: 2px solid rgba(255,255,255,.55); background: rgba(20,24,40,.45); color: #fff; font: bold 20px system-ui, sans-serif; border-radius: 16px; width: 64px; height: 64px; touch-action: none; } .controles-tactiles button.pulsado { background: rgba(255,255,255,.35); } .controles-tactiles button.accion { border-radius: 50%; width: 72px; height: 72px; font-size: 15px; } .controles-tactiles.en-caja, .controles-tactiles.en-caja button { position: absolute; }`;
 
 const FLECHAS = { arriba: '▲', abajo: '▼', izquierda: '◀', derecha: '▶' };
 
 /** Pone los botones en la página. Devuelve el contenedor (o null si el juego no usa teclas). */
-export function ponerControlesTactiles(entrada: Entrada, proyecto: DefProyecto): HTMLElement | null {
+export function ponerControlesTactiles(entrada: Entrada, proyecto: DefProyecto, dentroDe: HTMLElement | null = null): HTMLElement | null {
   const teclas = teclasDelJuego(proyecto);
   if (!Object.keys(teclas.direcciones).length && !teclas.acciones.length) return null;
   const capa = document.createElement('div');
-  capa.className = 'controles-tactiles';
+  // En el editor van DENTRO de la vista del juego (no pegados a la ventana entera)
+  capa.className = `controles-tactiles${dentroDe ? ' en-caja' : ''}`;
   // Los estilos van en la página del juego exportado (exportar.ts), con la política de
   // seguridad (CSP). Si no están (en el editor, en los tests), se ponen aquí como texto.
   if (!document.querySelector('style[data-controles-tactiles]')) {
@@ -110,6 +111,6 @@ export function ponerControlesTactiles(entrada: Entrada, proyecto: DefProyecto):
   teclas.acciones.forEach((t, i) => {
     boton(t === 'espacio' ? '⎵' : t, t, [t], { right: `${16 + (i % 3) * 84}px`, bottom: `${20 + Math.floor(i / 3) * 84}px` }, 'accion');
   });
-  document.body.appendChild(capa);
+  (dentroDe ?? document.body).appendChild(capa);
   return capa;
 }

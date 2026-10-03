@@ -40,7 +40,14 @@ export interface ContextoTutorial {
   escribirCodigo(archivo: string, codigo: string): void;
   /** ¿Hay errores en el código? */
   hayErrores(): boolean;
+  /** ¿Se maneja con el dedo? (entonces los pasos dicen «toca» y «con el dedo», no «haz clic» y «con el ratón») */
+  tactil?(): boolean;
+  /** Móvil y tablet: abre el cajón donde está lo que hay que tocar en este paso ('' = ninguno: la escena o el código). */
+  abrirCajon?(cajon: CajonDelPaso): void;
 }
+
+/** En móvil y tablet, en qué cajón está lo que pide un paso ('' = se ve sin abrir ninguno). */
+export type CajonDelPaso = '' | 'objetos' | 'propiedades' | 'juego';
 
 /** Lo que un paso quiere recordar (por ejemplo, dónde estaba la moneda al empezar el paso). */
 export type Memoria = Record<string, unknown>;
@@ -49,6 +56,10 @@ export interface PasoTutorial {
   titulo: string;
   /** El texto de la burbuja. Lo que va entre **asteriscos** sale en negrita. */
   texto: string;
+  /** El mismo texto para quien usa el dedo (si no se pone, vale `texto`). */
+  textoTactil?: string;
+  /** Móvil y tablet: el cajón que hay que tener abierto para ver lo resaltado. Por defecto, ninguno. */
+  cajon?: CajonDelPaso;
   /** Código para copiar (se enseña en la burbuja). */
   codigo?: string;
   /** Qué se resalta. null = nada (la burbuja sale en el centro). */
@@ -125,18 +136,22 @@ export const PASOS_TUTORIAL: PasoTutorial[] = [
   {
     titulo: 'Tu primer juego',
     texto: 'Vamos a hacer un juego pequeño: un personaje que anda y salta por un suelo y coge una moneda. Lo haces tú; yo te digo **dónde hacer clic** en cada momento. Son unos 5 minutos.',
+    textoTactil: 'Vamos a hacer un juego pequeño: un personaje que anda y salta por un suelo y coge una moneda. Lo haces tú; yo te digo **dónde tocar** en cada momento y te abro el panel que haga falta. Son unos 5 minutos.',
     siguiente: true,
   },
   {
     titulo: 'El jugador',
     texto: 'Todo lo que hay en un juego es un **objeto**. Añade un cuadrado: será tu jugador.',
     objetivo: botonAnadir('Cuadrado'),
+    cajon: 'objetos',
     hecho: (c) => !!objeto(c.estado, esCuadrado),
     hazloPorMi: (c) => c.anadir('rectangulo'),
   },
   {
     titulo: 'Ponle nombre',
     texto: 'En **Propiedades**, cambia su nombre: escribe **Jugador** y pulsa Intro. Con ese nombre lo encontrarás en el código.',
+    textoTactil: 'En **Propiedades**, toca su nombre, escribe **Jugador** y pulsa Intro en el teclado (o toca fuera). Con ese nombre lo encontrarás en el código.',
+    cajon: 'propiedades',
     objetivo: (r) => r.querySelector('.inspector .nombre-objeto'),
     alEmpezar: (c) => seleccionarSi(c.estado, esCuadrado),
     hecho: (c) => !!objeto(c.estado, llamado('Jugador')),
@@ -148,6 +163,7 @@ export const PASOS_TUTORIAL: PasoTutorial[] = [
   {
     titulo: 'Que caiga',
     texto: 'Activa la **Física** del Jugador (el interruptor de la derecha). Con física, cae, choca y puede saltar.',
+    cajon: 'propiedades',
     objetivo: (r) => seccionInspector(r, 'Física')?.querySelector('.interruptor') ?? null,
     alEmpezar: (c) => seleccionarSi(c.estado, llamado('Jugador')),
     hecho: (c) => !!objeto(c.estado, llamado('Jugador'))?.fisica,
@@ -162,12 +178,14 @@ export const PASOS_TUTORIAL: PasoTutorial[] = [
     titulo: 'Un suelo',
     texto: 'Sin suelo, el jugador caería para siempre. Añade un **mapa de casillas**: una rejilla donde se pintan suelos y paredes.',
     objetivo: botonAnadir('Mapa'),
+    cajon: 'objetos',
     hecho: (c) => !!objeto(c.estado, (o) => !!o.mapa),
     hazloPorMi: (c) => c.anadir('mapa'),
   },
   {
     titulo: 'Pinta el suelo',
     texto: 'Ya tienes el **pincel**. Mantén pulsada la tecla **Mayús** y arrastra por la parte de abajo de la pantalla del juego (el rectángulo de puntos), de lado a lado. Se pinta un rectángulo entero.',
+    textoTactil: 'Ya tienes el **pincel**. **Arrastra el dedo** por la parte de abajo de la pantalla del juego (el rectángulo de puntos), de lado a lado: se pinta una casilla por donde pasa. Con dos dedos mueves y acercas la vista.',
     objetivo: (r) => r.querySelector('.lienzo-escena'),
     alEmpezar: (c) => {
       seleccionarSi(c.estado, (o) => !!o.mapa);
@@ -182,6 +200,7 @@ export const PASOS_TUTORIAL: PasoTutorial[] = [
   {
     titulo: 'Vuelve a la flecha',
     texto: 'Para seguir colocando cosas, vuelve a la herramienta **Mover** (la flecha de la barra, o la tecla V).',
+    textoTactil: 'Para seguir colocando cosas, vuelve a la herramienta **Mover** (las flechas en cruz, la primera de la barra de la escena).',
     objetivo: (r) => r.querySelector('.barra-escena button[title^="Mover y seleccionar"]'),
     hecho: (c) => c.herramienta() === 'mover',
     hazloPorMi: (c) => c.ponerHerramienta('mover'),
@@ -190,12 +209,15 @@ export const PASOS_TUTORIAL: PasoTutorial[] = [
     titulo: 'Una moneda',
     texto: 'Añade un **círculo**: será la moneda que hay que coger.',
     objetivo: botonAnadir('Círculo'),
+    cajon: 'objetos',
     hecho: (c) => !!objeto(c.estado, esCirculo),
     hazloPorMi: (c) => c.anadir('circulo'),
   },
   {
     titulo: 'Llámala Moneda',
     texto: 'Cámbiale el nombre: escribe **Moneda** y pulsa Intro.',
+    textoTactil: 'Cámbiale el nombre: toca el nombre, escribe **Moneda** y pulsa Intro en el teclado (o toca fuera).',
+    cajon: 'propiedades',
     objetivo: (r) => r.querySelector('.inspector .nombre-objeto'),
     alEmpezar: (c) => seleccionarSi(c.estado, esCirculo),
     hecho: (c) => !!objeto(c.estado, llamado('Moneda')),
@@ -207,6 +229,7 @@ export const PASOS_TUTORIAL: PasoTutorial[] = [
   {
     titulo: 'Que se pueda atravesar',
     texto: 'Una moneda no es una pared: en **Colisión**, quita la marca de **sólido**. Así el jugador la atraviesa, pero el juego sabe cuándo la toca.',
+    cajon: 'propiedades',
     objetivo: (r) => r.querySelector('.inspector [data-ruta="colision.solido"]')?.closest('.campo-fila') ?? null,
     alEmpezar: (c) => seleccionarSi(c.estado, llamado('Moneda')),
     hecho: (c) => objeto(c.estado, llamado('Moneda'))?.colision?.solido === false,
@@ -218,6 +241,7 @@ export const PASOS_TUTORIAL: PasoTutorial[] = [
   {
     titulo: 'Colócala',
     texto: '**Arrastra** la moneda con el ratón a donde quieras: un poco por encima del suelo y a un lado del jugador, para cogerla de un salto.',
+    textoTactil: '**Arrastra** la moneda con el dedo a donde quieras: un poco por encima del suelo y a un lado del jugador, para cogerla de un salto.',
     objetivo: (r) => r.querySelector('.lienzo-escena'),
     alEmpezar: (c, m) => {
       const o = objeto(c.estado, llamado('Moneda'));
@@ -237,6 +261,8 @@ export const PASOS_TUTORIAL: PasoTutorial[] = [
   {
     titulo: 'Ahora, el código',
     texto: 'Lo que hace cada objeto se escribe en su **script**. Selecciona al **Jugador** en la lista de objetos.',
+    textoTactil: 'Lo que hace cada objeto se escribe en su **script**. Toca al **Jugador** en la lista de objetos.',
+    cajon: 'objetos',
     objetivo: (r) => filaObjeto(r, 'Jugador'),
     hecho: (c) => !!c.estado.seleccionado && llamado('Jugador')(c.estado.seleccionado),
     hazloPorMi: (c) => seleccionarSi(c.estado, llamado('Jugador')),
@@ -244,6 +270,8 @@ export const PASOS_TUTORIAL: PasoTutorial[] = [
   {
     titulo: 'Su script',
     texto: 'Pulsa **Crear script**: se abre el editor de código con un script para el Jugador.',
+    textoTactil: 'Toca **Crear script**: se abre el editor de código con un script para el Jugador.',
+    cajon: 'propiedades',
     objetivo: (r) => seccionInspector(r, 'Script')?.querySelector('button.principal') ?? null,
     alEmpezar: (c) => seleccionarSi(c.estado, llamado('Jugador')),
     hecho: (c) => {
@@ -258,6 +286,7 @@ export const PASOS_TUTORIAL: PasoTutorial[] = [
   {
     titulo: 'Escribe el código',
     texto: 'Borra lo que hay y escribe esto. Cada «cuando» es algo que pasa en el juego; lo de debajo (con sangría) es lo que se hace entonces. Mientras escribes, te sugiero palabras: acepta con Intro o Tab.',
+    textoTactil: 'Borra lo que hay y escribe esto. Cada «cuando» es algo que pasa en el juego; lo de debajo (con sangría) es lo que se hace entonces. La **barra de encima del teclado** tiene las palabras, los dos puntos, las comillas y la sangría. Si quieres ver el código entero mientras escribes, encoge esta burbuja con **–**.',
     codigo: CODIGO_JUGADOR,
     objetivo: (r) => r.querySelector('.zona-codigo .caja-script:not([style*="none"]) .cm-editor') ?? r.querySelector('.zona-codigo'),
     alEmpezar: (c) => {
@@ -280,6 +309,7 @@ export const PASOS_TUTORIAL: PasoTutorial[] = [
   {
     titulo: 'Vuelve a la escena',
     texto: 'Haz clic en la pestaña **Escena**, arriba, para volver a ver tus objetos.',
+    textoTactil: 'Toca la pestaña **Escena**, arriba (o el botón **Escena** de la barra de abajo), para volver a ver tus objetos.',
     objetivo: (r) => r.querySelector('.pestanas-centro .pestana'),
     hecho: (c) => c.estado.pestanaActiva === 'escena',
     hazloPorMi: (c) => c.estado.activarPestana('escena'),
@@ -288,12 +318,14 @@ export const PASOS_TUTORIAL: PasoTutorial[] = [
     titulo: 'Un marcador',
     texto: 'Añade un **texto**: enseñará los puntos. Los textos nuevos se quedan pegados a la pantalla, arriba a la izquierda.',
     objetivo: botonAnadir('Texto'),
+    cajon: 'objetos',
     hecho: (c) => !!objeto(c.estado, esTexto),
     hazloPorMi: (c) => c.anadir('texto'),
   },
   {
     titulo: 'Enséñale los puntos',
     texto: 'En **{ } Enseñar un dato…**, elige **juego.puntos**. El texto se actualizará solo mientras juegas, sin escribir nada de código.',
+    cajon: 'propiedades',
     objetivo: (r) => r.querySelector('.inspector .menu-datos'),
     alEmpezar: (c) => seleccionarSi(c.estado, esTexto),
     hecho: (c) => /\{\s*juego\.puntos\s*\}/.test(objeto(c.estado, esTexto)?.sprite?.texto ?? ''),
@@ -305,6 +337,7 @@ export const PASOS_TUTORIAL: PasoTutorial[] = [
   {
     titulo: '¡A jugar!',
     texto: 'Pulsa **Ejecutar** (o F5). El juego empieza a la derecha.',
+    textoTactil: 'Toca **Ejecutar** (el botón verde de arriba). El juego ocupa la pantalla.',
     objetivo: (r) => r.querySelector('.controles-juego .ejecutar'),
     hecho: (c) => c.juegoEnMarcha(),
     hazloPorMi: (c) => c.ejecutar(),
@@ -312,6 +345,8 @@ export const PASOS_TUTORIAL: PasoTutorial[] = [
   {
     titulo: 'Coge la moneda',
     texto: 'Haz clic en el juego y usa las **flechas** para andar y **espacio** para saltar. Cuando cojas la moneda, el marcador sube.',
+    textoTactil: 'Usa los **botones de la pantalla**: las flechas para andar y el botón redondo para saltar. Cuando cojas la moneda, el marcador sube.',
+    cajon: 'juego',
     objetivo: (r) => r.querySelector('.vista-juego'),
     hecho: (c) => Number(c.datoDelJuego('puntos') ?? 0) >= 1,
     siguiente: true,
@@ -319,6 +354,7 @@ export const PASOS_TUTORIAL: PasoTutorial[] = [
   {
     titulo: '¡Lo has hecho!',
     texto: 'Este juego es **tuyo**. Ideas para seguir: pon más monedas (selecciona una y pulsa Ctrl+D), cambia colores y tamaños en Propiedades, o mira **Guía > Recetas** abajo para aprender a disparar, poner enemigos o cambiar de nivel. Se guarda solo en este navegador; con **Guardar** te lo llevas en un archivo, y con **Exportar** lo publicas.',
+    textoTactil: 'Este juego es **tuyo**. Ideas para seguir: pon más monedas (deja el dedo sobre una y elige «Duplicar»), cambia colores y tamaños en Propiedades, o mira **Consola > Guía > Recetas** para aprender a disparar, poner enemigos o cambiar de nivel. Se guarda solo en este navegador; en el menú de arriba, con **Guardar** te lo llevas en un archivo, y con **Exportar** lo publicas.',
     siguiente: true,
   },
 ];

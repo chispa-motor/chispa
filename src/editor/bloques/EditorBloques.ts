@@ -18,7 +18,7 @@
  * Cada cambio vuelve a escribir el código del script (modelo.ts): el código
  * es lo que se guarda y lo que se ejecuta. «Ver el código» lo enseña al lado.
  */
-import { h, icono, rellenar } from '../interfaz/dom';
+import { botonIcono, h, icono, rellenar } from '../interfaz/dom';
 import { analizarSintaxis } from '../../chispa/sintaxis/parser';
 import { ACCIONES, DATOS_CON_BLOQUE, EVENTOS, accionPorId, aCodigo, datoPorObjetivo, type Accion, type Bloque, type ClaseEvento } from './modelo';
 
@@ -166,6 +166,12 @@ export class EditorBloques {
   /** Las listas que se ven (para saber dónde se suelta algo): el número va en data-lista. */
   private listas: Bloque[][] = [];
   private arrastre: Arrastre | null = null;
+  /**
+   * SIN ARRASTRAR (con el dedo, o con el teclado): al tocar un bloque se queda «en la mano», y
+   * entonces salen los SITIOS donde se puede poner; al tocar un sitio, se pone ahí.
+   */
+  private enMano: Arrastre | null = null;
+  private aviso = h('div', { class: 'aviso-bloques' });
   private hueco = h('div', { class: 'hueco-soltar' });
   private pasado: string[] = [];
   private futuro: string[] = [];
@@ -185,10 +191,13 @@ export class EditorBloques {
       this.paletaEl,
       h('div', { class: 'centro-bloques' },
         h('div', { class: 'barra-bloques' },
-          h('span', { class: 'nota', title: 'Arrastra bloques desde la izquierda. Para borrar uno, arrástralo a la paleta (o usa su ✕). Ctrl+Z deshace.' }, 'Arrastra desde la izquierda · para borrar, a la paleta · Ctrl+Z deshace'),
+          h('span', { class: 'nota', title: 'Toca un bloque de la paleta y luego el sitio donde lo quieres (o arrástralo con el ratón). Para moverlo, toca su cabecera. Para borrarlo, su ✕ (o arrástralo a la paleta).' }, 'Toca un bloque y luego dónde va · o arrástralo'),
           h('span', { class: 'espacio' }),
+          botonIcono('deshacer', 'Deshacer el último cambio en los bloques (Ctrl+Z)', () => this.deshacer(), undefined, 'deshacer-bloques'),
+          botonIcono('rehacer', 'Rehacer (Ctrl+Y)', () => this.rehacer(), undefined, 'rehacer-bloques'),
           verCodigo,
         ),
+        this.aviso,
         this.area,
       ),
       this.codigoEl,
@@ -209,6 +218,7 @@ export class EditorBloques {
     this.numerar(this.bloques);
     this.pasado = [];
     this.futuro = [];
+    this.enMano = null;
     this.dibujar();
   }
 
@@ -251,19 +261,117 @@ export class EditorBloques {
     this.alCambiar(codigo);
   }
 
-  /** Ctrl+Z / Ctrl+Y dentro de los bloques. */
+  /** Ctrl+Z / Ctrl+Y dentro de los bloques, y Escape para soltar lo que se tiene en la mano. */
   private teclas(e: KeyboardEvent): void {
+    if (e.key === 'Escape' && this.enMano) {
+      e.preventDefault();
+      e.stopPropagation();
+      return this.dejar();
+    }
     if (!(e.ctrlKey || e.metaKey) || (e.target as HTMLElement).tagName === 'INPUT') return;
     const k = e.key.toLowerCase();
-    const de = k === 'z' && !e.shiftKey ? this.pasado : k === 'y' || (k === 'z' && e.shiftKey) ? this.futuro : null;
-    const a = de === this.pasado ? this.futuro : this.pasado;
-    const foto = de?.pop();
-    if (!foto) return;
-    e.preventDefault();
+    const hecho = k === 'z' && !e.shiftKey ? this.deshacer() : k === 'y' || (k === 'z' && e.shiftKey) ? this.rehacer() : false;
+    if (hecho) e.preventDefault();
+  }
+
+  private recuperar(de: string[], a: string[]): boolean {
+    const foto = de.pop();
+    if (!foto) return false;
     a.push(JSON.stringify(this.bloques));
     this.bloques = JSON.parse(foto);
+    this.enMano = null;
     this.publicar();
     this.dibujar();
+    return true;
+  }
+
+  /** Deshace el último cambio en los bloques. Devuelve si había algo que deshacer. */
+  deshacer(): boolean {
+    return this.recuperar(this.pasado, this.futuro);
+  }
+
+  rehacer(): boolean {
+    return this.recuperar(this.futuro, this.pasado);
+  }
+
+  // ───────────────────────── Sin arrastrar: coger y poner ─────────────────────────
+
+  /** Coge un bloque (uno nuevo de la paleta, o uno del código para moverlo). Si ya se tenía ese, se suelta. */
+  coger(a: Arrastre): void {
+    const mismo = this.enMano && ((a.tipo === 'mover' && this.enMano.tipo === 'mover' && this.enMano.id === a.id) || (a.tipo === 'nuevo' && this.enMano.tipo === 'nuevo' && this.enMano.bloque === a.bloque));
+    if (mismo) return this.dejar();
+    // Con el código vacío solo hay un sitio: se pone sin preguntar
+    if (a.tipo === 'nuevo' && !this.bloques.length) {
+      this.arrastre = a;
+      this.soltar(this.bloques, 0);
+      this.arrastre = null;
+      return;
+    }
+    this.enMano = a;
+    this.dibujar();
+    this.dibujarPaleta();
+  }
+
+  /** Suelta lo que se tenía en la mano sin ponerlo en ningún sitio. */
+  dejar(): void {
+    if (!this.enMano) return;
+    this.enMano = null;
+    this.dibujar();
+    this.dibujarPaleta();
+  }
+
+  /** Pone lo que se tiene en la mano en esa lista, en esa posición. */
+  private ponerEn(lista: Bloque[], posicion: number): void {
+    const a = this.enMano;
+    if (!a) return;
+    this.enMano = null;
+    this.arrastre = a;
+    this.soltar(lista, posicion);
+    this.arrastre = null;
+    this.dibujarPaleta();
+  }
+
+  /** El bloque que se tiene en la mano para moverlo (o null). */
+  private get moviendo(): Bloque | null {
+    const a = this.enMano;
+    if (a?.tipo !== 'mover') return null;
+    const r = this.buscar(a.id);
+    return r ? r.lista[r.i] : null;
+  }
+
+  /** La franja de arriba que dice qué se tiene en la mano y qué se puede hacer con ello. */
+  private dibujarAviso(): void {
+    const a = this.enMano;
+    this.elemento.classList.toggle('colocando', !!a);
+    if (!a) return void rellenar(this.aviso);
+    const b = a.tipo === 'nuevo' ? a.bloque : this.moviendo;
+    rellenar(this.aviso,
+      h('span', { class: 'texto-aviso' }, a.tipo === 'nuevo' ? 'Toca el sitio donde va: ' : 'Toca el sitio adonde lo mueves: ', h('strong', {}, b ? this.textoDe(b) : '')),
+      h('span', { class: 'espacio' }),
+      a.tipo === 'mover' ? h('button', { class: 'boton', 'data-accion': 'duplicar', title: 'Pone una copia justo debajo', onclick: () => {
+        const r = this.buscar(a.id);
+        this.enMano = null;
+        if (r) this.cambiar(() => {
+          const copia = structuredClone(r.lista[r.i]);
+          this.numerar([copia]);
+          r.lista.splice(r.i + 1, 0, copia);
+        });
+        else this.dibujar();
+      } }, 'Duplicar') : null,
+      a.tipo === 'mover' ? h('button', { class: 'boton', 'data-accion': 'borrar', title: 'Quita este bloque (y lo que lleve dentro)', onclick: () => {
+        this.enMano = null;
+        this.cambiar(() => this.quitar(a.id));
+      } }, 'Borrar') : null,
+      h('button', { class: 'boton', 'data-accion': 'cancelar', title: 'No ponerlo en ningún sitio (Escape)', onclick: () => this.dejar() }, 'Cancelar'),
+    );
+  }
+
+  /** Un sitio donde se puede poner lo que se tiene en la mano. */
+  private sitio(lista: Bloque[], posicion: number): HTMLElement {
+    return h('button', { class: 'sitio-soltar', type: 'button', title: 'Ponerlo aquí', 'aria-label': 'Ponerlo aquí', onclick: (e: Event) => {
+      e.stopPropagation();
+      this.ponerEn(lista, posicion);
+    } }, '＋ aquí');
   }
 
   /** Busca un bloque por su id: la lista donde está y su posición. */
@@ -334,7 +442,17 @@ export class EditorBloques {
       ),
       h('div', { class: 'lista-paleta', style: `--color: ${cat.color}` },
         paletaPara(this.categoria, this.nombres?.() ?? null).map((b) => {
-          const el = h('div', { class: `bloque-paleta tipo-${b.tipo}`, draggable: 'true', style: `--color: ${CATEGORIAS.find((c) => c.id === categoriaDe(b))!.color}`, title: 'Arrástralo a tu código' }, this.textoDe(b));
+          const cogido = this.enMano?.tipo === 'nuevo' && JSON.stringify(this.enMano.bloque) === JSON.stringify(b);
+          const el = h('div', {
+            class: `bloque-paleta tipo-${b.tipo} ${cogido ? 'en-mano' : ''}`, draggable: 'true', role: 'button', tabindex: '0', style: `--color: ${CATEGORIAS.find((c) => c.id === categoriaDe(b))!.color}`,
+            title: 'Tócalo y luego toca el sitio de tu código donde va (o arrástralo)',
+            onclick: () => this.coger({ tipo: 'nuevo', bloque: b }),
+            onkeydown: (e: KeyboardEvent) => {
+              if (e.key !== 'Enter' && e.key !== ' ') return;
+              e.preventDefault();
+              this.coger({ tipo: 'nuevo', bloque: b });
+            },
+          }, this.textoDe(b));
           el.addEventListener('dragstart', (e) => this.empezarArrastre(e, { tipo: 'nuevo', bloque: b }));
           el.addEventListener('dragend', () => this.terminarArrastre());
           return el;
@@ -388,14 +506,25 @@ export class EditorBloques {
     const { lineaDe, codigo } = aCodigo(this.bloques);
     this.ultimaLineaDe = lineaDe;
     this.codigoEl.textContent = codigo;
+    this.dibujarAviso();
     rellenar(this.area, this.lista(this.bloques, true));
-    if (!this.bloques.length) this.area.append(h('p', { class: 'nota vacio-bloques' }, 'Todavía no hay bloques. Empieza arrastrando «cuando empieza» desde Eventos.'));
+    if (!this.bloques.length) this.area.append(h('p', { class: 'nota vacio-bloques' }, 'Todavía no hay bloques. Empieza tocando «cuando empieza» en Eventos (o arrástralo hasta aquí).'));
   }
 
   /** Una lista de bloques donde se pueden soltar otros. */
   private lista(bs: Bloque[], arriba = false): HTMLElement {
     const n = this.listas.push(bs) - 1;
-    const el = h('div', { class: `lista-bloques ${arriba ? 'arriba' : ''}`, 'data-lista': String(n) }, bs.map((b) => this.bloque(b)));
+    // Con un bloque en la mano: un sitio antes de cada bloque y otro al final (menos dentro del que se está moviendo,
+    // y menos los dos sitios que lo dejarían donde ya está)
+    const moviendo = this.moviendo;
+    const conSitios = !!this.enMano && !(moviendo && this.contiene(moviendo, bs));
+    const hijos: HTMLElement[] = [];
+    bs.forEach((b, i) => {
+      if (conSitios && b !== moviendo && bs[i - 1] !== moviendo) hijos.push(this.sitio(bs, i));
+      hijos.push(this.bloque(b));
+    });
+    if (conSitios && bs[bs.length - 1] !== moviendo) hijos.push(this.sitio(bs, bs.length));
+    const el = h('div', { class: `lista-bloques ${arriba ? 'arriba' : ''}`, 'data-lista': String(n) }, hijos);
     el.addEventListener('dragover', (e) => {
       if (!this.arrastre) return;
       e.preventDefault();
@@ -434,7 +563,12 @@ export class EditorBloques {
       this.empezarArrastre(e, { tipo: 'mover', id: b.id! });
     });
     cabeza.addEventListener('dragend', () => this.terminarArrastre());
-    const el = h('div', { class: `bloque tipo-${b.tipo}`, 'data-id': String(b.id), style: `--color: ${color}` }, cabeza);
+    // Tocar la cabecera (no un hueco ni un botón) coge el bloque para moverlo, duplicarlo o borrarlo
+    cabeza.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest('input, select, button')) return;
+      this.coger({ tipo: 'mover', id: b.id! });
+    });
+    const el = h('div', { class: `bloque tipo-${b.tipo} ${this.enMano?.tipo === 'mover' && this.enMano.id === b.id ? 'en-mano' : ''}`, 'data-id': String(b.id), style: `--color: ${color}` }, cabeza);
     if (b.tipo === 'si') {
       b.ramas.forEach((r, i) => {
         if (i > 0) el.append(h('div', { class: 'cabeza-bloque intermedia' }, 'sino si', this.campo(r.condicion, (v) => (r.condicion = v), 'expresion'), this.botonMenos(() => b.ramas.splice(i, 1))));
@@ -462,7 +596,7 @@ export class EditorBloques {
   /** El hueco en forma de C donde van los bloques de dentro. */
   private boca(cuerpo: Bloque[]): HTMLElement {
     const l = this.lista(cuerpo);
-    if (!cuerpo.some((b) => b.tipo !== 'nota')) l.append(h('div', { class: 'boca-vacia' }, 'Arrastra aquí lo que tiene que hacer'));
+    if (!cuerpo.some((b) => b.tipo !== 'nota') && !this.enMano) l.append(h('div', { class: 'boca-vacia' }, 'Aquí va lo que tiene que hacer'));
     return h('div', { class: 'boca-bloque' }, l);
   }
 

@@ -82,8 +82,11 @@ export class Tutorial {
   /** Paso en el que ya se ha llevado la vista hasta lo resaltado (solo una vez, para no pelear con quien mueve la vista). */
   private desplazadoEn = -1;
 
+  /** La burbuja encogida (solo el título): para ver entero lo que hay debajo, sobre todo en un móvil. */
+  private encogida = false;
+
   constructor(
-    c: ContextoTutorial,
+    private c: ContextoTutorial,
     private alTerminar: () => void = () => {},
     private raiz: HTMLElement = document.body,
   ) {
@@ -117,7 +120,13 @@ export class Tutorial {
   private dibujarBurbuja(): void {
     const g = this.guia;
     const p = g.paso;
+    // Paso nuevo: en móvil y tablet se abre el cajón donde está lo que hay que tocar (y la burbuja vuelve a su tamaño)
+    if (this.dibujado !== g.indice) {
+      this.encogida = false;
+      this.c.abrirCajon?.(p.cajon ?? '');
+    }
     this.dibujado = g.indice;
+    this.burbuja.classList.toggle('encogida', this.encogida);
     const ultimo = g.indice === g.pasos.length - 1;
     const botones = h('div', { class: 'tutorial-botones' },
       ultimo ? null : h('button', { class: 'boton-enlace tutorial-saltar', title: 'Cerrar el tutorial (se puede volver a abrir desde Ayuda)', onclick: () => this.cerrar() }, 'Saltar el tutorial'),
@@ -131,15 +140,23 @@ export class Tutorial {
         this.actualizar();
       } }, g.indice === 0 ? '¡Empezamos!' : ultimo ? 'Terminar' : 'Siguiente') : null,
     );
+    const encoger = h('button', { class: 'tutorial-encoger', title: this.encogida ? 'Ver el paso entero' : 'Encoger esta burbuja para ver lo que hay debajo', 'aria-label': this.encogida ? 'Ver el paso entero' : 'Encoger la burbuja', 'aria-expanded': String(!this.encogida), onclick: () => {
+      this.encogida = !this.encogida;
+      this.dibujarBurbuja();
+      this.colocar();
+    } }, this.encogida ? '+' : '–');
     const partes: HTMLElement[] = [
       h('div', { class: 'tutorial-cabecera' },
         h('span', { class: 'tutorial-paso' }, `Paso ${g.indice + 1} de ${g.pasos.length}`),
         h('strong', {}, p.titulo),
+        encoger,
       ),
-      h('p', {}, ...conNegritas(p.texto)),
     ];
-    if (p.codigo) partes.push(h('pre', { class: 'tutorial-codigo' }, p.codigo.trimEnd()));
-    partes.push(botones);
+    if (!this.encogida) {
+      partes.push(h('p', {}, ...conNegritas(this.c.tactil?.() && p.textoTactil ? p.textoTactil : p.texto)));
+      if (p.codigo) partes.push(h('pre', { class: 'tutorial-codigo' }, p.codigo.trimEnd()));
+      partes.push(botones);
+    }
     this.burbuja.replaceChildren(...partes);
   }
 
@@ -149,12 +166,35 @@ export class Tutorial {
     const visible = objetivo instanceof HTMLElement && objetivo.offsetParent !== null;
     const ancho = window.innerWidth;
     const alto = window.innerHeight;
+    // Móvil y tablet: si lo que hay que tocar está en un cajón que se ha cerrado (queda fuera de la pantalla), se vuelve a abrir
+    if (visible && this.guia.paso.cajon) {
+      const r = objetivo.getBoundingClientRect();
+      if (r.right < 0 || r.left > ancho || r.bottom < 0 || r.top > alto + 2000) this.c.abrirCajon?.(this.guia.paso.cajon);
+    }
     // Si lo que hay que tocar está fuera de la vista (por ejemplo, abajo del todo en Propiedades), la llevamos hasta allí
     if (visible && this.desplazadoEn !== this.guia.indice) {
       this.desplazadoEn = this.guia.indice;
       if (!dentroDeLaVista(objetivo)) objetivo.scrollIntoView({ block: 'center', inline: 'nearest' });
     }
     const caja = visible ? objetivo.getBoundingClientRect() : null;
+    // Pantallas pequeñas: la burbuja ocupa el ancho y va arriba o abajo, en el lado contrario a lo resaltado
+    if (ancho < 700 || alto < 500) {
+      const altoVisible = window.visualViewport?.height ?? alto;
+      this.burbuja.classList.remove('centrada');
+      this.burbuja.classList.add('estrecha');
+      this.foco.hidden = !caja || caja.width === 0;
+      if (caja && caja.width) {
+        Object.assign(this.foco.style, { left: `${caja.left - 4}px`, top: `${caja.top - 4}px`, width: `${caja.width + 8}px`, height: `${caja.height + 8}px` });
+      }
+      const bh = this.burbuja.offsetHeight || 160;
+      const grande = !!caja && caja.height > altoVisible * 0.5;
+      // Lo resaltado en la mitad de arriba → la burbuja abajo; si es grande (la escena, el código), según la esquina del paso
+      const abajo = caja ? (grande ? this.guia.paso.esquina === 'abajo' : caja.top + caja.height / 2 < altoVisible / 2) : false;
+      this.burbuja.style.left = '8px';
+      this.burbuja.style.top = `${Math.round(abajo ? Math.max(8, altoVisible - bh - 8) : 8)}px`;
+      return;
+    }
+    this.burbuja.classList.remove('estrecha');
     if (!caja || caja.width === 0) {
       // Nada que resaltar: la burbuja en el centro
       this.foco.hidden = true;

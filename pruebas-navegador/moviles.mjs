@@ -107,6 +107,7 @@ async function prueba(nombre, aparatos, fn, opciones = {}) {
   for (const a of aparatos) {
     if (process.env.APARATO && a.nombre !== process.env.APARATO) continue;
     const contexto = await navegador.newContext({ viewport: { width: a.ancho, height: a.alto }, hasTouch: a.tactil, isMobile: a.tactil, deviceScaleFactor: a.tactil ? 2 : 1, acceptDownloads: true });
+    await opciones.antes?.(contexto);
     const p = await contexto.newPage();
     const errores = [];
     p.on('pageerror', (e) => errores.push(e.message));
@@ -722,6 +723,355 @@ await prueba('un ordenador con pantalla táctil: los gestos funcionan con el ded
     await contexto.close();
   }
 });
+
+// ═════════════════════════ BLOQUE 2: programar con el dedo ═════════════════════════
+
+/** ¿Cabe entero en la pantalla? */
+const cabeEnPantalla = (p, selector) => estado(p, (sel) => {
+  const el = document.querySelector(sel);
+  if (!el) return false;
+  const c = el.getBoundingClientRect();
+  return c.width > 0 && c.left >= -1 && c.top >= -1 && c.right <= innerWidth + 1 && c.bottom <= innerHeight + 1;
+}, selector);
+
+await prueba('la barra de atajos: está encima del teclado, escribe en el código sin quitarle el foco y deshace', [aparato('movil pequeno'), aparato('movil grande'), aparato('tablet vertical')], async (p, a, d) => {
+  await estado(p, () => {
+    const e = window.chispa.estado;
+    e.cambiarCodigo('cuadrado.chs', 'cuando empieza:\n    \n');
+    e.abrirScript('cuadrado.chs');
+  });
+  await p.waitForSelector('.barra-atajos');
+  comprobar(await p.isVisible('.barra-atajos'), 'no se ve la barra de atajos');
+  const barra = await p.locator('.barra-atajos').boundingBox();
+  const codigoCaja = await p.locator('.cm-editor').boundingBox();
+  comprobar(barra.y >= codigoCaja.y + codigoCaja.height - 1, 'la barra de atajos no está debajo del código');
+  const pequenos = await estado(p, () => [...document.querySelectorAll('.atajo-codigo')].filter((b) => b.getBoundingClientRect().height < 43.5 || b.getBoundingClientRect().width < 43.5).length);
+  comprobar(pequenos === 0, `${pequenos} botones de la barra miden menos de 44 px`);
+  // El cursor, al final de la línea con sangría
+  await estado(p, () => {
+    const v = window.chispa.editorCodigo.pestanas.get('cuadrado.chs').vista;
+    v.focus();
+    v.dispatch({ selection: { anchor: v.state.doc.line(2).to } });
+  });
+  const pulsar = async (id) => {
+    const b = await p.locator(`[data-atajo="${id}"]`);
+    await b.scrollIntoViewIfNeeded();
+    const c = await b.boundingBox();
+    await d.tocar(c.x + c.width / 2, c.y + c.height / 2);
+  };
+  const codigo = () => estado(p, () => window.chispa.estado.proyecto.scripts['cuadrado.chs']);
+  const enfocado = () => estado(p, () => !!document.activeElement?.closest('.cm-editor'));
+  await pulsar('si');
+  comprobar((await codigo()) === 'cuando empieza:\n    si :\n', `«si» ha escrito: ${JSON.stringify(await codigo())}`);
+  comprobar(await enfocado(), 'tocar la barra le ha quitado el foco al código (el teclado se escondería)');
+  await p.keyboard.insertText('yo.x > 5');
+  await pulsar('derecha');
+  await p.keyboard.press('Enter');
+  await p.keyboard.insertText('mostrar');
+  await pulsar('parentesis');
+  await pulsar('comillas');
+  await p.keyboard.insertText('hola');
+  comprobar((await codigo()).includes('    si yo.x > 5:\n        mostrar("hola")'), `con los atajos ha quedado: ${JSON.stringify(await codigo())}`);
+  comprobar(await enfocado(), 'se ha perdido el foco del código');
+  // Sangría y quitar sangría
+  await pulsar('quitarSangria');
+  comprobar((await codigo()).includes('\n    mostrar("hola")'), 'quitar sangría no saca la línea');
+  await pulsar('sangria');
+  comprobar((await codigo()).includes('\n        mostrar("hola")'), 'sangría no mete la línea');
+  // Deshacer y rehacer
+  const antes = await codigo();
+  await pulsar('deshacer');
+  comprobar((await codigo()) !== antes, 'deshacer no deshace');
+  await pulsar('rehacer');
+  comprobar((await codigo()) === antes, 'rehacer no rehace');
+  // «?»: la ayuda de la palabra del cursor
+  await estado(p, () => {
+    const v = window.chispa.editorCodigo.pestanas.get('cuadrado.chs').vista;
+    v.dispatch({ selection: { anchor: v.state.doc.toString().indexOf('mostrar') + 3 } });
+  });
+  await pulsar('ayuda');
+  await p.waitForSelector('.bocadillo-ayuda .ficha-ayuda');
+  comprobar(await cabeEnPantalla(p, '.bocadillo-ayuda'), 'la ayuda se sale de la pantalla');
+  // Con el teclado fuera (la ventana se encoge), la barra queda justo encima del teclado
+  await p.setViewportSize({ width: a.ancho, height: Math.round(a.alto * 0.58) });
+  await p.waitForTimeout(250);
+  const abajo = await estado(p, () => ({ barra: document.querySelector('.barra-atajos').getBoundingClientRect().bottom, visible: innerHeight, nav: getComputedStyle(document.querySelector('.navegacion-abajo')).display }));
+  comprobar(Math.abs(abajo.barra - abajo.visible) <= 1 && abajo.nav === 'none', `con el teclado fuera la barra de atajos no queda pegada encima (${JSON.stringify(abajo)})`);
+});
+
+await prueba('en el escritorio con ratón la barra de atajos no sale (no hace falta)', [aparato('escritorio'), aparato('portatil pequeno')], async (p) => {
+  await estado(p, () => window.chispa.estado.abrirScript('cuadrado.chs'));
+  await p.waitForSelector('.cm-content');
+  comprobar(!(await p.isVisible('.barra-atajos')), 'la barra de atajos sale con ratón');
+});
+
+await prueba('bloques con el dedo: tocar un bloque y luego su sitio lo pone; mover, duplicar y borrar sin arrastrar; todo cabe', TACTILES, async (p, a, d) => {
+  await estado(p, () => {
+    const e = window.chispa.estado;
+    e.cambiarCodigo('cuadrado.chs', 'cuando empieza:\n    mostrar("a")\n');
+    e.abrirScript('cuadrado.chs');
+  });
+  await p.waitForSelector('.modo-script');
+  await p.tap('.modo-script .modo:has-text("Bloques")');
+  await p.waitForSelector('.editor-bloques');
+  const tocar = async (localizador) => {
+    await localizador.scrollIntoViewIfNeeded();
+    const c = await localizador.boundingBox();
+    await d.tocar(c.x + Math.min(c.width / 2, 40), c.y + c.height / 2);
+    await p.waitForTimeout(80);
+  };
+  const codigo = () => estado(p, () => window.chispa.estado.proyecto.scripts['cuadrado.chs']);
+  // Nada se sale y todo mide 44
+  let mal = await loQueSeSale(p);
+  comprobar(mal.length === 0, `en bloques se sale: ${mal.slice(0, 4).join(', ')}`);
+  let pequenos = await botonesPequenos(p);
+  comprobar(pequenos.length === 0, `en bloques hay ${pequenos.length} cosas de menos de 44 px: ${pequenos.slice(0, 4).join(' · ')}`);
+  comprobar((await estado(p, () => document.querySelector('.bloque-paleta').getBoundingClientRect().height)) >= 43.5, 'los bloques de la paleta miden menos de 44 px');
+  // La ✕ de cada bloque se ve sin «pasar por encima»
+  comprobar((await estado(p, () => Number(getComputedStyle(document.querySelector('.quitar-bloque')).opacity))) > 0.5, 'la ✕ de los bloques no se ve con el dedo');
+  // Tocar «repetir» en Control y luego el sitio de después de mostrar("a")
+  await tocar(p.locator('.categoria-bloques:has-text("Control")'));
+  await tocar(p.locator('.bloque-paleta:has-text("repetir")').first());
+  comprobar(await p.isVisible('.aviso-bloques'), 'no sale el aviso de «toca el sitio»');
+  const sitios = p.locator('.bloque.tipo-evento .boca-bloque .sitio-soltar');
+  comprobar((await sitios.count()) === 2, `tenía que haber dos sitios dentro del evento y hay ${await sitios.count()}`);
+  comprobar((await estado(p, () => document.querySelector('.sitio-soltar').getBoundingClientRect().height)) >= 43.5, 'los sitios miden menos de 44 px');
+  await tocar(sitios.nth(1));
+  comprobar(/mostrar\("a"\)\n {4}repetir /.test(await codigo()), `no se ha puesto el «repetir» en su sitio: ${JSON.stringify(await codigo())} ${JSON.stringify(await estado(p, () => [...document.querySelectorAll('.sitio-soltar')].map((x) => { const c = x.getBoundingClientRect(); return [Math.round(c.left), Math.round(c.top), document.elementFromPoint(c.left + 40, c.top + 22)?.className]; })))}`);
+  // Mover «mostrar» dentro del repetir: tocar su cabecera y luego el sitio de dentro
+  await tocar(p.locator('.bloque.tipo-accion > .cabeza-bloque').first());
+  await tocar(p.locator('.bloque.tipo-repetir .boca-bloque .sitio-soltar').first());
+  comprobar(/repetir .* veces:\n {8}mostrar\("a"\)/.test(await codigo()), `no se ha movido dentro del repetir: ${JSON.stringify(await codigo())}`);
+  // Duplicar y borrar desde el aviso
+  await tocar(p.locator('.bloque.tipo-accion > .cabeza-bloque').first());
+  await tocar(p.locator('.aviso-bloques [data-accion="duplicar"]'));
+  comprobar(((await codigo()).match(/mostrar\("a"\)/g) ?? []).length === 2, 'Duplicar no duplica');
+  await tocar(p.locator('.bloque.tipo-accion > .cabeza-bloque').first());
+  await tocar(p.locator('.aviso-bloques [data-accion="borrar"]'));
+  comprobar(((await codigo()).match(/mostrar\("a"\)/g) ?? []).length === 1, 'Borrar no borra');
+  // Deshacer (botón) y escribir en un hueco con el teclado de pantalla
+  await tocar(p.locator('.deshacer-bloques'));
+  comprobar(((await codigo()).match(/mostrar\("a"\)/g) ?? []).length === 2, 'el botón de deshacer no deshace');
+  const hueco = p.locator('.bloque.tipo-accion input.campo-bloque').first();
+  await hueco.scrollIntoViewIfNeeded();
+  await hueco.tap();
+  comprobar((await estado(p, () => parseFloat(getComputedStyle(document.activeElement).fontSize))) >= 16, 'los huecos tienen la letra pequeña: Safari acercaría la página');
+  await hueco.fill('"b"');
+  await p.waitForTimeout(400);
+  comprobar((await codigo()).includes('mostrar("b")'), 'escribir en un hueco no cambia el código');
+  mal = await loQueSeSale(p);
+  comprobar(mal.length === 0, `al final se sale: ${mal.slice(0, 4).join(', ')}`);
+  // El código sigue siendo bueno
+  comprobar((await estado(p, () => window.chispa.inferior.revisar())) === 0, 'los bloques han dejado errores en el código');
+});
+
+await prueba('el tutorial en el móvil: abre el cajón de cada paso, lo resaltado se ve y se puede tocar, y la burbuja cabe', [aparato('movil pequeno'), aparato('movil grande'), aparato('movil tumbado'), aparato('tablet vertical')], async (p, a, d) => {
+  await p.waitForSelector('.tutorial-burbuja');
+  comprobar((await p.innerText('.tutorial-burbuja')).includes('dónde tocar'), 'el tutorial no habla de tocar');
+  const pasos = await estado(p, () => window.chispa.tutorial.guia.pasos.length);
+  const problemas = [];
+  for (let i = 0; i < pasos + 5; i++) {
+    if (!(await estado(p, () => !!window.chispa.tutorial))) break;
+    await p.waitForTimeout(380);
+    const e = await estado(p, () => {
+      const t = window.chispa.tutorial;
+      if (!t) return null;
+      const paso = t.guia.paso;
+      const burbuja = document.querySelector('.tutorial-burbuja').getBoundingClientRect();
+      const objetivo = paso.objetivo?.(document);
+      const caja = objetivo?.getBoundingClientRect();
+      let tocable = null;
+      if (caja && caja.width) {
+        // Un punto de lo resaltado que no tape la burbuja
+        const puntos = [[0.5, 0.5], [0.5, 0.15], [0.5, 0.85], [0.15, 0.5], [0.85, 0.5]].map(([fx, fy]) => [caja.left + caja.width * fx, caja.top + caja.height * fy]);
+        tocable = puntos.some(([x, y]) => {
+          const el = document.elementFromPoint(x, y);
+          return !!el && (objetivo === el || objetivo.contains(el) || el.contains(objetivo)) && !el.closest('.tutorial-burbuja');
+        });
+      }
+      return {
+        titulo: paso.titulo, cajonPaso: paso.cajon ?? '', cajon: window.chispa.cajon,
+        burbuja: burbuja.left >= -1 && burbuja.top >= -1 && burbuja.right <= innerWidth + 1 && burbuja.bottom <= innerHeight + 1,
+        objetivo: !!paso.objetivo, dentro: !caja || (caja.right > 0 && caja.left < innerWidth && caja.bottom > 0 && caja.top < innerHeight), tocable,
+        hazlo: !!document.querySelector('.tutorial-hazlo'),
+      };
+    });
+    if (!e) break;
+    if (e.cajon !== e.cajonPaso) problemas.push(`«${e.titulo}»: tenía que estar abierto el cajón «${e.cajonPaso}» y está «${e.cajon}»`);
+    if (!e.burbuja) problemas.push(`«${e.titulo}»: la burbuja se sale de la pantalla`);
+    if (e.objetivo && !e.dentro) problemas.push(`«${e.titulo}»: lo resaltado está fuera de la pantalla`);
+    if (e.objetivo && e.tocable === false) problemas.push(`«${e.titulo}»: lo resaltado no se puede tocar (lo tapa algo)`);
+    // Los dos primeros objetos se hacen de verdad, tocando lo resaltado; lo demás, con «Hazlo por mí»
+    if (e.titulo === 'El jugador' || e.titulo === 'Una moneda') {
+      const c = await estado(p, () => {
+        const b = window.chispa.tutorial.guia.paso.objetivo(document).getBoundingClientRect();
+        return { x: b.left + b.width / 2, y: b.top + b.height / 2 };
+      });
+      await d.tocar(c.x, c.y);
+    } else if (e.titulo === 'Ponle nombre') {
+      await p.locator('.inspector .nombre-objeto').tap();
+      await p.locator('.inspector .nombre-objeto').fill('Jugador');
+      await p.keyboard.press('Enter');
+    } else {
+      const boton = e.hazlo ? '.tutorial-hazlo' : '.tutorial-siguiente';
+      const b = await p.locator(boton).boundingBox();
+      await d.tocar(b.x + b.width / 2, b.y + b.height / 2);
+    }
+  }
+  comprobar(problemas.length === 0, problemas.slice(0, 4).join(' ‖ '));
+  comprobar(!(await estado(p, () => !!window.chispa.tutorial)), 'el tutorial no ha llegado al final');
+  const juego = await estado(p, () => ({ nombres: window.chispa.estado.escena.objetos.map((o) => o.nombre), errores: window.chispa.inferior.revisar() }));
+  comprobar(juego.nombres.includes('Jugador') && juego.nombres.includes('Moneda') && juego.errores === 0, `el juego del tutorial no ha quedado bien: ${JSON.stringify(juego)}`);
+  // En el último paso con juego en marcha, los botones de la pantalla estaban puestos
+}, { direccion: '?tutorial' });
+
+await prueba('el juego del editor, con el dedo: salen los botones en pantalla y mueven al personaje', [aparato('movil grande'), aparato('tablet horizontal')], async (p, a, d) => {
+  await estado(p, () => window.chispa.ejecutar());
+  await p.waitForFunction(() => document.querySelector('.estado-juego')?.textContent?.startsWith('Jugando'));
+  await p.waitForSelector('.vista-juego .controles-tactiles button');
+  await p.waitForTimeout(350);
+  const botones = await p.locator('.vista-juego .controles-tactiles button').count();
+  comprobar(botones >= 4, `tenía que haber botones de dirección y hay ${botones}`);
+  const fuera = await estado(p, () => [...document.querySelectorAll('.vista-juego .controles-tactiles button')].filter((b) => {
+    const c = b.getBoundingClientRect();
+    return c.left < 0 || c.right > innerWidth || c.top < 0 || c.bottom > innerHeight;
+  }).length);
+  comprobar(fuera === 0, 'hay botones táctiles fuera de la pantalla');
+  const x0 = await estado(p, () => window.chispa.vistaJuego.juego.escena.objetos[0].posicion.x);
+  const derecha = await p.locator('.vista-juego .controles-tactiles button[aria-label="derecha"]').boundingBox();
+  await d.dejar(derecha.x + derecha.width / 2, derecha.y + derecha.height / 2, 500);
+  const x1 = await estado(p, () => window.chispa.vistaJuego.juego.escena.objetos[0].posicion.x);
+  comprobar(x1 > x0 + 20, `el botón de la derecha no mueve al personaje (${x0} → ${x1})`);
+  await estado(p, () => window.chispa.parar());
+  comprobar((await p.locator('.controles-tactiles').count()) === 0, 'al parar el juego se quedan los botones');
+});
+
+await prueba('mis proyectos: lo que se cambia se guarda solo con su nombre, se puede tener varios y volver a cualquiera', [aparato('movil grande'), aparato('escritorio')], async (p, a) => {
+  const esperarGuardado = () => p.waitForFunction(() => document.querySelector('.estado-guardado')?.textContent?.includes('guardado') || window.chispa.guardadoEn, null, { timeout: 8000 });
+  // El ejemplo sin tocar no es de nadie: no aparece
+  await estado(p, () => window.chispa.guardarEnNavegador());
+  await estado(p, () => window.chispa.abrirMisProyectos());
+  await p.waitForSelector('.mis-proyectos');
+  const alPrincipio = await p.locator('.fila-mi-proyecto').count();
+  await p.keyboard.press('Escape');
+  // Se cambia algo: aparece
+  await estado(p, () => {
+    const e = window.chispa.estado;
+    e.renombrarProyecto('Juego uno');
+    e.moverObjeto({ tipo: 'escena', escena: e.escenaActual, indice: 0 }, 111, 222);
+  });
+  await estado(p, () => window.chispa.guardarEnNavegador());
+  await esperarGuardado();
+  const idUno = await estado(p, () => window.chispa.estado.proyecto.id);
+  // Otro proyecto (una plantilla) y un cambio en él
+  await estado(p, () => void window.chispa.nuevo());
+  await p.waitForSelector('[data-plantilla="naves"]');
+  await p.locator('[data-plantilla="naves"]').click();
+  await p.waitForFunction((id) => !document.querySelector('.dialogo') && window.chispa.estado.proyecto.id !== id, idUno);
+  await estado(p, () => {
+    const e = window.chispa.estado;
+    e.moverObjeto({ tipo: 'escena', escena: e.escenaActual, indice: 0 }, 5, 5);
+  });
+  await estado(p, () => window.chispa.guardarEnNavegador());
+  const idDos = await estado(p, () => window.chispa.estado.proyecto.id);
+  comprobar(idUno !== idDos, 'los dos proyectos tienen el mismo identificador');
+  await estado(p, () => window.chispa.abrirMisProyectos());
+  await p.waitForSelector('.fila-mi-proyecto');
+  comprobar((await p.locator('.fila-mi-proyecto').count()) === alPrincipio + 2, `tenía que haber ${alPrincipio + 2} proyectos y hay ${await p.locator('.fila-mi-proyecto').count()}`);
+  comprobar(await p.isVisible(`.fila-mi-proyecto.actual[data-proyecto="${idDos}"]`), 'no se marca el que está abierto');
+  await p.waitForTimeout(250);
+  comprobar(await cabeEnPantalla(p, '.dialogo'), 'la ventana de Mis proyectos no cabe');
+  // Volver al primero
+  await p.locator(`[data-proyecto="${idUno}"] .abrir-mi-proyecto`).click();
+  await p.waitForFunction((id) => !document.querySelector('.dialogo') && window.chispa.estado.proyecto.id === id, idUno, { timeout: 8000 }).catch(() => {});
+  const vuelto = await estado(p, () => ({ id: window.chispa.estado.proyecto.id, x: window.chispa.estado.escena.objetos[0].x, y: window.chispa.estado.escena.objetos[0].y }));
+  comprobar(vuelto.id === idUno && vuelto.x === 111 && vuelto.y === 222, `no se ha abierto el primero como estaba: ${JSON.stringify(vuelto)}`);
+  // Borrar el segundo (pregunta antes)
+  await estado(p, () => window.chispa.abrirMisProyectos());
+  await p.waitForSelector(`[data-proyecto="${idDos}"]`);
+  await p.locator(`[data-proyecto="${idDos}"] .boton-icono`).click();
+  await p.locator('.dialogo .principal.peligro').click();
+  await p.waitForFunction((id) => !document.querySelector(`[data-proyecto="${id}"]`), idDos);
+  comprobar((await p.locator('.fila-mi-proyecto').count()) === alPrincipio + 1, 'no se ha borrado el segundo');
+});
+
+await prueba('autoguardado en el móvil: al mandar la página al fondo se guarda al momento, y al volver a abrir está todo', [aparato('movil grande')], async (p) => {
+  await estado(p, () => {
+    const e = window.chispa.estado;
+    e.moverObjeto({ tipo: 'escena', escena: e.escenaActual, indice: 0 }, 77, 88);
+  });
+  // Justo después del cambio (sin esperar a los segundos del guardado automático), la página se va al fondo
+  await estado(p, () => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await p.waitForFunction(() => !!window.chispa.guardadoEn, null, { timeout: 3000 });
+  // Se vuelve a abrir la página (sin ?limpio): el proyecto está como se dejó
+  await p.goto(p.url().replace('?limpio', ''));
+  await p.waitForFunction(() => window.chispa);
+  await p.waitForTimeout(500);
+  const o = await estado(p, () => ({ x: window.chispa.estado.escena.objetos[0].x, y: window.chispa.estado.escena.objetos[0].y }));
+  comprobar(o.x === 77 && o.y === 88, `al volver no está lo último: ${JSON.stringify(o)}`);
+  if (await p.isVisible('.dialogo')) await p.keyboard.press('Escape');
+});
+
+await prueba('importar de la galería: una foto enorme del móvil se reduce al importarla, y un sonido se importa', [aparato('movil grande'), aparato('tablet vertical')], async (p, a) => {
+  // Una «foto» de 3000 × 2000 (como las de la cámara), hecha aquí mismo
+  const foto = await estado(p, () => {
+    const c = document.createElement('canvas');
+    c.width = 3000;
+    c.height = 2000;
+    const x = c.getContext('2d');
+    for (let i = 0; i < 400; i++) {
+      x.fillStyle = `hsl(${(i * 37) % 360} 80% ${30 + (i % 5) * 10}%)`;
+      x.fillRect((i * 173) % 3000, (i * 97) % 2000, 400, 300);
+    }
+    return c.toDataURL('image/jpeg', 0.92).split(',')[1];
+  });
+  await estado(p, () => window.chispa.abrirCajon('objetos'));
+  await p.waitForTimeout(250);
+  await p.tap('.panel-izquierdo .pestana-panel:has-text("Proyecto")');
+  const boton = p.locator('[aria-label^="Importar imágenes"]').first();
+  await boton.scrollIntoViewIfNeeded();
+  const [selector] = await Promise.all([p.waitForEvent('filechooser'), boton.tap()]);
+  comprobar((await estado(p, () => document.querySelector('.selector-de-archivos')?.accept)) === 'image/*', 'el selector de imágenes no pide «image/*» (en el móvil no abriría la galería)');
+  await selector.setFiles({ name: 'IMG_20261003.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(foto, 'base64') });
+  await p.waitForFunction(() => Object.keys(window.chispa.estado.proyecto.imagenes).length > 0, null, { timeout: 15000 });
+  const imagen = await estado(p, async () => {
+    const datos = Object.values(window.chispa.estado.proyecto.imagenes)[0];
+    const img = new Image();
+    img.src = datos;
+    await img.decode();
+    return { ancho: img.naturalWidth, alto: img.naturalHeight, peso: datos.length, tipo: datos.slice(0, 15) };
+  });
+  comprobar(imagen.ancho === 1024 && imagen.alto === 683, `la foto no se ha reducido bien: ${JSON.stringify(imagen)}`);
+  comprobar(imagen.peso < 600000 && imagen.tipo.startsWith('data:image/jpeg'), `la foto reducida pesa demasiado o no es JPEG: ${JSON.stringify(imagen)}`);
+  comprobar(!(await estado(p, () => !!document.querySelector('.selector-de-archivos'))), 'el selector de archivos se queda en la página');
+  // Un sonido (un WAV pequeño)
+  const wav = Buffer.concat([Buffer.from('RIFF'), Buffer.from([36, 0, 0, 0]), Buffer.from('WAVEfmt '), Buffer.from([16, 0, 0, 0, 1, 0, 1, 0, 0x44, 0xac, 0, 0, 0x88, 0x58, 1, 0, 2, 0, 16, 0]), Buffer.from('data'), Buffer.from([0, 0, 0, 0])]);
+  const botonSonido = p.locator('[aria-label^="Importar sonidos"]').first();
+  await botonSonido.scrollIntoViewIfNeeded();
+  const [selector2] = await Promise.all([p.waitForEvent('filechooser'), botonSonido.tap()]);
+  await selector2.setFiles({ name: 'grabacion.wav', mimeType: 'audio/wav', buffer: wav });
+  await p.waitForFunction(() => Object.keys(window.chispa.estado.proyecto.sonidos).length > 0, null, { timeout: 8000 });
+});
+
+await prueba('compartir: en un aparato que sabe compartir archivos, el menú lo ofrece y manda el .chispa.json', [aparato('movil grande')], async (p, a) => {
+  comprobar(await p.isVisible('.boton-mas'), 'no hay menú «Más»');
+  await p.tap('.boton-mas');
+  const opciones = await p.locator('.menu-flotante .opcion-menu').allInnerTexts();
+  comprobar(opciones.some((o) => o.includes('Mis proyectos')) && opciones.some((o) => o.includes('Abrir un archivo')) && opciones.some((o) => o.includes('Guardar')), `faltan opciones en «Más»: ${opciones}`);
+  comprobar(opciones.some((o) => o.includes('Compartir')), 'el menú no ofrece compartir');
+  await p.tap('.menu-flotante .opcion-menu:has-text("Compartir")');
+  await p.waitForFunction(() => window.__compartido);
+  const c = await estado(p, () => window.__compartido);
+  comprobar(c.nombre.endsWith('.chispa.json') && c.tipo === 'application/json' && c.tamano > 100, `lo compartido no es el proyecto: ${JSON.stringify(c)}`);
+}, { antes: (contexto) => contexto.addInitScript(() => {
+  navigator.canShare = (d) => !!d?.files?.length;
+  navigator.share = async (d) => {
+    window.__compartido = { nombre: d.files[0].name, tipo: d.files[0].type, tamano: d.files[0].size };
+  };
+}) });
 
 await navegador.close();
 await new Promise((r) => servidor.httpServer.close(r));

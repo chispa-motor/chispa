@@ -6,7 +6,7 @@ se ve por dónde iba. La regla que manda en todo es `DISPOSITIVOS.md`.
 | Bloque | Qué | Estado | Etiqueta |
 |---|---|---|---|
 | 1 | Editor adaptable (cajones, barra de abajo, escena con el dedo, teclado de pantalla) | **Hecho** | `m12-bloque-1` |
-| 2 | Programar con el dedo (barra de atajos, bloques para tacto, tutorial, archivos) | Sin empezar | |
+| 2 | Programar con el dedo (barra de atajos, bloques para tacto, tutorial, archivos) | **Hecho** | `m12-bloque-2` |
 | 3 | Juegos en móvil (joystick, botones, gestos, vibración, calidad, 30 fps, PWA) | Sin empezar | |
 | 4 | Pruebas, seguridad y documentación (versión 1.2.0) | Sin empezar | |
 
@@ -31,6 +31,24 @@ No se ha hecho push de nada. La web sigue como estaba.
 - **Pruebas**: `pruebas/movil.test.ts` (18) y `pruebas-navegador/moviles.mjs` (69 comprobaciones en
   7 aparatos simulados, con toques de uno y dos dedos). Lo que no se puede simular está en
   `PRUEBAS_PENDIENTES.md`.
+
+## Bloque 2 — Programar con el dedo (hecho)
+
+- **Barra de atajos** (`src/editor/codigo/barraAtajos.ts`): debajo del código, justo encima del
+  teclado. cuando, si, sino, mientras, repetir, funcion, dos puntos, paréntesis, comillas, igual,
+  punto, sangría y quitar sangría, deshacer y rehacer, mover el cursor y «?» (ayuda de la palabra).
+  No le quita el foco al código (el teclado no se esconde). Solo sale en móvil y tablet.
+- **Bloques sin arrastrar** (`EditorBloques.coger`): tocar un bloque de la paleta y luego el sitio
+  donde va; tocar la cabecera de un bloque para moverlo, duplicarlo o borrarlo. Botones de
+  deshacer y rehacer. En el móvil la paleta va arriba en dos tiras. Arrastrar con el ratón sigue igual.
+- **Tutorial**: cada paso sabe en qué cajón está lo que hay que tocar y lo abre; textos para el dedo;
+  la burbuja ocupa el ancho, se pone en el lado contrario a lo resaltado y se puede encoger.
+- **El juego en el editor con el dedo**: salen los mismos botones en pantalla que en el juego exportado.
+- **Archivos**: «Mis proyectos» (cada proyecto se guarda solo en el navegador, con su nombre; se
+  puede tener varios y borrar), compartir el archivo por el menú del aparato, las fotos enormes de
+  la cámara se reducen a 1024 px al importarlas, y se guarda al mandar la página al fondo.
+- **Pruebas**: `pruebas/dedo.test.ts` (19) y 22 comprobaciones más en `pruebas-navegador/moviles.mjs`
+  (91 en total).
 
 ## Cómo seguir si se corta
 

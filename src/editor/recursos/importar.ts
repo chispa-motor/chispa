@@ -37,10 +37,66 @@ function conTipoReal(datos: string): string {
   return real ? `data:${MIME[real.formato]};base64,${datos.slice(coma + 1)}` : datos;
 }
 
+/** Las fotos de un móvil miden 4000 píxeles y pesan varios megas: para un juego sobran. Por encima de esto, se reducen. */
+export const LADO_MAXIMO_IMAGEN = 2048;
+export const PESO_MAXIMO_IMAGEN = 1.5 * 1024 * 1024;
+/** A esto se reduce el lado más largo de una imagen enorme. */
+export const LADO_REDUCIDO = 1024;
+
+/** El tamaño al que se queda una imagen de `ancho` × `alto` para que su lado más largo no pase de `maximo` (sin deformarla). */
+export function tamanoReducido(ancho: number, alto: number, maximo = LADO_REDUCIDO): { ancho: number; alto: number } {
+  const mayor = Math.max(ancho, alto);
+  if (!(mayor > maximo)) return { ancho, alto };
+  const f = maximo / mayor;
+  return { ancho: Math.max(1, Math.round(ancho * f)), alto: Math.max(1, Math.round(alto * f)) };
+}
+
+/** ¿Hay que reducirla? (mide o pesa demasiado para un juego) */
+export function hayQueReducir(ancho: number, alto: number, peso: number): boolean {
+  return Math.max(ancho, alto) > LADO_MAXIMO_IMAGEN || peso > PESO_MAXIMO_IMAGEN;
+}
+
+/**
+ * Una foto de la galería del móvil → una imagen de un tamaño razonable para un juego.
+ * Devuelve la data URL reducida y sus medidas, o null si no hace falta o no se puede
+ * (entonces se importa tal cual, como siempre). Solo fotos y dibujos normales: los GIF
+ * animados y los SVG se dejan como están.
+ */
+export async function reducirImagen(archivo: Blob, formato: string): Promise<{ datos: string; ancho: number; alto: number } | null> {
+  if (!['png', 'jpeg', 'webp', 'bmp'].includes(formato) || typeof createImageBitmap !== 'function' || typeof document === 'undefined') return null;
+  let mapa: ImageBitmap;
+  try {
+    // 'from-image': las fotos hechas con el móvil de lado salen derechas
+    mapa = await createImageBitmap(archivo, { imageOrientation: 'from-image' });
+  } catch {
+    return null;
+  }
+  try {
+    if (!hayQueReducir(mapa.width, mapa.height, archivo.size)) return null;
+    const t = tamanoReducido(mapa.width, mapa.height);
+    const lienzo = document.createElement('canvas');
+    lienzo.width = t.ancho;
+    lienzo.height = t.alto;
+    const ctx = lienzo.getContext('2d');
+    if (!ctx) return null;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(mapa, 0, 0, t.ancho, t.alto);
+    // Las fotos (JPEG) siguen siendo JPEG, que ocupa mucho menos; lo demás, PNG (puede tener partes transparentes)
+    const datos = formato === 'jpeg' ? lienzo.toDataURL('image/jpeg', 0.86) : lienzo.toDataURL('image/png');
+    return datos.startsWith('data:image/') ? { datos, ...t } : null;
+  } catch {
+    return null;
+  } finally {
+    mapa.close?.();
+  }
+}
+
 export interface ResultadoImportar {
   imagenes: string[];
   sonidos: string[];
   letras: string[];
+  /** Imágenes que se han reducido al importarlas (eran enormes), con su tamaño nuevo. */
+  reducidas?: string[];
   /** Archivos que no se han podido importar, con el motivo. */
   rechazados: string[];
 }
@@ -65,11 +121,30 @@ export async function importarArchivos(estado: EstadoEditor, archivos: Iterable<
       r.letras.push(...(await importarLetra(estado, archivo, r.rechazados)));
       continue;
     }
+    // No nos fiamos del nombre ni de lo que dice el navegador: miramos los primeros bytes
+    const inicio = new Uint8Array(await archivo.slice(0, 16).arrayBuffer());
+    // Las fotos HEIC del iPhone (si el navegador no las ha convertido solo) no se pueden usar en una web
+    if (tipo === 'imagen' && /^ftyp(heic|heix|hevc|mif1|msf1|heif)/.test(String.fromCharCode(...inicio.slice(4, 12)))) {
+      r.rechazados.push(`"${archivo.name}" es una foto en formato HEIC, que los navegadores no saben enseñar. En el iPhone: Ajustes > Cámara > Formatos > «El más compatible», o compártela como JPG`);
+      continue;
+    }
+    // Una foto enorme (de la cámara del móvil) se reduce en vez de rechazarla o de engordar el proyecto
+    // (hasta cuatro veces el tamaño máximo: más que eso ni se intenta abrir)
+    const reducida = tipo === 'imagen' && archivo.size <= TAMANO_MAXIMO * 4 ? await reducirImagen(archivo, formatoReal(inicio)?.formato ?? '') : null;
+    if (reducida) {
+      try {
+        const nombre = estado.agregarImagen(archivo.name, reducida.datos);
+        r.imagenes.push(nombre);
+        (r.reducidas ??= []).push(`${nombre} (ahora mide ${reducida.ancho}×${reducida.alto})`);
+      } catch (e) {
+        r.rechazados.push(e instanceof ErrorMotor ? e.message.replace(/^No se puede añadir /, '').replace(/\.$/, '') : `"${archivo.name}" no se ha podido leer`);
+      }
+      continue;
+    }
     if (archivo.size > TAMANO_MAXIMO) {
       r.rechazados.push(`"${archivo.name}" es demasiado grande (más de ${TAMANO_MAXIMO / 1024 / 1024} MB)`);
       continue;
     }
-    // No nos fiamos del nombre ni de lo que dice el navegador: miramos los primeros bytes
     const real = await tipoRealDeArchivo(archivo);
     if (real !== tipo) {
       r.rechazados.push(real ? `"${archivo.name}" dice ser ${tipo === 'imagen' ? 'una imagen' : 'un sonido'}, pero por dentro es ${real === 'imagen' ? 'una imagen' : 'un sonido'}` : `"${archivo.name}" no es de verdad ${tipo === 'imagen' ? 'una imagen' : 'un sonido'} (o está dañado)`);
@@ -113,6 +188,7 @@ export function resumenImportar(r: ResultadoImportar): { texto: string; tipo: 'o
   if (r.imagenes.length) partes.push(`${r.imagenes.length === 1 ? 'Imagen' : 'Imágenes'}: ${r.imagenes.join(', ')}`);
   if (r.sonidos.length) partes.push(`${r.sonidos.length === 1 ? 'Sonido' : 'Sonidos'}: ${r.sonidos.join(', ')}`);
   if (r.letras.length) partes.push(`${r.letras.length === 1 ? 'Letra' : 'Letras'}: ${r.letras.join(', ')} (elígela en el inspector de un texto, o con yo.letra = "${r.letras[0]}")`);
+  if (r.reducidas?.length) partes.push(`${r.reducidas.length === 1 ? 'Era muy grande y se ha reducido' : 'Eran muy grandes y se han reducido'}: ${r.reducidas.join(', ')}`);
   if (!partes.length && !r.rechazados.length) return null;
   const texto = [partes.length ? `Importado. ${partes.join(' · ')}.` : '', r.rechazados.length ? `No se ha podido: ${r.rechazados.join('; ')}. Se pueden importar imágenes (.png, .jpg, .gif, .svg), sonidos (.mp3, .ogg, .wav) y tipos de letra (.ttf, .otf, .woff, .woff2).` : ''].filter(Boolean).join(' ');
   return { texto, tipo: partes.length ? 'ok' : 'error' };
