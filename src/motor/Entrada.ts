@@ -175,6 +175,99 @@ export class Entrada {
   escribiendo = false;
   /** Lo que se ha escrito en este fotograma: letras, "\b" (borrar), "\n" (Intro) y "\x1b" (Escape). */
   textoEscrito: string[] = [];
+
+  /**
+   * TECLADO DE PANTALLA (móviles y tabletas). El navegador solo saca el teclado si, EN EL MISMO
+   * TOQUE, se enfoca un campo de texto de verdad (de la página). Los campos de Chispa están
+   * dibujados dentro del juego, así que hay un campo de la página invisible para eso.
+   *
+   * Cada campo de texto del juego apunta aquí una función: dice si el dedo está encima de él
+   * y qué texto tiene (o null). Al tocar el lienzo se pregunta a todas y, si alguna contesta,
+   * se enfoca el campo invisible en ese mismo instante. Lo que se escribe en él llega al juego
+   * como `textoEscrito`, igual que con un teclado de verdad.
+   */
+  zonasDeTexto = new Set<() => string | null>();
+  private teclado: HTMLInputElement | null = null;
+  /** Lo que tenía el campo invisible la última vez (para saber qué se ha escrito o borrado). */
+  private textoTeclado = '';
+  private componiendo = false;
+
+  /** ¿Está abierto el teclado de pantalla (el campo invisible tiene el foco)? */
+  get tecladoAbierto(): boolean {
+    return !!this.teclado && typeof document !== 'undefined' && document.activeElement === this.teclado;
+  }
+
+  /** Enfoca el campo invisible (hay que llamarlo dentro de un toque del usuario) con ese texto, en ese punto de la ventana. */
+  abrirTeclado(texto: string, x = 0, y = 0): void {
+    if (typeof document === 'undefined') return;
+    if (!this.teclado) {
+      const t = document.createElement('input');
+      t.type = 'text';
+      t.className = 'teclado-chispa';
+      t.setAttribute('aria-label', 'Escribir en el juego');
+      t.setAttribute('autocapitalize', 'off');
+      t.setAttribute('autocomplete', 'off');
+      t.setAttribute('autocorrect', 'off');
+      t.setAttribute('enterkeyhint', 'done');
+      t.spellcheck = false;
+      // Invisible pero «de verdad»: con 16 px de letra Safari no acerca la página al enfocarlo
+      Object.assign(t.style, { position: 'fixed', width: '1px', height: '1px', padding: '0', border: '0', margin: '0', opacity: '0', fontSize: '16px', background: 'transparent', color: 'transparent', caretColor: 'transparent', outline: 'none', zIndex: '-1' });
+      t.addEventListener('compositionstart', () => (this.componiendo = true));
+      t.addEventListener('compositionend', () => {
+        this.componiendo = false;
+        this.leerTeclado();
+      });
+      t.addEventListener('input', () => this.leerTeclado());
+      t.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          this.textoEscrito.push('\n');
+          e.preventDefault();
+        } else if (e.key === 'Escape') this.textoEscrito.push('\x1b');
+      });
+      this.eventos.signal.addEventListener('abort', () => t.remove());
+      document.body.append(t);
+      this.teclado = t;
+    }
+    const t = this.teclado;
+    // Donde se ha tocado: así, si el navegador mueve la página para enseñar el campo, enseña el del juego
+    t.style.left = `${Math.max(0, Math.round(x))}px`;
+    t.style.top = `${Math.max(0, Math.round(y))}px`;
+    t.value = texto;
+    this.textoTeclado = texto;
+    t.focus({ preventScroll: true });
+    try {
+      t.setSelectionRange(texto.length, texto.length);
+    } catch {
+      /* hay navegadores que no dejan en campos invisibles: da igual */
+    }
+  }
+
+  /** Lo que ha cambiado en el campo invisible desde la última vez, convertido en letras y borrados. */
+  private leerTeclado(): void {
+    const t = this.teclado;
+    if (!t) return;
+    const antes = [...this.textoTeclado];
+    const ahora = [...t.value];
+    let iguales = 0;
+    while (iguales < antes.length && iguales < ahora.length && antes[iguales] === ahora[iguales]) iguales++;
+    for (let i = iguales; i < antes.length; i++) this.textoEscrito.push('\b');
+    for (let i = iguales; i < ahora.length; i++) this.textoEscrito.push(ahora[i] === '\n' ? '\n' : ahora[i]);
+    this.textoTeclado = t.value;
+  }
+
+  /** El campo del juego dice qué texto tiene de verdad (puede haber recortado lo escrito): el invisible se pone igual. */
+  sincronizarTeclado(texto: string): void {
+    const t = this.teclado;
+    if (!t || this.componiendo || t.value === texto || this.textoEscrito.length) return;
+    t.value = texto;
+    this.textoTeclado = texto;
+  }
+
+  /** Quita el teclado de pantalla (el campo del juego ha dejado de estar enfocado). */
+  cerrarTeclado(): void {
+    if (this.tecladoAbierto) this.teclado!.blur();
+  }
+
   private teclasAbajo = new Map<string, string>();
   private pulsadasEsteFotograma = new Set<string>();
   private soltadasEsteFotograma = new Set<string>();
@@ -243,9 +336,22 @@ export class Entrada {
         this.botonesAbajo.add(b);
         this.botonesPulsados.add(b);
         this.posicionRaton = this.aCoordenadasJuego(e.clientX, e.clientY);
+        // Con el dedo (o un lápiz) sobre un campo de texto del juego: sale el teclado de pantalla
+        if (e.pointerType && e.pointerType !== 'mouse') this.tocarZonaDeTexto(e);
       },
       { signal },
     );
+    // Algunos navegadores (Safari) solo sacan el teclado si el campo se enfoca al LEVANTAR el dedo
+    canvas.addEventListener(
+      'pointerup',
+      (e) => {
+        if (e.pointerType && e.pointerType !== 'mouse' && this.quiereTeclado && !this.tecladoAbierto) this.tocarZonaDeTexto(e);
+        this.quiereTeclado = false;
+      },
+      { signal },
+    );
+    // Con el teclado fuera, el clic «de ratón» que el navegador manda tras el toque no se lleva el foco al lienzo
+    canvas.addEventListener('mousedown', (e) => this.tecladoAbierto && e.preventDefault(), { signal });
     // pointerup y pointermove en window: así detectamos que sueltas aunque salgas del lienzo.
     window.addEventListener(
       'pointerup',
@@ -274,6 +380,17 @@ export class Entrada {
     );
     // Quitamos el menú del clic derecho para poder usar ese botón en los juegos.
     canvas.addEventListener('contextmenu', (e) => e.preventDefault(), { signal });
+  }
+
+  private quiereTeclado = false;
+  private tocarZonaDeTexto(e: PointerEvent): void {
+    for (const zona of this.zonasDeTexto) {
+      const texto = zona();
+      if (texto === null) continue;
+      this.quiereTeclado = true;
+      this.abrirTeclado(texto, e.clientX, e.clientY);
+      return;
+    }
   }
 
   // ───────────────────────── Teclado ─────────────────────────

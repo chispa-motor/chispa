@@ -10,7 +10,9 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover: la página llega hasta los bordes (el notch y la barra de abajo del iPhone se respetan con
+         env(safe-area-inset-*)). interactive-widget: en Android, el teclado de pantalla encoge la página en vez de taparla. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
     <title>Chispa</title>
     <link rel="icon" href="imagenes/estrella.svg" />
   </head>

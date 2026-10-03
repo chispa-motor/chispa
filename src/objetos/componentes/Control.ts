@@ -395,6 +395,7 @@ export class Control extends Componente {
     if (!this.atiende) {
       this.enfocado = false;
       this.arrastre = null;
+      if (this.eraElQueEscribia()) entrada.cerrarTeclado?.();
       entrada.escribiendo &&= !this.eraElQueEscribia();
       return;
     }
@@ -424,6 +425,11 @@ export class Control extends Componente {
 
     // El campo de texto
     if (this.tipo === 'campo') {
+      // Para el teclado de pantalla: al tocar el lienzo, la entrada pregunta si el dedo está encima de este campo
+      if (!this.zonaDeTexto && entrada.zonasDeTexto) {
+        this.zonaDeTexto = () => (this.atiende && this.sprite?.visible !== false && this.objeto.escena?.ratonEncima(this.objeto) ? this.sprite?.texto ?? '' : null);
+        entrada.zonasDeTexto.add(this.zonaDeTexto);
+      }
       this.reloj += escena.motor.tiempo?.deltaReal ?? dt;
       // Un clic fuera lo suelta
       if (this.enfocado && entrada.ratonSePulso('izquierdo') && !escena.ratonEncima(this.objeto)) this.enfocado = false;
@@ -442,10 +448,13 @@ export class Control extends Componente {
           this.reloj = 0;
           this.avisarCambio();
         }
+        // El campo invisible del teclado de pantalla tiene que decir lo mismo que este (que puede haber recortado)
+        entrada.sincronizarTeclado?.(s.texto);
       }
       if (!this.enfocado && this.eraElQueEscribia()) {
         entrada.escribiendo = false;
         Control.escribe = null;
+        entrada.cerrarTeclado?.();
       }
     }
   }
@@ -456,11 +465,19 @@ export class Control extends Componente {
     return Control.escribe === this;
   }
 
+  /** Con la que la entrada sabe si el dedo ha tocado este campo (para sacar el teclado de pantalla). */
+  private zonaDeTexto: (() => string | null) | null = null;
+
   alDestruir(): void {
+    const entrada = this.objeto.escena?.motor.entrada;
+    if (this.zonaDeTexto) entrada?.zonasDeTexto?.delete(this.zonaDeTexto);
+    this.zonaDeTexto = null;
     if (this.eraElQueEscribia()) {
       Control.escribe = null;
-      const entrada = this.objeto.escena?.motor.entrada;
-      if (entrada) entrada.escribiendo = false;
+      if (entrada) {
+        entrada.escribiendo = false;
+        entrada.cerrarTeclado?.();
+      }
     }
   }
 

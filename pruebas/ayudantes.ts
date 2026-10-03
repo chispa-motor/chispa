@@ -167,7 +167,7 @@ function motorDePrueba(ancho = 960, alto = 540) {
     },
   };
 
-  return { motor: motor as unknown as Motor, avanzar, pulsar, soltar, clic, raton, entrada };
+  return { motor: motor as unknown as Motor, avanzar, pulsar, soltar, clic, raton, entrada, canvas };
 }
 
 export interface OpcionesJuegoPrueba {

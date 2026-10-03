@@ -37,7 +37,7 @@ import { forceLinting, lintGutter, lintKeymap } from '@codemirror/lint';
 import type { EstadoEditor } from '../estado/EstadoEditor';
 import { coloresChispa, lenguajeChispa, sangriaChispa, sangriaEscritaAMano } from './lenguajeChispa';
 import { fuenteAutocompletado } from './autocompletado';
-import { ayudaAlPasar, posicionEnDocumento, revisionEnVivo } from './ayudaYErrores';
+import { ayudaAlPasar, ayudaAlTocarCodigo, posicionEnDocumento, revisionEnVivo } from './ayudaYErrores';
 import { marcarParada, puntosDeParada } from './puntosDeParada';
 import type { Depurador } from '../../chispa/ejecucion/depurador';
 import { EditorBloques } from '../bloques/EditorBloques';
@@ -159,6 +159,7 @@ export class EditorCodigo {
       lintGutter(),
       revisionEnVivo(() => archivo.nombre, proyecto),
       ayudaAlPasar,
+      ayudaAlTocarCodigo,
       FRASES,
       TEMA,
       EditorView.contentAttributes.of({ spellcheck: 'false', autocorrect: 'off', autocapitalize: 'off', 'aria-label': 'Código Chispa' }),
@@ -291,6 +292,14 @@ export class EditorCodigo {
       this.desdeBloques = false;
       this.escribiendo = false;
     }
+  }
+
+  /** Deja a la vista la línea del cursor (al salir el teclado de pantalla, lo que se ve es mucho más bajo). */
+  verCursor(archivo: string): void {
+    const p = this.pestanas.get(archivo);
+    if (!p || (p.bloques && this.estado.enBloques(archivo))) return;
+    p.vista.requestMeasure();
+    p.vista.dispatch({ effects: EditorView.scrollIntoView(p.vista.state.selection.main.head, { y: 'nearest', yMargin: 24 }) });
   }
 
   enfocar(archivo: string): void {

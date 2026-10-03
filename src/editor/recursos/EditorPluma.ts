@@ -279,10 +279,13 @@ export function abrirEditorPluma(estado: EstadoEditor, ref: RefObjeto, opciones:
     }
     return p;
   };
-  const radio = () => 9 / ESCALA;
+  /** Lo cerca que hay que pulsar de un punto para cogerlo (con el dedo, más holgura). */
+  let dedo = false;
+  const radio = () => (dedo ? 22 : 9) / ESCALA;
 
   lienzo.addEventListener('pointerdown', (e) => {
-    lienzo.focus();
+    dedo = e.pointerType === 'touch';
+    lienzo.focus({ preventScroll: true });
     lienzo.setPointerCapture?.(e.pointerId);
     const agarre = modelo.pulsar(posicion(e), radio());
     pintar();
@@ -290,9 +293,11 @@ export function abrirEditorPluma(estado: EstadoEditor, ref: RefObjeto, opciones:
     const soltar = () => {
       lienzo.removeEventListener('pointermove', mover);
       lienzo.removeEventListener('pointerup', soltar);
+      lienzo.removeEventListener('pointercancel', soltar);
     };
     lienzo.addEventListener('pointermove', mover);
     lienzo.addEventListener('pointerup', soltar);
+    lienzo.addEventListener('pointercancel', soltar);
   });
   lienzo.addEventListener('dblclick', (e) => {
     const a = modelo.agarrar(posicion(e), radio());
@@ -310,6 +315,9 @@ export function abrirEditorPluma(estado: EstadoEditor, ref: RefObjeto, opciones:
     lienzo,
     h('div', { class: 'barra-pluma' },
       botonCerrar,
+      h('button', { class: 'boton', 'data-accion': 'curva', title: 'El punto elegido pasa de esquina a curva, o al revés (también con doble clic en el punto)', onclick: () => {
+        if (modelo.elegido !== null) cambiar(() => modelo.alternarCurva(modelo.elegido!));
+      } }, 'Curva / esquina'),
       h('button', { class: 'boton', title: 'Borrar el punto elegido (Supr)', onclick: () => cambiar(() => modelo.borrarElegido()) }, 'Borrar punto'),
       botonIcono('deshacer', 'Deshacer (Ctrl+Z)', () => cambiar(() => modelo.deshacer())),
       h('button', { class: 'boton', title: 'Quitar todos los puntos y empezar otra vez', onclick: () => cambiar(() => modelo.vaciar()) }, 'Empezar de nuevo'),

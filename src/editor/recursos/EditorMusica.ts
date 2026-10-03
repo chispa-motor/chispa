@@ -194,24 +194,42 @@ export function abrirEditorMusica(estado: EstadoEditor, editar?: string): void {
     const una: DefCancion = { tempo: 120, pasos: 4, bucle: false, pistas: [{ instrumento: pista().instrumento, volumen: pista().volumen, notas: [{ paso: 0, nota, largo: 2 }] }] };
     tocar(renderizarCancion(una), FRECUENCIA_MUSICA);
   };
-  rejilla.addEventListener('mousedown', (ev) => {
-    const c = celda(ev);
-    if (!c) return;
-    ev.preventDefault();
+  /** Cuántos pasos dura cada nota nueva (con el ratón se puede alargar arrastrando; con el dedo se elige aquí). */
+  const largoNota = h('select', { class: 'campo', 'aria-label': 'Largo de las notas nuevas', title: 'Cuánto dura cada nota que pongas. Con el ratón también puedes alargarla arrastrando hacia la derecha.' },
+    [[1, 'corta'], [2, 'media'], [4, 'larga'], [8, 'muy larga']].map(([n, t]) => h('option', { value: String(n) }, `${t} (${n})`)));
+  /** Pone una nota en esa celda, o quita la que hubiera. Devuelve si ha puesto una. */
+  const ponerOQuitar = (c: { paso: number; nota: number }): boolean => {
     if (quitarNota(pista(), c.paso, c.nota)) {
       pintar();
       refrescarSonido();
-      return;
+      return false;
     }
-    if (!ponerNota(cancion, pista(), c.paso, c.nota, 1)) {
+    const largo = pista().instrumento === 'bateria' ? 1 : Math.min(Number(largoNota.value) || 1, cancion.pasos - c.paso);
+    if (!ponerNota(cancion, pista(), c.paso, c.nota, largo)) {
       notificar(`Una pista puede tener ${LIMITES_CANCION.notasPorPista} notas como mucho.`, 'error');
-      return;
+      return false;
     }
-    arrastre = c;
     probar(c.nota);
     pintar();
+    return true;
+  };
+  /** Con qué se ha tocado la rejilla la última vez ('mouse', 'touch' o 'pen'). */
+  let puntero = 'mouse';
+  rejilla.addEventListener('pointerdown', (ev) => {
+    puntero = ev.pointerType || 'mouse';
+    // Con el dedo la nota se pone al LEVANTARLO sin haber arrastrado (un «clic»): arrastrar desplaza la rejilla
+    if (puntero !== 'mouse' || ev.button !== 0) return;
+    const c = celda(ev);
+    if (!c) return;
+    ev.preventDefault();
+    if (ponerOQuitar(c)) arrastre = c;
   });
-  const mover = (ev: MouseEvent) => {
+  rejilla.addEventListener('click', (ev) => {
+    if (puntero === 'mouse') return;
+    const c = celda(ev);
+    if (c && ponerOQuitar(c)) refrescarSonido();
+  });
+  const mover = (ev: PointerEvent) => {
     if (!arrastre || pista().instrumento === 'bateria') return;
     const r = rejilla.getBoundingClientRect();
     const paso = Math.max(arrastre.paso, Math.min(cancion.pasos - 1, Math.floor(((ev.clientX - r.left) / r.width) * cancion.pasos)));
@@ -223,8 +241,8 @@ export function abrirEditorMusica(estado: EstadoEditor, editar?: string): void {
     arrastre = null;
     refrescarSonido();
   };
-  window.addEventListener('mousemove', mover);
-  window.addEventListener('mouseup', soltar);
+  window.addEventListener('pointermove', mover);
+  window.addEventListener('pointerup', soltar);
 
   // ── La barra de arriba ──
   const tempo = h('input', { class: 'campo', type: 'number', min: String(LIMITES_CANCION.tempoMin), max: String(LIMITES_CANCION.tempoMax), value: String(cancion.tempo), 'aria-label': 'Tempo', 'data-ruta': 'cancion.tempo', title: 'Lo rápida que va: pulsos por minuto (120 es lo normal)' });
@@ -271,8 +289,8 @@ export function abrirEditorMusica(estado: EstadoEditor, editar?: string): void {
     abierto = false;
     sonandoCancion = false;
     callar();
-    window.removeEventListener('mousemove', mover);
-    window.removeEventListener('mouseup', soltar);
+    window.removeEventListener('pointermove', mover);
+    window.removeEventListener('pointerup', soltar);
   };
 
   const contenido = h('div', { class: 'editor-musica' },
@@ -281,6 +299,7 @@ export function abrirEditorMusica(estado: EstadoEditor, editar?: string): void {
       h('label', { class: 'campo-musica' }, 'Tempo', tempo),
       h('label', { class: 'campo-musica' }, 'Dura', pasos),
       h('label', { class: 'campo-musica' }, 'Escala', selectorEscala),
+      h('label', { class: 'campo-musica' }, 'Notas', largoNota),
       h('label', { class: 'casilla-particula', title: 'Al acabar, vuelve a empezar (lo normal en la música de un juego)' }, bucle, ' Se repite'),
       h('button', { class: 'boton', 'data-accion': 'ejemplo', title: 'Una canción corta de ejemplo, para ver cómo se hace', onclick: () => {
         cancion = cancionDeEjemplo();

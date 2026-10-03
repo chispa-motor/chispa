@@ -20,13 +20,13 @@ describe('Ajustes', () => {
   it('lo guardado se arregla si está mal (números fuera de sus límites, un tema que no existe, texto roto)', () => {
     expect(leerAjustes(null)).toEqual(AJUSTES_POR_DEFECTO);
     expect(leerAjustes('esto no es json')).toEqual(AJUSTES_POR_DEFECTO);
-    expect(leerAjustes('{"tema":"rosa","letraCodigo":100,"letraInterfaz":2}')).toEqual({ tema: 'oscuro', letraCodigo: 26, letraInterfaz: 11 });
-    expect(leerAjustes('{"tema":"claro","letraCodigo":18}')).toEqual({ tema: 'claro', letraCodigo: 18, letraInterfaz: 13.5 });
+    expect(leerAjustes('{"tema":"rosa","letraCodigo":100,"letraInterfaz":2}')).toEqual({ tema: 'oscuro', letraCodigo: 26, letraInterfaz: 11, botonesGrandes: 'auto' });
+    expect(leerAjustes('{"tema":"claro","letraCodigo":18}')).toEqual({ tema: 'claro', letraCodigo: 18, letraInterfaz: 13.5, botonesGrandes: 'auto' });
   });
 
   it('se aplican con variables de CSS', () => {
     const raiz = document.createElement('div');
-    aplicarAjustes({ tema: 'claro', letraCodigo: 20, letraInterfaz: 27 }, raiz);
+    aplicarAjustes({ tema: 'claro', letraCodigo: 20, letraInterfaz: 27, botonesGrandes: 'auto' }, raiz);
     expect(raiz.dataset.tema).toBe('claro');
     expect(raiz.style.getPropertyValue('--tamano-codigo')).toBe('20px');
     expect(raiz.style.getPropertyValue('--zoom-interfaz')).toBe('2');

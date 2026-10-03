@@ -25,6 +25,7 @@ import { CATEGORIAS_BIBLIOTECA, buscarEnBiblioteca, type CategoriaBiblioteca } f
 import { miniatura } from '../interfaz/iconosFormas';
 import { abrirEditorParticulas } from '../recursos/EditorParticulas';
 import { botonIcono, h, icono, rellenar } from '../interfaz/dom';
+import { conMenu, type OpcionMenu } from '../interfaz/menu';
 import { confirmar, notificar, pedirTexto } from '../interfaz/dialogos';
 import { abrirEditorSonidos } from '../recursos/EditorSonidos';
 import { abrirPantallasListas } from '../pantallas/dialogoPantallas';
@@ -164,6 +165,23 @@ export class PanelIzquierdo {
         def.sprite?.fijo ? h('span', { class: 'etiqueta', title: 'Pegado a la pantalla (interfaz)' }, 'IU') : null,
         def.plantilla && e.proyecto.plantillas[def.plantilla] ? h('span', { class: 'etiqueta enlazada', title: `Copia de la plantilla "${def.plantilla}": al cambiarla, cambian todas` }, icono('plantilla', 11)) : null,
       );
+      conMenu(fila, () => [
+        { texto: 'Cambiar el nombre', icono: 'texto', alPulsar: () => fila.dispatchEvent(new MouseEvent('dblclick')) },
+        { texto: conScript ? 'Abrir su código' : 'Crear su script', icono: 'script', alPulsar: () => {
+          const archivo = conScript ? def.script! : e.crearScriptPara({ tipo: 'escena', escena: e.escenaActual, indice: i });
+          if (archivo) e.abrirScript(archivo);
+        } },
+        { texto: 'Duplicar', icono: 'copiar', alPulsar: () => {
+          e.seleccionarIndice(i);
+          e.duplicarSeleccionado();
+        } },
+        { texto: 'Subir en la lista', icono: 'arriba', ayuda: 'Los de arriba se dibujan antes (quedan por debajo)', desactivada: i === 0, alPulsar: () => e.moverEnLista(i, i - 1) },
+        { texto: 'Bajar en la lista', icono: 'abajo', ayuda: 'Los de abajo se dibujan después (quedan por encima)', desactivada: i === objetos.length - 1, alPulsar: () => e.moverEnLista(i, i + 1) },
+        { texto: 'Borrar', icono: 'basura', peligro: true, alPulsar: () => {
+          if (!e.estaSeleccionado(i)) e.seleccionarIndice(i);
+          e.borrarSeleccionado();
+        } },
+      ], def.nombre ?? 'Objeto');
       lista.append(fila);
       if (conScript) {
         lista.append(h('li', {
@@ -239,8 +257,15 @@ export class PanelIzquierdo {
     );
   }
 
-  private fila(ic: string | HTMLElement, nombre: string, extra: (HTMLElement | null)[], props: Record<string, unknown> = {}): HTMLElement {
-    return h('div', { class: 'fila-recurso', tabindex: '0', ...props }, typeof ic === 'string' ? icono(ic, 15) : ic, h('span', { class: 'nombre' }, nombre), h('span', { class: 'acciones' }, extra));
+  /**
+   * Una fila de la pestaña Proyecto. Lo que con ratón se hace con doble clic (cambiar el nombre) o arrastrando
+   * (`menu`: poner en la escena...) está también en su menú: botón derecho, o dejar el dedo encima.
+   */
+  private fila(ic: string | HTMLElement, nombre: string, extra: (HTMLElement | null)[], props: Record<string, unknown> = {}, menu: () => OpcionMenu[] = () => []): HTMLElement {
+    const el = h('div', { class: 'fila-recurso', tabindex: '0', ...props }, typeof ic === 'string' ? icono(ic, 15) : ic, h('span', { class: 'nombre' }, nombre), h('span', { class: 'acciones' }, extra));
+    const renombrar = props.ondblclick as (() => void) | undefined;
+    const opciones = () => [...menu(), ...(renombrar ? [{ texto: 'Cambiar el nombre', icono: 'texto', alPulsar: () => renombrar() }] : [])];
+    return opciones().length ? conMenu(el, opciones, nombre) : el;
   }
 
   private pestanaProyecto(): HTMLElement[] {
@@ -301,20 +326,25 @@ export class PanelIzquierdo {
         title: 'Clic: ver sus propiedades · Arrástrala a la escena para poner una copia · En el código: crear("' + n + '")',
         onclick: () => e.seleccionar({ tipo: 'plantilla', nombre: n }),
         ondragstart: (ev: DragEvent) => ev.dataTransfer?.setData('chispa/plantilla', n),
-      }),
+      }, () => [{ texto: 'Poner una copia en la escena', icono: 'mas', ayuda: 'Lo mismo que arrastrarla a la escena: la pone en el centro de lo que se ve', alPulsar: () => this.vista.ponerEnElCentro('plantilla', n) }]),
     );
 
     // Imágenes
     const imagenes = h('div', { class: 'rejilla-imagenes' },
       Object.entries(p.imagenes).map(([n, url]) =>
-        h('div', { class: 'imagen-recurso', draggable: 'true', title: `${n}\nArrástrala a la escena · Doble clic: cambiar el nombre · En el código: yo.imagen = "${n}"`, ondragstart: (ev: DragEvent) => ev.dataTransfer?.setData('chispa/imagen', n), ondblclick: () => this.renombrarRecurso('imagen', n) },
+        conMenu(h('div', { class: 'imagen-recurso', draggable: 'true', title: `${n}\nArrástrala a la escena · Doble clic: cambiar el nombre · En el código: yo.imagen = "${n}"`, ondragstart: (ev: DragEvent) => ev.dataTransfer?.setData('chispa/imagen', n), ondblclick: () => this.renombrarRecurso('imagen', n) },
           h('img', { src: url, alt: n, draggable: 'false', onload: marcarPixelado }),
           h('span', {}, n),
           h('div', { class: 'acciones-imagen' },
             botonIcono('pincel', `Editar "${n}" en el editor de píxeles`, () => void abrirEditorPixelArt(e, { imagen: n }), undefined, 'pequeno'),
             botonIcono('cerrar', `Borrar la imagen "${n}"`, () => this.borrarRecurso('imagen', n), undefined, 'pequeno'),
           ),
-        ),
+        ), () => [
+          { texto: 'Poner en la escena', icono: 'mas', ayuda: 'Lo mismo que arrastrarla a la escena: crea un objeto con esta imagen en el centro de lo que se ve', alPulsar: () => this.vista.ponerEnElCentro('imagen', n) },
+          { texto: 'Cambiar el nombre', icono: 'texto', alPulsar: () => this.renombrarRecurso('imagen', n) },
+          { texto: 'Editar el dibujo', icono: 'pincel', alPulsar: () => void abrirEditorPixelArt(e, { imagen: n }) },
+          { texto: 'Borrar', icono: 'basura', peligro: true, alPulsar: () => this.borrarRecurso('imagen', n) },
+        ], n),
       ),
     );
 

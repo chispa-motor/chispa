@@ -728,3 +728,171 @@ a.boton { text-decoration: none; display: inline-flex; align-items: center; }
   .categoria-bloques { padding: 3px 2px; gap: 1px; }
   .categoria-bloques .punto { width: 13px; height: 13px; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   MÓVIL Y TABLET (ver DISPOSITIVOS.md)
+   Las clases las pone interfaz/dispositivo.ts en el editor y en <html>:
+     .compacto = móvil o tablet: paneles en cajones y barra de abajo
+     .movil    = pantalla pequeña: cada cajón ocupa la pantalla
+     .tactil   = se maneja con el dedo: todo lo que se pulsa mide 44 px
+     .tumbado  = más ancho que alto
+     .con-teclado = ha salido el teclado de pantalla
+   ═══════════════════════════════════════════════════════════════════ */
+.editor-chispa { height: 100dvh; padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+.barra-principal { padding-top: env(safe-area-inset-top); box-sizing: content-box; }
+.navegacion-abajo, .fondo-cajon { display: none; }
+/* Con el dedo sobre la escena no se desplaza ni se amplía la página: lo hace la escena */
+.lienzo-escena, .lienzo-juego { touch-action: none; }
+html, body { overscroll-behavior: none; }
+
+/* ── El editor ocupa justo lo que se ve (si sale el teclado, se encoge con él en vez de quedar tapado) ── */
+.editor-chispa.compacto { position: fixed; left: 0; right: 0; top: var(--arriba-visible, 0px); height: var(--alto-visible, 100dvh); }
+/* (clip y no hidden: con hidden el navegador puede DESPLAZAR el cuerpo para enseñar algo de un cajón cerrado, y todo sale movido) */
+.compacto .cuerpo-editor { position: relative; overflow: hidden; overflow: clip; }
+.compacto .divisor { display: none; }
+.compacto .columna-centro { min-width: 0; }
+
+/* ── Cajones: los paneles salen por los lados encima de la escena o del código ── */
+.compacto .columna-izquierda, .compacto .columna-derecha, .compacto .panel-inferior {
+  position: absolute; z-index: 30; visibility: hidden; pointer-events: none; box-shadow: 0 0 30px #000a;
+  transition: transform .18s ease-out, visibility 0s .18s;
+}
+.compacto .columna-izquierda { left: 0; top: 0; bottom: 0; width: min(360px, 100%); transform: translateX(-104%); }
+.compacto .columna-derecha { right: 0; top: 0; bottom: 0; width: min(400px, 100%); transform: translateX(104%); }
+.compacto .panel-inferior { left: 0; right: 0; bottom: 0; height: min(62%, 460px); transform: translateY(104%); border-top: 1px solid var(--borde-fuerte); }
+.movil .columna-izquierda, .movil .columna-derecha { width: 100%; }
+.movil .panel-inferior { height: 100%; }
+.editor-chispa.compacto[data-cajon=objetos] .columna-izquierda,
+.editor-chispa.compacto[data-cajon=propiedades] .columna-derecha,
+.editor-chispa.compacto[data-cajon=juego] .columna-derecha,
+.editor-chispa.compacto[data-cajon=consola] .panel-inferior { visibility: visible; pointer-events: auto; transform: none; transition: transform .18s ease-out; }
+/* El juego ocupa toda la pantalla; el panel de propiedades comparte columna con él y entonces no se ve */
+.editor-chispa.compacto[data-cajon=juego] .columna-derecha { left: 0; width: 100%; }
+.editor-chispa.compacto[data-cajon=juego] .titulo-propiedades, .editor-chispa.compacto[data-cajon=juego] .inspector { display: none; }
+.editor-chispa.compacto[data-cajon=juego] .vista-juego { flex: 1; height: auto; min-height: 0; }
+/* Con las propiedades abiertas el juego sigue ahí (puede estar en marcha), fuera de la vista */
+.editor-chispa.compacto:not([data-cajon=juego]) .titulo-juego { display: none; }
+.editor-chispa.compacto:not([data-cajon=juego]) .vista-juego:not(.ampliada) { position: absolute; left: -200vw; top: 0; width: 320px; height: 200px; }
+.editor-chispa.compacto[data-cajon=objetos] .fondo-cajon, .editor-chispa.compacto[data-cajon=propiedades] .fondo-cajon, .editor-chispa.compacto[data-cajon=consola] .fondo-cajon { display: block; position: absolute; inset: 0; z-index: 25; background: #05070b99; }
+.movil .fondo-cajon { display: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .compacto .columna-izquierda, .compacto .columna-derecha, .compacto .panel-inferior { transition: none !important; }
+}
+
+/* ── La barra de abajo ── */
+.compacto .navegacion-abajo {
+  display: flex; flex: none; height: calc(58px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom);
+  background: var(--fondo-profundo); border-top: 1px solid var(--borde); z-index: 40;
+}
+.movil .boton-navegacion { font-size: 10px; letter-spacing: -.2px; }
+.boton-navegacion { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 0 2px; border: none; background: none; color: var(--texto-suave); font-size: 11px; cursor: pointer; position: relative; }
+.boton-navegacion span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.boton-navegacion.activo { color: var(--acento); }
+.boton-navegacion.activo::before { content: ''; position: absolute; top: 0; left: 18%; right: 18%; height: 3px; border-radius: 0 0 3px 3px; background: var(--acento); }
+.boton-navegacion[data-ir=consola] .icono { color: inherit; }
+/* Con el teclado fuera cada píxel cuenta: la barra de abajo se quita mientras se escribe */
+.con-teclado .navegacion-abajo { display: none; }
+/* Móvil tumbado: la barra va a la izquierda, de arriba abajo (así no se come lo poco que hay de alto) */
+.editor-chispa.movil.tumbado { display: grid; grid-template: 'barra barra' auto 'nav cuerpo' minmax(0, 1fr) / 64px minmax(0, 1fr); }
+.movil.tumbado .barra-principal { grid-area: barra; }
+.movil.tumbado .cuerpo-editor { grid-area: cuerpo; }
+.movil.tumbado .navegacion-abajo { grid-area: nav; flex-direction: column; height: auto; padding: 0; border-top: none; border-right: 1px solid var(--borde); }
+.movil.tumbado .boton-navegacion.activo::before { top: 18%; bottom: 18%; left: 0; right: auto; width: 3px; height: auto; border-radius: 0 3px 3px 0; }
+.movil.tumbado.con-teclado { grid-template-columns: 0 minmax(0, 1fr); }
+
+/* ── La barra de arriba ── */
+.compacto .barra-principal { overflow-x: auto; scrollbar-width: none; }
+.compacto .barra-principal::-webkit-scrollbar { display: none; }
+.compacto .grupo-barra .boton-icono span { display: none; }
+.compacto .marca span { display: none; }
+.grupo-barra.sin-borde { border-left: none; padding-left: 0; }
+.movil .barra-principal { gap: 0; padding-left: 4px; padding-right: 4px; }
+.movil .barra-principal .nombre-proyecto { flex: 1; padding: 0 6px; }
+.movil .barra-principal .nombre-proyecto span:first-child { max-width: none; }
+.movil .barra-principal .grupo-barra { padding: 0 2px; border-left: none; flex: none; }
+.movil .barra-principal .grupo-barra.derecha { margin-left: 0; }
+.movil .pestanas-centro .pestana span { max-width: 38vw; overflow: hidden; text-overflow: ellipsis; }
+/* La escena: lo que no cabe en su barra se desplaza con el dedo */
+.compacto .barra-escena { overflow-x: auto; scrollbar-width: none; }
+.compacto .barra-escena::-webkit-scrollbar { display: none; }
+.compacto .barra-escena .grupo { flex: none; }
+.compacto .etiqueta-raton { display: none; }
+.compacto .barra-escena .con-menu { position: static; }
+.compacto .barra-escena .menu-desplegable { position: fixed; right: 8px; top: auto; margin-top: 4px; max-height: 70dvh; overflow-y: auto; max-width: calc(100vw - 16px); }
+.movil .boton-anadir span { display: none; }
+
+/* ── Con el dedo: todo lo que se pulsa mide al menos 44 px ── */
+.tactil button, .tactil select, .tactil [role=tab], .tactil a.boton,
+.tactil input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=hidden]):not(.teclado-chispa) {
+  min-height: 44px; min-width: 44px;
+}
+.tactil summary { min-height: 44px; padding-top: 11px; padding-bottom: 11px; }
+.tactil .boton-icono, .tactil .boton, .tactil .pestana-panel, .tactil .modo-script .modo, .tactil .boton-forma, .tactil .opcion-tema, .tactil .cerrar-pestana, .tactil .categoria-bloques { justify-content: center; }
+.tactil .opcion-menu, .tactil .boton-herramienta { justify-content: flex-start; }
+.tactil .boton-icono.pequeno { height: 44px; padding: 0 10px; }
+.tactil .barra-principal { height: 52px; }
+.tactil .pestanas-centro { height: 46px; }
+.tactil .pestana { min-height: 44px; padding-left: 14px; }
+.tactil .titulo-panel { height: 46px; }
+.tactil .barra-escena { height: 50px; }
+.tactil .modo-script { padding: 3px 8px; }
+.tactil .dialogo .campo, .tactil input[type=text], .tactil input[type=number], .tactil input[type=search], .tactil select, .tactil textarea { min-height: 44px; }
+/* (16 px de letra: con menos, Safari de iPhone acerca la página al tocar un campo) */
+.tactil input[type=text], .tactil input[type=number], .tactil input[type=search], .tactil select, .tactil textarea { font-size: 16px; }
+.tactil input[type=checkbox], .tactil input[type=radio] { width: 24px; height: 24px; }
+.tactil input[type=range] { min-height: 44px; }
+.tactil .dialogo-botones { flex-wrap: wrap; }
+.tactil .estado-juego { height: 26px; }
+/* Con el dedo no hay «pasar por encima»: nada se queda marcado como si el dedo siguiera ahí */
+@media (hover: none) {
+  .boton-icono:hover:not(:disabled):not(.activo):not(.principal), .boton:hover:not(.principal), .opcion-menu:hover, .pestana:hover:not(.activa) { background: transparent; }
+}
+
+/* ── Ventanas (diálogos) en el móvil: a pantalla completa, y nunca debajo del teclado ── */
+.dialogo-fondo { height: var(--alto-visible, 100dvh); top: var(--arriba-visible, 0px); bottom: auto; }
+.dialogo { max-height: calc(var(--alto-visible, 100dvh) - 48px); }
+.movil .dialogo-fondo { align-items: stretch; }
+.movil .dialogo, .movil .dialogo.dialogo-ancho { width: 100vw; max-width: none; max-height: none; height: 100%; border-radius: 0; border: none; padding: calc(14px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left)); display: flex; flex-direction: column; }
+.movil .dialogo > :not(h2):not(.dialogo-botones) { flex: 1 1 auto; min-height: 0; overflow: auto; }
+.movil .dialogo .dialogo-botones { flex: none; }
+.compacto #notificaciones { left: 8px; right: 8px; bottom: calc(70px + env(safe-area-inset-bottom)); align-items: stretch; }
+.compacto .notificacion { max-width: none; }
+
+/* ── El bocadillo de ayuda al tocar y los menús flotantes ── */
+.bocadillo-ayuda { position: fixed; z-index: 1000; padding: 9px 12px; border-radius: 9px; background: #10131aee; color: #fff; border: 1px solid #ffffff38; box-shadow: 0 10px 28px #000b; font-size: 13.5px; line-height: 1.4; pointer-events: auto; animation: aparecer .12s ease-out; }
+.menu-flotante { position: fixed; z-index: 300; min-width: 210px; max-width: calc(100vw - 16px); max-height: calc(var(--alto-visible, 100dvh) - 16px); overflow-y: auto; padding: 5px; border-radius: 10px; background: var(--fondo-elevado); border: 1px solid var(--borde-fuerte); box-shadow: 0 14px 36px #000b; animation: aparecer .1s ease-out; }
+.menu-flotante .titulo-menu { padding: 6px 9px 4px; font-size: 11.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--texto-suave); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.menu-flotante .sin-icono { width: 18px; }
+.opcion-menu.peligro { color: var(--error); }
+.opcion-menu:disabled { opacity: .4; }
+.boton-navegacion.con-error:not(.activo) { color: var(--error); }
+.tactil .campo-fila { min-height: 44px; }
+/* El interruptor de las secciones: se ve de 30 px, pero se puede tocar en 44 (el borde transparente también cuenta) */
+.tactil .interruptor { width: 60px !important; height: 44px !important; box-sizing: border-box; border: 7px solid transparent; border-left-width: 4px; border-right-width: 4px; background-clip: padding-box; border-radius: 22px; }
+.tactil .interruptor::after { left: 3px; top: 3px; width: 24px; height: 24px; }
+.tactil .interruptor:checked::after { transform: translateX(22px); }
+/* En la tablet, con las propiedades abiertas se sigue viendo y tocando la escena (para elegir otro objeto y ver los cambios) */
+.editor-chispa.tablet[data-cajon=propiedades] .fondo-cajon { display: none; }
+.tactil label:has(input[type=checkbox]), .tactil label:has(input[type=radio]) { min-height: 44px; align-content: center; }
+.tactil input[type=color] { min-height: 44px; min-width: 44px; }
+.selector-color-ventana { max-height: calc(var(--alto-visible, 100dvh) - 12px); overflow-y: auto; max-width: calc(100vw - 12px); }
+.tactil .selector-color-ventana { width: min(340px, calc(100vw - 12px)); }
+[data-menu] { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.bocadillo-ayuda.con-ficha { padding: 4px; background: var(--fondo-elevado); color: var(--texto); border-color: var(--borde-fuerte); max-height: 46vh; overflow-y: auto; }
+.problema-bocadillo { padding: 8px 10px; white-space: pre-wrap; border-left: 4px solid var(--aviso); border-radius: 4px; margin: 2px; }
+.problema-bocadillo.error { border-left-color: var(--error); }
+/* ── El editor de píxeles en pantallas estrechas: primero el dibujo, y debajo las herramientas en fila ── */
+@media (max-width: 860px) {
+  .editor-pixel .centro-pixel { order: -1; }
+  .herramientas-pixel { flex-direction: row; flex-wrap: wrap; }
+  .herramientas-pixel .separador { display: none; }
+  .herramientas-pixel .boton-herramienta { flex: 1 1 auto; justify-content: center; }
+  .herramientas-pixel .boton-herramienta span { display: none; }
+  .paleta-pixel { grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); }
+  .marco-lienzo-pixel { max-height: 46dvh; }
+}
+/* En el móvil el contenido de una ventana se desplaza: lo de dentro no se encoge para caber (la rejilla de música se quedaba sin alto) */
+.movil .dialogo > :not(h2):not(.dialogo-botones) > * { flex-shrink: 0; }
+.zona-musica { flex: none; height: clamp(190px, 46dvh, 420px); }
+/* La pluma cabe siempre entera (sobre ella no se puede desplazar la ventana: el dedo dibuja) */
+.lienzo-pluma { width: min(440px, 100%, calc(var(--alto-visible, 100dvh) - 150px)); min-width: 180px; align-self: center; }

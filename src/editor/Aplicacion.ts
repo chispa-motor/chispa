@@ -37,6 +37,9 @@ import { EstadoEditor } from './estado/EstadoEditor';
 import { VistaEscena } from './escena/VistaEscena';
 import { VistaJuego } from './juego/VistaJuego';
 import { abrirDialogo, avisar, confirmar, notificar } from './interfaz/dialogos';
+import { vigilarDispositivo, type EstadoDispositivo } from './interfaz/dispositivo';
+import { activarAyudaAlTocar } from './interfaz/ayudaAlTocar';
+import { abrirMenu } from './interfaz/menu';
 import { botonIcono, h, icono, rellenar } from './interfaz/dom';
 import { Inspector } from './paneles/Inspector';
 import { PanelInferior } from './paneles/PanelInferior';
@@ -47,7 +50,7 @@ import { importarArchivos, resumenImportar } from './recursos/importar';
 import { PanelDepurador } from './paneles/PanelDepurador';
 import { revisarProyecto } from '../proyecto/Revision';
 import { ATAJOS, abrirAtajos, tablaAtajos } from './atajos';
-import { abrirAjustes } from './ajustes';
+import { abrirAjustes, cargarAjustes } from './ajustes';
 import { LIMITES_PROYECTO } from '../proyecto/validar';
 import { abrirAcercaDe, abrirApoyo } from './acerca';
 import { VERSION } from '../version';
@@ -56,6 +59,9 @@ const CLAVE_DISPOSICION = 'chispa-editor:disposicion';
 /** Milisegundos después de un cambio para guardar solo, y como mucho sin guardar mientras se sigue cambiando. */
 const ESPERA_GUARDADO = 1200;
 const ESPERA_MAXIMA_GUARDADO = 5000;
+
+/** Los paneles que, en móvil y tablet, se abren como cajones con la barra de abajo. */
+export type Cajon = '' | 'objetos' | 'propiedades' | 'juego' | 'consola';
 
 export class Aplicacion {
   readonly estado = new EstadoEditor(proyectoMinimo);
@@ -73,6 +79,8 @@ export class Aplicacion {
   private zonaCodigo = h('div', { class: 'zona-codigo' });
   private zonaEscena = h('div', { class: 'zona-escena' });
   private errores = 0;
+  /** Errores que ha dado el juego mientras estaba en marcha (para marcarlo en la barra de abajo del móvil). */
+  private erroresEnMarcha = 0;
   private temporizadorGuardado = 0;
   private guardadoEn: number | null = null;
   /** Puntos de parada y paso a paso (se guarda aquí: sirve para todas las partidas). */
@@ -80,6 +88,14 @@ export class Aplicacion {
   private panelDepurador: PanelDepurador;
   /** El tutorial guiado, si está abierto. */
   tutorial: Tutorial | null = null;
+
+  /** La barra de abajo (móvil y tablet): cada botón enseña una parte del editor. */
+  private navegacion = h('nav', { class: 'navegacion-abajo', 'aria-label': 'Partes del editor' });
+  /** El panel que está abierto como cajón en móvil y tablet ('' = ninguno: se ve la escena o el código). */
+  cajon: Cajon = '';
+  /** En qué aparato estamos (móvil, tablet, escritorio; con el dedo o con ratón). */
+  dispositivo: EstadoDispositivo = { disposicion: 'escritorio', tactil: false, tumbado: true, teclado: false };
+  private vigia: ReturnType<typeof vigilarDispositivo> | null = null;
 
   constructor(private raiz: HTMLElement) {
     const e = this.estado;
@@ -96,6 +112,13 @@ export class Aplicacion {
     this.soltarArchivos();
     this.dibujarBarra();
     this.dibujarPestanas();
+    // Móvil y tablet: se mira el aparato, se ponen los cajones y la ayuda sale al tocar
+    this.vigia = vigilarDispositivo(this.raiz, (d) => this.cambiaDispositivo(d), () => {
+      const b = cargarAjustes().botonesGrandes;
+      return b === 'auto' ? null : b === 'si';
+    });
+    activarAyudaAlTocar();
+    this.vistaEscena.menuExtra = () => (this.dispositivo.disposicion === 'escritorio' ? [] : [{ texto: 'Propiedades', icono: 'ajustes', ayuda: 'Abre el panel de propiedades de este objeto', alPulsar: () => this.abrirCajon('propiedades') }]);
 
     e.alCambiar((c) => {
       if (c === 'proyecto' || c === 'archivos' || c === 'scripts' || c === 'escena') {
@@ -105,8 +128,14 @@ export class Aplicacion {
       if (c === 'recursos' || c === 'objetos' || c === 'escena') this.editorCodigo.revisarTodo();
       if (c !== 'seleccion') this.programarGuardado();
       if (c === 'historial' || c === 'proyecto') this.dibujarBarra();
+      // Al abrir un script o cambiar de pestaña se cierra el cajón: lo que se ha pedido ver está debajo
+      if (c === 'archivos' && this.cajon && this.cajon !== 'consola') this.abrirCajon('');
+      if (c === 'archivos' || c === 'proyecto' || c === 'escena') this.dibujarNavegacion();
     });
-    this.vistaJuego.alCambiarEstado = () => this.dibujarBarra();
+    this.vistaJuego.alCambiarEstado = () => {
+      this.dibujarBarra();
+      this.dibujarNavegacion();
+    };
     this.inferior.alOrden = (codigo) => this.ejecutarOrden(codigo);
     this.inferior.alCambiarProblemas = (n) => {
       if (n !== this.errores) {
@@ -243,15 +272,20 @@ export class Aplicacion {
       this.inferior.elemento,
     );
     const derecha = h('aside', { class: 'columna-derecha' },
-      h('div', { class: 'titulo-panel' }, icono('jugar', 14), h('span', {}, 'Juego'), h('span', { class: 'espacio' }),
+      h('div', { class: 'titulo-panel titulo-juego' }, icono('jugar', 14), h('span', {}, 'Juego'), h('span', { class: 'espacio' }),
         botonIcono('ampliar', 'Ver el juego en grande (Escape o el botón de arriba para volver)', () => this.vistaJuego.ampliar(), undefined, 'pequeno')),
       this.vistaJuego.elemento,
       divisor('--alto-juego', 'y', 1, 120, 800),
-      h('div', { class: 'titulo-panel' }, icono('menu', 14), h('span', {}, 'Propiedades')),
+      h('div', { class: 'titulo-panel titulo-propiedades' }, icono('menu', 14), h('span', {}, 'Propiedades')),
       this.inspector.elemento,
     );
     const izquierda = h('aside', { class: 'columna-izquierda' }, this.izquierdo.elemento);
     this.raiz.classList.add('editor-chispa');
+    // Los cajones cerrados están fuera de la vista: si un navegador desplaza el cuerpo para enseñar algo de ellos, se devuelve a su sitio
+    this.raiz.addEventListener('scroll', (ev) => {
+      const el = ev.target as HTMLElement;
+      if (el.classList?.contains('cuerpo-editor') && (el.scrollLeft || el.scrollTop)) el.scrollTo(0, 0);
+    }, true);
     this.raiz.replaceChildren(
       this.barra,
       h('div', { class: 'cuerpo-editor' },
@@ -260,7 +294,10 @@ export class Aplicacion {
         centro,
         divisor('--ancho-der', 'x', -1, 240, 900),
         derecha,
+        // Móvil y tablet: lo oscuro de detrás de un cajón abierto (tocarlo lo cierra)
+        h('div', { class: 'fondo-cajon', onclick: () => this.abrirCajon('') }),
       ),
+      this.navegacion,
     );
     try {
       const guardada = JSON.parse(localStorage.getItem(CLAVE_DISPOSICION) ?? '{}') as Record<string, string>;
@@ -268,6 +305,90 @@ export class Aplicacion {
     } catch {
       /* sin disposición guardada */
     }
+  }
+
+  // ═════════════════════════ Móvil y tablet: cajones y barra de abajo ═════════════════════════
+
+  /** Ha cambiado el aparato (se ha girado, ha salido el teclado, se ha estrechado la ventana...). */
+  private cambiaDispositivo(d: EstadoDispositivo): void {
+    const antes = this.dispositivo;
+    this.dispositivo = d;
+    // Al volver al escritorio no hay cajones
+    if (d.disposicion === 'escritorio' && this.cajon) this.abrirCajon('');
+    if (antes.disposicion !== d.disposicion || antes.tactil !== d.tactil) {
+      this.dibujarBarra();
+      this.dibujarPestanas();
+    }
+    this.dibujarNavegacion();
+    this.vistaEscena.redibujar();
+    // Ha salido (o se ha ido) el teclado de pantalla: lo que se está escribiendo tiene que seguir a la vista
+    if (antes.teclado !== d.teclado) {
+      requestAnimationFrame(() => {
+        const foco = document.activeElement as HTMLElement | null;
+        if (foco?.closest('.cm-editor')) this.editorCodigo.verCursor(this.estado.pestanaActiva);
+        else if (d.teclado && foco && foco !== document.body && !foco.classList.contains('teclado-chispa')) foco.scrollIntoView({ block: 'nearest' });
+      });
+    }
+  }
+
+  /** Vuelve a mirar el aparato (tras cambiar «Botones grandes» en Ajustes). */
+  revisarDispositivo(): void {
+    this.vigia?.revisar();
+  }
+
+  /** Abre un panel como cajón (o los cierra todos, con ''). En el escritorio no hace nada: los paneles ya se ven. */
+  abrirCajon(c: Cajon): void {
+    if (this.dispositivo.disposicion === 'escritorio') c = '';
+    this.cajon = c;
+    if (c) this.raiz.dataset.cajon = c;
+    else delete this.raiz.dataset.cajon;
+    this.dibujarNavegacion();
+    if (c === 'juego') requestAnimationFrame(() => this.vistaJuego.enfocar());
+    if (!c) this.vistaEscena.redibujar();
+  }
+
+  private dibujarNavegacion(): void {
+    const e = this.estado;
+    const enMarcha = this.vistaJuego.estadoJuego !== 'parado';
+    const boton = (id: string, ic: string, texto: string, ayuda: string, activo: boolean, alPulsar: () => void) =>
+      h('button', { class: `boton-navegacion ${activo ? 'activo' : ''} ${id === 'consola' && (this.errores || this.erroresEnMarcha) ? 'con-error' : ''}`, 'data-ir': id, title: ayuda, 'aria-label': ayuda, 'aria-current': activo ? 'page' : 'false', onclick: alPulsar }, icono(ic, 22), h('span', {}, texto));
+    const scripts = e.pestanas;
+    rellenar(this.navegacion,
+      boton('escena', 'escena', 'Escena', 'La escena: colocar y mover los objetos', !this.cajon && e.pestanaActiva === 'escena', () => {
+        this.abrirCajon('');
+        e.activarPestana('escena');
+      }),
+      boton('codigo', 'script', 'Código', 'El código (o los bloques) del último script abierto', !this.cajon && e.pestanaActiva !== 'escena', () => {
+        this.abrirCajon('');
+        const def = e.seleccion?.tipo === 'escena' ? e.seleccionado : null;
+        // El del objeto seleccionado, si tiene; si no, el último abierto
+        if (def?.script && def.script in e.proyecto.scripts) e.abrirScript(def.script);
+        else if (scripts.length) e.activarPestana(e.pestanaActiva !== 'escena' ? e.pestanaActiva : scripts[scripts.length - 1]);
+        else {
+          const primero = Object.keys(e.proyecto.scripts)[0];
+          if (primero) e.abrirScript(primero);
+          else notificar('Todavía no hay ningún script. Deja el dedo sobre un objeto de la escena y elige «Crear su script».');
+        }
+      }),
+      boton('objetos', 'objeto', 'Objetos', 'Los objetos de la escena y lo que hay en el proyecto (imágenes, sonidos, escenas...)', this.cajon === 'objetos', () => this.abrirCajon(this.cajon === 'objetos' ? '' : 'objetos')),
+      boton('propiedades', 'ajustes', 'Propiedades', 'Las propiedades del objeto seleccionado', this.cajon === 'propiedades', () => this.abrirCajon(this.cajon === 'propiedades' ? '' : 'propiedades')),
+      boton('juego', enMarcha ? 'jugar' : 'ampliar', 'Juego', 'La pantalla del juego en marcha', this.cajon === 'juego', () => this.abrirCajon(this.cajon === 'juego' ? '' : 'juego')),
+      boton('consola', this.errores || this.erroresEnMarcha ? 'error' : 'consola', this.errores ? `Errores (${this.errores})` : this.erroresEnMarcha ? 'Error' : 'Consola', 'La consola, los problemas del código y la Guía', this.cajon === 'consola', () => this.abrirCajon(this.cajon === 'consola' ? '' : 'consola')),
+    );
+  }
+
+  /** En el móvil no caben todos los botones de arriba: los de archivo, ajustes y ayuda van en este menú. */
+  private menuMas(boton: HTMLElement): void {
+    const r = boton.getBoundingClientRect();
+    abrirMenu(r.left, r.bottom + 4, [
+      { texto: 'Proyecto nuevo', icono: 'nuevo', alPulsar: () => void this.nuevo() },
+      { texto: 'Abrir un proyecto', icono: 'abrir', ayuda: 'Abre un archivo .chispa.json', alPulsar: () => void this.abrirArchivo() },
+      { texto: 'Guardar (descargar)', icono: 'guardar', ayuda: 'Descarga el proyecto como archivo .chispa.json', alPulsar: () => this.descargarProyecto() },
+      { texto: 'Exportar el juego', icono: 'exportar', alPulsar: () => void this.exportar() },
+      { texto: 'itch.io en un toque', icono: 'estrella', alPulsar: () => void this.exportar('itch') },
+      { texto: 'Ajustes', icono: 'ajustes', alPulsar: () => abrirAjustes(() => this.revisarDispositivo()) },
+      { texto: 'Ayuda', icono: 'ayuda', alPulsar: () => this.ayuda() },
+    ], this.estado.proyecto.nombre);
   }
 
   private guardarDisposicion(): void {
@@ -300,6 +421,20 @@ export class Aplicacion {
     rehacer.disabled = !e.puedeRehacer;
     const guardado = this.guardadoEn ? `Guardado en este navegador a las ${new Date(this.guardadoEn).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}` : 'Se guarda solo en este navegador';
 
+    if (this.dispositivo.disposicion === 'movil') {
+      // Móvil: lo justo (jugar, deshacer) y el resto en el menú «Más»
+      const mas: HTMLButtonElement = botonIcono('menu', 'Más: proyecto nuevo, abrir, guardar, exportar, ajustes y ayuda', () => this.menuMas(mas), undefined, 'boton-mas');
+      rellenar(this.barra,
+        h('div', { class: 'grupo-barra sin-borde' }, mas),
+        h('div', { class: 'nombre-proyecto', title: guardado },
+          h('span', {}, e.proyecto.nombre),
+          h('span', { class: 'estado-guardado' }, this.guardadoEn ? '✓ guardado' : ''),
+        ),
+        h('div', { class: 'grupo-barra derecha' }, deshacer, rehacer),
+        h('div', { class: 'grupo-barra controles-juego' }, ejecutar, parar),
+      );
+      return;
+    }
     rellenar(this.barra,
       h('div', { class: 'marca' }, icono('estrella', 20), h('span', {}, 'Chispa')),
       h('div', { class: 'grupo-barra' },
@@ -316,7 +451,7 @@ export class Aplicacion {
         h('span', { class: 'estado-guardado' }, this.guardadoEn ? '✓ guardado' : ''),
       ),
       h('div', { class: 'grupo-barra derecha' },
-        botonIcono('ajustes', 'Ajustes: tema claro u oscuro y tamaño de la letra (Ctrl + ,)', () => abrirAjustes(), 'Ajustes'),
+        botonIcono('ajustes', 'Ajustes: tema claro u oscuro, tamaño de la letra y botones grandes (Ctrl + ,)', () => abrirAjustes(() => this.revisarDispositivo()), 'Ajustes'),
         botonIcono('ayuda', 'Ayuda: primeros pasos y atajos (F1: todos los atajos)', () => this.ayuda(), 'Ayuda'),
       ),
     );
@@ -357,6 +492,7 @@ export class Aplicacion {
 
   private irA(archivo: string, linea: number, columna: number): void {
     if (!(archivo in this.estado.proyecto.scripts)) return;
+    if (this.cajon) this.abrirCajon('');
     this.estado.abrirScript(archivo);
     this.editorCodigo.irA(archivo, linea, columna);
   }
@@ -369,11 +505,19 @@ export class Aplicacion {
     c.revisar();
     c.limpiar();
     c.info(`▶ Ejecutando "${this.estado.proyecto.nombre}"…`);
+    this.erroresEnMarcha = 0;
+    // Móvil y tablet: se pasa a la pantalla del juego
+    if (this.dispositivo.disposicion !== 'escritorio') this.abrirCajon('juego');
     try {
       await this.vistaJuego.ejecutar(this.estado.proyecto, {
         alMostrar: (t) => c.mostrar(t),
         depurador: this.depurador,
-        alError: (err, veces) => c.diagnostico(err.diagnostico(), veces),
+        alError: (err, veces) => {
+          c.diagnostico(err.diagnostico(), veces);
+          // Móvil y tablet: la consola no se ve mientras se juega. Se avisa (una vez) y se marca en la barra de abajo
+          if (this.dispositivo.disposicion !== 'escritorio' && !this.erroresEnMarcha++) notificar('El juego ha dado un error. Está en «Consola» (abajo).', 'error');
+          this.dibujarNavegacion();
+        },
         alAviso: (avisos) => avisos.forEach((a) => c.diagnostico(a)),
         alFallar: (err) => this.falloDelMotor(err),
       });
@@ -382,6 +526,7 @@ export class Aplicacion {
         c.info(`No se puede ejecutar: ${err.errores.length === 1 ? 'hay 1 error' : `hay ${err.errores.length} errores`} en el código. Haz clic en uno para ir a su línea.`);
         for (const x of err.errores) c.diagnostico(x.diagnostico());
         c.mostrarPestana('consola');
+        if (this.dispositivo.disposicion !== 'escritorio') this.abrirCajon('consola');
       } else this.falloDelMotor(err);
     }
   }
@@ -411,6 +556,8 @@ export class Aplicacion {
       this.inferior.info('✖ Error interno del motor (no es culpa de tu juego). El detalle técnico está en la consola del navegador (F12).');
     }
     this.inferior.mostrarPestana('consola');
+    // Móvil y tablet: la consola está en un cajón cerrado; se abre para que el error se vea
+    if (this.dispositivo.disposicion !== 'escritorio') this.abrirCajon('consola');
   }
 
   /** Qué hace el editor cuando el juego se para en una línea, y cuando sigue. */
@@ -645,7 +792,7 @@ export class Aplicacion {
       }
       if (ctrl && ev.key === ',') {
         ev.preventDefault();
-        abrirAjustes();
+        abrirAjustes(() => this.revisarDispositivo());
         return;
       }
       if (ctrl && k === 'b' && this.estado.pestanaActiva !== 'escena') {

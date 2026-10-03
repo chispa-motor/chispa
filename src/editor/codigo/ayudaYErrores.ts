@@ -18,8 +18,9 @@
  * - Ayuda: al pasar el ratón por una palabra de Chispa o de la API, sale su
  *   ficha: cómo se usa, qué hace y un ejemplo.
  */
-import { linter, type Diagnostic } from '@codemirror/lint';
-import { hoverTooltip, type EditorView } from '@codemirror/view';
+import { forEachDiagnostic, linter, type Diagnostic } from '@codemirror/lint';
+import { EditorView, hoverTooltip } from '@codemirror/view';
+import { mostrarAyudaEn } from '../interfaz/ayudaAlTocar';
 import type { Text } from '@codemirror/state';
 import { buscarDoc, DOC_EVENTOS } from '../../chispa/api/documentacion';
 import { explicarPila, type Diagnostico } from '../../chispa/errores/ErrorChispa';
@@ -102,8 +103,8 @@ export function eventoDeLinea(texto: string): (typeof DOC_EVENTOS)[number] | nul
 /** Palabras que forman parte de la línea de un evento (para enseñar la ayuda del evento). */
 const PALABRAS_DE_EVENTO = new Set(['cuando', 'empieza', 'cada', 'fotograma', 'segundos', 'segundo', 'pasen', 'se', 'pulsa', 'mantiene', 'suelta', 'toco', 'dejo', 'de', 'tocar', 'hago', 'clic', 'encima', 'cambia', 'termina', 'la', 'animacion', 'salgo', 'pantalla', 'recibo', 'recibe', 'reciba', 'llega', 'escucho', 'oigo']);
 
-/** Ayuda al pasar el ratón por encima de una palabra. */
-export const ayudaAlPasar = hoverTooltip((vista: EditorView, pos: number) => {
+/** La ficha de ayuda de la palabra que hay en esa posición del código (y dónde empieza y acaba la palabra), o null. */
+export function fichaEn(vista: EditorView, pos: number): { desde: number; hasta: number; dom: () => HTMLElement } | null {
   const linea = vista.state.doc.lineAt(pos);
   const encontrada = rutaEn(linea.text, pos - linea.from);
   if (!encontrada) return null;
@@ -111,10 +112,86 @@ export const ayudaAlPasar = hoverTooltip((vista: EditorView, pos: number) => {
   const esEvento = /^\s*cuando\s/i.test(linea.text) && PALABRAS_DE_EVENTO.has(palabra) && !encontrada.ruta.includes('.');
   const doc = esEvento ? eventoDeLinea(linea.text) : buscarDoc(encontrada.ruta);
   if (!doc) return null;
-  return {
-    pos: linea.from + encontrada.desde,
-    end: linea.from + encontrada.hasta,
-    above: true,
-    create: () => ({ dom: fichaDOM(doc) }),
-  };
+  return { desde: linea.from + encontrada.desde, hasta: linea.from + encontrada.hasta, dom: () => fichaDOM(doc) };
+}
+
+/** Ayuda al pasar el ratón por encima de una palabra. */
+export const ayudaAlPasar = hoverTooltip((vista: EditorView, pos: number) => {
+  const ficha = fichaEn(vista, pos);
+  return ficha && { pos: ficha.desde, end: ficha.hasta, above: true, create: () => ({ dom: ficha.dom() }) };
 });
+
+/** Los errores y avisos subrayados que pasan por esa posición del código. */
+export function problemasEn(vista: EditorView, pos: number): Diagnostic[] {
+  const lista: Diagnostic[] = [];
+  forEachDiagnostic(vista.state, (d, desde, hasta) => {
+    if (pos >= desde && pos <= hasta) lista.push(d);
+  });
+  return lista;
+}
+
+/**
+ * Enseña, en un bocadillo encima de la palabra, lo que con ratón sale al pasar por encima:
+ * el error o el aviso subrayado y la ficha del comando. `soloProblemas`: sin la ficha.
+ * Devuelve si ha enseñado algo.
+ */
+export function mostrarAyudaDelCodigo(vista: EditorView, pos: number, soloProblemas = false): boolean {
+  const problemas = problemasEn(vista, pos);
+  const ficha = soloProblemas ? null : fichaEn(vista, pos);
+  if (!problemas.length && !ficha) return false;
+  const caja = document.createElement('div');
+  for (const d of problemas) {
+    const p = document.createElement('div');
+    p.className = `problema-bocadillo ${d.severity === 'error' ? 'error' : 'aviso'}`;
+    p.textContent = d.message;
+    caja.append(p);
+  }
+  if (ficha) caja.append(ficha.dom());
+  const donde = vista.coordsAtPos(ficha?.desde ?? pos) ?? vista.coordsAtPos(pos);
+  if (!donde) return false;
+  mostrarAyudaEn({ left: donde.left, top: donde.top, bottom: donde.bottom, width: 40 }, caja, true, 9000);
+  return true;
+}
+
+/** Cuánto hay que dejar el dedo sobre una palabra para ver su ayuda (milisegundos). */
+export const ESPERA_AYUDA_CODIGO = 500;
+
+/**
+ * Con el dedo no se puede «pasar por encima»:
+ *  - TOCAR algo subrayado (un error o un aviso) enseña su explicación.
+ *  - DEJAR EL DEDO sobre una palabra enseña su ficha de ayuda (y el error, si lo hay).
+ */
+export const ayudaAlTocarCodigo = (() => {
+  let espera = 0;
+  let inicio: { x: number; y: number; t: number } | null = null;
+  const cancelar = () => {
+    clearTimeout(espera);
+    inicio = null;
+  };
+  return EditorView.domEventHandlers({
+    pointerdown(ev, vista) {
+      cancelar();
+      if (ev.pointerType === 'mouse') return;
+      inicio = { x: ev.clientX, y: ev.clientY, t: Date.now() };
+      const en = inicio;
+      espera = window.setTimeout(() => {
+        if (inicio !== en) return;
+        inicio = null;
+        const pos = vista.posAtCoords({ x: en.x, y: en.y });
+        if (pos !== null) mostrarAyudaDelCodigo(vista, pos);
+      }, ESPERA_AYUDA_CODIGO);
+    },
+    pointermove(ev) {
+      if (inicio && Math.hypot(ev.clientX - inicio.x, ev.clientY - inicio.y) > 10) cancelar();
+    },
+    pointerup(ev, vista) {
+      const era = inicio;
+      cancelar();
+      if (!era || ev.pointerType === 'mouse') return;
+      // Un toque corto: si ahí hay un error subrayado, se explica
+      const pos = vista.posAtCoords({ x: ev.clientX, y: ev.clientY });
+      if (pos !== null) mostrarAyudaDelCodigo(vista, pos, true);
+    },
+    pointercancel: cancelar,
+  });
+})();

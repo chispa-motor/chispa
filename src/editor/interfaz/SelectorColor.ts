@@ -20,6 +20,7 @@
  *   - MIS COLORES: los que guardas (van dentro del proyecto);
  *   - PALETAS LISTAS: pastel, retro, neón, natural... (las mismas que paleta() en Chispa).
  */
+import { conMenu } from './menu';
 import { NOMBRES_COLORES, colorAComponentes, componentesAColor, esColorValido, resolverColor } from '../../motor/Color';
 import { PALETAS, aHSV, desdeHSV } from '../../motor/Estilo';
 import { h, icono } from './dom';
@@ -148,12 +149,12 @@ export function abrirSelectorColor(ancla: HTMLElement, inicial: string, alElegir
     listaMios.replaceChildren(
       ...mios.map((c) => {
         const b = boton(c);
-        b.addEventListener('contextmenu', (e) => {
-          e.preventDefault();
+        // Quitarlo: clic derecho con el ratón; con el dedo, dejarlo encima (sale un menú)
+        conMenu(b, () => [{ texto: 'Quitar de «Mis colores»', icono: 'basura', peligro: true, alPulsar: () => {
           misColores.guardar(misColores.leer().filter((x) => x !== c));
           pintarMios();
-        });
-        b.title = `${c} (clic derecho: quitarlo)`;
+        } }], c);
+        b.title = `${c} (clic derecho, o dejar el dedo encima: quitarlo)`;
         return b;
       }),
       h('button', { class: 'muestra guardar-color', title: 'Guardar este color en «Mis colores»', 'aria-label': 'Guardar este color', onclick: () => {
@@ -180,16 +181,19 @@ export function abrirSelectorColor(ancla: HTMLElement, inicial: string, alElegir
     listaPaleta,
   );
 
-  const caja = ancla.getBoundingClientRect();
-  ventana.style.left = `${Math.max(4, Math.min(caja.left, window.innerWidth - 230))}px`;
-  ventana.style.top = `${Math.min(caja.bottom + 4, window.innerHeight - 470)}px`;
   document.body.append(ventana);
   pintarMios();
   pintarPaleta();
   pintar();
+  // Junto al botón, pero siempre dentro de lo que se ve (con el dedo los botones son más grandes y la ventana, también)
+  const caja = ancla.getBoundingClientRect();
+  const medida = ventana.getBoundingClientRect();
+  const alto = window.visualViewport?.height ?? window.innerHeight;
+  ventana.style.left = `${Math.max(4, Math.min(caja.left, window.innerWidth - medida.width - 8))}px`;
+  ventana.style.top = `${Math.max(4, Math.min(caja.bottom + 4, alto - medida.height - 8))}px`;
 
   const fuera = (e: Event) => {
-    if (!ventana.contains(e.target as Node) && e.target !== ancla && !esperandoCuentagotas) cerrar();
+    if (!ventana.contains(e.target as Node) && e.target !== ancla && !esperandoCuentagotas && !(e.target as Element | null)?.closest?.('.menu-flotante')) cerrar();
   };
   const tecla = (e: KeyboardEvent) => e.key === 'Escape' && cerrar();
   function cerrar(): void {

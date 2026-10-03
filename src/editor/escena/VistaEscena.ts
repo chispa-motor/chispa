@@ -40,6 +40,8 @@ import { BIBLIOTECA } from '../biblioteca/biblioteca';
 import { FORMAS_DIBUJO, type Forma } from '../../objetos/formas/figuras';
 import { botonIcono, h, icono } from '../interfaz/dom';
 import { notificar } from '../interfaz/dialogos';
+import { abrirMenu, type OpcionMenu } from '../interfaz/menu';
+import { Gestos, HOLGURA_DEDO } from './gestos';
 import { importarArchivos, resumenImportar, tipoDeArchivo } from '../recursos/importar';
 import { cargarLetra, olvidarLetras } from '../../motor/Letras';
 import { TIPOS_CONTROL, type TipoControl } from '../../objetos/componentes/Control';
@@ -71,11 +73,11 @@ const TAMANO_TIRADOR = 9;
 const MINIMO_PARA_TIRADOR = TAMANO_TIRADOR * 3;
 
 type Arrastre =
-  | { tipo: 'mover'; dx: number; dy: number }
-  | { tipo: 'moverVarios'; x0: number; y0: number; origenes: { indice: number; x: number; y: number }[] }
+  | { tipo: 'mover'; dx: number; dy: number; umbral?: { x: number; y: number } }
+  | { tipo: 'moverVarios'; x0: number; y0: number; origenes: { indice: number; x: number; y: number }[]; umbral?: { x: number; y: number } }
   | { tipo: 'marco'; x0: number; y0: number; x1: number; y1: number; sumar: boolean }
   | { tipo: 'tamano'; ancho0: number; alto0: number; x0: number; y0: number }
-  | { tipo: 'vista'; px: number; py: number }
+  | { tipo: 'vista'; px: number; py: number; toque?: boolean }
   | { tipo: 'pintar' }
   | { tipo: 'rectangulo'; c0: number; f0: number; c1: number; f1: number }
   | { tipo: 'punto'; indice: number };
@@ -124,6 +126,20 @@ export class VistaEscena {
   private encuadrada = false;
   private escenaVista = '';
   private quitarOyente: () => void;
+  /** El último puntero ha sido un dedo: todo se coge con más holgura (un dedo tapa mucho más que la flecha del ratón). */
+  private dedo = false;
+  /** Opciones que añade el editor al menú de la pulsación larga (en el móvil, «Propiedades»). */
+  menuExtra: () => OpcionMenu[] = () => [];
+  /** Los dedos sobre la escena: dos mueven y acercan la vista; uno quieto abre el menú. */
+  private gestos = new Gestos({
+    pulsacionLarga: (x, y) => this.pulsacionLarga(x, y),
+    empiezanDosDedos: () => this.dejarArrastre(),
+    dosDedos: (dx, dy, factor, cx, cy) => {
+      this.camara.desplazar(dx, dy);
+      if (factor !== 1) this.camara.zoomEn(cx, cy, factor);
+      this.redibujar();
+    },
+  });
 
   constructor(private estado: EstadoEditor) {
     this.canvas = h('canvas', { class: 'lienzo-escena', tabindex: '0', 'aria-label': 'Vista de la escena' });
@@ -273,6 +289,14 @@ export class VistaEscena {
     const x = this.iman ? ajustar(this.camara.x, PASO_IMAN) : Math.round(this.camara.x);
     const y = this.iman ? ajustar(this.camara.y, PASO_IMAN) : Math.round(this.camara.y);
     this.ponerDeBiblioteca(id, x, y);
+  }
+
+  /** Pone una copia de una plantilla, o un objeto con esa imagen, en el centro de lo que se ve (lo mismo que arrastrarla a la escena). */
+  ponerEnElCentro(que: 'plantilla' | 'imagen', nombre: string): void {
+    const x = this.iman ? ajustar(this.camara.x, PASO_IMAN) : Math.round(this.camara.x);
+    const y = this.iman ? ajustar(this.camara.y, PASO_IMAN) : Math.round(this.camara.y);
+    if (que === 'plantilla') this.estado.colocarPlantilla(nombre, x, y);
+    else this.estado.crearObjeto('imagen', x, y, nombre);
   }
 
   private ponerDeBiblioteca(id: string, x: number, y: number): void {
@@ -716,7 +740,7 @@ export class VistaEscena {
     const def = this.estado.seleccion?.tipo === 'escena' ? this.estado.seleccionado : null;
     if (!def?.recorrido || this.herramienta !== 'mover') return null;
     const pts = this.puntosRecorrido(def, this.marco());
-    for (let i = pts.length - 1; i >= 1; i--) if (Math.hypot(pts[i].x - px, pts[i].y - py) <= 10) return i - 1;
+    for (let i = pts.length - 1; i >= 1; i--) if (Math.hypot(pts[i].x - px, pts[i].y - py) <= (this.dedo ? 24 : 10)) return i - 1;
     return null;
   }
 
@@ -735,7 +759,9 @@ export class VistaEscena {
     const a = this.camara.aPantalla(c.izquierda, c.arriba);
     const b = this.camara.aPantalla(c.derecha, c.abajo);
     if (Math.min(b.x - a.x, b.y - a.y) < MINIMO_PARA_TIRADOR) return false;
-    return Math.abs(px - b.x) <= TAMANO_TIRADOR && Math.abs(py - b.y) <= TAMANO_TIRADOR;
+    // Con el dedo, la holgura es solo HACIA FUERA del objeto: hacia dentro se comería el objeto entero si es pequeño
+    const fuera = this.dedo ? TAMANO_TIRADOR * 2.5 : TAMANO_TIRADOR;
+    return px - b.x <= fuera && py - b.y <= fuera && b.x - px <= TAMANO_TIRADOR && b.y - py <= TAMANO_TIRADOR;
   }
 
   /** La casilla del mapa seleccionado que hay bajo un punto de la pantalla. */
@@ -783,9 +809,16 @@ export class VistaEscena {
     c.addEventListener('contextmenu', (e) => e.preventDefault());
 
     c.addEventListener('pointerdown', (e) => {
-      c.focus();
+      // (con el dedo no se enfoca con desplazamiento: el navegador movería la página)
+      c.focus({ preventScroll: true });
       c.setPointerCapture(e.pointerId);
       const p = this.posRaton(e);
+      this.dedo = e.pointerType === 'touch';
+      if (this.dedo) {
+        // El segundo dedo empieza a mover y acercar la vista; un tercero no hace nada
+        if (this.gestos.bajar(e.pointerId, p.x, p.y) !== 'uno') return;
+        this.raton = p;
+      }
       // Mover la vista: botón central, botón derecho o espacio + clic
       if (e.button === 1 || e.button === 2 || this.espacioPulsado) {
         this.arrastre = { tipo: 'vista', px: p.x, py: p.y };
@@ -820,8 +853,13 @@ export class VistaEscena {
         this.arrastre = { tipo: 'tamano', ancho0: def.sprite?.ancho ?? 64, alto0: def.sprite?.alto ?? 64, x0: m.x, y0: m.y };
         return;
       }
-      const i = objetoEn(this.estado.escena.objetos, marco, m.x, m.y, 3 / this.camara.zoom);
+      const i = objetoEn(this.estado.escena.objetos, marco, m.x, m.y, (this.dedo ? 14 : 3) / this.camara.zoom);
       const sumar = e.ctrlKey || e.metaKey;
+      if (i === null && this.dedo) {
+        // Con el dedo, arrastrar el fondo mueve la vista (y un toque suelto quita la selección)
+        this.arrastre = { tipo: 'vista', px: p.x, py: p.y, toque: true };
+        return;
+      }
       if (i === null) {
         // Fondo: rectángulo de selección (con Ctrl, se añade a lo que ya había)
         if (!sumar) this.estado.seleccionar(null);
@@ -836,18 +874,20 @@ export class VistaEscena {
         // Arrastrar uno de los seleccionados: se mueven todos
         const origenes = this.estado.indicesSeleccionados().map((k) => ({ indice: k, ...posicionEnEditor(this.estado.escena.objetos[k], marco) }));
         this.estado.empezarCambioLargo();
-        this.arrastre = { tipo: 'moverVarios', x0: m.x, y0: m.y, origenes };
+        this.arrastre = { tipo: 'moverVarios', x0: m.x, y0: m.y, origenes, ...(this.dedo ? { umbral: p } : {}) };
         return;
       }
       this.estado.seleccionarIndice(i);
       const def = this.estado.escena.objetos[i];
       const pos = posicionEnEditor(def, marco);
       this.estado.empezarCambioLargo();
-      this.arrastre = { tipo: 'mover', dx: pos.x - m.x, dy: pos.y - m.y };
+      // (con el dedo no se mueve hasta que se arrastra un poco: al tocar para seleccionar, el dedo siempre resbala algo)
+      this.arrastre = { tipo: 'mover', dx: pos.x - m.x, dy: pos.y - m.y, ...(this.dedo ? { umbral: p } : {}) };
     });
 
     c.addEventListener('pointermove', (e) => {
       const p = this.posRaton(e);
+      if (e.pointerType === 'touch' && this.gestos.mover(e.pointerId, p.x, p.y) !== 'uno') return;
       this.raton = p;
       const mundo = this.camara.aMundo(p.x, p.y);
       this.etiquetaRaton.textContent = `x: ${Math.round(mundo.x)}   y: ${Math.round(mundo.y)}`;
@@ -866,6 +906,10 @@ export class VistaEscena {
         return;
       }
       if (a.tipo === 'pintar') return this.pintar(p.x, p.y);
+      if ((a.tipo === 'mover' || a.tipo === 'moverVarios') && a.umbral) {
+        if (Math.hypot(p.x - a.umbral.x, p.y - a.umbral.y) <= HOLGURA_DEDO) return;
+        delete a.umbral;
+      }
       if (a.tipo === 'marco') {
         a.x1 = p.x;
         a.y1 = p.y;
@@ -938,8 +982,17 @@ export class VistaEscena {
       }
     });
 
-    const soltar = () => {
+    const soltar = (e: PointerEvent) => {
       const a = this.arrastre;
+      if (e.pointerType === 'touch') {
+        const toque = !this.gestos.seHaMovido(e.pointerId) && !this.gestos.ignorarUno;
+        this.gestos.subir(e.pointerId);
+        // Un toque suelto en el fondo quita la selección
+        if (a?.tipo === 'vista' && a.toque && toque && e.type === 'pointerup') this.estado.seleccionar(null);
+        // Con el dedo no hay «pasar por encima»: al levantarlo se quita el fantasma del pincel
+        this.raton = null;
+        this.redibujar();
+      }
       if (a?.tipo === 'rectangulo' && this.estado.seleccion) {
         this.estado.pintarRectangulo(this.estado.seleccion, a.c0, a.f0, a.c1, a.f1, this.tipoParaPintar());
       } else if (a?.tipo === 'marco') {
@@ -1032,7 +1085,73 @@ export class VistaEscena {
     });
   }
 
+  /** Deja lo que se estuviera arrastrando (ha bajado otro dedo, o ha salido el menú). */
+  private dejarArrastre(): void {
+    const a = this.arrastre;
+    if (a && a.tipo !== 'vista' && a.tipo !== 'marco' && a.tipo !== 'rectangulo') this.estado.terminarCambioLargo();
+    this.arrastre = null;
+    this.redibujar();
+  }
+
+  /** Dedo quieto sobre la escena: el menú de ese objeto (o el de la escena, si no hay nada debajo). */
+  private pulsacionLarga(px: number, py: number): void {
+    this.dejarArrastre();
+    const m = this.camara.aMundo(px, py);
+    const i = objetoEn(this.estado.escena.objetos, this.marco(), m.x, m.y, 14 / this.camara.zoom);
+    if (i !== null && !this.estado.estaSeleccionado(i)) this.estado.seleccionarIndice(i);
+    const r = this.canvas.getBoundingClientRect();
+    abrirMenu(r.left + px + 6, r.top + py + 6, this.opcionesDeMenu(i, m.x, m.y), i === null ? 'Escena' : this.estado.variosSeleccionados ? 'Varios objetos' : this.estado.escena.objetos[i].nombre ?? 'Objeto');
+    try {
+      navigator.vibrate?.(15);
+    } catch {
+      /* sin vibración: da igual */
+    }
+  }
+
+  /** Lo que se puede hacer con el objeto `i` (o con la escena, si es null). También lo abre la tecla del menú. */
+  opcionesDeMenu(i: number | null, x: number, y: number): OpcionMenu[] {
+    const e = this.estado;
+    if (i === null) {
+      return [
+        { texto: 'Pegar', icono: 'copiar', ayuda: 'Pega aquí lo último que se copió', alPulsar: () => {
+          if (e.pegar() < 0) notificar('No hay nada copiado. Deja el dedo sobre un objeto y elige «Copiar».');
+        } },
+        { texto: 'Añadir un rectángulo aquí', icono: 'mas', alPulsar: () => e.crearObjeto('rectangulo', this.iman ? ajustar(x, PASO_IMAN) : x, this.iman ? ajustar(y, PASO_IMAN) : y) },
+        { texto: 'Seleccionar todo', icono: 'cuadricula', alPulsar: () => e.seleccionarTodo() },
+        { texto: 'Ver la pantalla entera', icono: 'centrar', alPulsar: () => this.encuadrar() },
+      ];
+    }
+    const def = e.escena.objetos[i];
+    const varios = e.variosSeleccionados;
+    const conScript = !!def.script && def.script in e.proyecto.scripts;
+    return [
+      ...this.menuExtra(),
+      varios ? null : { texto: conScript ? 'Abrir su código' : 'Crear su script', icono: 'script', alPulsar: () => {
+        const ref = e.seleccion;
+        if (conScript) e.abrirScript(def.script!);
+        else if (ref) {
+          const archivo = e.crearScriptPara(ref);
+          if (archivo) e.abrirScript(archivo);
+        }
+      } },
+      { texto: 'Duplicar', icono: 'copiar', alPulsar: () => e.duplicarSeleccionado() },
+      { texto: 'Copiar', icono: 'copiar', alPulsar: () => {
+        if (e.copiarSeleccionado()) notificar('Copiado. Deja el dedo en un sitio vacío de la escena y elige «Pegar».', 'ok');
+      } },
+      { texto: 'Borrar', icono: 'basura', peligro: true, alPulsar: () => e.borrarSeleccionado() },
+    ].filter((o): o is OpcionMenu => !!o);
+  }
+
   private tecla(e: KeyboardEvent): void {
+    // La tecla del menú (o Mayús+F10): el mismo menú que la pulsación larga, sin ratón ni dedo
+    if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
+      e.preventDefault();
+      const i = this.estado.seleccion?.tipo === 'escena' ? this.estado.seleccion.indice : null;
+      const r = this.canvas.getBoundingClientRect();
+      const centro = this.camara.aMundo(r.width / 2, r.height / 2);
+      abrirMenu(r.left + r.width / 2, r.top + r.height / 2, this.opcionesDeMenu(i, centro.x, centro.y), i === null ? 'Escena' : this.estado.escena.objetos[i].nombre ?? 'Objeto');
+      return;
+    }
     if (e.code === 'Space') {
       this.espacioPulsado = true;
       e.preventDefault();

@@ -62,6 +62,11 @@ jobs:
         env:
           RUTA_BASE: /chispa/
 
+      - name: Pruebas en móviles y tabletas simulados (ver DISPOSITIVOS.md)
+        run: node pruebas-navegador/moviles.mjs
+        env:
+          RUTA_BASE: /chispa/
+
       - name: Preparar la web para publicarla
         uses: actions/upload-pages-artifact@v4
         with:
