@@ -14,7 +14,7 @@
  * pruebas-navegador/moviles.mjs.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { GESTOS, MAXIMO_BOTONES, MS_LARGO, Tactil, UMBRAL_FLECHA, ZONA_MUERTA, gestoAlLevantar, inclinacion } from '../src/motor/Tactil';
+import { ENCOGE_MINIMO, GESTOS, MAXIMO_BOTONES, MS_LARGO, Tactil, encogeParaAncho, UMBRAL_FLECHA, ZONA_MUERTA, gestoAlLevantar, inclinacion } from '../src/motor/Tactil';
 import { AJUSTES_CALIDAD, Calidad, VENTANAS_PARA_SUBIR, VENTANA_CALIDAD, calidad } from '../src/motor/Calidad';
 import { Particulas, TIPOS_PARTICULAS } from '../src/objetos/Particulas';
 import { ponerControlesTactiles, teclasDelJuego } from '../src/reproductor/ControlesTactiles';
@@ -755,5 +755,18 @@ describe('Mandos y controles de pantalla', () => {
     // Un mando que sigue como estaba (el botón aún apretado, sin nada nuevo) no los esconde
     motor.entrada.ponerMando(true, new Set(['a']), 0, 0);
     expect(t.visibles).toBe(true);
+  });
+});
+
+describe('Pantallas estrechas', () => {
+  it('los controles se encogen para caber, pero nunca por debajo de 44 px', () => {
+    expect(encogeParaAncho(0)).toBe(1);
+    expect(encogeParaAncho(1180)).toBe(1);
+    expect(encogeParaAncho(400)).toBe(1);
+    expect(encogeParaAncho(320)).toBe(0.8);
+    expect(encogeParaAncho(100)).toBe(ENCOGE_MINIMO);
+    // Un botón mide 72 px a tamaño normal
+    expect(72 * ENCOGE_MINIMO).toBeGreaterThanOrEqual(44);
+    expect(encogeParaAncho(Number.NaN)).toBe(1);
   });
 });

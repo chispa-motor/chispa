@@ -16,4 +16,4 @@
  *   - el 2 sube con cosas nuevas (comandos, partes del editor...);
  *   - el 3 sube con arreglos.
  */
-export const VERSION = '1.1.0';
+export const VERSION = '1.2.0';

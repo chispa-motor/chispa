@@ -1463,6 +1463,59 @@ await prueba('en el editor, un juego «horizontal» con el móvil de pie: el avi
   comprobar((await p.locator('.aviso-girar').count()) === 0, 'al parar el juego se queda el aviso de girar');
 });
 
+await prueba('juego exportado en TODOS los aparatos táctiles (de pie y tumbados): los controles caben, no se pisan, miden 44 px y la palanca mueve', [aparato('escritorio')], async (p) => {
+  const archivo = await exportarJuego(p, { scripts: { 'cuadrado.chs': JUEGO_TACTIL } });
+  const fallan = [];
+  for (const a of [...TACTILES, { nombre: 'movil pequeno tumbado', ancho: 640, alto: 360, tactil: true }, { nombre: 'movil muy estrecho', ancho: 320, alto: 568, tactil: true }]) {
+    const { contexto, juego, mensajes, ultimo, d } = await abrirJuego(pathToFileURL(archivo).href, a);
+    try {
+      await juego.waitForSelector('.palanca-tactil', { timeout: 8000 });
+      await juego.waitForTimeout(600);
+      const cajas = await juego.evaluate(() => [...document.querySelectorAll('.palanca-tactil, .boton-tactil')].map((el) => {
+        const c = el.getBoundingClientRect();
+        return { nombre: el.getAttribute('aria-label'), l: c.left, t: c.top, r: c.right, b: c.bottom, ancho: innerWidth, alto: innerHeight };
+      }));
+      if (cajas.length !== 3) fallan.push(`${a.nombre}: hay ${cajas.length} controles`);
+      for (const c of cajas) if (c.l < 0 || c.t < 0 || c.r > c.ancho || c.b > c.alto || Math.min(c.r - c.l, c.b - c.t) < 44) fallan.push(`${a.nombre}: «${c.nombre}» se sale o es pequeño`);
+      if (cajas.some((x, i) => cajas.some((y, j) => j > i && x.l < y.r && y.l < x.r && x.t < y.b && y.t < x.b))) fallan.push(`${a.nombre}: hay controles unos encima de otros`);
+      const x0 = ultimo('POS');
+      const palanca = await centroDe(juego, '.palanca-tactil');
+      await d.dejar(palanca.x + palanca.ancho / 2 - 4, palanca.y, 900);
+      await juego.waitForTimeout(500);
+      if (!(ultimo('POS') > x0 + 60)) fallan.push(`${a.nombre}: la palanca no mueve (${x0} → ${ultimo('POS')})`);
+      const pagina = await juego.evaluate(() => ({ ancho: document.documentElement.scrollWidth <= innerWidth, alto: document.documentElement.scrollHeight <= innerHeight }));
+      if (!pagina.ancho || !pagina.alto) fallan.push(`${a.nombre}: la página del juego se desplaza`);
+      if (mensajes.some((m) => m.startsWith('ERROR'))) fallan.push(`${a.nombre}: ${mensajes.find((m) => m.startsWith('ERROR'))}`);
+    } finally {
+      await contexto.close();
+    }
+  }
+  comprobar(fallan.length === 0, fallan.join(' | '));
+});
+
+await prueba('juego exportado SIN controles propios en todos los aparatos táctiles: los botones automáticos caben, no se pisan y miden 44 px', [aparato('escritorio')], async (p) => {
+  const archivo = await exportarJuego(p, {});
+  const fallan = [];
+  for (const a of [...TACTILES, { nombre: 'movil pequeno tumbado', ancho: 640, alto: 360, tactil: true }, { nombre: 'movil muy estrecho', ancho: 320, alto: 568, tactil: true }]) {
+    const { contexto, juego, mensajes } = await abrirJuego(pathToFileURL(archivo).href, a);
+    try {
+      await juego.waitForSelector('.boton-tactil', { timeout: 8000 });
+      await juego.waitForTimeout(500);
+      const cajas = await juego.evaluate(() => [...document.querySelectorAll('.boton-tactil')].map((el) => {
+        const c = el.getBoundingClientRect();
+        return { nombre: el.getAttribute('aria-label'), l: c.left, t: c.top, r: c.right, b: c.bottom, ancho: innerWidth, alto: innerHeight };
+      }));
+      if (cajas.length < 5) fallan.push(`${a.nombre}: solo hay ${cajas.length} botones`);
+      for (const c of cajas) if (c.l < 0 || c.t < 0 || c.r > c.ancho || c.b > c.alto || Math.min(c.r - c.l, c.b - c.t) < 44) fallan.push(`${a.nombre}: «${c.nombre}» se sale o es pequeño`);
+      if (cajas.some((x, i) => cajas.some((y, j) => j > i && x.l < y.r - 1 && y.l < x.r - 1 && x.t < y.b - 1 && y.t < x.b - 1))) fallan.push(`${a.nombre}: hay botones unos encima de otros`);
+      if (mensajes.some((m) => m.startsWith('ERROR'))) fallan.push(`${a.nombre}: ${mensajes.find((m) => m.startsWith('ERROR'))}`);
+    } finally {
+      await contexto.close();
+    }
+  }
+  comprobar(fallan.length === 0, fallan.join(' | '));
+});
+
 await prueba('el editor como app: se puede instalar y, sin internet, se abre, ejecuta y exporta', [aparato('movil grande'), aparato('tablet horizontal'), aparato('portatil pequeno')], async (p, a) => {
   await p.waitForFunction(() => navigator.serviceWorker.ready.then((r) => !!r.active), null, { timeout: 20000 });
   await p.reload();

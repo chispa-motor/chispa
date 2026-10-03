@@ -204,7 +204,8 @@ copiarlo:
 - **Dibujar en la pantalla desde el código:** `dibujar.enPantalla.rectangulo(…)`.
 - **Mando y móvil.** `yo.moverConFlechas` ya funciona con la palanca de un
   mando, y los botones se leen con `mando.pulsado("a")`. Si abren tu juego
-  exportado en un móvil, salen botones en la pantalla solos.
+  exportado en un móvil, salen botones en la pantalla solos; para poner los
+  tuyos (una palanca, un botón de saltar), mira la sección 7.
 - **Funciones para todos.** Un script con solo funciones (sin ningún
   `cuando`) que no está puesto en ningún objeto es una *biblioteca*: sus
   funciones se pueden usar desde cualquier script.
@@ -213,6 +214,8 @@ copiarlo:
 
 - El editor **guarda solo** en tu navegador. Si cierras la pestaña, al volver
   está todo.
+- **Mis proyectos** (arriba): todos los proyectos que has tocado en este
+  navegador, cada uno con su nombre. Tócalo para abrirlo.
 - **Guardar** (Ctrl+S) descarga tu proyecto como un archivo `.chispa.json`.
   Con **Abrir** lo recuperas, en este o en otro ordenador.
 - **Exportar** te deja elegir:
@@ -222,6 +225,9 @@ copiarlo:
     qué pulsar en la web de itch.io (y qué tamaño poner).
   - **GitHub Pages**: descarga un `index.html` y te explica cómo tener tu
     juego en una dirección tuya, gratis.
+  - **App para el móvil**: descarga un `.zip` con tu juego listo para
+    instalarse en la pantalla de inicio de un móvil o una tableta, con su
+    icono, y jugar sin internet. Te explica dónde subirlo.
 
   No hace falta conectar ninguna cuenta al editor: tú subes el archivo.
 - **itch.io en un clic.** El botón **itch.io** de la barra de arriba hace lo
@@ -267,7 +273,98 @@ de ellos en tus juegos, sin pedir permiso.
 > Esto es una explicación sencilla, no un consejo legal. El texto que vale
 > es el de la licencia, en el archivo `LICENSE`.
 
-## 7. A tu gusto
+## 7. Usar Chispa en el móvil o la tableta
+
+Chispa funciona en móviles (Android con Chrome, iPhone con Safari), en
+tabletas (con o sin teclado), en Chromebooks y en ordenadores con pantalla
+táctil. Es la misma dirección de siempre, y todo se hace con el dedo.
+
+### El editor con el dedo
+
+- **La barra de abajo** cambia de sitio: **Escena**, **Código**, **Objetos**,
+  **Propiedades**, **Juego** y **Consola**. Lo que estás editando ocupa toda
+  la pantalla y lo demás se abre encima. Con el móvil tumbado, la barra se
+  pone a la izquierda.
+- **En la escena**: toca un objeto para elegirlo y arrástralo para moverlo.
+  Con **dos dedos** mueves y acercas la vista. **Deja el dedo quieto** sobre
+  un objeto y sale su menú (abrir su código, duplicar, copiar, borrar…).
+- **Dejar el dedo quieto** es el truco para todo: sobre un botón enseña su
+  ayuda, y sobre una fila de una lista abre su menú (cambiar el nombre,
+  ordenar…). Es lo que con ratón se hace pasando por encima o con el botón
+  derecho.
+- **Escribir código**: encima del teclado sale una **barra de atajos** con lo
+  que más cuesta escribir en un móvil: `cuando`, `si`, `sino`, `mientras`,
+  `repetir`, `funcion`, los dos puntos, paréntesis, comillas, la sangría y
+  deshacer. Toca un error subrayado para ver qué pasa, y **?** para la ayuda
+  de la palabra donde estás.
+- **Si prefieres no escribir**: el botón **Bloques** de arriba del script.
+  Toca un bloque de la lista y luego el sitio **＋ aquí** donde lo quieres.
+  Toca la cabecera de un bloque para moverlo, duplicarlo o borrarlo.
+- **El tutorial** («Tu primer juego») también funciona con el dedo: abre él
+  solo el panel que toca en cada paso.
+- **Fotos y sonidos**: en *Proyecto*, **Importar** abre tu galería (o la
+  cámara). Las fotos enormes se hacen más pequeñas solas.
+- **Guardar**: se guarda solo, también cuando cambias de app. En el menú de
+  arriba, **Compartir o guardar copia** manda el proyecto por donde quieras
+  (a tus archivos, a la nube, a otra persona).
+- **Botones grandes**: en un ordenador con pantalla táctil, *Ajustes →
+  Botones grandes → Siempre*.
+
+### Chispa como una app, sin internet
+
+Chispa se puede **instalar** en la pantalla de inicio y usar **sin
+internet**: se abre como cualquier app, sin la barra del navegador.
+
+- **Android y Chromebook** (Chrome): *Ajustes → Chispa como app → Instalar
+  Chispa*, o el menú de los tres puntos → **Instalar app**.
+- **iPhone y iPad** (Safari): botón de **Compartir** (el cuadrado con la
+  flecha) → **Añadir a pantalla de inicio**.
+- **Ordenador** (Chrome o Edge): el icono de instalar de la barra de
+  direcciones.
+
+> **En iPhone y iPad, instálala.** Safari borra lo guardado de las webs que
+> no visitas en 7 días; a las que están en la pantalla de inicio no les
+> pasa. Aun así, guarda una copia de tus proyectos de vez en cuando.
+
+### Que tu juego se juegue en el móvil
+
+Dos líneas y tu juego de teclado se juega con el dedo:
+
+```
+cuando empieza:
+    tactil.joystick()                  # una palanca: hace de flechas
+    tactil.boton("Saltar", "espacio")  # un botón que pulsa la tecla espacio
+```
+
+El resto del código no cambia (`yo.moverConFlechas`, `cuando se pulsa
+"espacio"`…). La palanca y los botones **solo se ven cuando se juega con el
+dedo**: en un ordenador con teclado no salen, y con un mando se esconden.
+
+Más cosas, todas en la pestaña **Guía** (busca «tactil»):
+
+- `tactil.gesto`: deslizar, tocar dos veces, dejar el dedo…
+- `tactil.mirar()`: arrastrar el dedo para apuntar o mover la cámara.
+- `tactil.colocar()`: que cada uno ponga los botones donde le vengan bien.
+- `tactil.vibrar(0.2)`: vibra el móvil (en iPhone no: Safari no deja).
+- **Tumbado o de pie**, **calidad** y **fotogramas**: clic en el fondo de la
+  escena → *Propiedades → Proyecto*. Con «solo tumbado», quien abra el juego
+  con el móvil de pie ve un aviso de «Gira el móvil». La calidad
+  «automática» baja sola en los móviles lentos, y «30 por segundo» gasta
+  menos batería.
+
+Para probarlo en tu móvil: **Exportar → App para el móvil**.
+
+### Cosas que conviene saber
+
+- **El sonido** empieza con el primer toque (los móviles no dejan antes). En
+  un iPhone con el interruptor de silencio puesto, no suena.
+- **Pantalla completa**: en Android y iPad, el botón ⛶ del juego. En iPhone
+  las webs no pueden; ahí la manera es instalar el juego en la pantalla de
+  inicio.
+- **Teclado y ratón en una tableta**: funcionan, y el editor vuelve a sus
+  botones normales.
+
+## 8. A tu gusto
 
 - **Ajustes** (arriba, o **Ctrl+,**): tema claro u oscuro y tamaño de la
   letra del código y del editor. Se quedan guardados en tu navegador.
@@ -279,7 +376,8 @@ de ellos en tus juegos, sin pedir permiso.
 ¿Quieres aprender de verdad, paso a paso? Sigue el curso
 **[APRENDE_CHISPA.md](APRENDE_CHISPA.md)**: 5 niveles, cada comando con un
 ejemplo y el error que más se comete, ejercicios y un mini proyecto por nivel.
-Lo nuevo de esta versión está en **[NOVEDADES_1.1.md](NOVEDADES_1.1.md)**.
+Lo nuevo de esta versión está en **[NOVEDADES_1.2.md](NOVEDADES_1.2.md)**
+(y lo de la anterior, en [NOVEDADES_1.1.md](NOVEDADES_1.1.md)).
 Para buscar algo rápido, la **[chuleta](CHULETA_CHISPA.md)** (una línea por
 comando; también hay botones para los dos arriba de la pestaña **Guía**).
 

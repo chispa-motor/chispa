@@ -1062,16 +1062,16 @@ await prueba('seguridad: el editor compilado lleva CSP y abrir un proyecto con i
   comprobar(texto.includes('por seguridad no se abre') && texto.includes('imagenes → foto'), 'el error no explica el problema: ' + texto);
 });
 
-await prueba('Ayuda: «Acerca de Chispa» con la versión 1.1.0 y «Apoya Chispa», que nunca salta solo', async (p) => {
+await prueba('Ayuda: «Acerca de Chispa» con la versión 1.2.0 y «Apoya Chispa», que nunca salta solo', async (p) => {
   // Un rato con el editor abierto (y un juego en marcha): no sale ningún aviso por su cuenta
   await p.keyboard.press('F5');
   await p.waitForTimeout(4000);
   comprobar(!(await p.$('.dialogo')), 'ha salido una ventana sin pulsar nada');
   await p.click('button:has-text("Ayuda")');
-  comprobar((await textoDe(p, '.ayuda-chispa')).includes('Chispa 1.1.0'), 'la Ayuda no dice la versión');
+  comprobar((await textoDe(p, '.ayuda-chispa')).includes('Chispa 1.2.0'), 'la Ayuda no dice la versión');
   await p.click('.boton-acerca');
   const acerca = await textoDe(p, '.dialogo');
-  comprobar(acerca.includes('Versión 1.1.0') && acerca.includes('Rodrigo') && acerca.includes('Mozilla Public License 2.0'), 'Acerca de no enseña versión, autor y licencia: ' + acerca);
+  comprobar(acerca.includes('Versión 1.2.0') && acerca.includes('Rodrigo') && acerca.includes('Mozilla Public License 2.0'), 'Acerca de no enseña versión, autor y licencia: ' + acerca);
   const terceros = await p.getAttribute('.acerca-de a[href="licencias-de-terceros.txt"]', 'href');
   const respuesta = await p.request.get(new URL(terceros, direccion).href);
   comprobar(respuesta.ok() && (await respuesta.text()).includes('@codemirror/view'), 'las licencias de terceros no van con el editor');

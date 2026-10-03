@@ -89,10 +89,15 @@ export interface ProyectoGuardado {
 export function fichaDeProyecto(json: string): { id: string; nombre: string } | null {
   try {
     const p = JSON.parse(json) as { id?: unknown; nombre?: unknown };
-    return typeof p.id === 'string' && p.id ? { id: p.id, nombre: typeof p.nombre === 'string' && p.nombre ? p.nombre : 'Sin nombre' } : null;
+    return typeof p.id === 'string' && p.id && p.id.length <= 80 ? { id: p.id, nombre: nombreSeguro(p.nombre) } : null;
   } catch {
     return null;
   }
+}
+
+/** El nombre que se enseña en la lista: siempre un texto, y corto (lo guardado en el navegador puede estar roto). */
+export function nombreSeguro(nombre: unknown): string {
+  return typeof nombre === 'string' && nombre.trim() ? [...nombre.trim()].slice(0, 80).join('') : 'Sin nombre';
 }
 
 /** Cuáles hay que quitar para que no pasen de `maximo` (los que hace más que no se tocan). */
@@ -123,7 +128,7 @@ export async function misProyectos(): Promise<ProyectoGuardado[]> {
           if (!c) return;
           const clave = String(c.key);
           const v = c.value as { json?: string; fecha?: number; nombre?: string } | undefined;
-          if (clave.startsWith(PREFIJO) && typeof v?.json === 'string') lista.push({ id: clave.slice(PREFIJO.length), nombre: v.nombre ?? 'Sin nombre', fecha: v.fecha ?? 0, tamano: v.json.length });
+          if (clave.startsWith(PREFIJO) && typeof v?.json === 'string') lista.push({ id: clave.slice(PREFIJO.length), nombre: nombreSeguro(v.nombre), fecha: typeof v.fecha === 'number' && Number.isFinite(v.fecha) ? v.fecha : 0, tamano: v.json.length });
           c.continue();
         };
         tx.oncomplete = () => resolver(lista.sort((a, b) => b.fecha - a.fecha));

@@ -8,7 +8,7 @@ se ve por dónde iba. La regla que manda en todo es `DISPOSITIVOS.md`.
 | 1 | Editor adaptable (cajones, barra de abajo, escena con el dedo, teclado de pantalla) | **Hecho** | `m12-bloque-1` |
 | 2 | Programar con el dedo (barra de atajos, bloques para tacto, tutorial, archivos) | **Hecho** | `m12-bloque-2` |
 | 3 | Juegos en móvil (joystick, botones, gestos, vibración, calidad, 30 fps, PWA) | **Hecho** | `m12-bloque-3` |
-| 4 | Pruebas, seguridad y documentación (versión 1.2.0) | Sin empezar | |
+| 4 | Pruebas, seguridad y documentación (versión 1.2.0) | **Hecho** | `m12-bloque-4` |
 
 No se ha hecho push de nada. La web sigue como estaba.
 
@@ -75,6 +75,23 @@ No se ha hecho push de nada. La web sigue como estaba.
 - **Pruebas**: `pruebas/juegos-movil.test.ts` (39) y 11 comprobaciones más en
   `pruebas-navegador/moviles.mjs` (102 en total): juego exportado con dos dedos a la vez, PC táctil,
   girar, calidad, 30 fps, colocar controles, app sin internet e instalable, editor sin internet.
+
+## Bloque 4 — Pruebas, seguridad y documentación (hecho)
+
+- **Seguridad**: auditoría de todo lo nuevo (`AUDITORIA_SEGURIDAD.md`, «Chispa 1.2», puntos 20 a 23,
+  el service worker punto por punto y los riesgos aceptados). 12 tests nuevos en
+  `pruebas/seguridad.test.ts` (71): uno ejecuta el service worker con un navegador de mentira y le
+  pide archivos de fuera de su carpeta.
+- **Documentación**: `EMPIEZA_AQUI.md` sección 7 «Usar Chispa en el móvil o la tableta»; 9 recetas
+  nuevas en la Guía (y en el manual), todas jugadas en `pruebas/recetas.test.ts`; manual, curso y
+  chuleta regenerados (434 comandos); `NOVEDADES_1.2.md`; `PRUEBAS_PENDIENTES.md` con lo que hay que
+  mirar en aparatos de verdad.
+- **Versión 1.2.0** (`src/version.ts`, `package.json`).
+- **Pruebas en aparatos simulados**: el juego exportado se abre en todos los aparatos táctiles (y en
+  uno de 320 px), con controles propios y con los automáticos. Salió un fallo (en 320 px la palanca
+  pisaba un botón) y está arreglado: los controles se encogen en pantallas estrechas.
+- **Números al cerrar la 1.2**: 434 comandos (408 en la 1.1), 1077 tests (975), 149 pruebas de
+  navegador (45 del editor y 104 en móviles y tabletas simulados; 45 en la 1.1), 82 973 líneas (74 184).
 
 ## Cómo seguir si se corta
 

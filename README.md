@@ -13,7 +13,7 @@ empieza (a partir de unos 12 años): se escribe como se habla, y cuando algo
 sale mal te explica qué pasa y cómo arreglarlo.
 
 [![Licencia: MPL 2.0](https://img.shields.io/badge/licencia-MPL%202.0-brightgreen.svg)](LICENSE)
-![Versión 1.1.0](https://img.shields.io/badge/versi%C3%B3n-1.1.0-blue.svg)
+![Versión 1.2.0](https://img.shields.io/badge/versi%C3%B3n-1.2.0-blue.svg)
 ![Hecho en español](https://img.shields.io/badge/idioma-espa%C3%B1ol-orange.svg)
 
 ![Arena de Habilidades, un juego hecho solo con Chispa](docs/imagenes/arena.gif)
@@ -71,7 +71,12 @@ tienes un personaje que anda, salta y recoge monedas. Después, para aprender
 de verdad, sigue el curso **[Aprende Chispa](APRENDE_CHISPA.md)** (5 niveles,
 con ejercicios y mini proyectos) y ten a mano la **[chuleta](CHULETA_CHISPA.md)**.
 
-**¿Qué hay de nuevo en la 1.1?** Plantillas de juegos, dibujos, sonidos y
+**¿Qué hay de nuevo en la 1.2?** Chispa en el móvil y la tableta: el editor
+entero con el dedo, programar sin teclado, juegos con palanca y botones en la
+pantalla, y apps que se instalan y funcionan sin internet:
+**[NOVEDADES_1.2.md](NOVEDADES_1.2.md)**.
+
+**¿Y en la 1.1?** Plantillas de juegos, dibujos, sonidos y
 música listos, controles de interfaz, pantallas listas, varios jugadores,
 luces, efectos y exportar a itch.io en un clic: **[NOVEDADES_1.1.md](NOVEDADES_1.1.md)**.
 

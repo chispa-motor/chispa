@@ -172,7 +172,8 @@ export class Tactil {
   private conDedo = esAparatoTactil();
   private eventos = new AbortController();
   /** Dónde ha dejado cada control quien juega (se guarda entre partidas). */
-  private colocados: Record<string, SitioControl> = {};
+  // (sin «padre»: un botón llamado "constructor" o "__proto__" no encuentra nada que no sea suyo)
+  private colocados: Record<string, SitioControl> = Object.create(null) as Record<string, SitioControl>;
   /** Para guardar y leer dónde ha dejado los controles quien juega (lo pone el juego). */
   almacen: { leer(): string | null; guardar(texto: string): void } | null = null;
   /** Convierte un punto de la ventana en un punto del juego (para los dedos y para mirar). */
@@ -198,7 +199,10 @@ export class Tactil {
       // (el campo invisible del teclado de pantalla no cuenta: eso también es jugar con el dedo)
       if (!(e.target as HTMLElement | null)?.classList?.contains('teclado-chispa') && e.key !== 'Unidentified') this.usandoDedo(false);
     }, o);
-    window.addEventListener('resize', () => this.revisarOrientacion(), o);
+    window.addEventListener('resize', () => {
+      this.ajustarAlAncho();
+      this.revisarOrientacion();
+    }, o);
   }
 
   // ───────────────────────── Cuándo se ven ─────────────────────────
@@ -248,6 +252,7 @@ export class Tactil {
 
   private actualizarVista(): void {
     if (!this.capa) return;
+    this.ajustarAlAncho();
     const controles = this.visibles || this.colocando;
     // (el aviso de girar el móvil va en la misma capa: se ve aunque no haya controles)
     this.capa.classList.toggle('sin-controles', !controles);
@@ -255,6 +260,16 @@ export class Tactil {
   }
 
   // ───────────────────────── La capa (donde van los controles) ─────────────────────────
+
+  /**
+   * En pantallas estrechas (un móvil pequeño de pie, la vista del juego del editor) los controles
+   * se encogen para no pisarse: la palanca y dos botones necesitan unos 400 px de ancho a tamaño normal.
+   * Nunca bajan de 44 px (ENCOGE_MINIMO × 72 px del botón).
+   */
+  private ajustarAlAncho(): void {
+    const ancho = this.capa?.clientWidth ?? 0;
+    this.capa?.style.setProperty('--encoge', String(encogeParaAncho(ancho)));
+  }
 
   /** La capa de encima del lienzo. Se crea la primera vez que hace falta. */
   private laCapa(): HTMLElement | null {
@@ -637,7 +652,7 @@ export class Tactil {
   }
 
   private olvidarColocados(): void {
-    this.colocados = {};
+    this.colocados = Object.create(null) as Record<string, SitioControl>;
     this.guardarColocados();
     if (this.palanca) this.situar(this.palanca.el, 'joystick', this.palanca.sitio);
     for (const [clave, b] of this.botones) this.situar(b.el, clave, b.sitio);
@@ -756,13 +771,23 @@ export class Tactil {
   }
 }
 
+/** El ancho con el que los controles caben a tamaño normal, y cuánto se encogen como mucho. */
+export const ANCHO_COMODO = 400;
+export const ENCOGE_MINIMO = 0.62;
+
+/** Cuánto hay que encoger los controles en una pantalla de este ancho (1 = nada). Sin medida (0), nada. */
+export function encogeParaAncho(ancho: number): number {
+  if (!(ancho > 0)) return 1;
+  return Math.round(limitar(ancho / ANCHO_COMODO, ENCOGE_MINIMO, 1) * 100) / 100;
+}
+
 /**
  * Los estilos de los controles. Van aparte porque el juego exportado tiene que
  * poner su huella en la política de seguridad (ver exportar.ts): si cambian,
  * la huella cambia sola.
  */
 export const ESTILOS_TACTILES = `
-.controles-tactiles{position:absolute;inset:0;z-index:10;pointer-events:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none;--t:var(--tamano-tactil,1);--o:var(--opacidad-tactil,.6);overflow:hidden}
+.controles-tactiles{position:absolute;inset:0;z-index:10;pointer-events:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none;--t:calc(var(--tamano-tactil,1)*var(--encoge,1));--o:var(--opacidad-tactil,.6);overflow:hidden}
 .controles-tactiles[hidden]{display:none}
 .controles-tactiles.sin-controles>.boton-tactil,.controles-tactiles.sin-controles>.palanca-tactil{display:none}
 .controles-tactiles>*{pointer-events:auto;touch-action:none}

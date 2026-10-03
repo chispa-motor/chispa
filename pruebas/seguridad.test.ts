@@ -22,7 +22,7 @@ import { LIMITE_HILOS } from '../src/chispa/ScriptChispa';
 import { migrarProyecto, proyectoVacio } from '../src/proyecto/formato';
 import { problemaDataURL } from '../src/proyecto/archivos';
 import { esColorValido } from '../src/motor/Color';
-import { generarPaginaJuego } from '../src/exportar/exportar';
+import { generarPaginaJuego, politicaDeSeguridad } from '../src/exportar/exportar';
 import { huellaCSP, sha256 } from '../src/utilidades/sha256';
 import { proyectoMinimo } from '../src/ejemplos/minimo/proyecto';
 import { EstadoEditor } from '../src/editor/estado/EstadoEditor';
@@ -33,6 +33,11 @@ import { duracionDeCancion } from '../src/sonido/musica';
 import { duracionDe } from '../src/sonido/generador';
 import { plantillaPorId } from '../src/plantillas/indice';
 import { IMAGEN_PRUEBA, SONIDO_PRUEBA, ejecutar, errorDe, juegoDePrueba } from './ayudantes';
+import { MAXIMO_BOTONES, Tactil } from '../src/motor/Tactil';
+import { MAXIMO_TECLADO } from '../src/motor/Entrada';
+import { manifiestoDelJuego, servicioDelJuego } from '../src/exportar/pwa';
+import { fichaDeProyecto, nombreSeguro } from '../src/editor/Almacen';
+import { LADO_MAXIMO_IMAGEN, tamanoReducido } from '../src/editor/recursos/importar';
 
 // ───────────────────────── 1. Salir del intérprete ─────────────────────────
 
@@ -562,5 +567,193 @@ describe('Chispa 1.1: lo nuevo tampoco puede congelar el juego ni llenar la memo
     e.renombrar({ tipo: 'escena', escena: e.escenaActual, indice }, 'X");sistema.abrirWeb("http://malo.example');
     expect(e.proyecto.scripts).toEqual(antes);
     for (const codigo of Object.values(e.proyecto.scripts)) expect(codigo).not.toContain('abrirWeb');
+  });
+});
+
+// ───────────────────────── 8. Lo nuevo de Chispa 1.2 (móvil y tablet) ─────────────────────────
+
+describe('Chispa 1.2: los controles de pantalla, la app instalable y lo guardado en el móvil', () => {
+  const objeto = (codigo: string) => juegoDePrueba({ scripts: { 'p.chs': codigo }, gravedad: 0, escena: [{ nombre: 'Prueba', x: 100, y: 100, sprite: { ancho: 20, alto: 20 }, script: 'p.chs' }] });
+  const conLienzo = () => {
+    const caja = document.createElement('div');
+    const lienzo = document.createElement('canvas');
+    caja.append(lienzo);
+    document.body.append(caja);
+    const t = new Tactil({ pulsarVirtual: () => {}, soltarVirtual: () => {} }, lienzo);
+    return { caja, t, quitar: () => (t.destruir(), caja.remove()) };
+  };
+
+  it('tactil y lo nuevo de pantalla no dejan llegar a JavaScript', () => {
+    for (const codigo of ['mostrar(tactil.constructor)', 'mostrar(tactil.__proto__)', 'mostrar(tactil.toques.constructor)', 'mostrar(pantalla.calidad.constructor)', 'tactil.boton("a", "__proto__")', 'tactil.mover("constructor", 1, 1)', 'tactil.quitar("__proto__")', 'pantalla.calidad = "constructor"', 'pantalla.orientacion = "__proto__"', 'tactil.mostrar = "toString"']) {
+      let salida: string[] = [];
+      try {
+        const j = objeto(`cuando empieza:\n    ${codigo}\n    mostrar("sigue")`);
+        j.avanzar(1);
+        salida = j.salida;
+        expect(j.errores.length, codigo).toBe(1);
+      } catch (e) {
+        expect(e, codigo).toBeInstanceOf(Error);
+      }
+      expect(salida, codigo).toEqual([]);
+    }
+  });
+
+  it('el nombre de un botón es texto: no puede meter nada en la página', () => {
+    const { caja, t, quitar } = conLienzo();
+    t.boton('<img src=x>', []);
+    t.boton('constructor', []);
+    t.boton('__proto__', []);
+    expect(caja.querySelector('img')).toBeNull();
+    expect([...caja.querySelectorAll('.boton-tactil')].map((b) => b.textContent)).toEqual(['<img src=x>', 'constructor', '__proto__']);
+    // Y un botón con nombre de trampa se coloca como cualquier otro
+    for (const b of caja.querySelectorAll<HTMLElement>('.boton-tactil')) expect(b.style.left).not.toContain('NaN');
+    expect(t.colocadoEn('constructor')).toBeNull();
+    quitar();
+  });
+
+  it('un juego no puede llenar la pantalla de botones', () => {
+    const j = objeto('cuando cada fotograma:\n    repetir 500 veces:\n        tactil.boton("b" + texto(redondear(aleatorio(1, 9999))))');
+    j.avanzar(3);
+    expect(j.entrada.tactil.nombres.length).toBeLessThanOrEqual(MAXIMO_BOTONES);
+    expect(j.errores.length).toBe(1);
+  });
+
+  it('el sitio de los controles guardado en el navegador se lee con cuidado: lo roto o con trampa se tira', () => {
+    const { t, quitar } = conLienzo();
+    const leer = (texto: string) => {
+      t.almacen = { leer: () => texto, guardar: () => {} };
+      t.leerColocados();
+    };
+    for (const roto of ['no es json', '[1,2]', 'null', '"x"', '7']) expect(() => leer(roto)).not.toThrow();
+    leer(JSON.stringify({ saltar: { x: 0.5, y: 0.5, dx: 99999, extra: '<b>' }, lejos: { x: 50, y: -3 }, texto: { x: '1', y: '1' }, ['k'.repeat(500)]: { x: 0, y: 0 }, nada: null }));
+    expect(t.colocadoEn('saltar')).toEqual({ x: 0.5, y: 0.5 });
+    expect(t.colocadoEn('lejos')).toBeNull();
+    expect(t.colocadoEn('texto')).toBeNull();
+    expect(t.colocadoEn('k'.repeat(500))).toBeNull();
+    // «__proto__» en lo guardado no toca nada de fuera
+    leer('{"__proto__": {"x": 0.1, "y": 0.1, "trampa": true}, "constructor": {"x": 0.2, "y": 0.2}}');
+    expect(({} as Record<string, unknown>).trampa).toBeUndefined();
+    expect(({} as Record<string, unknown>).x).toBeUndefined();
+    // Muchísimas entradas: solo se miran las primeras
+    leer(JSON.stringify(Object.fromEntries(Array.from({ length: 5000 }, (_, i) => [`b${i}`, { x: 0, y: 0 }]))));
+    expect(t.colocadoEn('b4999')).toBeNull();
+    quitar();
+  });
+
+  it('los ajustes de móvil del archivo de un proyecto solo admiten sus valores', () => {
+    const con = (cambio: Record<string, unknown>) => ({ ...JSON.parse(JSON.stringify(proyectoVacio('x'))), ...cambio });
+    for (const malo of [{ orientacion: 'landscape"><script>' }, { orientacion: 7 }, { calidad: 'ultra' }, { calidad: { toString: 1 } }, { maximoFps: 100000 }, { maximoFps: -1 }, { maximoFps: '30' }]) {
+      expect(() => migrarProyecto(con(malo)), JSON.stringify(malo)).toThrow(/por seguridad no se abre/);
+    }
+    expect(migrarProyecto(con({ orientacion: 'horizontal', calidad: 'baja', maximoFps: 30 })).maximoFps).toBe(30);
+  });
+
+  it('la ficha de la app y la página no dejan que el nombre del juego cuele nada', () => {
+    const p = migrarProyecto({ ...JSON.parse(JSON.stringify(proyectoVacio('x'))), nombre: '"><script>alert(1)</script>', orientacion: 'horizontal' });
+    const ficha = JSON.parse(manifiestoDelJuego(p));
+    expect(ficha.name).toBe(p.nombre.trim());
+    expect(Object.keys(ficha).sort()).toEqual(['background_color', 'categories', 'display', 'display_override', 'icons', 'lang', 'name', 'orientation', 'scope', 'short_name', 'start_url', 'theme_color']);
+    expect(ficha.start_url).toBe('./');
+    expect(ficha.scope).toBe('./');
+    expect(ficha.theme_color).toMatch(/^#[0-9a-f]{6}$/i);
+    expect(ficha.icons.every((i: { src: string }) => /^icono-\d+\.png$/.test(i.src))).toBe(true);
+    const pagina = generarPaginaJuego(p, 'console.log(1)', true);
+    expect(pagina).not.toContain('<script>alert(1)');
+    expect(pagina.match(/<script/g)!.length).toBe(generarPaginaJuego(proyectoVacio('x'), 'console.log(1)', true).match(/<script/g)!.length);
+  });
+
+  it('la política de seguridad de la app solo se abre a su propia carpeta', () => {
+    const normal = politicaDeSeguridad('codigo', ['estilo']);
+    const app = politicaDeSeguridad('codigo', ['estilo'], true);
+    expect(normal).toContain("worker-src 'none'");
+    expect(normal).toContain("manifest-src 'none'");
+    expect(app).toContain("worker-src 'self'");
+    expect(app).toContain("manifest-src 'self'");
+    for (const csp of [normal, app]) {
+      expect(csp).toContain("default-src 'none'");
+      expect(csp).toContain("connect-src 'none'");
+      expect(csp).toContain("frame-src 'none'");
+      expect(csp).toContain("base-uri 'none'");
+      expect(csp).not.toMatch(/unsafe-inline|unsafe-eval|https?:|\*/);
+      // El código sigue yendo solo por su huella: 'self' no vale para scripts ni estilos
+      expect(/script-src [^;]*'self'/.test(csp)).toBe(false);
+      expect(/style-src [^;]*'self'/.test(csp)).toBe(false);
+    }
+  });
+
+  it('el service worker solo sirve su lista de archivos: nada de otros sitios, otras carpetas, ni órdenes de la página', async () => {
+    const codigo = servicioDelJuego('v1', ['index.html', 'icono-192.png']);
+    for (const prohibido of ['importScripts', "'message'", 'eval(', 'Function(', 'postMessage', 'indexedDB', 'http://', 'https://', '.put(', 'sync', 'push']) expect(codigo, prohibido).not.toContain(prohibido);
+    // Se ejecuta con un navegador de mentira y se le piden cosas
+    const oyentes: Record<string, (e: unknown) => void> = {};
+    const guardado = new Map<string, string>();
+    const caja = { addAll: async (lista: string[]) => void lista.forEach((a) => guardado.set(new URL(a, 'https://sitio.example/juego/').href, a)), match: async (clave: string) => guardado.get(clave) };
+    const yo = { registration: { scope: 'https://sitio.example/juego/' }, addEventListener: (tipo: string, f: (e: unknown) => void) => void (oyentes[tipo] = f), skipWaiting: async () => {}, clients: { claim: async () => {} } };
+    const cajas = { abiertas: [] as string[], open: async (n: string) => (cajas.abiertas.push(n), caja), keys: async () => ['chispa-juego:https://sitio.example/juego/:v0', 'chispa-juego:https://sitio.example/otro/:v9', 'otra-cosa'], borradas: [] as string[], delete: async (n: string) => void cajas.borradas.push(n) };
+    new Function('self', 'caches', 'fetch', codigo)(yo, cajas, () => { throw new Error('no tenía que pedir nada a internet'); });
+    expect(Object.keys(oyentes).sort()).toEqual(['activate', 'fetch', 'install']);
+    let espera: Promise<unknown> = Promise.resolve();
+    oyentes.install({ waitUntil: (p: Promise<unknown>) => (espera = p) });
+    await espera;
+    expect([...guardado.keys()]).toEqual(['https://sitio.example/juego/', 'https://sitio.example/juego/index.html', 'https://sitio.example/juego/icono-192.png']);
+    oyentes.activate({ waitUntil: (p: Promise<unknown>) => (espera = p) });
+    await espera;
+    // Solo tira SUS versiones viejas: ni las de otro juego del mismo sitio ni las de otra cosa
+    expect(cajas.borradas).toEqual(['chispa-juego:https://sitio.example/juego/:v0']);
+    const pedir = (url: string, method = 'GET') => {
+      let respondido = false;
+      oyentes.fetch({ request: { url, method }, respondWith: () => (respondido = true) });
+      return respondido;
+    };
+    expect(pedir('https://sitio.example/juego/index.html')).toBe(true);
+    expect(pedir('https://sitio.example/juego/?desde=inicio#x')).toBe(true);
+    for (const fuera of ['https://sitio.example/otro/index.html', 'https://sitio.example/juego/../secreto.txt', 'https://sitio.example/juego/secreto.txt', 'https://malo.example/juego/index.html', 'https://sitio.example/juego/index.html/../../x', 'http://sitio.example/juego/index.html']) expect(pedir(fuera), fuera).toBe(false);
+    expect(pedir('https://sitio.example/juego/index.html', 'POST')).toBe(false);
+  });
+
+  it('«Mis proyectos»: un nombre o un identificador rotos no llegan a la lista tal cual', () => {
+    expect(nombreSeguro(undefined)).toBe('Sin nombre');
+    expect(nombreSeguro({ toString: () => 'x' })).toBe('Sin nombre');
+    expect(nombreSeguro('  ')).toBe('Sin nombre');
+    expect([...nombreSeguro('a'.repeat(5000))].length).toBe(80);
+    expect(fichaDeProyecto('{"id": "' + 'a'.repeat(500) + '", "nombre": "x"}')).toBeNull();
+    expect(fichaDeProyecto('{"id": 7}')).toBeNull();
+    expect(fichaDeProyecto('no es json')).toBeNull();
+    expect(fichaDeProyecto('{"id": "abcdefgh", "nombre": ["x"]}')).toEqual({ id: 'abcdefgh', nombre: 'Sin nombre' });
+  });
+
+  it('el campo invisible del teclado de pantalla tiene tope: pegar un texto enorme no llena la memoria', () => {
+    const j = objeto('cuando empieza:\n    mostrar("ya")');
+    j.avanzar(1);
+    j.entrada.abrirTeclado('');
+    const campo = document.querySelector<HTMLInputElement>('.teclado-chispa')!;
+    expect(campo.maxLength).toBe(MAXIMO_TECLADO);
+    campo.value = 'x'.repeat(500000);
+    campo.dispatchEvent(new Event('input'));
+    expect(campo.value.length).toBe(MAXIMO_TECLADO);
+    j.avanzar(1);
+    expect(j.errores).toEqual([]);
+  });
+
+  it('las fotos enormes se reducen siempre al mismo tope, por raras que sean sus medidas', () => {
+    for (const [ancho, alto] of [[4000, 3000], [100000, 10], [10, 100000], [2049, 2049], [1e9, 1e9]]) {
+      const t = tamanoReducido(ancho, alto);
+      expect(Math.max(t.ancho, t.alto), `${ancho}x${alto}`).toBeLessThanOrEqual(LADO_MAXIMO_IMAGEN);
+      expect(Math.min(t.ancho, t.alto)).toBeGreaterThanOrEqual(1);
+      expect(Number.isInteger(t.ancho) && Number.isInteger(t.alto)).toBe(true);
+    }
+  });
+
+  it('vibrar tiene tope y nunca da error donde no se puede', () => {
+    const { t, quitar } = conLienzo();
+    const llamadas: number[] = [];
+    Object.defineProperty(navigator, 'vibrate', { configurable: true, value: (ms: number) => (llamadas.push(ms), true) });
+    expect(t.vibrar(9999)).toBe(true);
+    expect(llamadas[0]).toBeLessThanOrEqual(5000);
+    Object.defineProperty(navigator, 'vibrate', { configurable: true, value: () => { throw new Error('no'); } });
+    expect(t.vibrar(1)).toBe(false);
+    Reflect.deleteProperty(navigator, 'vibrate');
+    expect(t.vibrar(1)).toBe(false);
+    quitar();
   });
 });

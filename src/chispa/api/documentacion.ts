@@ -901,6 +901,51 @@ export const RECETAS: Receta[] = [
     titulo: "Programar con bloques",
     descripcion: "Con el botón «Bloques» de arriba del script (o Ctrl+B) el script se ve como bloques de colores. Arrastra un evento («cuando cada fotograma») y mete dentro acciones. Puedes volver al código cuando quieras: los dos son el mismo script. Este código se ve así en bloques:",
     codigo: "cuando cada fotograma:\n    yo.moverConFlechas(300)\n\ncuando se pulsa \"espacio\":\n    yo.saltar(700)",
+  },  // ── Chispa 1.2: jugar en el móvil ──
+  {
+    titulo: 'Jugar con el dedo: una palanca y un botón de saltar',
+    descripcion: 'En el script del jugador. La palanca hace de flechas y el botón pulsa la tecla espacio, así que el resto del código es el mismo que con teclado. Solo se ven cuando se juega con el dedo: en un ordenador no salen.',
+    codigo: 'cuando empieza:\n    tactil.joystick()\n    tactil.boton("Saltar", "espacio")\n\ncuando cada fotograma:\n    yo.moverConFlechas(300)\n\ncuando se pulsa "espacio":\n    yo.saltar(700)',
+  },
+  {
+    titulo: 'Un botón en pantalla para disparar',
+    descripcion: 'Un botón que no pulsa ninguna tecla: se pregunta por él con tactil.sePulso (una vez por toque) o tactil.pulsado (mientras se aprieta). Con tactil.mover se pone donde quieras: de 0 a 100 de izquierda a derecha y de abajo arriba.',
+    codigo: 'cuando empieza:\n    tactil.boton("Fuego")\n    tactil.mover("Fuego", 88, 25)\n\ncuando cada fotograma:\n    si tactil.sePulso("Fuego"):\n        efecto.chispas(yo)',
+  },
+  {
+    titulo: 'Moverse deslizando el dedo (sin botones)',
+    descripcion: 'Para juegos de una mano: deslizar a un lado cambia de carril y deslizar hacia arriba salta. tactil.gesto dice el gesto de este fotograma: "toque", "doble", "largo", "arriba", "abajo", "izquierda" o "derecha".',
+    codigo: 'cuando cada fotograma:\n    si tactil.gesto == "izquierda":\n        yo.x -= 120\n    si tactil.gesto == "derecha":\n        yo.x += 120\n    si tactil.gesto == "arriba":\n        yo.saltar(600)',
+  },
+  {
+    titulo: 'Apuntar o mirar arrastrando el dedo',
+    descripcion: 'Con tactil.mirar(), arrastrar por la pantalla (fuera de la palanca y los botones) se lee en tactil.miraX y tactil.miraY. Aquí gira al objeto; cambiando la última línea mueve la cámara.',
+    codigo: 'cuando empieza:\n    tactil.joystick()\n    tactil.mirar()\n\ncuando cada fotograma:\n    yo.rotacion -= tactil.miraX',
+  },
+  {
+    titulo: 'Un juego que va bien en móviles lentos y gasta poca batería',
+    descripcion: 'La calidad "auto" baja sola si el aparato no puede (menos píxeles y menos partículas), y con 30 fotogramas por segundo el móvil trabaja la mitad y se calienta menos. También se elige sin código: clic en el fondo de la escena > Proyecto > «calidad» y «fotogramas».',
+    codigo: 'cuando empieza:\n    pantalla.calidad = "auto"\n    pantalla.maximoFps = 30',
+  },
+  {
+    titulo: 'Un juego que se juega con el móvil tumbado',
+    descripcion: 'Si alguien lo abre con el móvil de pie, sale un aviso de «Gira el móvil» y el juego espera. En un ordenador no hace nada.',
+    codigo: 'cuando empieza:\n    pantalla.orientacion = "horizontal"\n    tactil.joystick()',
+  },
+  {
+    titulo: 'Vibrar cuando te dan y texto distinto en móvil y en ordenador',
+    descripcion: 'tactil.vibrar hace vibrar el móvil (en iPhone y en ordenadores no pasa nada). tactil.hay dice si se juega con el dedo: sirve para cambiar las instrucciones.',
+    codigo: 'cuando empieza:\n    si tactil.hay:\n        mostrar("Toca Saltar")\n    sino:\n        mostrar("Pulsa espacio")\n\ncuando toco Enemigo:\n    tactil.vibrar(0.2)',
+  },
+  {
+    titulo: 'Dejar que cada uno coloque los botones a su gusto',
+    descripcion: 'En el script de un botón de tu menú de opciones. Se abre el modo colocar: quien juega arrastra la palanca y los botones a donde le vengan bien y pulsa «Listo». Se le recuerda para las siguientes partidas.',
+    codigo: 'cuando hago clic encima:\n    tactil.colocar()',
+  },
+  {
+    titulo: 'Convertir tu juego en una app para el móvil',
+    descripcion: 'Arriba, «Exportar» > «App para el móvil»: descarga un zip con el juego, su icono y lo necesario para que funcione sin internet. Descomprímelo y sube lo de dentro a un sitio web con https (GitHub Pages, Netlify...). Al abrir esa dirección en el móvil: en Android, menú > «Instalar app»; en iPhone, Compartir > «Añadir a pantalla de inicio». El juego necesita controles para el dedo, por ejemplo:',
+    codigo: 'cuando empieza:\n    tactil.joystick()\n    tactil.boton("Saltar", "espacio")',
   },
 ];
 

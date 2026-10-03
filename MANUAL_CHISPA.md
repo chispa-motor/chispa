@@ -4524,3 +4524,114 @@ cuando cada fotograma:
 cuando se pulsa "espacio":
     yo.saltar(700)
 ```
+
+### Jugar con el dedo: una palanca y un botón de saltar
+
+En el script del jugador. La palanca hace de flechas y el botón pulsa la tecla espacio, así que el resto del código es el mismo que con teclado. Solo se ven cuando se juega con el dedo: en un ordenador no salen.
+
+```
+cuando empieza:
+    tactil.joystick()
+    tactil.boton("Saltar", "espacio")
+
+cuando cada fotograma:
+    yo.moverConFlechas(300)
+
+cuando se pulsa "espacio":
+    yo.saltar(700)
+```
+
+### Un botón en pantalla para disparar
+
+Un botón que no pulsa ninguna tecla: se pregunta por él con tactil.sePulso (una vez por toque) o tactil.pulsado (mientras se aprieta). Con tactil.mover se pone donde quieras: de 0 a 100 de izquierda a derecha y de abajo arriba.
+
+```
+cuando empieza:
+    tactil.boton("Fuego")
+    tactil.mover("Fuego", 88, 25)
+
+cuando cada fotograma:
+    si tactil.sePulso("Fuego"):
+        efecto.chispas(yo)
+```
+
+### Moverse deslizando el dedo (sin botones)
+
+Para juegos de una mano: deslizar a un lado cambia de carril y deslizar hacia arriba salta. tactil.gesto dice el gesto de este fotograma: "toque", "doble", "largo", "arriba", "abajo", "izquierda" o "derecha".
+
+```
+cuando cada fotograma:
+    si tactil.gesto == "izquierda":
+        yo.x -= 120
+    si tactil.gesto == "derecha":
+        yo.x += 120
+    si tactil.gesto == "arriba":
+        yo.saltar(600)
+```
+
+### Apuntar o mirar arrastrando el dedo
+
+Con tactil.mirar(), arrastrar por la pantalla (fuera de la palanca y los botones) se lee en tactil.miraX y tactil.miraY. Aquí gira al objeto; cambiando la última línea mueve la cámara.
+
+```
+cuando empieza:
+    tactil.joystick()
+    tactil.mirar()
+
+cuando cada fotograma:
+    yo.rotacion -= tactil.miraX
+```
+
+### Un juego que va bien en móviles lentos y gasta poca batería
+
+La calidad "auto" baja sola si el aparato no puede (menos píxeles y menos partículas), y con 30 fotogramas por segundo el móvil trabaja la mitad y se calienta menos. También se elige sin código: clic en el fondo de la escena > Proyecto > «calidad» y «fotogramas».
+
+```
+cuando empieza:
+    pantalla.calidad = "auto"
+    pantalla.maximoFps = 30
+```
+
+### Un juego que se juega con el móvil tumbado
+
+Si alguien lo abre con el móvil de pie, sale un aviso de «Gira el móvil» y el juego espera. En un ordenador no hace nada.
+
+```
+cuando empieza:
+    pantalla.orientacion = "horizontal"
+    tactil.joystick()
+```
+
+### Vibrar cuando te dan y texto distinto en móvil y en ordenador
+
+tactil.vibrar hace vibrar el móvil (en iPhone y en ordenadores no pasa nada). tactil.hay dice si se juega con el dedo: sirve para cambiar las instrucciones.
+
+```
+cuando empieza:
+    si tactil.hay:
+        mostrar("Toca Saltar")
+    sino:
+        mostrar("Pulsa espacio")
+
+cuando toco Enemigo:
+    tactil.vibrar(0.2)
+```
+
+### Dejar que cada uno coloque los botones a su gusto
+
+En el script de un botón de tu menú de opciones. Se abre el modo colocar: quien juega arrastra la palanca y los botones a donde le vengan bien y pulsa «Listo». Se le recuerda para las siguientes partidas.
+
+```
+cuando hago clic encima:
+    tactil.colocar()
+```
+
+### Convertir tu juego en una app para el móvil
+
+Arriba, «Exportar» > «App para el móvil»: descarga un zip con el juego, su icono y lo necesario para que funcione sin internet. Descomprímelo y sube lo de dentro a un sitio web con https (GitHub Pages, Netlify...). Al abrir esa dirección en el móvil: en Android, menú > «Instalar app»; en iPhone, Compartir > «Añadir a pantalla de inicio». El juego necesita controles para el dedo, por ejemplo:
+
+```
+cuando empieza:
+    tactil.joystick()
+    tactil.boton("Saltar", "espacio")
+```

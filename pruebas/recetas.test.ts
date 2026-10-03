@@ -137,3 +137,53 @@ describe('Recetas que se juegan', () => {
     expect(j.errores.map((x) => x.error.mensajeCorto)).toEqual([]);
   });
 });
+
+describe('Recetas de Chispa 1.2 (jugar en el móvil)', () => {
+  const NUEVAS = ['Jugar con el dedo', 'Un botón en pantalla', 'Moverse deslizando', 'Apuntar o mirar', 'Un juego que va bien en móviles', 'Un juego que se juega con el móvil tumbado', 'Vibrar cuando te dan', 'Dejar que cada uno', 'Convertir tu juego en una app'];
+
+  it('están todas y se juegan sin errores', () => {
+    for (const inicio of NUEVAS) {
+      expect(RECETAS.find((r) => r.titulo.startsWith(inicio)), inicio).toBeDefined();
+      const j = juegoDePrueba({
+        scripts: { 'r.chs': receta(inicio) },
+        escena: [
+          { nombre: 'Jugador', x: 100, y: 300, ...caja, fisica: {}, script: 'r.chs' },
+          { nombre: 'Enemigo', x: 600, y: 100, ...caja },
+          { nombre: 'Suelo', x: 400, y: 20, sprite: { ancho: 800, alto: 20 }, colision: {} },
+        ],
+      });
+      j.avanzar(30);
+      expect(j.errores, inicio).toEqual([]);
+    }
+  });
+
+  it('la palanca y el botón de la primera receta mueven y hacen saltar al jugador', () => {
+    const j = juegoDePrueba({
+      scripts: { 'r.chs': receta('Jugar con el dedo') },
+      escena: [{ nombre: 'Jugador', x: 100, y: 60, ...caja, fisica: {}, script: 'r.chs' }, { nombre: 'Suelo', x: 400, y: 20, sprite: { ancho: 2000, alto: 20 }, colision: {} }],
+    });
+    j.avanzar(30);
+    const o = j.buscar('Jugador');
+    const x0 = o.posicion.x;
+    j.entrada.tactil.ponerPalanca(1, 0);
+    j.avanzar(30);
+    expect(o.posicion.x).toBeGreaterThan(x0 + 80);
+    j.entrada.tactil.ponerPalanca(0, 0);
+    const y0 = o.posicion.y;
+    j.entrada.tactil.pulsar('Saltar', true);
+    j.avanzar(10);
+    j.entrada.tactil.pulsar('Saltar', false);
+    expect(o.posicion.y).toBeGreaterThan(y0 + 20);
+    expect(j.errores).toEqual([]);
+  });
+
+  it('deslizar el dedo cambia de carril', () => {
+    const j = juegoDePrueba({ gravedad: 0, scripts: { 'r.chs': receta('Moverse deslizando') }, escena: [{ nombre: 'Jugador', x: 400, y: 300, ...caja, script: 'r.chs' }] });
+    j.avanzar(2);
+    j.entrada.tactil.hacerGesto('derecha');
+    j.avanzar(1);
+    expect(j.buscar('Jugador').posicion.x).toBe(520);
+    j.avanzar(5);
+    expect(j.buscar('Jugador').posicion.x).toBe(520);
+  });
+});

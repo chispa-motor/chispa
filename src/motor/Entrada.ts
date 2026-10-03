@@ -158,6 +158,9 @@ function nombreDesdeEvento(e: KeyboardEvent): string {
   return normalizar(e.key);
 }
 
+/** Cuántas letras caben en el campo invisible del teclado de pantalla (los campos de los juegos admiten muchas menos). */
+export const MAXIMO_TECLADO = 2000;
+
 export class Entrada {
   /**
    * ¿Es esta tecla para el juego? Por defecto, sí. El editor lo cambia para
@@ -213,6 +216,8 @@ export class Entrada {
       t.setAttribute('autocorrect', 'off');
       t.setAttribute('enterkeyhint', 'done');
       t.spellcheck = false;
+      // (tope: pegar un texto enorme no puede llenar la memoria del juego)
+      t.maxLength = MAXIMO_TECLADO;
       // Invisible pero «de verdad»: con 16 px de letra Safari no acerca la página al enfocarlo
       Object.assign(t.style, { position: 'fixed', width: '1px', height: '1px', padding: '0', border: '0', margin: '0', opacity: '0', fontSize: '16px', background: 'transparent', color: 'transparent', caretColor: 'transparent', outline: 'none', zIndex: '-1' });
       t.addEventListener('compositionstart', () => (this.componiendo = true));
@@ -249,6 +254,7 @@ export class Entrada {
   private leerTeclado(): void {
     const t = this.teclado;
     if (!t) return;
+    if (t.value.length > MAXIMO_TECLADO) t.value = t.value.slice(0, MAXIMO_TECLADO);
     const antes = [...this.textoTeclado];
     const ahora = [...t.value];
     let iguales = 0;

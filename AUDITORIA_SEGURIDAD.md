@@ -4,9 +4,9 @@ Antes de publicar Chispa como código abierto se revisó todo el motor **como
 lo haría un atacante**. La pregunta era siempre la misma: *si alguien me pasa
 un proyecto o un juego, ¿qué me puede hacer?*
 
-Cada ataque que se probó tiene su test en `pruebas/seguridad.test.ts` (59
-tests; los 12 últimos son de la revisión de Chispa 1.1, al final de este
-documento) y en las pruebas del navegador (`pruebas-navegador/editor.mjs`, las 3
+Cada ataque que se probó tiene su test en `pruebas/seguridad.test.ts` (71
+tests; 12 son de la revisión de Chispa 1.1 y los 12 últimos de la de
+Chispa 1.2, al final de este documento) y en las pruebas del navegador (`pruebas-navegador/editor.mjs`, las 3
 que empiezan por «seguridad»). Así ninguno puede volver a funcionar sin que
 falle un test.
 
@@ -336,6 +336,109 @@ de carga (el nombre del juego y el icono van escapados en la página).
 `npm audit` sigue dando 0 vulnerabilidades y no se ha añadido ninguna
 dependencia.
 
+## Chispa 1.2: revisión de lo nuevo (móvil y tablet)
+
+Lo que se añadió en la 1.2 y se revisó: los controles de pantalla (`tactil`),
+la calidad y el límite de fotogramas, el juego como app instalable (ficha y
+service worker), el editor como app instalable, «Mis proyectos» (guardados en
+el navegador), compartir, la reducción de fotos al importar, el campo
+invisible del teclado de pantalla, y los menús y la ayuda que salen al dejar
+el dedo. Lo más delicado es el service worker, porque es código que se queda
+instalado en el aparato.
+
+### 20. Baja · El campo invisible del teclado no tenía tope
+
+Para que salga el teclado del móvil, el motor enfoca un campo de texto de
+verdad, invisible. No tenía longitud máxima: pegando un texto enorme, cada
+letra pasaba al juego una a una.
+
+**Arreglo:** 2000 letras como mucho (`MAXIMO_TECLADO`); lo que pase se
+recorta antes de llegar al juego.
+
+### 21. Baja · Un botón llamado «constructor»
+
+El sitio donde quien juega deja cada control se guardaba en un objeto
+normal de JavaScript, y se buscaba por el nombre del botón. Un botón
+llamado `constructor` o `__proto__` encontraba cosas del propio JavaScript
+en vez de «nada»: no se podía hacer daño, pero el botón salía mal colocado.
+
+**Arreglo:** ese objeto ya no tiene «padre» (`Object.create(null)`), ni
+al crearlo ni al leerlo de lo guardado.
+
+### 22. Baja · «Mis proyectos» se fiaba de lo guardado
+
+La lista enseñaba el nombre tal como estaba guardado en el navegador. Si
+eso se rompe (o lo cambia otro programa), podía llegar algo que no fuera un
+texto o un nombre larguísimo.
+
+**Arreglo:** el nombre se limpia al leerlo (`nombreSeguro`: siempre texto,
+80 letras) y un identificador de más de 80 letras no se guarda. Al abrir un
+proyecto de la lista pasa por la misma validación que un archivo de fuera.
+
+### 23. Baja · La versión dentro del service worker
+
+El número de versión se escribe en un comentario al principio de `sw.js`.
+Hoy siempre es una huella (letras y números), pero si algún día llegara
+otra cosa podría cerrar el comentario y colar código.
+
+**Arreglo:** en el comentario solo se dejan letras, números, puntos y
+guiones; en el código va con `JSON.stringify`. El prefijo de la caja solo
+admite letras minúsculas y guiones.
+
+### El service worker, punto por punto
+
+- **Solo sirve una lista fija**: los cinco archivos del juego (o los del
+  editor), hecha al exportar. Una petición a otra carpeta del mismo sitio,
+  a otro sitio, con `..`, por `http` o que no sea `GET` ni la mira: la hace
+  el navegador como siempre. Hay un test que lo ejecuta con un navegador de
+  mentira y le pide todo eso.
+- **No recibe órdenes**: no escucha mensajes de la página (`message`), ni
+  avisos (`push`), ni sincronizaciones. No carga más código
+  (`importScripts`), no usa `eval` y no guarda nada después de instalarse.
+- **Su alcance es su carpeta**: se apunta con una ruta relativa (`./sw.js`),
+  así que el navegador no le deja tocar nada de fuera de la carpeta del juego.
+- **Cada juego tiene su caja**, con su dirección en el nombre. Al
+  actualizarse solo borra sus versiones viejas: ni las de otro juego del
+  mismo sitio ni las de otros programas.
+- **No cambia lo que puede hacer la página**: lo que sirve es la misma
+  página, con su misma política de seguridad dentro.
+
+### La política de seguridad de la app
+
+El juego como app necesita tres permisos más que «una página», y los tres
+son solo para su propia carpeta: `manifest-src 'self'` (la ficha),
+`worker-src 'self'` (el service worker) e `img-src 'self'` (los iconos).
+Todo lo demás sigue igual: `default-src 'none'`, el código y los estilos
+solo por su huella (`'self'` NO vale para scripts), `connect-src 'none'`
+(la página no puede conectarse a ningún sitio, ni al suyo). La prueba del
+navegador comprueba que un `fetch` desde el juego falla.
+
+El editor como app no cambia su política: ya tenía `worker-src 'self'`.
+
+### Probado en lo nuevo y sin problemas
+
+- `constructor` y `__proto__` en `tactil` y en lo nuevo de `pantalla`;
+  nombres con trampa en `tactil.boton`, `tactil.mover`, `tactil.quitar`,
+  `tactil.mostrar`, `pantalla.calidad` y `pantalla.orientacion`.
+- El nombre de un botón se pone como texto: `<img src=x>` sale escrito tal
+  cual. Como mucho 12 botones de 12 letras; un bucle que pide 500 se para
+  con un error claro.
+- Lo guardado sobre el sitio de los controles se lee con cuidado: si no es
+  lo que se espera se tira; solo valen números de 0 a 1, nombres de 40
+  letras y las primeras 13 entradas.
+- `orientacion`, `calidad` y `maximoFps` en el archivo de un proyecto solo
+  admiten sus valores; cualquier otra cosa y el proyecto no se abre.
+- El nombre del juego en la ficha de la app va por `JSON.stringify`, y en
+  la página, escapado. La ficha solo lleva campos fijos y rutas de su carpeta.
+- Las fotos enormes: se reducen a 1024 px de lado, sean cuales sean sus medidas.
+- `tactil.vibrar`: 5 segundos como mucho, y el navegador solo vibra después
+  de un toque de quien juega.
+- Compartir usa el menú del propio aparato, con el mismo nombre de archivo
+  limpio que al descargar. Los menús y la ayuda al dejar el dedo se
+  construyen con nodos de texto.
+- `npm audit` sigue dando 0 vulnerabilidades y no se ha añadido ninguna
+  dependencia.
+
 ---
 
 ## Revisado y sin problemas
@@ -378,3 +481,17 @@ dependencia.
   quiere impedir que su juego se meta dentro de otra web, lo tiene que
   configurar en su servidor. Para itch.io justamente tiene que poder ir
   dentro.
+- **(1.2) Un juego instalado como app se actualiza a la segunda.** Primero
+  sirve lo guardado (por eso va sin internet); la versión nueva se guarda por
+  detrás y sale la siguiente vez que se abre. Si se publica un arreglo
+  urgente, quien ya tenía el juego lo ve al abrirlo dos veces.
+- **(1.2) El service worker de un juego manda solo en su carpeta, pero el
+  sitio donde se sube manda sobre él.** Quien controle el sitio web (o una
+  carpeta de más arriba) puede poner su propio service worker por encima. Es
+  así en cualquier web: hay que subir los juegos a un sitio de confianza.
+- **(1.2) Un juego puede vibrar muchas veces seguidas** (5 segundos cada
+  vez). El navegador solo lo permite después de un toque y se para al cerrar
+  o esconder la página. En iPhone no vibra nunca.
+- **(1.2) «Mis proyectos» vive en el navegador.** Vale lo dicho arriba sobre
+  compartir origen, y el navegador puede borrarlo si se queda sin sitio (se
+  le pide que no lo haga, pero puede negarse).
