@@ -518,3 +518,9 @@ Ver PROBLEMAS_PRINCIPIANTE.md para la lista completa de lo que se encontró.
 | Los números de aspecto fuera de tope desde un script se recortan sin dar error (`yo.borde = 5000` deja 1000). | Un valor exagerado suele ser un descuido en una cuenta, no merece parar el juego. |
 | Las estampas recién hechas (menos de 2 segundos) no se tiran para hacer sitio a otras: lo que no cabe se pinta directamente durante 90 fotogramas. | Si no, una escena con más aspectos distintos de los que caben haría y tiraría estampas en cada fotograma, que es mucho más lento que no usarlas. |
 | Arreglo que salió al repasar las pruebas del navegador: al abrir otro proyecto, la caja del script que estaba abierto se quedaba en la página, debajo de la nueva (con sus bloques). Ahora se quita. | Era basura que se acumulaba con cada proyecto abierto, y con los bloques se llegaba a ver doble. |
+
+## Chispa 1.2 — Reglas
+
+| Decisión | Por qué |
+|---|---|
+| Regla permanente de dispositivos (`DISPOSITIVOS.md`): móviles, tabletas, Chromebooks, pantallas táctiles, mandos y escritorio. Vale para la 1.2 y para todo lo que venga después. | Pedido por Rodrigo el 3 de octubre de 2026. |
