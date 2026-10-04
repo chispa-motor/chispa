@@ -21,6 +21,7 @@ import { EditorState } from '@codemirror/state';
 import { CompletionContext } from '@codemirror/autocomplete';
 import { agregarNovedades } from '../src/chispa/api/cursoNovedades';
 import { agregarNovedades12 } from '../src/chispa/api/cursoNovedades12';
+import { agregarNovedades13 } from '../src/chispa/api/cursoNovedades13';
 import { fichasDeLaApi } from '../src/chispa/api/aprende';
 import { generarManual } from '../src/chispa/api/manual';
 import { fuenteAutocompletado } from '../src/editor/codigo/autocompletado';
@@ -33,6 +34,10 @@ agregarNovedades(() => {}, (id) => void nuevos.push(id));
 const nuevos12: string[] = [];
 agregarNovedades12(() => {}, (id) => void nuevos12.push(id));
 nuevos.push(...nuevos12);
+/** Los de Chispa 1.3 (primera persona, puertas, mirar con el ratón): los mismos requisitos. */
+const nuevos13: string[] = [];
+agregarNovedades13(() => {}, (id) => void nuevos13.push(id));
+nuevos.push(...nuevos13);
 
 function sugerencias(texto: string): string[] {
   const estado = EditorState.create({ doc: texto });
@@ -83,7 +88,7 @@ describe('Comandos nuevos de Chispa 1.1', () => {
       // Lo que solo se lee de los controles (controles(1).x) sale dentro del valor de un bloque
       if (grupo === 'controles') return !new RegExp(`${escrito.replace(/[.()]/g, '\\$&')}(\\W|$)`, 'm').test(codigo);
       // Lo que solo se lee del móvil (tactil.x, tactil.gesto...) también sale dentro del valor de un bloque
-      if (nuevos12.includes(id) && new RegExp(`(^|[^\\w.])${escrito.replace(/[.()]/g, '\\$&')}(\\W|$)`, 'm').test(codigo)) return false;
+      if ((nuevos12.includes(id) || nuevos13.includes(id)) && new RegExp(`(^|[^\\w.])${escrito.replace(/[.()]/g, '\\$&')}(\\W|$)`, 'm').test(codigo)) return false;
       return !new RegExp(`(^|[^\\w.])${escrito.replace(/[.()]/g, '\\$&')}(\\(| =)`, 'm').test(codigo);
     });
     expect(faltan).toEqual([]);

@@ -82,7 +82,7 @@ export const EVENTOS: { clase: ClaseEvento; texto: string; dato?: { nombre: stri
  */
 export interface Accion {
   id: string;
-  categoria: 'movimiento' | 'apariencia' | 'efectos' | 'sonido' | 'objetos' | 'control' | 'interfaz' | 'movil';
+  categoria: 'movimiento' | 'apariencia' | 'efectos' | 'sonido' | 'objetos' | 'control' | 'interfaz' | 'movil' | 'vista3d';
   /** Texto y huecos: ['mostrar', 0] */
   partes: (string | number)[];
   /** Lo que se escribe: el nombre de la función (con su «yo.» si es de yo) */
@@ -272,6 +272,39 @@ export const DATOS_CON_BLOQUE: DatoConBloque[] = [
   { categoria: 'efectos', objetivo: 'yo.grises', valor: '1' },
   { categoria: 'efectos', objetivo: 'yo.desenfoque', valor: '3' },
 ];
+
+// ── Primera persona, puertas y mirar con el ratón (1.3) ──
+ACCIONES.push(
+  { id: 'ver3d', categoria: 'vista3d', partes: ['ver en primera persona desde', 0], funcion: 'vista3d.ver', porDefecto: ['yo'] },
+  { id: 'quitar3d', categoria: 'vista3d', partes: ['volver a la vista desde arriba'], funcion: 'vista3d.quitar', porDefecto: [] },
+  { id: 'suelo3d', categoria: 'vista3d', partes: ['pintar el suelo con', 0], funcion: 'vista3d.suelo', porDefecto: ['"gris"'] },
+  { id: 'techo3d', categoria: 'vista3d', partes: ['pintar el techo con', 0], funcion: 'vista3d.techo', porDefecto: ['"#222233"'] },
+  { id: 'cielo3d', categoria: 'vista3d', partes: ['poner de cielo la imagen', 0], funcion: 'vista3d.cielo', porDefecto: ['"nubes"'] },
+  { id: 'pared3d', categoria: 'vista3d', partes: ['pintar las casillas', 0, 'con la imagen', 1], funcion: 'vista3d.pared', porDefecto: ['"muro"', '"ladrillo"'] },
+  { id: 'niebla3d', categoria: 'vista3d', partes: ['niebla de color', 0, 'desde', 1, 'hasta', 2, 'píxeles'], funcion: 'vista3d.niebla', porDefecto: ['"negro"', '200', '900'] },
+  { id: 'mapa3d', categoria: 'vista3d', partes: ['las paredes son las del mapa', 0], funcion: 'vista3d.mapa', porDefecto: ['buscar("Mapa")'] },
+  { id: 'abrirPuerta', categoria: 'vista3d', partes: ['(en un mapa) abrir la puerta de la columna', 0, 'fila', 1], funcion: 'yo.abrirPuerta', porDefecto: ['5', '3'] },
+  { id: 'cerrarPuerta', categoria: 'vista3d', partes: ['(en un mapa) cerrar la puerta de la columna', 0, 'fila', 1], funcion: 'yo.cerrarPuerta', porDefecto: ['5', '3'] },
+);
+
+DATOS_CON_BLOQUE.push(
+  { categoria: 'vista3d', objetivo: 'vista3d.campo', valor: '80' },
+  { categoria: 'vista3d', objetivo: 'vista3d.altura', valor: '0.3' },
+  { categoria: 'vista3d', objetivo: 'vista3d.inclinacion', valor: '0.2' },
+  { categoria: 'vista3d', objetivo: 'vista3d.brillo', valor: '1.5' },
+  { categoria: 'vista3d', objetivo: 'vista3d.columnas', valor: '320' },
+  { categoria: 'vista3d', objetivo: 'yo.elevacion', valor: '20' },
+  { categoria: 'vista3d', objetivo: 'yo.visible', valor: 'vista3d.activa' },
+  { categoria: 'vista3d', objetivo: 'yo.visible', valor: 'vista3d.observador == yo' },
+  { categoria: 'vista3d', objetivo: 'yo.visible', valor: 'vista3d.seVe(buscar("Jugador"))' },
+  { categoria: 'vista3d', objetivo: 'juego.sitio', valor: 'vista3d.enPantalla(buscar("Jugador"))' },
+  { categoria: 'vista3d', objetivo: 'juego.tarda', valor: 'vista3d.milisegundos' },
+  { categoria: 'vista3d', objetivo: 'yo.visible', valor: 'yo.puertaAbierta(5, 3)' },
+  { categoria: 'vista3d', objetivo: 'yo.visible', valor: 'yo.esPuerta(5, 3)' },
+  { categoria: 'vista3d', objetivo: 'raton.capturado', valor: 'verdadero' },
+  { categoria: 'vista3d', objetivo: 'yo.rotacion', valor: 'yo.rotacion - raton.movX * 0.2' },
+  { categoria: 'vista3d', objetivo: 'vista3d.inclinacion', valor: 'vista3d.inclinacion + raton.movY * 0.002' },
+);
 
 DATOS_CON_BLOQUE.push(
   // ── Jugar en el móvil (1.2) ──

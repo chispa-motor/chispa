@@ -48,6 +48,8 @@ export class ObjetoJuego {
    */
   padre: ObjetoJuego | null = null;
   posicionPadre: Vector2 | null = null;
+  /** Cuánto está levantado del suelo, en píxeles (yo.elevacion): en la vista en primera persona, lo que flota o vuela. */
+  elevacion = 0;
   /** Se puede coger y mover con el ratón (yo.arrastrable = verdadero). */
   arrastrable = false;
   /** La definición de la que salió (para clonar()). */

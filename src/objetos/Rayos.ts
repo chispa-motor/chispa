@@ -102,7 +102,7 @@ function rayoContraMapa(m: MapaCasillas, origen: Vector2, dir: Vector2, largo: n
   let recorrido = 0;
   for (let vueltas = 0; recorrido <= largo && vueltas < 100000; vueltas++) {
     const tipo = m.obtener(c, f);
-    if (tipo && m.esSolida(tipo) && !propio(m.tipos, tipo)?.soloDesdeArriba) return { distancia: recorrido, tipo };
+    if (tipo && m.solidaEn(c, f, tipo) && !propio(m.tipos, tipo)?.soloDesdeArriba) return { distancia: recorrido, tipo };
     if (bordeX < bordeY) {
       recorrido = bordeX;
       bordeX += deltaX;

@@ -45,6 +45,7 @@ import type { Camara } from '../../objetos/Camara';
 import { crearModuloJunta } from './juntas';
 import { crearModuloPuntuaciones } from './puntuaciones';
 import { crearModuloTactil } from './tactil';
+import { crearModuloVista3D } from './vista3d';
 import { FPS_MAXIMO, FPS_MINIMO, MODOS_CALIDAD, calidad, type ModoCalidad } from '../../motor/Calidad';
 import { ORIENTACIONES, type Orientacion } from '../../motor/Tactil';
 import { ControlesJugador, numeroDeJugador } from './jugadores';
@@ -466,13 +467,20 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
             if (l) l.style.cursor = comoLogico(v, 'visible', p) ? '' : 'none';
           },
         },
+        // Para mirar con el ratón (juegos en primera persona): el ratón se queda «dentro» del juego y se lee lo que se mueve
+        capturado: {
+          obtener: () => ctx.motor.entrada.ratonCapturado,
+          asignar: (v, p) => ctx.motor.entrada.capturarRaton(comoLogico(v, 'capturado', p)),
+        },
+        movx: { obtener: () => ctx.motor.entrada.movimientoRaton.x },
+        movy: { obtener: () => ctx.motor.entrada.movimientoRaton.y },
       },
       {
         pulsado: (a, p) => ctx.motor.entrada.ratonPulsado(argBoton(a, 'pulsado', p)),
         sepulso: (a, p) => ctx.motor.entrada.ratonSePulso(argBoton(a, 'sePulso', p)),
         sesolto: (a, p) => ctx.motor.entrada.ratonSeSolto(argBoton(a, 'seSolto', p)),
       },
-      ['x', 'y', 'posicion', 'rueda', 'objeto', 'visible', 'pulsado', 'sePulso', 'seSolto'],
+      ['x', 'y', 'posicion', 'rueda', 'objeto', 'visible', 'capturado', 'movX', 'movY', 'pulsado', 'sePulso', 'seSolto'],
     ),
   );
 
@@ -808,6 +816,14 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
     aMundo: (x, y) => ctx.escena.camara.pantallaAMundo(new Vector2(x, y)),
     guardarDato: (clave, texto) => ctx.guardarDato(clave, texto),
     cargarDato: (clave) => ctx.cargarDato(clave),
+  }));
+
+  // ── ver el juego en primera persona: 3D simulado (vista3d.ts) ──
+  g.declarar('vista3d', crearModuloVista3D({
+    escena: () => ctx.escena,
+    yo: () => (interprete.objetoActual as ObjetoJuego | null) ?? null,
+    hayImagen: (nombre) => ctx.motor.recursos.tiene(nombre),
+    imagenes: () => ctx.motor.recursos.nombres(),
   }));
 
   // ── juntas: cuerdas, muelles y bisagras (juntas.ts) ──

@@ -2,7 +2,7 @@
 
 > Este archivo se genera solo con `npm run manual`, a partir de la API de verdad (no lo cambies a mano: cambia `src/chispa/api/curso.ts`). Un test ejecuta cada ejemplo, cada ejercicio y cada mini proyecto para comprobar que funcionan.
 
-Un curso por niveles para aprender a programar juegos con Chispa, aunque no hayas programado nunca. Salen **todos** los comandos que existen (434), cada uno con qué hace, un ejemplo corto que funciona y el error que más se comete con él.
+Un curso por niveles para aprender a programar juegos con Chispa, aunque no hayas programado nunca. Salen **todos** los comandos que existen (460), cada uno con qué hace, un ejemplo corto que funciona y el error que más se comete con él.
 
 **Cómo usarlo:**
 
@@ -64,6 +64,9 @@ Una regla para todo el curso: en el código **no hacen falta tildes**. Se escrib
   - [Jugar con el dedo](#jugar-con-el-dedo)
   - [Gestos, mirar y vibrar](#gestos-mirar-y-vibrar)
   - [Calidad, batería y cómo se sujeta el móvil](#calidad-bateria-y-como-se-sujeta-el-movil)
+  - [Primera persona: el mundo desde dentro](#primera-persona-el-mundo-desde-dentro)
+  - [Puertas en los mapas](#puertas-en-los-mapas)
+  - [Mirar con el ratón](#mirar-con-el-raton)
   - [Depurar: encontrar los fallos](#depurar-encontrar-los-fallos)
 - [Nivel 5: Tu juego, de principio a fin](#nivel-5-tu-juego-de-principio-a-fin)
 - [Soluciones de los ejercicios](#soluciones)
@@ -7702,6 +7705,473 @@ cuando empieza:
 ```
 cuando empieza:
     pantalla.orientacion = "tumbado"
+```
+
+### Primera persona: el mundo desde dentro
+
+Un juego visto desde arriba (un mapa de casillas, objetos, sin gravedad) se puede mirar DESDE DENTRO, como en los primeros juegos de disparos. No hay que cambiar el juego: vista3d.ver(yo) lo pinta desde los ojos de ese objeto. Las casillas sólidas son paredes, las demás son suelo, y los objetos son dibujos que siempre te miran. Se gira con yo.rotacion y se anda con yo.avanzar o con la velocidad.
+
+#### `vista3d.ver(objeto)`
+
+Pone la vista en primera persona: el mundo se ve desde ese objeto (desde yo, si no se dice), mirando hacia donde apunta su rotación.
+
+```
+cuando empieza:
+    vista3d.ver(yo)
+```
+
+**Error típico:** Darle el nombre entre comillas: quiere el objeto (yo, o buscar("Jugador")). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    vista3d.ver("Jugador")
+```
+
+#### `vista3d.quitar()`
+
+Vuelve a la vista normal, desde arriba (por ejemplo, para enseñar el mapa entero).
+
+```
+cuando empieza:
+    vista3d.ver(yo)
+
+cuando se pulsa "m":
+    vista3d.quitar()
+```
+
+**Error típico:** Intentar apagarla con activa: solo se lee. Se quita con vista3d.quitar(). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    vista3d.activa = falso
+```
+
+#### `vista3d.activa`
+
+Verdadero si se está viendo en primera persona (solo se lee: se pone con vista3d.ver y se quita con vista3d.quitar).
+
+```
+cuando empieza:
+    vista3d.ver(yo)
+    mostrar(vista3d.activa)
+```
+
+**Error típico:** Intentar encenderla con activa: solo se lee. Se pone con vista3d.ver(yo). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    vista3d.activa = verdadero
+```
+
+#### `vista3d.observador`
+
+El objeto desde el que se mira, o nulo si la vista no está puesta (solo se lee).
+
+```
+cuando empieza:
+    vista3d.ver(yo)
+    mostrar(vista3d.observador.nombre)
+```
+
+**Error típico:** Intentar cambiarlo: solo se lee. Se elige con vista3d.ver(objeto). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    vista3d.observador = yo
+```
+
+#### `vista3d.campo`
+
+Cuánto se ve a lo ancho, en grados: de 30 (como con unos prismáticos) a 120 (ojo de pez).
+
+```
+cuando empieza:
+    vista3d.ver(yo)
+    vista3d.campo = 80
+```
+
+**Error típico:** Pedir la vuelta entera: va de 30 a 120 grados. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    vista3d.campo = 360
+```
+
+#### `vista3d.altura`
+
+A qué altura están los ojos: de 0.05 (pegados al suelo) a 0.95 (pegados al techo).
+
+```
+cuando empieza:
+    vista3d.ver(yo)
+    vista3d.altura = 0.3
+```
+
+**Error típico:** Darla en píxeles: va de 0.05 (el suelo) a 0.95 (el techo). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    vista3d.altura = 32
+```
+
+#### `vista3d.inclinacion`
+
+Mirar hacia arriba (positivo) o hacia abajo (negativo): de -1 a 1.
+
+```
+cuando empieza:
+    vista3d.ver(yo)
+    vista3d.inclinacion = 0.2
+```
+
+**Error típico:** Darla en grados: va de -1 (abajo) a 1 (arriba). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    vista3d.inclinacion = 45
+```
+
+#### `vista3d.brillo`
+
+La luz de todo lo que se ve en 3D: 1 = normal, 0 = a oscuras, hasta 3.
+
+```
+cuando empieza:
+    vista3d.ver(yo)
+    vista3d.brillo = 1.5
+```
+
+**Error típico:** Darlo en tanto por ciento: 1 es lo normal, y va de 0 a 3. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    vista3d.brillo = 100
+```
+
+#### `vista3d.suelo("imagen o color")`
+
+Con qué se pinta el suelo donde el mapa no tiene casilla: una imagen del proyecto (se repite en cada casilla) o un color.
+
+```
+cuando empieza:
+    vista3d.ver(yo)
+    vista3d.suelo("#444444")
+```
+
+**Error típico:** Escribir mal el nombre: tiene que ser una imagen del proyecto o un color. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    vista3d.suelo("baldosaaa")
+```
+
+#### `vista3d.techo("imagen o color")`
+
+Con qué se pinta el techo: una imagen del proyecto o un color.
+
+```
+cuando empieza:
+    vista3d.ver(yo)
+    vista3d.techo("#222233")
+```
+
+**Error típico:** Olvidar la imagen o el color. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    vista3d.techo()
+```
+
+#### `vista3d.cielo("imagen")`
+
+Un cielo en vez de techo: una imagen ancha que da la vuelta entera al girar y nunca se acerca (para sitios al aire libre).
+
+```
+cuando empieza:
+    vista3d.ver(yo)
+    vista3d.cielo()
+```
+
+**Error típico:** Darle un color: el cielo es una IMAGEN del proyecto. Para un color liso, vista3d.techo("azul"). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    vista3d.cielo("azul")
+```
+
+#### `vista3d.pared("tipo", "imagen")`
+
+Cambia la imagen con la que se pinta un tipo de casilla del mapa en primera persona (si no se dice, la del mapa).
+
+```
+cuando empieza:
+    vista3d.ver(yo)
+    mostrar(vista3d.columnas >= 0)
+```
+
+**Error típico:** Inventarse el tipo de casilla: tiene que ser uno del mapa (Chispa dice cuáles hay). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    vista3d.pared("murooo", "ladrillo")
+```
+
+#### `vista3d.niebla("color", desde, hasta)`
+
+Niebla con la distancia: a «desde» píxeles empieza a notarse y a «hasta» ya solo se ve el color de la niebla.
+
+```
+cuando empieza:
+    vista3d.ver(yo)
+    vista3d.niebla("negro", 200, 900)
+```
+
+**Error típico:** Poner las distancias al revés: primero dónde empieza y luego dónde ya no se ve nada. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    vista3d.niebla("negro", 900, 200)
+```
+
+#### `vista3d.mapa(objeto)`
+
+Elige qué mapa de casillas hace de paredes, si en la escena hay más de uno (si no se dice, el primero que tenga casillas sólidas).
+
+```
+cuando empieza:
+    vista3d.mapa(buscar("Mapa"))
+    vista3d.ver(yo)
+```
+
+**Error típico:** Darle un objeto que no es un mapa de casillas. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    vista3d.mapa(yo)
+```
+
+#### `vista3d.enPantalla(objeto, altura)`
+
+En qué punto de la pantalla se ve un objeto (o una posición) en primera persona: un vector, como los de dibujar.enPantalla; o nulo si queda detrás de ti.
+
+```
+cuando empieza:
+    vista3d.ver(yo)
+
+cuando cada fotograma:
+    variable p = vista3d.enPantalla(vector(yo.x + 100, yo.y))
+    si p != nulo:
+        dibujar.enPantalla.circulo(p.x, p.y, 6, "rojo")
+```
+
+**Error típico:** Usar el resultado sin mirar si es nulo: lo es cuando el objeto queda detrás (o la vista no está puesta). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando cada fotograma:
+    variable p = vista3d.enPantalla(jugador)
+    dibujar.enPantalla.circulo(p.x, p.y, 6, "rojo")
+```
+
+#### `vista3d.seVe(objeto)`
+
+Verdadero si ese objeto (o esa posición) se ve ahora mismo en la pantalla: está delante y no lo tapa una pared.
+
+```
+cuando empieza:
+    vista3d.ver(yo)
+
+cuando cada fotograma:
+    si vista3d.seVe(vector(yo.x + 100, yo.y)):
+        dibujar.enPantalla.texto("lo veo", 40, 40, "blanco")
+```
+
+**Error típico:** Darle el nombre entre comillas: quiere el objeto o una posición. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando cada fotograma:
+    si vista3d.seVe("Jugador"):
+        mostrar("lo veo")
+```
+
+#### `vista3d.columnas`
+
+Cuántas columnas tiene la imagen en 3D (cada una es un rayo).
+
+```
+cuando empieza:
+    vista3d.ver(yo)
+    vista3d.columnas = 320
+```
+
+**Error típico:** Pedir muy pocas: va de 64 a 1280 (0 = las que diga pantalla.calidad). Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    vista3d.columnas = 10
+```
+
+#### `vista3d.milisegundos`
+
+Lo que ha tardado en pintarse la vista 3D en el último fotograma, en milésimas de segundo (solo se lee).
+
+```
+cuando empieza:
+    vista3d.ver(yo)
+
+cuando cada 1 segundos:
+    mostrar(vista3d.milisegundos)
+```
+
+**Error típico:** Intentar cambiarlo: es una medida, solo se lee. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    vista3d.milisegundos = 0
+```
+
+#### `yo.elevacion`
+
+Cuánto está levantado del suelo, en píxeles.
+
+```
+cuando empieza:
+    yo.elevacion = 20
+```
+
+**Error típico:** Darle un texto: son píxeles desde el suelo. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    yo.elevacion = "alto"
+```
+
+### Puertas en los mapas
+
+Un tipo de casilla puede ser una PUERTA (en el editor: selecciona el mapa y, en el tipo de casilla, marca «es una puerta»). Cerrada es una pared; abierta, se pasa. Se abren y se cierran desde el código, diciendo su columna y su fila.
+
+#### `mapa.abrirPuerta(columna, fila, segundos)`
+
+Solo en mapas: abre la puerta de esa casilla poco a poco (0,6 segundos si no se dice).
+
+```
+cuando empieza:
+    variable m = buscar("Mapa")
+    m.ponerCasilla(20, 20, "puerta")
+    m.abrirPuerta(20, 20)
+```
+
+**Error típico:** Abrir una casilla que no es una puerta: su tipo tiene que tener marcado «es una puerta». Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    buscar("Mapa").abrirPuerta(0, 0)
+```
+
+#### `mapa.cerrarPuerta(columna, fila, segundos)`
+
+Solo en mapas: cierra la puerta de esa casilla poco a poco.
+
+```
+cuando empieza:
+    variable m = buscar("Mapa")
+    m.ponerCasilla(20, 20, "puerta")
+    m.abrirPuerta(20, 20, 0)
+    m.cerrarPuerta(20, 20)
+```
+
+**Error típico:** Dar los segundos en milisegundos: una puerta tarda de 0 a 60 segundos. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    buscar("Mapa").cerrarPuerta(20, 20, 500)
+```
+
+#### `mapa.puertaAbierta(columna, fila)`
+
+Solo en mapas: verdadero si la puerta de esa casilla está abierta lo bastante para pasar.
+
+```
+cuando empieza:
+    variable m = buscar("Mapa")
+    m.ponerCasilla(20, 20, "puerta")
+    m.abrirPuerta(20, 20, 0)
+    mostrar(m.puertaAbierta(20, 20))
+```
+
+**Error típico:** Preguntárselo a un objeto que no es el mapa. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    mostrar(yo.puertaAbierta(20, 20))
+```
+
+#### `mapa.esPuerta(columna, fila)`
+
+Solo en mapas: verdadero si en esa casilla hay una puerta (abierta o cerrada).
+
+```
+cuando empieza:
+    variable m = buscar("Mapa")
+    mostrar(m.esPuerta(m.columnaEn(yo.x), m.filaEn(yo.y)))
+```
+
+**Error típico:** Darle un solo número: quiere la columna y la fila. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    mostrar(buscar("Mapa").esPuerta(yo.x))
+```
+
+### Mirar con el ratón
+
+En primera persona se mira moviendo el ratón. Para eso el juego «captura» el ratón: la flecha desaparece, no se sale de la pantalla y se lee lo que se mueve. El navegador lo concede al hacer clic en el juego y lo suelta con Escape.
+
+#### `raton.capturado`
+
+Si es verdadero, el juego se queda con el ratón: la flecha desaparece y no se sale de la pantalla, y lo que se mueve se lee en raton.movX y raton.movY.
+
+```
+cuando empieza:
+    raton.capturado = verdadero
+```
+
+**Error típico:** Darle un texto: es verdadero o falso. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    raton.capturado = "si"
+```
+
+#### `raton.movX`
+
+Cuánto se ha movido el ratón a los lados en este fotograma, en píxeles (positivo = a la derecha).
+
+```
+cuando cada fotograma:
+    yo.rotacion -= raton.movX * 0.2
+```
+
+**Error típico:** Intentar cambiarlo: solo se lee. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando cada fotograma:
+    raton.movX = 0
+```
+
+#### `raton.movY`
+
+Cuánto se ha movido el ratón arriba o abajo en este fotograma, en píxeles (positivo = hacia arriba).
+
+```
+cuando cada fotograma:
+    yo.y += raton.movY
+```
+
+**Error típico:** Leerlo en cuando empieza: es lo que se mueve el ratón en CADA fotograma. Esto no da error: funciona, pero no hace lo que querías.
+
+```
+cuando empieza:
+    yo.y += raton.movY
 ```
 
 ### Depurar: encontrar los fallos

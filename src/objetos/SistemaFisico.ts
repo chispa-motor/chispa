@@ -385,7 +385,7 @@ export class SistemaFisico {
     for (const s of cerca.moviles) meter(s);
     for (const m of cerca.mapas) {
       for (const casilla of m.casillasEn(caja)) {
-        if (m.esSolida(casilla.tipo)) res.push({ caja: casilla.caja, objeto: m.objeto, soloArriba: propio(m.tipos, casilla.tipo)?.soloDesdeArriba ?? false });
+        if (m.solidaEn(casilla.columna, casilla.fila, casilla.tipo)) res.push({ caja: casilla.caja, objeto: m.objeto, soloArriba: propio(m.tipos, casilla.tipo)?.soloDesdeArriba ?? false });
       }
     }
     return res;

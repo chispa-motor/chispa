@@ -158,6 +158,11 @@ export class Sprite extends Componente {
    * signo: en el mundo, positivo = contrario a las agujas del reloj; en el
    * Canvas, positivo = a favor.
    */
+  /** El color del «flash» que tiene ahora mismo (yo.flash), o null si no tiene ninguno. */
+  get flashActual(): string | null {
+    return this.flashQueda > 0 ? this.flashColor : null;
+  }
+
   /** El objeto entero de un color durante unos segundos (yo.flash). */
   flash(color: string, segundos: number): void {
     this.flashColor = color;

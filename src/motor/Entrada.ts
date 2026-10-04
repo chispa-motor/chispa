@@ -289,6 +289,42 @@ export class Entrada {
   posicionRaton = Vector2.cero();
   /** Movimiento de la rueda en este fotograma (positivo = hacia abajo). */
   rueda = 0;
+  /** Lo que se ha movido el ratón en este fotograma, en píxeles (Y hacia arriba). Para mirar con el ratón. */
+  readonly movimientoRaton = new Vector2(0, 0);
+  /** El juego quiere quedarse con el ratón (raton.capturado = verdadero): se pide al navegador en el siguiente clic. */
+  private quiereRaton = false;
+  private lienzo: HTMLCanvasElement | null = null;
+
+  /** ¿Tiene el juego el ratón capturado ahora mismo? (el navegador lo suelta con Escape) */
+  get ratonCapturado(): boolean {
+    return typeof document !== 'undefined' && this.lienzo !== null && document.pointerLockElement === this.lienzo;
+  }
+
+  /**
+   * Pide (o suelta) el ratón: capturado, la flecha desaparece y no se sale del juego, y se lee lo que se mueve
+   * (raton.movX). El navegador solo lo concede dentro de un clic: si ahora no deja, se pide otra vez en el siguiente.
+   */
+  capturarRaton(si: boolean): void {
+    this.quiereRaton = si;
+    if (typeof document === 'undefined' || !this.lienzo) return;
+    if (!si) {
+      if (this.ratonCapturado) document.exitPointerLock?.();
+      return;
+    }
+    this.pedirRaton();
+  }
+
+  private pedirRaton(): void {
+    const l = this.lienzo;
+    if (!l || this.ratonCapturado || typeof l.requestPointerLock !== 'function') return;
+    try {
+      // (devuelve una promesa en los navegadores nuevos: si dice que no, se pedirá en el siguiente clic)
+      const r = l.requestPointerLock() as unknown as Promise<void> | undefined;
+      r?.catch?.(() => {});
+    } catch {
+      /* el navegador no deja ahora: se pide en el siguiente clic */
+    }
+  }
 
   /** AbortController permite quitar TODOS los eventos de golpe (útil al parar el juego). */
   private eventos = new AbortController();
@@ -299,6 +335,7 @@ export class Entrada {
     private aCoordenadasJuego: (x: number, y: number) => Vector2,
   ) {
     const signal = this.eventos.signal;
+    this.lienzo = canvas;
     this.tactil = new Tactil(this, canvas);
     this.tactil.aJuego = (x, y) => this.aCoordenadasJuego(x, y);
     this.tactil.escalaJuego = () => {
@@ -352,6 +389,8 @@ export class Entrada {
         this.botonesAbajo.add(b);
         this.botonesPulsados.add(b);
         this.posicionRaton = this.aCoordenadasJuego(e.clientX, e.clientY);
+        // El juego quiere el ratón (raton.capturado): el navegador solo lo da dentro de un clic
+        if (this.quiereRaton && e.pointerType === 'mouse') this.pedirRaton();
         // Con el dedo (o un lápiz) sobre un campo de texto del juego: sale el teclado de pantalla
         if (e.pointerType && e.pointerType !== 'mouse') this.tocarZonaDeTexto(e);
       },
@@ -382,7 +421,12 @@ export class Entrada {
     window.addEventListener(
       'pointermove',
       (e) => {
-        this.posicionRaton = this.aCoordenadasJuego(e.clientX, e.clientY);
+        // Capturado, el ratón no se mueve de sitio: solo cuenta lo que se desplaza
+        if (!this.ratonCapturado) this.posicionRaton = this.aCoordenadasJuego(e.clientX, e.clientY);
+        if (e.pointerType === 'mouse' || this.ratonCapturado) {
+          this.movimientoRaton.x += e.movementX || 0;
+          this.movimientoRaton.y -= e.movementY || 0;
+        }
       },
       { signal },
     );
@@ -559,10 +603,13 @@ export class Entrada {
       m.soltados.clear();
     }
     this.rueda = 0;
+    this.movimientoRaton.x = 0;
+    this.movimientoRaton.y = 0;
   }
 
   /** Quita todos los eventos del navegador. */
   destruir(): void {
+    if (this.ratonCapturado) document.exitPointerLock?.();
     this.tactil.destruir();
     this.eventos.abort();
   }

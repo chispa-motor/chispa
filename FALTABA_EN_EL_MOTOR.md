@@ -29,3 +29,26 @@ ayuda, manual, errores en español y test (`pruebas/faltaba.test.ts`), y se volv
 | `yo.irHacia(jugador)` en cada fotograma **volvía a calcular el camino** (A*) cada vez. | Si el destino es el mismo, solo cambia la rapidez. |
 | `si a and b:` decía «esperaba ':'», sin explicar que en Chispa es `y`. | La pista dice «'and' no es de Chispa: aquí se escribe 'y'» (también `or`, `not`...). |
 | La vista del juego del editor cerraba la pantalla grande con **Escape**, que también es la tecla de pausa del juego: al pausar, se salía de la pantalla grande. | Si los scripts usan la tecla Escape, Escape es para el juego (se sale de la pantalla grande con su botón). |
+
+---
+
+# Lo que faltaba para «Arena Cero» (Chispa 1.3)
+
+**Arena Cero** es un juego de disparos en primera persona con 3D simulado (como los de principios de
+los 90), escrito solo en Chispa. Es un proyecto privado: no está en este repositorio. Lo que sí está
+aquí es todo lo que hubo que añadir al motor para poder hacerlo, siempre como comandos **generales**
+(sirven para cualquier juego), con ayuda, autocompletado, manual, chuleta, bloque, error claro en
+español y test (`pruebas/vista3d.test.ts`).
+
+La regla del encargo: lo pesado (pintar el mundo, las texturas, los sprites) lo hace el motor; el
+código del juego nunca calcula píxeles.
+
+| # | Qué pasaba en el juego | Qué se añadió al motor (para cualquier juego) |
+|---|---|---|
+| 1 | No había manera de ver el mundo «desde dentro». Chispa solo sabía pintar desde arriba o de lado. | **El módulo `vista3d`** (18 comandos). La idea: el juego sigue siendo uno visto desde arriba (un mapa de casillas, objetos, física sin gravedad) y `vista3d.ver(yo)` lo pinta desde los ojos de ese objeto. Las casillas sólidas son paredes con la imagen de su tipo, las que no lo son son baldosas del suelo, y cada objeto con dibujo es un sprite que siempre mira a quien ve, con su tamaño según la distancia, tapado por las paredes y ordenado por profundidad. Como el juego no cambia, **todo lo que ya había sigue valiendo**: choques, `yo.irHacia` (camino rodeando paredes), `rayo(...)` (disparos y línea de visión), animaciones, `yo.flash`, sonidos con sitio. Suelo, techo o cielo (`vista3d.suelo`, `techo`, `cielo`), niebla con la distancia (`vista3d.niebla`), `campo`, `altura` (agacharse, balanceo al andar), `inclinacion` (mirar arriba y abajo), `brillo` (destellos), `pared` (otra imagen para un tipo), `enPantalla` y `seVe` (para poner nombres o barras encima de alguien), `columnas` y `milisegundos` (para medir). |
+| 2 | Las puertas: una casilla era pared o no lo era, para siempre. Quitar la casilla la hacía desaparecer de golpe y sin marco. | **Puertas en los mapas de casillas.** Un tipo de casilla puede marcarse como puerta (en el editor: «es una puerta»). `mapa.abrirPuerta(columna, fila, segundos)`, `mapa.cerrarPuerta`, `mapa.puertaAbierta` y `mapa.esPuerta`. Cerrada es una pared; abierta, pasan los objetos, los rayos, los caminos de `yo.irHacia` y la luz. Desde arriba se va haciendo transparente; en primera persona es una hoja fina en mitad de la casilla que se aparta hacia un lado. |
+| 3 | Mirar con el ratón: el ratón se salía del juego y solo se sabía dónde estaba, no cuánto se movía. | **`raton.capturado`** (el juego se queda con el ratón: la flecha desaparece y no se sale; el navegador lo suelta con Escape) y **`raton.movX`, `raton.movY`** (lo que se ha movido en este fotograma). |
+| 4 | Los sonidos con sitio sonaban por el lado de la PANTALLA donde estaba su objeto visto desde arriba: un enemigo a mi derecha podía sonar por la izquierda. | En primera persona, quien escucha es quien mira, y **el lado depende de hacia dónde mira**: lo que está a su derecha suena por la derecha; delante o detrás, por los dos. No hay comando nuevo: `sonido.reproducirEn` y `sonido.bucleEn` lo hacen solos cuando la vista está puesta. |
+| 5 | Un dron que vuela, una bala a la altura del pecho: todo estaba pegado al suelo. | **`yo.elevacion`**: cuántos píxeles está levantado del suelo. |
+| 6 | En un móvil no se puede pintar lo mismo que en un ordenador. | La vista 3D usa la **calidad adaptable de la 1.2** sin rehacer nada: 640 columnas en alta, 480 en media y 320 en baja (`pantalla.calidad`; en "auto" baja y sube sola). |
+

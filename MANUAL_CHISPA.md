@@ -1302,6 +1302,14 @@ para cada h en yo.hijos:
     h.color = "rojo"
 ```
 
+#### `yo.elevacion`
+
+Cuánto está levantado del suelo, en píxeles. En primera persona (vista3d) es lo que flota o vuela: un dron, una bala, algo que salta. 0 = apoyado en el suelo.
+
+```
+yo.elevacion = 20
+```
+
 #### `yo.arrastrable`
 
 Si es verdadero, se puede coger con el ratón y moverlo (puzles, inventarios, juegos de ordenar).
@@ -2080,6 +2088,44 @@ Solo en mapas: el centro de una casilla, en el mundo (vector).
 yo.posicion = mapa.centroDeCasilla(2, 5)
 ```
 
+#### `mapa.abrirPuerta(columna, fila, segundos)`
+
+Solo en mapas: abre la puerta de esa casilla poco a poco (0,6 segundos si no se dice). Abierta, se pasa por ella, y los rayos y yo.irHacia también. La casilla tiene que ser de un tipo marcado como puerta (en el editor: el mapa > su tipo de casilla > «es una puerta»).
+
+```
+variable mapa = buscar("Mapa")
+mapa.abrirPuerta(5, 3)
+```
+
+#### `mapa.cerrarPuerta(columna, fila, segundos)`
+
+Solo en mapas: cierra la puerta de esa casilla poco a poco. Cerrada, vuelve a ser una pared.
+
+```
+variable mapa = buscar("Mapa")
+mapa.cerrarPuerta(5, 3)
+```
+
+#### `mapa.puertaAbierta(columna, fila)`
+
+Solo en mapas: verdadero si la puerta de esa casilla está abierta lo bastante para pasar.
+
+```
+variable mapa = buscar("Mapa")
+si mapa.puertaAbierta(5, 3):
+    mostrar("paso")
+```
+
+#### `mapa.esPuerta(columna, fila)`
+
+Solo en mapas: verdadero si en esa casilla hay una puerta (abierta o cerrada).
+
+```
+variable mapa = buscar("Mapa")
+si mapa.esPuerta(mapa.columnaEn(yo.x + 40), mapa.filaEn(yo.y)):
+    mostrar("hay una puerta")
+```
+
 ## 8. Módulos
 
 Grupos de cosas del motor. Se escriben con un punto: `teclado.pulsada("a")`, `escena.camara.zoom`.
@@ -2202,6 +2248,33 @@ Si es falso, la flecha del ratón no se ve encima del juego (para poner tu propi
 
 ```
 raton.visible = falso
+```
+
+#### `raton.capturado`
+
+Si es verdadero, el juego se queda con el ratón: la flecha desaparece y no se sale de la pantalla, y lo que se mueve se lee en raton.movX y raton.movY. Para mirar con el ratón en primera persona. El navegador lo concede al hacer clic en el juego, y lo suelta con la tecla Escape (por eso al leerlo dice si lo tiene de verdad).
+
+```
+cuando empieza:
+    raton.capturado = verdadero
+```
+
+#### `raton.movX`
+
+Cuánto se ha movido el ratón a los lados en este fotograma, en píxeles (positivo = a la derecha). Solo se lee.
+
+```
+cuando cada fotograma:
+    yo.rotacion -= raton.movX * 0.2
+```
+
+#### `raton.movY`
+
+Cuánto se ha movido el ratón arriba o abajo en este fotograma, en píxeles (positivo = hacia arriba). Solo se lee.
+
+```
+cuando cada fotograma:
+    yo.y += raton.movY
 ```
 
 #### `raton.pulsado("izquierdo")`
@@ -2921,6 +2994,196 @@ Hace vibrar el móvil (0,1 segundos si no se dice; como mucho 5). Si el aparato 
 ```
 cuando toco Enemigo:
     tactil.vibrar(0.2)
+```
+
+### `vista3d`
+
+Ver el juego en PRIMERA PERSONA, con 3D simulado (como los primeros juegos de disparos). El juego es el de siempre, visto desde arriba: un mapa de casillas, objetos, física sin gravedad. Con vista3d.ver(yo) se pinta desde los ojos de ese objeto: las casillas sólidas del mapa son paredes (con su imagen), las que no lo son son baldosas del suelo, y cada objeto es un dibujo que siempre te mira, más pequeño cuanto más lejos. Se gira con yo.rotacion y se anda como siempre. Todo lo demás (choques, yo.irHacia, rayo, sonidos con sitio) funciona igual.
+
+```
+cuando empieza:
+    vista3d.ver(yo)
+    vista3d.niebla("negro", 200, 900)
+
+cuando cada fotograma:
+    si teclado.pulsada("izquierda"):
+        yo.rotacion += 120 * delta
+    si teclado.pulsada("derecha"):
+        yo.rotacion -= 120 * delta
+    si teclado.pulsada("arriba"):
+        yo.avanzar(200 * delta)
+```
+
+#### `vista3d.ver(objeto)`
+
+Pone la vista en primera persona: el mundo se ve desde ese objeto (desde yo, si no se dice), mirando hacia donde apunta su rotación. Hace falta un mapa de casillas en la escena: sus casillas sólidas son las paredes. El objeto desde el que se mira no se ve.
+
+```
+cuando empieza:
+    vista3d.ver(yo)
+```
+
+#### `vista3d.quitar()`
+
+Vuelve a la vista normal, desde arriba (por ejemplo, para enseñar el mapa entero).
+
+```
+cuando se pulsa "m":
+    vista3d.quitar()
+```
+
+#### `vista3d.activa`
+
+Verdadero si se está viendo en primera persona (solo se lee: se pone con vista3d.ver y se quita con vista3d.quitar).
+
+```
+si vista3d.activa:
+    mostrar("en primera persona")
+```
+
+#### `vista3d.observador`
+
+El objeto desde el que se mira, o nulo si la vista no está puesta (solo se lee).
+
+```
+si vista3d.observador == yo:
+    mostrar("miro yo")
+```
+
+#### `vista3d.campo`
+
+Cuánto se ve a lo ancho, en grados: de 30 (como con unos prismáticos) a 120 (ojo de pez). 66 si no se dice. Bajarlo de golpe sirve para apuntar con zoom.
+
+```
+cuando empieza:
+    vista3d.ver(yo)
+    vista3d.campo = 80
+```
+
+#### `vista3d.altura`
+
+A qué altura están los ojos: de 0.05 (pegados al suelo) a 0.95 (pegados al techo). 0.5 si no se dice. Para agacharse, o para que la vista suba y baje un poco al andar.
+
+```
+cuando cada fotograma:
+    vista3d.altura = 0.5 + seno(tiempo.total * 400) * 0.02
+```
+
+#### `vista3d.inclinacion`
+
+Mirar hacia arriba (positivo) o hacia abajo (negativo): de -1 a 1. 0 = de frente.
+
+```
+cuando cada fotograma:
+    vista3d.inclinacion = limitar(vista3d.inclinacion + raton.movY * 0.002, -0.6, 0.6)
+```
+
+#### `vista3d.brillo`
+
+La luz de todo lo que se ve en 3D: 1 = normal, 0 = a oscuras, hasta 3. Subirlo un instante hace el destello de un disparo.
+
+```
+cuando se pulsa "espacio":
+    vista3d.brillo = 1.6
+    animar(vista3d.brillo, 1, 0.15)
+```
+
+#### `vista3d.suelo("imagen o color")`
+
+Con qué se pinta el suelo donde el mapa no tiene casilla: una imagen del proyecto (se repite en cada casilla) o un color. Las casillas NO sólidas del mapa se ven como baldosas con su propia imagen.
+
+```
+cuando empieza:
+    vista3d.ver(yo)
+    vista3d.suelo("#444444")
+```
+
+#### `vista3d.techo("imagen o color")`
+
+Con qué se pinta el techo: una imagen del proyecto o un color. Quita el cielo si lo había.
+
+```
+cuando empieza:
+    vista3d.ver(yo)
+    vista3d.techo("#222233")
+```
+
+#### `vista3d.cielo("imagen")`
+
+Un cielo en vez de techo: una imagen ancha que da la vuelta entera al girar y nunca se acerca (para sitios al aire libre). Sin nada, vista3d.cielo() lo quita.
+
+```
+cuando empieza:
+    vista3d.ver(yo)
+    vista3d.cielo("jugador")
+```
+
+#### `vista3d.pared("tipo", "imagen")`
+
+Cambia la imagen con la que se pinta un tipo de casilla del mapa en primera persona (si no se dice, la del mapa). Sirve para que una pared tenga un dibujo desde arriba y otro de frente.
+
+```
+cuando empieza:
+    vista3d.pared("suelo", "jugador")
+```
+
+#### `vista3d.niebla("color", desde, hasta)`
+
+Niebla con la distancia: a «desde» píxeles empieza a notarse y a «hasta» ya solo se ve el color de la niebla. Da ambiente, y además lo que queda detrás no hay que pintarlo. Sin nada, vista3d.niebla() la quita.
+
+```
+cuando empieza:
+    vista3d.ver(yo)
+    vista3d.niebla("negro", 200, 900)
+```
+
+#### `vista3d.mapa(objeto)`
+
+Elige qué mapa de casillas hace de paredes, si en la escena hay más de uno (si no se dice, el primero que tenga casillas sólidas).
+
+```
+cuando empieza:
+    vista3d.mapa(buscar("Mapa"))
+    vista3d.ver(yo)
+```
+
+#### `vista3d.enPantalla(objeto, altura)`
+
+En qué punto de la pantalla se ve un objeto (o una posición) en primera persona: un vector, como los de dibujar.enPantalla; o nulo si queda detrás de ti. Para poner un nombre, una barra de vida o una flecha encima de alguien. La altura, en píxeles desde el suelo (si no se dice, la de en medio).
+
+```
+cuando cada fotograma:
+    variable p = vista3d.enPantalla(buscar("Jugador"))
+    si p != nulo:
+        dibujar.enPantalla.texto("AQUI", p.x, p.y, "blanco")
+```
+
+#### `vista3d.seVe(objeto)`
+
+Verdadero si ese objeto (o esa posición) se ve ahora mismo en la pantalla: está delante y no lo tapa una pared.
+
+```
+cuando cada fotograma:
+    si vista3d.seVe(buscar("Jugador")):
+        mostrar("lo veo")
+```
+
+#### `vista3d.columnas`
+
+Cuántas columnas tiene la imagen en 3D (cada una es un rayo). Si no se toca (0), las que diga pantalla.calidad: 640 en alta, 480 en media y 320 en baja. Con menos va más rápido y se ve más «pixelado». De 64 a 1280.
+
+```
+cuando empieza:
+    vista3d.columnas = 320
+```
+
+#### `vista3d.milisegundos`
+
+Lo que ha tardado en pintarse la vista 3D en el último fotograma, en milésimas de segundo (solo se lee). Para medir: a 60 fotogramas por segundo, cada uno tiene 16 en total.
+
+```
+cuando cada 1 segundos:
+    mostrar(vista3d.milisegundos)
 ```
 
 ### `puntuaciones`

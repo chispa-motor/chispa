@@ -23,6 +23,7 @@
  */
 import { agregarNovedades } from './cursoNovedades';
 import { agregarNovedades12 } from './cursoNovedades12';
+import { agregarNovedades13 } from './cursoNovedades13';
 import type { DefObjeto } from '../../proyecto/formato';
 
 /** Un comando en el curso. */
@@ -919,6 +920,7 @@ export const NIVELES_CURSO: readonly NivelCurso[] = [
 // Lo nuevo de Chispa 1.1 (formas, efectos, sonido, interfaz...), en su propio archivo
 agregarNovedades(tema, c);
 agregarNovedades12(tema, c);
+agregarNovedades13(tema, c);
 
 export const COMANDOS_CURSO: readonly ComandoCurso[] = C;
 export const TEMAS_CURSO: readonly TemaCurso[] = T;

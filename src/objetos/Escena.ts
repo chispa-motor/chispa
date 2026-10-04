@@ -43,6 +43,7 @@ import { SistemaFisico } from './SistemaFisico';
 import { Colision, type Caja } from './componentes/Colision';
 import { GRAVEDAD_MUNDO } from './componentes/Fisica';
 import { MapaCasillas } from './componentes/MapaCasillas';
+import { Vista3D } from './Vista3D';
 import { Sprite } from './componentes/Sprite';
 import { Fisica } from './componentes/Fisica';
 import { AnimadorDeValores } from './AnimadorDeValores';
@@ -92,6 +93,8 @@ export class Escena implements EscenaActiva {
   readonly jugadores: Jugadores;
   /** Quién escucha los sonidos con sitio: un objeto, o null (el centro de la cámara principal). */
   oyente: ObjetoJuego | null = null;
+  /** La vista en primera persona (vista3d.ver): si tiene observador, el mundo se pinta desde sus ojos. */
+  readonly vista3d = new Vista3D();
   /** Las cuerdas, muelles y bisagras que unen objetos. */
   readonly juntas = new Juntas();
   /** Efectos especiales: partículas, emisores (fuego, lluvia...), rayos, ondas, destellos y números de daño. */
@@ -300,7 +303,13 @@ export class Escena implements EscenaActiva {
     for (const c of this.camaras) c.actualizar(dt);
     // Los sonidos con sitio: más flojos cuanto más lejos del oyente, y por su lado
     if (this.oyente?.destruido) this.oyente = null;
-    this.motor.sonido?.actualizarSitios(this.oyente?.posicion ?? this.camara.posicion, this.camara.anchoPantalla / 2 / this.camara.zoom);
+    // En primera persona escucha quien mira (salvo que se haya elegido otro oyente), y el lado depende de hacia dónde mira
+    const ojos = this.vista3d.activa ? this.vista3d.observador : null;
+    const escucha = this.oyente ?? ojos;
+    this.motor.sonido?.actualizarSitios(
+      escucha ? { x: escucha.posicion.x, y: escucha.posicion.y, mirando: ojos ? (escucha.transformacion.rotacion * Math.PI) / 180 : undefined } : this.camara.posicion,
+      this.camara.anchoPantalla / 2 / this.camara.zoom,
+    );
     this.actualizarFundido(this.motor.tiempo.deltaReal);
     this.quitarDestruidos();
   }
@@ -536,6 +545,8 @@ export class Escena implements EscenaActiva {
   /** El mundo visto por una cámara. `r` mide lo que mide su trozo de pantalla. */
   private dibujarMundo(r: Renderizador, cam: Camara): void {
     const ctx = r.ctx;
+    // En primera persona (solo la cámara principal): el mundo lo pinta la vista 3D
+    if (cam === this.camara && this.vista3d.activa && this.vista3d.dibujar(r, this)) return;
     const visible = cam.zonaVisible();
     const margen = 64 / cam.zoom;
     const centro = cam.centroDibujo();

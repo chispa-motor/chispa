@@ -89,12 +89,26 @@ export const ALCANCE_NORMAL = 800;
  * `alcance` píxeles o más) y por qué lado (-1 izquierda, 1 derecha).
  * `medioAncho`: la mitad de lo que se ve a lo ancho (a esa distancia hacia un lado, suena solo por ese altavoz... casi).
  */
-export function oirDesde(oyente: { x: number; y: number }, sitio: { x: number; y: number }, alcance: number, medioAncho: number): { volumen: number; pan: number } {
+export function oirDesde(oyente: Oyente, sitio: { x: number; y: number }, alcance: number, medioAncho: number): { volumen: number; pan: number } {
   const dx = sitio.x - oyente.x;
   const dy = sitio.y - oyente.y;
-  const cerca = Math.max(0, 1 - Math.hypot(dx, dy) / Math.max(1, alcance));
+  const lejos = Math.hypot(dx, dy);
+  const cerca = Math.max(0, 1 - lejos / Math.max(1, alcance));
+  // En primera persona (el oyente mira hacia un sitio): el lado depende de hacia dónde mira, no de la pantalla.
+  // Justo delante o detrás suena por los dos altavoces; a su derecha, por el derecho.
+  if (oyente.mirando !== undefined) {
+    const lado = lejos < 1 ? 0 : (dx * Math.sin(oyente.mirando) - dy * Math.cos(oyente.mirando)) / lejos;
+    return { volumen: cerca * cerca, pan: Math.max(-1, Math.min(1, lado)) * 0.85 };
+  }
   // Al cuadrado: baja deprisa al alejarse un poco y despacio al final, como se oye de verdad
   return { volumen: cerca * cerca, pan: Math.max(-1, Math.min(1, dx / Math.max(1, medioAncho))) * 0.85 };
+}
+
+/** Quien escucha: dónde está y, si mira hacia algún sitio (en primera persona), hacia dónde (en radianes). */
+export interface Oyente {
+  x: number;
+  y: number;
+  mirando?: number;
 }
 
 /** Algo que está sonando (o, sin audio en el navegador, un bucle apuntado). */
@@ -614,7 +628,7 @@ export class Sonido {
 
   // ───────────────────────── Sonido con sitio ─────────────────────────
 
-  private oyente: { x: number; y: number } | null = null;
+  private oyente: Oyente | null = null;
   private medioAncho = 480;
 
   /**
@@ -623,8 +637,8 @@ export class Sonido {
    * sitio suenan más flojos cuanto más lejos y por el lado donde están; los
    * bucles de un objeto destruido se paran.
    */
-  actualizarSitios(oyente: { x: number; y: number }, medioAncho: number): void {
-    this.oyente = { x: oyente.x, y: oyente.y };
+  actualizarSitios(oyente: Oyente, medioAncho: number): void {
+    this.oyente = { x: oyente.x, y: oyente.y, mirando: oyente.mirando };
     this.medioAncho = medioAncho;
     for (const grupo of this.voces.values()) {
       for (const v of [...grupo]) {
@@ -640,7 +654,7 @@ export class Sonido {
     }
   }
 
-  private colocar(v: Voz, oyente: { x: number; y: number }, medioAncho: number): void {
+  private colocar(v: Voz, oyente: Oyente, medioAncho: number): void {
     const s = v.sitio!;
     const { volumen, pan } = oirDesde(oyente, 'posicion' in s ? s.posicion : s, v.alcance, medioAncho);
     v.volumenSitio = volumen;

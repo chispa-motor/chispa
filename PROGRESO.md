@@ -93,6 +93,42 @@ No se ha hecho push de nada. La web sigue como estaba.
 - **Números al cerrar la 1.2**: 434 comandos (408 en la 1.1), 1077 tests (975), 149 pruebas de
   navegador (45 del editor y 104 en móviles y tabletas simulados; 45 en la 1.1), 82 973 líneas (74 184).
 
+# Arena Cero (Chispa 1.3): un juego en primera persona
+
+El juego NO está en este repositorio: es un proyecto privado, en la carpeta de al lado
+(`../arena-cero/`, con su propio `PROGRESO.md`). Aquí va lo que se añade al MOTOR para poder
+hacerlo, con commit y etiqueta por parte (`arena-parte-N`). Lo que faltaba está en
+`FALTABA_EN_EL_MOTOR.md`. No se hace push de nada.
+
+| Parte | Qué | Estado | Etiqueta |
+|---|---|---|---|
+| 1 | Motor 3D simulado: paredes, suelo, techo, niebla, puertas, medir fps | **Hecho** | `arena-parte-1` |
+| 2 | Jugador: teclado, ratón, mando y táctil | Sin empezar | |
+| 3 | Sprites que miran al jugador | Sin empezar | |
+| 4 | Armas | Sin empezar | |
+| 5 | NPCs con IA | Sin empezar | |
+| 6 | Mapa rejugable | Sin empezar | |
+| 7 | Interfaz | Sin empezar | |
+| 8 | Sonido, niveles, guardado, pausa, ajustes | Sin empezar | |
+| 9 | Rendimiento | Sin empezar | |
+| 10 | Reto: alturas | Sin empezar | |
+
+## Arena Cero, parte 1 — Motor 3D simulado (hecho)
+
+- **`src/motor/Raycaster.ts`**: el dibujo (paredes con textura, suelo y techo por filas, cielo,
+  niebla, puertas finas que se deslizan, sprites con profundidad). No depende del navegador.
+- **`src/objetos/Vista3D.ts`**: lo une con la escena (el mapa de casillas hecho rejilla, las
+  imágenes hechas texturas, los objetos hechos sprites). La escena la usa en `dibujarMundo`.
+- **`src/chispa/api/vista3d.ts`**: el módulo `vista3d` (18 comandos). Además: 4 comandos de puertas
+  en los mapas, `yo.elevacion`, y `raton.capturado`, `movX`, `movY`. En total, de 434 a 460 comandos.
+- Puertas: `MapaCasillas` (apertura por casilla), y las respetan la física, los rayos, los caminos y
+  las luces. En el editor, casilla «es una puerta» en el tipo de casilla.
+- Sonido con sitio según hacia dónde mira quien escucha (`Sonido.oirDesde`).
+- **Pruebas**: `pruebas/vista3d.test.ts` (46) y «primera persona» en `pruebas-navegador/editor.mjs`.
+- **Medido** (con el nivel de pruebas del juego, en la máquina de trabajo, sin tarjeta gráfica):
+  60 fps en un ordenador (4 ms de dibujo a 640×360); con el procesador frenado 4 veces (como un
+  móvil), 53 fps a 320×180; frenado 6 veces, 40 fps.
+
 ## Cómo seguir si se corta
 
 1. `git log --oneline | head` y `git tag | grep m12` dicen el último bloque cerrado.

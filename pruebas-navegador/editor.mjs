@@ -1425,7 +1425,7 @@ await prueba('pantallas de portátil: en 1366×768 y en 1280×720 cabe todo (bar
       const columna = [...document.querySelectorAll('.categorias-bloques')].find((c) => c.offsetParent).getBoundingClientRect();
       return [...document.querySelectorAll('.categoria-bloques')].filter((c) => c.offsetParent).map((c) => { const b = c.getBoundingClientRect(); return b.top >= columna.top - 1 && b.bottom <= columna.bottom + 1; });
     });
-    comprobar(categorias.length === 11 && categorias.every(Boolean), `${ancho}×${alto}: las categorías de los bloques no caben: ${categorias}`);
+    comprobar(categorias.length === 12 && categorias.every(Boolean), `${ancho}×${alto}: las categorías de los bloques no caben: ${categorias}`);
     // Y no queda por debajo el editor del proyecto anterior (se quedaba su caja al abrir otro proyecto)
     comprobar(await estado(p, () => document.querySelectorAll('.caja-script').length) === 1, `${ancho}×${alto}: queda la caja de un script del proyecto anterior`);
     await comprobarQueCabe('los bloques');
@@ -1561,6 +1561,90 @@ await prueba('rendimiento: 500 objetos con efectos, luces y partículas', async 
   // pinta el procesador, que es mucho más lento que un ordenador normal): aquí se pide no pasar de 25 ms
   comprobar(con.ms < 25 * HOLGURA, `un fotograma tarda ${con.ms.toFixed(1)} ms (como mucho ${25 * HOLGURA})`);
   comprobar(con.ms < sin.ms * 0.8, `las mejoras de la 1.1 no se notan: ${con.ms.toFixed(1)} ms con ellas, ${sin.ms.toFixed(1)} sin ellas`);
+});
+
+await prueba('primera persona (vista3d): paredes con su imagen, suelo, techo, un objeto delante, una puerta que se abre, y va deprisa', async (p) => {
+  // Dos imágenes hechas aquí mismo: una pared a rayas rojas y un robot verde
+  const imagenes = await estado(p, () => {
+    const hacer = (pintar) => {
+      const c = document.createElement('canvas');
+      c.width = c.height = 32;
+      pintar(c.getContext('2d'));
+      return c.toDataURL('image/png');
+    };
+    return {
+      muro: hacer((x) => { x.fillStyle = '#c0392b'; x.fillRect(0, 0, 32, 32); x.fillStyle = '#7b241c'; for (let i = 0; i < 32; i += 8) x.fillRect(0, i, 32, 2); }),
+      robot: hacer((x) => { x.fillStyle = '#2ecc71'; x.fillRect(8, 2, 16, 30); }),
+      hoja: hacer((x) => { x.fillStyle = '#2e86de'; x.fillRect(0, 0, 32, 32); }),
+    };
+  });
+  const celdas = {};
+  for (let c = 0; c < 11; c++) for (let f = 0; f < 7; f++) {
+    if (c === 0 || f === 0 || c === 10 || f === 6) celdas[`${c},${f}`] = 'muro';
+    else if (c === 6) celdas[`${c},${f}`] = f === 3 ? 'puerta' : 'muro';
+  }
+  const codigo = 'cuando empieza:\n    vista3d.ver(yo)\n    vista3d.suelo("#404040")\n    vista3d.techo("#101010")\n\ncuando se pulsa "e":\n    buscar("Mapa").abrirPuerta(6, 3, 0.3)\n\ncuando se pulsa "q":\n    yo.rotacion = 90\n';
+  await estado(p, ({ imagenes, celdas, codigo }) => {
+    const pr = JSON.parse(JSON.stringify(window.chispa.estado.proyecto));
+    pr.imagenes = imagenes;
+    pr.scripts = { 'jugador.chs': codigo };
+    pr.plantillas = {};
+    pr.animaciones = {};
+    pr.escenas = { Principal: { colorFondo: '#000000', gravedad: 0, objetos: [
+      { nombre: 'Mapa', x: 0, y: 0, mapa: { tamano: 48, tipos: { muro: { imagen: 'muro', solida: true }, puerta: { imagen: 'hoja', solida: true, puerta: true } }, celdas } },
+      { nombre: 'Jugador', x: 72, y: 168, sprite: { forma: 'circulo', ancho: 20, alto: 20 }, colision: { ancho: 20, alto: 20 }, fisica: { gravedad: 0 }, script: 'jugador.chs' },
+      { nombre: 'Robot', x: 168, y: 168, sprite: { imagen: 'robot', ancho: 20, alto: 20 } },
+    ] } };
+    pr.escenaInicial = 'Principal';
+    window.chispa.estado.abrir(pr);
+  }, { imagenes, celdas, codigo });
+  await p.waitForTimeout(300);
+  // En el editor: el tipo «puerta» tiene su casilla marcada
+  await estado(p, () => window.chispa.estado.seleccionar({ tipo: 'escena', escena: 'Principal', indice: 0 }));
+  await p.waitForSelector('text=es una puerta', { state: 'attached' });
+  await estado(p, () => window.chispa.ejecutar());
+  await p.waitForFunction(() => document.querySelector('.estado-juego')?.textContent?.startsWith('Jugando'));
+  await p.waitForTimeout(700);
+  comprobar((await estado(p, () => window.chispa.erroresEnMarcha)) === 0, `el juego en primera persona da errores: ${await textoDe(p, '.consola-editor')}`);
+  /** El color de un punto de la pantalla del juego (de 0 a 1 a lo ancho y a lo alto). */
+  const color = (x, y) => estado(p, ({ x, y }) => {
+    const c = document.querySelector('.pantalla-juego canvas');
+    const d = c.getContext('2d').getImageData(Math.floor(c.width * x), Math.floor(c.height * y), 1, 1).data;
+    return [d[0], d[1], d[2]];
+  }, { x, y });
+  const rojizo = ([r, g, b]) => r > 90 && r > g * 2 && r > b * 2;
+  const verdoso = ([r, g, b]) => g > 120 && g > r * 1.5 && g > b * 1.5;
+  const azulado = ([r, g, b]) => b > 120 && b > r * 1.5;
+  const gris = ([r, g, b], cuanto) => Math.abs(r - cuanto) < 12 && Math.abs(g - cuanto) < 12 && Math.abs(b - cuanto) < 12;
+  // El robot, delante (a dos casillas); detrás, la puerta azul; arriba el techo y abajo el suelo
+  comprobar(verdoso(await color(0.5, 0.7)), `delante, en el suelo, tenía que verse el robot verde y hay ${await color(0.5, 0.7)}`);
+  comprobar(azulado(await color(0.5, 0.45)), `encima del robot tenía que verse la puerta azul y hay ${await color(0.5, 0.45)}`);
+  comprobar(gris(await color(0.5, 0.03), 16), `arriba tenía que verse el techo y hay ${await color(0.5, 0.03)}`);
+  comprobar(gris(await color(0.5, 0.97), 64), `abajo tenía que verse el suelo y hay ${await color(0.5, 0.97)}`);
+  comprobar(rojizo(await color(0.08, 0.5)) && rojizo(await color(0.92, 0.5)), `a los lados tenían que verse las paredes rojas y hay ${await color(0.08, 0.5)} y ${await color(0.92, 0.5)}`);
+  // La puerta se abre: detrás del robot ya no hay azul, se ve la pared roja del fondo
+  await p.locator('.pantalla-juego canvas').focus();
+  await p.keyboard.press('e');
+  await p.waitForTimeout(900);
+  comprobar(rojizo(await color(0.5, 0.45)), `con la puerta abierta tenía que verse el fondo rojo y hay ${await color(0.5, 0.45)}`);
+  // Mirando a otro lado, el robot ya no está en el centro
+  await p.keyboard.press('q');
+  await p.waitForTimeout(200);
+  comprobar(rojizo(await color(0.5, 0.5)), `al girar tenía que verse la pared y hay ${await color(0.5, 0.5)}`);
+  // Y va deprisa: pintar la vista cabe de sobra en un fotograma
+  const ms = await estado(p, () => new Promise((listo) => {
+    const v = window.chispa.vistaJuego.juego.escena.vista3d;
+    let n = 0;
+    let suma = 0;
+    const paso = () => {
+      suma += v.milisegundos;
+      if (++n < 60) requestAnimationFrame(paso);
+      else listo(suma / n);
+    };
+    requestAnimationFrame(paso);
+  }));
+  comprobar(ms > 0 && ms < 9 * HOLGURA, `pintar la vista en primera persona tarda ${ms.toFixed(1)} ms (como mucho ${9 * HOLGURA})`);
+  await estado(p, () => window.chispa.parar());
 });
 
 await navegador.close();

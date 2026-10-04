@@ -53,6 +53,11 @@ export class Recursos {
     this.imagenes.set(nombre, img);
   }
 
+  /** Los nombres de las imágenes cargadas. */
+  nombres(): string[] {
+    return [...this.imagenes.keys()];
+  }
+
   /** ¿Hay una imagen cargada con este nombre? */
   tiene(nombre: string): boolean {
     return this.imagenes.has(nombre);

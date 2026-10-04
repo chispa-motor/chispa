@@ -135,9 +135,9 @@ function queTapa(escena: Escena, cx: number, cy: number, radio: number, duena: O
 function bordesDeMapa(mapa: MapaCasillas, zona: Caja, res: Segmento[], cajas: Caja[]): void {
   const solida = (c: number, f: number) => {
     const t = mapa.obtener(c, f);
-    return t !== null && mapa.esSolida(t);
+    return t !== null && mapa.solidaEn(c, f, t);
   };
-  const casillas = mapa.casillasEn(zona).filter((c) => mapa.esSolida(c.tipo));
+  const casillas = mapa.casillasEn(zona).filter((c) => mapa.solidaEn(c.columna, c.fila, c.tipo));
   const t = mapa.tamano;
   // Bordes horizontales (arriba y abajo) y verticales (izquierda y derecha), juntados en tramos largos
   const horizontales = new Map<string, number[]>();

@@ -252,7 +252,7 @@ function fisica(v: unknown, ruta: Ruta): DefFisica {
 }
 
 function tipoCasilla(v: unknown, ruta: Ruta): TipoCasilla {
-  return campos<TipoCasilla>(objeto(v, ruta), ruta, { imagen: nombre, color, solida: logico, soloDesdeArriba: logico });
+  return campos<TipoCasilla>(objeto(v, ruta), ruta, { imagen: nombre, color, solida: logico, soloDesdeArriba: logico, puerta: logico });
 }
 
 function mapa(v: unknown, ruta: Ruta): DefMapa {

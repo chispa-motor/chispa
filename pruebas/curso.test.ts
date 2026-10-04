@@ -48,7 +48,7 @@ function mundo(scripts: Record<string, string>, proyecto?: { objetos: DefObjeto[
         sprite: { ancho: 200, alto: 30, fijo: true, tamano: 16 },
         control: { tipo, ...(tipo === 'lista' || tipo === 'menu' ? { opciones: ['Uno', 'Dos', 'Tres'] } : {}) },
       })),
-      { nombre: 'Mapa', x: 0, y: 0, mapa: { tamano: 32, tipos: { suelo: { solida: true }, agua: { solida: false }, hielo: { solida: true } }, celdas: { '0,0': 'suelo', '1,0': 'suelo', '2,0': 'hielo' } } },
+      { nombre: 'Mapa', x: 0, y: 0, mapa: { tamano: 32, tipos: { suelo: { solida: true }, agua: { solida: false }, hielo: { solida: true }, puerta: { solida: true, puerta: true } }, celdas: { '0,0': 'suelo', '1,0': 'suelo', '2,0': 'hielo', '20,20': 'puerta' } } },
     ],
     plantillas: {
       Bala: caja(0, 0, { fisica: { gravedad: 0 } }),

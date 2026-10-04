@@ -588,6 +588,7 @@ export class Inspector {
             imagenes.length ? campoLista('imagen', `tipo.${nombre}.imagen`, t.imagen ?? '', [['', '(solo color)'], ...imagenes.map((i): [string, string] => [i, i])], (v) => e.ponerTipoCasilla(ref, nombre, { ...t, imagen: v || undefined })) : null,
             campoCasilla('sólida', `tipo.${nombre}.solida`, t.solida, (v) => e.ponerTipoCasilla(ref, nombre, { ...t, solida: v }), 'Sólida = pared o suelo. Si no, se atraviesa (agua, pinchos, monedas...) y avisa con "cuando toco"'),
             t.solida ? campoCasilla('solo desde arriba', `tipo.${nombre}.soloDesdeArriba`, t.soloDesdeArriba ?? false, (v) => e.ponerTipoCasilla(ref, nombre, { ...t, soloDesdeArriba: v || undefined }), 'Plataforma que se atraviesa saltando desde abajo: solo para a lo que cae encima') : null,
+            t.solida ? campoCasilla('es una puerta', `tipo.${nombre}.puerta`, t.puerta ?? false, (v) => e.ponerTipoCasilla(ref, nombre, { ...t, puerta: v || undefined }), 'Una puerta se abre y se cierra desde el código: mapa.abrirPuerta(columna, fila). Abierta, se pasa por ella') : null,
             tipos.length > 1 ? botonIcono('basura', `Quitar el tipo "${nombre}" (y sus casillas)`, async () => {
               if (await confirmar('Quitar tipo de casilla', `¿Quitar "${nombre}" y borrar todas sus casillas del mapa?`, 'Quitar', true)) e.borrarTipoCasilla(ref, nombre);
             }, undefined, 'pequeno') : null,

@@ -29,7 +29,7 @@ import { tocanDeVerdad } from '../../objetos/SistemaFisico';
 import { Fisica } from '../../objetos/componentes/Fisica';
 import { Sprite } from '../../objetos/componentes/Sprite';
 import { Animador } from '../../objetos/componentes/Animador';
-import { MapaCasillas } from '../../objetos/componentes/MapaCasillas';
+import { MapaCasillas, SEGUNDOS_PUERTA } from '../../objetos/componentes/MapaCasillas';
 import { Recorrido } from '../../objetos/componentes/Recorrido';
 import { Comportamiento } from '../../objetos/componentes/Comportamiento';
 import { SUAVIZADOS } from '../../objetos/AnimadorDeValores';
@@ -102,6 +102,27 @@ function necesitaMapa(o: ObjetoJuego, accion: string, pos: Posicion): MapaCasill
   const m = o.obtener(MapaCasillas);
   if (!m) throw new ErrorChispa(pos, `'${accion}' solo funciona con mapas de casillas, y '${o.nombre}' no es un mapa.`, 'Busca el mapa primero, por ejemplo: variable mapa = buscar("Mapa")');
   return m;
+}
+
+/** mapa.abrirPuerta(columna, fila, segundos) y mapa.cerrarPuerta: la casilla tiene que ser de un tipo marcado como puerta. */
+function moverPuerta(o: ObjetoJuego, a: Valor[], p: Posicion, accion: string, hacia: 0 | 1): null {
+  const ej = `mapa.${accion}(5, 3)`;
+  const m = necesitaMapa(o, accion, p);
+  const c = Math.floor(argNumero(a, 0, accion, p, ej));
+  const f = Math.floor(argNumero(a, 1, accion, p, ej));
+  const segundos = argNumero(a, 2, accion, p, ej, SEGUNDOS_PUERTA);
+  if (!(segundos >= 0 && segundos <= 60)) throw new ErrorChispa(p, `una puerta tarda de 0 a 60 segundos en moverse, y le das ${segundos}.`, `Ejemplo: mapa.${accion}(5, 3, 0.5)`);
+  if (!m.esPuerta(c, f)) {
+    const tipo = m.obtener(c, f);
+    const puertas = Object.entries(m.tipos).filter(([, t]) => t.puerta).map(([n]) => `"${n}"`);
+    throw new ErrorChispa(
+      p,
+      tipo ? `la casilla (${c}, ${f}) es de tipo "${tipo}", que no es una puerta.` : `en la casilla (${c}, ${f}) no hay nada: no hay puerta que ${hacia ? 'abrir' : 'cerrar'}.`,
+      puertas.length ? `Los tipos que son puerta en este mapa: ${puertas.join(', ')}. Para saber la casilla de un sitio: mapa.columnaEn(x) y mapa.filaEn(y).` : 'Ningún tipo de este mapa es una puerta. En el editor: selecciona el mapa > en el tipo de casilla, marca «es una puerta».',
+    );
+  }
+  m.moverPuerta(c, f, hacia, segundos);
+  return null;
 }
 
 /** Comprueba que un tipo de casilla existe en el mapa (con sugerencia si no). */
@@ -255,6 +276,15 @@ const PROPIEDADES: Record<string, PropiedadObjeto> = sinPrototipo({
   padre: { obtener: (o) => (o.padre && !o.padre.destruido ? referencia(o.padre) : null) },
   hijos: { obtener: (o) => o.hijos.map(referencia) },
   arrastrable: { obtener: (o) => o.arrastrable, asignar: (o, v, p) => (o.arrastrable = comoLogico(v, 'arrastrable', p)) },
+  // En primera persona (vista3d): cuánto está levantado del suelo, en píxeles (lo que flota o vuela)
+  elevacion: {
+    obtener: (o) => o.elevacion,
+    asignar: (o, v, p) => {
+      const n = comoNumero(v, 'elevacion', p);
+      if (!(n >= -10000 && n <= 10000)) throw new ErrorChispa(p, `'elevacion' son los píxeles que el objeto está levantado del suelo, y le das ${n}.`, 'Ejemplo: yo.elevacion = 20');
+      o.elevacion = n;
+    },
+  },
   arrastrando: { obtener: (o) => o.escena?.arrastrando(o) ?? false },
   imagen: {
     obtener: (o, p) => necesitaSprite(o, 'imagen', p).imagen,
@@ -957,6 +987,16 @@ const METODOS: Record<string, (o: ObjetoJuego, args: Valor[], pos: Posicion) => 
   },
   columnaen: (o, a, p) => necesitaMapa(o, 'columnaEn', p).columnaEn(argNumero(a, 0, 'columnaEn', p, 'mapa.columnaEn(yo.x)')),
   filaen: (o, a, p) => necesitaMapa(o, 'filaEn', p).filaEn(argNumero(a, 0, 'filaEn', p, 'mapa.filaEn(yo.y)')),
+  abrirpuerta: (o, a, p) => moverPuerta(o, a, p, 'abrirPuerta', 1),
+  cerrarpuerta: (o, a, p) => moverPuerta(o, a, p, 'cerrarPuerta', 0),
+  puertaabierta: (o, a, p) => {
+    const ej = 'si mapa.puertaAbierta(5, 3):';
+    return necesitaMapa(o, 'puertaAbierta', p).abierta(argNumero(a, 0, 'puertaAbierta', p, ej), argNumero(a, 1, 'puertaAbierta', p, ej));
+  },
+  espuerta: (o, a, p) => {
+    const ej = 'si mapa.esPuerta(5, 3):';
+    return necesitaMapa(o, 'esPuerta', p).esPuerta(argNumero(a, 0, 'esPuerta', p, ej), argNumero(a, 1, 'esPuerta', p, ej));
+  },
   centrodecasilla: (o, a, p) => {
     const ej = 'mapa.centroDeCasilla(3, 0)';
     const c = necesitaMapa(o, 'centroDeCasilla', p).centroDe(argNumero(a, 0, 'centroDeCasilla', p, ej), argNumero(a, 1, 'centroDeCasilla', p, ej));
@@ -969,7 +1009,7 @@ const NOMBRES_BONITOS = [
   'color', 'visible', 'ancho', 'alto', 'texto', 'tamaño', 'colorTexto', 'letra', 'imagen', 'opacidad', 'voltear', 'capa', 'fijo',
   'solido', 'fantasma', 'rozamiento', 'rebote', 'masa', 'estatico', 'moviendo', 'animacion', 'ratonEncima', 'destruido',
   'saltar', 'mover', 'rotar', 'destruir', 'distanciaA', 'empujar', 'animar', 'pararAnimacion', 'moverHacia', 'mirarA', 'direccionA',
-  'moverConFlechas', 'moverConJugador', 'casilla', 'ponerCasilla', 'quitarCasilla', 'casillaEn', 'columnaEn', 'filaEn', 'centroDeCasilla',
+  'moverConFlechas', 'moverConJugador', 'casilla', 'ponerCasilla', 'quitarCasilla', 'casillaEn', 'columnaEn', 'filaEn', 'centroDeCasilla', 'abrirPuerta', 'cerrarPuerta', 'puertaAbierta', 'esPuerta', 'elevacion',
   'tamanoLetra', 'transparencia', 'voltearVertical', 'etiquetas', 'padre', 'hijos', 'arrastrable', 'arrastrando',
   'teletransportar', 'irA', 'anguloA', 'rotarHacia', 'avanzar', 'ocultar', 'aparecer', 'parpadear', 'ponerDelante', 'ponerDetras',
   'tocando', 'cercanos', 'masCercano', 'clonar', 'ponerEtiqueta', 'quitarEtiqueta', 'tieneEtiqueta', 'pegarA', 'soltar',

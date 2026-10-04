@@ -47,12 +47,14 @@ export interface AjustesCalidad {
   sombrasDeLuz: boolean;
   /** ¿Se hacen los filtros de pantalla que más cuestan (bloom, desenfoque, aberración)? */
   filtrosCaros: boolean;
+  /** Cuántas columnas tiene la vista en primera persona (vista3d): cada una es un rayo. */
+  columnas3d: number;
 }
 
 export const AJUSTES_CALIDAD: Record<NivelCalidad, AjustesCalidad> = {
-  alta: { resolucion: 2, particulas: 1, sombrasDeLuz: true, filtrosCaros: true },
-  media: { resolucion: 1.5, particulas: 0.6, sombrasDeLuz: true, filtrosCaros: true },
-  baja: { resolucion: 1, particulas: 0.35, sombrasDeLuz: false, filtrosCaros: false },
+  alta: { resolucion: 2, particulas: 1, sombrasDeLuz: true, filtrosCaros: true, columnas3d: 640 },
+  media: { resolucion: 1.5, particulas: 0.6, sombrasDeLuz: true, filtrosCaros: true, columnas3d: 480 },
+  baja: { resolucion: 1, particulas: 0.35, sombrasDeLuz: false, filtrosCaros: false, columnas3d: 320 },
 };
 
 /** Cada cuánto se decide en automático (segundos), y cuántas veces seguidas tiene que ir sobrado para subir. */

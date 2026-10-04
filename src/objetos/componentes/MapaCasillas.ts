@@ -38,7 +38,21 @@ export interface TipoCasilla {
   solida: boolean;
   /** Si es sólida: solo para a lo que cae encima (se atraviesa desde abajo y los lados). */
   soloDesdeArriba?: boolean;
+  /** Es una PUERTA: una casilla sólida que se puede abrir y cerrar (mapa.abrirPuerta). Abierta, se pasa por ella. */
+  puerta?: boolean;
 }
+
+/** Cómo está una puerta: de 0 (cerrada) a 1 (abierta del todo), hacia dónde va y a qué velocidad (por segundo). */
+interface EstadoPuerta {
+  apertura: number;
+  objetivo: number;
+  velocidad: number;
+}
+
+/** Desde cuánta apertura se puede pasar por una puerta (no hace falta esperar a que acabe de abrirse). */
+export const APERTURA_PARA_PASAR = 0.7;
+/** Lo que tarda una puerta en abrirse o cerrarse si no se dice. */
+export const SEGUNDOS_PUERTA = 0.6;
 
 export interface CasillaEncontrada {
   columna: number;
@@ -61,6 +75,56 @@ export class MapaCasillas extends Componente {
     return this.objeto.posicion;
   }
 
+  /** Sube cada vez que cambia una casilla: quien se guarda el mapa «ya preparado» (la vista 3D) sabe que tiene que rehacerlo. */
+  version = 0;
+  /** Las puertas que no están cerradas del todo: "columna,fila" → cómo están. */
+  private readonly puertas = new Map<string, EstadoPuerta>();
+
+  // ───────────────────────── Puertas ─────────────────────────
+
+  /** ¿Es una puerta la casilla que hay ahí? */
+  esPuerta(columna: number, fila: number): boolean {
+    const tipo = this.obtener(columna, fila);
+    return tipo !== null && propio(this.tipos, tipo)?.puerta === true;
+  }
+
+  /** Cuánto está abierta la puerta de esa casilla: de 0 (cerrada) a 1 (abierta del todo). */
+  apertura(columna: number, fila: number): number {
+    return this.puertas.get(`${columna},${fila}`)?.apertura ?? 0;
+  }
+
+  /** ¿Se puede pasar ya por esa puerta? */
+  abierta(columna: number, fila: number): boolean {
+    return this.puertas.size > 0 && this.apertura(columna, fila) >= APERTURA_PARA_PASAR;
+  }
+
+  /** Abre (hacia = 1) o cierra (hacia = 0) la puerta de una casilla, poco a poco. Con 0 segundos, de golpe. */
+  moverPuerta(columna: number, fila: number, hacia: 0 | 1, segundos = SEGUNDOS_PUERTA): void {
+    const clave = `${columna},${fila}`;
+    const p = this.puertas.get(clave) ?? { apertura: 0, objetivo: 0, velocidad: 0 };
+    p.objetivo = hacia;
+    if (segundos <= 0) p.apertura = hacia;
+    else p.velocidad = 1 / segundos;
+    if (p.apertura === 0 && p.objetivo === 0) this.puertas.delete(clave);
+    else this.puertas.set(clave, p);
+    this.version++;
+  }
+
+  /** ¿Es sólida (para de verdad) la casilla de ese sitio? Una puerta abierta no lo es. */
+  solidaEn(columna: number, fila: number, tipo: string): boolean {
+    return this.esSolida(tipo) && !this.abierta(columna, fila);
+  }
+
+  actualizar(dt: number): void {
+    if (!this.puertas.size) return;
+    for (const [clave, p] of this.puertas) {
+      if (p.apertura === p.objetivo) continue;
+      const paso = p.velocidad * dt;
+      p.apertura = p.objetivo > p.apertura ? Math.min(p.objetivo, p.apertura + paso) : Math.max(p.objetivo, p.apertura - paso);
+      if (p.apertura === 0 && p.objetivo === 0) this.puertas.delete(clave);
+    }
+  }
+
   // ───────────────────────── Leer y cambiar casillas ─────────────────────────
 
   obtener(columna: number, fila: number): string | null {
@@ -69,10 +133,14 @@ export class MapaCasillas extends Componente {
 
   poner(columna: number, fila: number, tipo: string): void {
     this.celdas.set(`${columna},${fila}`, this.tipoExistente(tipo) ?? tipo);
+    this.puertas.delete(`${columna},${fila}`);
+    this.version++;
   }
 
   quitar(columna: number, fila: number): void {
     this.celdas.delete(`${columna},${fila}`);
+    this.puertas.delete(`${columna},${fila}`);
+    this.version++;
   }
 
   /** Busca el nombre del tipo sin importar mayúsculas ni tildes. */
@@ -155,12 +223,16 @@ export class MapaCasillas extends Componente {
     for (const c of this.casillasEn(visible)) {
       const tipo = propio(this.tipos, c.tipo);
       const centro = aPantalla(c.caja.izquierda + t / 2, c.caja.abajo + t / 2);
+      // Una puerta que se abre: se va haciendo transparente (abierta del todo, queda su sombra)
+      const abre = this.puertas.size ? this.apertura(c.columna, c.fila) : 0;
+      if (abre > 0) r.ctx.globalAlpha = 1 - abre * 0.8;
       if (tipo?.imagen) {
         r.imagen(this.objeto.escena!.motor.recursos.imagen(tipo.imagen), centro.x, centro.y, { ancho: lado, alto: lado });
       } else {
         r.ctx.fillStyle = resolverColor(tipo?.color ?? 'gris');
         r.ctx.fillRect(centro.x - lado / 2, centro.y - lado / 2, lado, lado);
       }
+      if (abre > 0) r.ctx.globalAlpha = 1;
     }
   }
 }

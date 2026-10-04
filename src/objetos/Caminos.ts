@@ -50,7 +50,7 @@ function esPared(m: MapaCasillas, tipo: string): boolean {
 /** ¿Se puede pasar por esta casilla? */
 export function casillaLibre(m: MapaCasillas, columna: number, fila: number): boolean {
   const tipo = m.obtener(columna, fila);
-  return !tipo || !esPared(m, tipo);
+  return !tipo || !esPared(m, tipo) || m.abierta(columna, fila);
 }
 
 /**
