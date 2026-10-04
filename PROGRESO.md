@@ -108,7 +108,7 @@ hacerlo, con commit y etiqueta por parte (`arena-cero-parte-N`: las `arena-parte
 | 4 | Armas | **Hecho** | `arena-cero-parte-4` |
 | 5 | NPCs con IA | **Hecho** | `arena-cero-parte-5` |
 | 6 | Mapa rejugable | **Hecho** | `arena-cero-parte-6` |
-| 7 | Interfaz | Sin empezar | |
+| 7 | Interfaz | **Hecho** | `arena-cero-parte-7` |
 | 8 | Sonido, niveles, guardado, pausa, ajustes | Sin empezar | |
 | 9 | Rendimiento | Sin empezar | |
 | 10 | Reto: alturas | Sin empezar | |
@@ -183,6 +183,15 @@ hacerlo, con commit y etiqueta por parte (`arena-cero-parte-N`: las `arena-parte
   HTML (`herramientas/exportar.mts`), abierto desde file:// en móvil simulado y manejado con toques.
 - A medio hacer para las partes 7 y 8 (en `pendiente/` del juego, sin conectar): menú de pausa,
   título, final, indicador de daño, barra del jefe e iconos de tarjetas.
+
+## Arena Cero, parte 7 — Interfaz (hecho)
+
+- En el motor no hizo falta nada más: lo del minimapa y `yo.enMinimapa` entró con la parte 6.
+- En el juego: barras de vida y escudo (controles «Barra» que leen `juego.vida` y `juego.escudo`),
+  munición, iconos de las tarjetas (`tarjeta.chs`), minimapa (enemigos en rojo, cosas en amarillo,
+  aliados en verde, lo roto no sale), indicador de daño (`indicador.chs`: un arco que señala de
+  dónde vino el golpe), mira y barra del jefe (`barrajefe.chs`). Pruebas: `pruebas/parte7.mjs` (8),
+  con comprobación de que en móvil, móvil pequeño y tableta los botones táctiles no pisan la interfaz.
 
 ## Cómo seguir si se corta
 
