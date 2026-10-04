@@ -109,7 +109,7 @@ hacerlo, con commit y etiqueta por parte (`arena-cero-parte-N`: las `arena-parte
 | 5 | NPCs con IA | **Hecho** | `arena-cero-parte-5` |
 | 6 | Mapa rejugable | **Hecho** | `arena-cero-parte-6` |
 | 7 | Interfaz | **Hecho** | `arena-cero-parte-7` |
-| 8 | Sonido, niveles, guardado, pausa, ajustes | Sin empezar | |
+| 8 | Sonido, niveles, guardado, pausa, ajustes | **Hecho** | `arena-cero-parte-8` |
 | 9 | Rendimiento | Sin empezar | |
 | 10 | Reto: alturas | Sin empezar | |
 
@@ -181,8 +181,6 @@ hacerlo, con commit y etiqueta por parte (`arena-cero-parte-N`: las `arena-parte
   `partida.chs` y `ajustes.chs` (bibliotecas: armas y munición pasan de un nivel a otro; guardado).
 - Pruebas: `pruebas/parte6.mjs` (8) y `pruebas/exportado.mjs` (4): el juego exportado a UN archivo
   HTML (`herramientas/exportar.mts`), abierto desde file:// en móvil simulado y manejado con toques.
-- A medio hacer para las partes 7 y 8 (en `pendiente/` del juego, sin conectar): menú de pausa,
-  título, final, indicador de daño, barra del jefe e iconos de tarjetas.
 
 ## Arena Cero, parte 7 — Interfaz (hecho)
 
@@ -192,6 +190,15 @@ hacerlo, con commit y etiqueta por parte (`arena-cero-parte-N`: las `arena-parte
   aliados en verde, lo roto no sale), indicador de daño (`indicador.chs`: un arco que señala de
   dónde vino el golpe), mira y barra del jefe (`barrajefe.chs`). Pruebas: `pruebas/parte7.mjs` (8),
   con comprobación de que en móvil, móvil pequeño y tableta los botones táctiles no pisan la interfaz.
+
+## Arena Cero, parte 8 — Sonido, niveles, guardado, pausa y ajustes (hecho)
+
+- En el motor no hizo falta nada nuevo: `sonido.reproducirEn` y `bucleEn` ya oyen desde quien mira
+  (parte 1), `guardar`/`cargar` guardan tablas y listas, `tiempo.pausar` para el juego y el control
+  «Menú» se maneja con teclado, ratón, dedo y mando (el arreglo del mando entró con la parte 6).
+- En el juego: escenas Titulo, Nivel1, Nivel2 y Final; pausa, reintentar, continuar y ajustes
+  (sensibilidad, volumen, dificultad, calidad, ver fps y colocar los botones táctiles); pasos de
+  los guardias y zumbidos con sitio. Pruebas: `pruebas/parte8.mjs` (7).
 
 ## Cómo seguir si se corta
 
