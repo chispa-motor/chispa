@@ -33,6 +33,7 @@ import type { Renderizador } from '../motor/Renderizador';
 import { Vector2 } from '../motor/Vector2';
 import { propio } from '../utilidades/seguro';
 import { MapaCasillas } from './componentes/MapaCasillas';
+import type { Proyector } from './Particulas';
 import { Sprite } from './componentes/Sprite';
 import type { Escena } from './Escena';
 import type { ObjetoJuego } from './ObjetoJuego';
@@ -336,9 +337,26 @@ export class Vista3D {
         r.ctx.drawImage(lienzo, 0, 0, r.ancho, r.alto);
       }
     }
+    // Encima, los efectos (partículas, destellos, rayos, textos que suben): cada uno donde se ve su sitio
+    escena.efectos.dibujar3D(r.ctx, this.proyector);
     if (typeof performance !== 'undefined') this.milisegundos = performance.now() - antes;
     return true;
   }
+
+  /**
+   * Para pintar cosas ENCIMA de la vista (los efectos): dónde cae un punto del mundo en el lienzo del juego
+   * (con la Y hacia abajo), cuántos píxeles mide allí un píxel del mundo y si lo tapa una pared.
+   * `z` null = a media altura de la pared.
+   */
+  readonly proyector: Proyector = (x, y, z) => {
+    const p = this.preparado;
+    if (!p || !this.raycaster.ancho) return null;
+    const t = p.mapa.tamano;
+    const q = this.raycaster.proyectar((x - (p.mapa.objeto.posicion.x + p.c0 * t)) / t, (y - (p.mapa.objeto.posicion.y + p.f0 * t)) / t, (z ?? t / 2) / t);
+    if (!q) return null;
+    const k = this.zona.ancho / this.raycaster.ancho;
+    return { x: q.x * k, y: q.y * k, k: (q.escala * k) / t, tapado: q.tapado };
+  };
 
   /**
    * Dónde se ve en la pantalla del juego un punto del mundo (en píxeles del mundo; `z` = a qué altura, en píxeles).

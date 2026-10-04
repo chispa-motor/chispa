@@ -3806,6 +3806,15 @@ La palanca izquierda de arriba abajo: de -1 (abajo) a 1 (arriba).
 yo.y += mando.ejeY * 300 * delta
 ```
 
+#### `mando.comoTeclado`
+
+Si es verdadero (lo normal), el mando hace de teclado: la palanca y la cruceta son las flechas, A es espacio, B es "x"... Con falso deja de pulsar teclas y solo se lee con mando.ejeX, mando.pulsado... Hace falta cuando las flechas y la palanca tienen que hacer cosas DISTINTAS (en primera persona: las flechas giran y la palanca anda de lado).
+
+```
+cuando empieza:
+    mando.comoTeclado = falso
+```
+
 #### `mando.ejeDerechoX`
 
 La palanca derecha de lado (de -1 a 1). Sirve para apuntar.

@@ -606,7 +606,7 @@ describe('Chispa 1.2: los controles de pantalla, la app instalable y lo guardado
     expect(caja.querySelector('img')).toBeNull();
     expect([...caja.querySelectorAll('.boton-tactil')].map((b) => b.textContent)).toEqual(['<img src=x>', 'constructor', '__proto__']);
     // Y un botón con nombre de trampa se coloca como cualquier otro
-    for (const b of caja.querySelectorAll<HTMLElement>('.boton-tactil')) expect(b.style.left).not.toContain('NaN');
+    for (const b of caja.querySelectorAll<HTMLElement>('.boton-tactil')) expect(b.style.getPropertyValue('--x')).toMatch(/^\d+\.\d\d%$/);
     expect(t.colocadoEn('constructor')).toBeNull();
     quitar();
   });

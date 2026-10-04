@@ -299,9 +299,12 @@ export class Tactil {
   /** Pone un control en su sitio (el que le dio quien juega, si lo movió). */
   private situar(el: HTMLElement, id: string, sitio: SitioControl): void {
     const s = this.colocados[id] ?? sitio;
-    const px = (n: number | undefined) => (n ? ` + ${Math.round(n)}px * var(--t)` : '');
-    el.style.left = `calc(${(limitar(s.x, 0, 1) * 100).toFixed(2)}%${px(s.dx)})`;
-    el.style.bottom = `calc(${(limitar(s.y, 0, 1) * 100).toFixed(2)}%${px(s.dy)})`;
+    // El sitio va en variables; los estilos lo convierten en left y bottom SIN dejar que se salga de la pantalla
+    // (su centro se queda, como poco, a medio control del borde: --medio)
+    el.style.setProperty('--x', `${(limitar(s.x, 0, 1) * 100).toFixed(2)}%`);
+    el.style.setProperty('--y', `${(limitar(s.y, 0, 1) * 100).toFixed(2)}%`);
+    el.style.setProperty('--dx', `${Math.round(s.dx ?? 0)}px`);
+    el.style.setProperty('--dy', `${Math.round(s.dy ?? 0)}px`);
   }
 
   // ───────────────────────── La palanca ─────────────────────────
@@ -791,10 +794,10 @@ export const ESTILOS_TACTILES = `
 .controles-tactiles[hidden]{display:none}
 .controles-tactiles.sin-controles>.boton-tactil,.controles-tactiles.sin-controles>.palanca-tactil{display:none}
 .controles-tactiles>*{pointer-events:auto;touch-action:none}
-.boton-tactil{position:absolute;transform:translate(-50%,50%);width:calc(72px*var(--t));height:calc(72px*var(--t));min-width:44px;min-height:44px;border-radius:50%;border:2px solid rgba(255,255,255,.6);background:rgba(20,24,40,.5);color:#fff;font:bold calc(14px*var(--t)) system-ui,sans-serif;opacity:var(--o);padding:0 4px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;-webkit-tap-highlight-color:transparent}
-.boton-tactil.flecha{border-radius:16px;width:calc(64px*var(--t));height:calc(64px*var(--t));font-size:calc(20px*var(--t))}
+.boton-tactil{--medio:max(22px,calc(36px*var(--t)));position:absolute;left:clamp(var(--medio),calc(var(--x,50%) + var(--dx,0px)*var(--t)),calc(100% - var(--medio)));bottom:clamp(var(--medio),calc(var(--y,50%) + var(--dy,0px)*var(--t)),calc(100% - var(--medio)));transform:translate(-50%,50%);width:calc(72px*var(--t));height:calc(72px*var(--t));min-width:44px;min-height:44px;border-radius:50%;border:2px solid rgba(255,255,255,.6);background:rgba(20,24,40,.5);color:#fff;font:bold calc(14px*var(--t)) system-ui,sans-serif;opacity:var(--o);padding:0 4px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;-webkit-tap-highlight-color:transparent}
+.boton-tactil.flecha{--medio:max(22px,calc(32px*var(--t)));border-radius:16px;width:calc(64px*var(--t));height:calc(64px*var(--t));font-size:calc(20px*var(--t))}
 .boton-tactil.pulsado{background:rgba(255,255,255,.4);opacity:1}
-.palanca-tactil{position:absolute;transform:translate(-50%,50%);width:calc(128px*var(--t));height:calc(128px*var(--t));border-radius:50%;border:2px solid rgba(255,255,255,.5);background:rgba(20,24,40,.35);opacity:var(--o)}
+.palanca-tactil{--medio:calc(64px*var(--t));position:absolute;left:clamp(var(--medio),calc(var(--x,50%) + var(--dx,0px)*var(--t)),calc(100% - var(--medio)));bottom:clamp(var(--medio),calc(var(--y,50%) + var(--dy,0px)*var(--t)),calc(100% - var(--medio)));transform:translate(-50%,50%);width:calc(128px*var(--t));height:calc(128px*var(--t));border-radius:50%;border:2px solid rgba(255,255,255,.5);background:rgba(20,24,40,.35);opacity:var(--o)}
 .palanca-tactil.pulsado{opacity:1}
 .pomo-tactil{position:absolute;left:50%;top:50%;width:44%;height:44%;margin:-22% 0 0 -22%;border-radius:50%;background:rgba(255,255,255,.75);pointer-events:none}
 .controles-tactiles.colocando{background:rgba(0,0,0,.45);pointer-events:auto}

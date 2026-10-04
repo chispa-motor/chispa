@@ -552,7 +552,7 @@ export class Raycaster {
    * con el último fotograma pintado. Devuelve el píxel (de 0 a ancho y de 0 a alto, con la Y hacia
    * abajo), a qué distancia está y si lo tapa una pared; o null si queda detrás del ojo.
    */
-  proyectar(x: number, y: number, z = 0.5): { x: number; y: number; distancia: number; tapado: boolean } | null {
+  proyectar(x: number, y: number, z = 0.5): { x: number; y: number; distancia: number; tapado: boolean; escala: number } | null {
     const ojo = this.ojo;
     const dirX = Math.cos(ojo.angulo);
     const dirY = Math.sin(ojo.angulo);
@@ -564,6 +564,7 @@ export class Raycaster {
     const py = this.horizonte + (ojo.altura - z) * escala;
     const columna = Math.floor(px);
     const tapado = columna >= 0 && columna < this.ancho ? fondo >= this.profundidad[columna] : false;
-    return { x: px, y: py, distancia: fondo, tapado };
+    // (escala: cuántos píxeles mide a esa distancia algo de una casilla de grande)
+    return { x: px, y: py, distancia: fondo, tapado, escala };
   }
 }

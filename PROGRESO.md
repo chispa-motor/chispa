@@ -103,7 +103,7 @@ hacerlo, con commit y etiqueta por parte (`arena-cero-parte-N`: las `arena-parte
 | Parte | Qué | Estado | Etiqueta |
 |---|---|---|---|
 | 1 | Motor 3D simulado: paredes, suelo, techo, niebla, puertas, medir fps | **Hecho** | `arena-cero-parte-1` |
-| 2 | Jugador: teclado, ratón, mando y táctil | Sin empezar | |
+| 2 | Jugador: teclado, ratón, mando y táctil | **Hecho** | `arena-cero-parte-2` |
 | 3 | Sprites que miran al jugador | Sin empezar | |
 | 4 | Armas | Sin empezar | |
 | 5 | NPCs con IA | Sin empezar | |
@@ -128,6 +128,16 @@ hacerlo, con commit y etiqueta por parte (`arena-cero-parte-N`: las `arena-parte
 - **Medido** (con el nivel de pruebas del juego, en la máquina de trabajo, sin tarjeta gráfica):
   60 fps en un ordenador (4 ms de dibujo a 640×360); con el procesador frenado 4 veces (como un
   móvil), 53 fps a 320×180; frenado 6 veces, 40 fps.
+
+## Arena Cero, parte 2 — Jugador (hecho)
+
+- En el juego (todo en Chispa): `scripts/controles.chs` (una biblioteca que junta teclado, ratón,
+  mando y pantalla táctil) y `scripts/jugador.chs` (andar con física, girar, subir la mirada,
+  balanceo al andar, abrir puertas, sensibilidad que se guarda).
+- En el motor: `mando.comoTeclado` (461 comandos) y dos errores arreglados con test (un control
+  táctil se podía salir de la pantalla; capturar el ratón rompía los toques en un móvil).
+- Pruebas del juego (`pruebas/parte2.mjs`, en su carpeta): teclado, choques, ratón capturado,
+  sensibilidad, mando, y táctil en tres aparatos (con los dos pulgares a la vez).
 
 ## Cómo seguir si se corta
 

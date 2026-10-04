@@ -691,3 +691,190 @@ describe('Mirar con el ratón', () => {
     expect(j.salida).toEqual(['falso', 'falso']);
   });
 });
+
+describe('Capturar el ratón no estropea los toques', () => {
+  it('con ratón se pide al momento y en cada clic; jugando con el dedo no se pide, y un toque lo suelta', () => {
+    const j = juego3D('cuando se pulsa "c":\n    raton.capturado = verdadero');
+    let pedidas = 0;
+    let soltadas = 0;
+    (j.canvas as unknown as { requestPointerLock: () => void }).requestPointerLock = () => void pedidas++;
+    const documento = document as unknown as { exitPointerLock: () => void; pointerLockElement: Element | null };
+    const antes = Object.getOwnPropertyDescriptor(document, 'pointerLockElement');
+    let capturado: Element | null = null;
+    Object.defineProperty(document, 'pointerLockElement', { configurable: true, get: () => capturado });
+    documento.exitPointerLock = () => {
+      soltadas++;
+      capturado = null;
+    };
+    const bajar = (tipo: string) => {
+      const e = new MouseEvent('pointerdown', { button: 0, bubbles: true }) as MouseEvent & Record<string, unknown>;
+      Object.defineProperty(e, 'pointerType', { value: tipo });
+      j.canvas.dispatchEvent(e);
+    };
+    try {
+      // Con ratón (un ordenador): se pide ya, y otra vez en cada clic mientras no lo tenga
+      j.entrada.capturarRaton(true);
+      expect(pedidas).toBe(1);
+      bajar('mouse');
+      expect(pedidas).toBe(2);
+      // Ya lo tiene: tocar con el dedo lo suelta (capturado, el navegador no dice dónde cae cada dedo)
+      capturado = j.canvas;
+      bajar('touch');
+      expect(soltadas).toBe(1);
+      // Jugando con el dedo, pedirlo desde el juego no hace nada... hasta que alguien haga clic con un ratón
+      j.entrada.tactil.usandoDedo(true);
+      j.entrada.capturarRaton(true);
+      expect(pedidas).toBe(2);
+      bajar('touch');
+      expect(pedidas).toBe(2);
+      bajar('mouse');
+      expect(pedidas).toBe(3);
+    } finally {
+      if (antes) Object.defineProperty(document, 'pointerLockElement', antes);
+      else Reflect.deleteProperty(document, 'pointerLockElement');
+    }
+  });
+});
+
+describe('El mando deja de hacer de teclado', () => {
+  it('mando.comoTeclado = falso: la palanca ya no pulsa las flechas, pero mando.ejeX sigue diciendo cuánto', () => {
+    const j = juego3D('cuando cada fotograma:\n    juego.flecha = teclado.pulsada("derecha")\n    juego.eje = mando.ejeX\n    juego.a = mando.pulsado("a")\n    juego.espacio = teclado.pulsada("espacio")\n\ncuando se pulsa "t":\n    mando.comoTeclado = falso\n    mostrar(mando.comoTeclado)');
+    j.entrada.ponerMando(true, new Set(['a']), 0.9, 0);
+    j.avanzar(1);
+    expect([j.juego.datoDelJuego('flecha'), j.juego.datoDelJuego('eje'), j.juego.datoDelJuego('a'), j.juego.datoDelJuego('espacio')]).toEqual([true, 0.9, true, true]);
+    j.pulsar('KeyT', 't');
+    j.avanzar(1);
+    j.soltar('KeyT', 't');
+    j.entrada.ponerMando(true, new Set(['a']), 0.9, 0);
+    j.avanzar(1);
+    expect(j.salida).toEqual(['falso']);
+    expect([j.juego.datoDelJuego('flecha'), j.juego.datoDelJuego('eje'), j.juego.datoDelJuego('a'), j.juego.datoDelJuego('espacio')]).toEqual([false, 0.9, true, false]);
+    expect(j.errores).toEqual([]);
+  });
+});
+
+
+// ───────────────────────── Efectos en primera persona ─────────────────────────
+
+/** Un «lienzo» de mentira que apunta lo que se le pide pintar. */
+function lienzoApuntador() {
+  const llamadas: { que: string; a: number[] }[] = [];
+  const textos: { texto: string; x: number; y: number }[] = [];
+  const ctx = new Proxy({} as Record<string, unknown>, {
+    get: (o, nombre: string) => {
+      if (nombre in o) return o[nombre];
+      if (nombre === 'createRadialGradient') return () => ({ addColorStop: () => {} });
+      return (...a: unknown[]) => {
+        if (nombre === 'fillText') textos.push({ texto: String(a[0]), x: a[1] as number, y: a[2] as number });
+        llamadas.push({ que: nombre, a: a.filter((x): x is number => typeof x === 'number') });
+      };
+    },
+    set: (o, nombre: string, v) => ((o[nombre] = v), true),
+  });
+  /** Los rectángulos y círculos pintados: su centro y su tamaño. */
+  // (las chispas son rayitas: cuenta donde empieza cada una)
+  const manchas = () => llamadas.filter((l) => l.que === 'fillRect' || l.que === 'arc' || l.que === 'moveTo').map((l) => (l.que === 'fillRect' ? { x: l.a[0] + l.a[2] / 2, y: l.a[1] + l.a[3] / 2, tam: l.a[2] } : l.que === 'arc' ? { x: l.a[0], y: l.a[1], tam: l.a[2] * 2 } : { x: l.a[0], y: l.a[1], tam: 1 }));
+  return { ctx: ctx as unknown as CanvasRenderingContext2D, llamadas, textos, manchas };
+}
+
+describe('Los efectos se ven en primera persona', () => {
+  const montar = (codigo: string, mas: DefObjeto[] = []) => {
+    const j = juego3D(`cuando empieza:\n    vista3d.ver(yo)\n${codigo}`, mas);
+    j.avanzar(2);
+    j.vista.calcular(j.juego.escena, 960, 540);
+    return j;
+  };
+
+  it('las partículas salen donde se ve su sitio, se abren a los lados y hacia arriba, y son más pequeñas de lejos', () => {
+    const cerca = montar('    efecto.chispas(vector(yo.x + 40, yo.y))');
+    const a = lienzoApuntador();
+    cerca.juego.escena.efectos.dibujar3D(a.ctx, cerca.vista.proyector);
+    const m = a.manchas();
+    expect(m.length).toBeGreaterThan(5);
+    // Justo delante: alrededor del centro de la pantalla, repartidas a los dos lados y arriba y abajo
+    const xs = m.map((p) => p.x);
+    const ys = m.map((p) => p.y);
+    expect(Math.min(...xs)).toBeLessThan(480);
+    expect(Math.max(...xs)).toBeGreaterThan(480);
+    expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThan(4);
+    expect(xs.every((x) => x > 200 && x < 760)).toBe(true);
+    // Lo mismo al doble de distancia: más juntas y más pequeñas
+    const lejos = montar('    efecto.chispas(vector(yo.x + 78, yo.y))');
+    const b = lienzoApuntador();
+    lejos.juego.escena.efectos.dibujar3D(b.ctx, lejos.vista.proyector);
+    const ancho = (l: ReturnType<typeof lienzoApuntador>) => Math.max(...l.manchas().map((p) => p.x)) - Math.min(...l.manchas().map((p) => p.x));
+    expect(ancho(b)).toBeLessThan(ancho(a));
+  });
+
+  it('lo que queda detrás de quien mira o al otro lado de una pared no se pinta', () => {
+    const detras = montar('    efecto.chispas(vector(yo.x - 40, yo.y))');
+    const a = lienzoApuntador();
+    detras.juego.escena.efectos.dibujar3D(a.ctx, detras.vista.proyector);
+    expect(a.manchas()).toEqual([]);
+    // Al otro lado del muro (x = 300): delante, pero tapado
+    const tapado = montar('    efecto.chispas(vector(300, 200))');
+    const b = lienzoApuntador();
+    tapado.juego.escena.efectos.dibujar3D(b.ctx, tapado.vista.proyector);
+    expect(b.manchas()).toEqual([]);
+  });
+
+  it('el efecto de un objeto sale a SU altura (un dron que vuela echa chispas arriba)', () => {
+    const robot: DefObjeto = { nombre: 'Robot', x: 140, y: 140, sprite: { imagen: 'robot', ancho: 20, alto: 20 } };
+    const suelo = montar('    efecto.chispas(buscar("Robot"))', [robot]);
+    const a = lienzoApuntador();
+    suelo.juego.escena.efectos.dibujar3D(a.ctx, suelo.vista.proyector);
+    const vuela = montar('    buscar("Robot").elevacion = 28\n    efecto.chispas(buscar("Robot"))', [robot]);
+    const b = lienzoApuntador();
+    vuela.juego.escena.efectos.dibujar3D(b.ctx, vuela.vista.proyector);
+    const media = (l: ReturnType<typeof lienzoApuntador>) => l.manchas().reduce((s, p) => s + p.y, 0) / l.manchas().length;
+    // (en el lienzo la Y va hacia abajo: más arriba = menor)
+    expect(media(b)).toBeLessThan(media(a) - 30);
+    // El del suelo queda por debajo del horizonte (y = 270)
+    expect(media(a)).toBeGreaterThan(270);
+  });
+
+  it('el número de un golpe sale encima de la cabeza y se lee', () => {
+    const j = montar('    efecto.golpe(buscar("Robot"), 25)', [{ nombre: 'Robot', x: 140, y: 140, sprite: { imagen: 'robot', ancho: 20, alto: 20 } }]);
+    const a = lienzoApuntador();
+    j.juego.escena.efectos.dibujar3D(a.ctx, j.vista.proyector);
+    expect(a.textos).toHaveLength(1);
+    expect(a.textos[0].texto).toBe('-25');
+    expect(a.textos[0].x).toBeGreaterThan(430);
+    expect(a.textos[0].x).toBeLessThan(530);
+    // La cabeza del robot (20 de alto en casillas de 40) queda justo en el horizonte: el número, un poco por encima
+    expect(a.textos[0].y).toBeLessThan(275);
+    expect(a.textos[0].y).toBeGreaterThan(100);
+  });
+
+  it('destellos, ondas, rayos y textos: se pintan sin fallar, y el clima no sale', () => {
+    const j = montar('    efecto.explosion(vector(yo.x + 60, yo.y))\n    efecto.onda(vector(yo.x + 60, yo.y))\n    efecto.rayo(yo, buscar("Robot"))\n    efecto.texto("+1", vector(yo.x + 60, yo.y))\n    efecto.fuego(buscar("Robot"))', [{ nombre: 'Robot', x: 140, y: 150, sprite: { imagen: 'robot', ancho: 20, alto: 20 } }]);
+    j.avanzar(6);
+    j.vista.calcular(j.juego.escena, 960, 540);
+    const a = lienzoApuntador();
+    expect(() => j.juego.escena.efectos.dibujar3D(a.ctx, j.vista.proyector)).not.toThrow();
+    expect(a.llamadas.some((l) => l.que === 'ellipse')).toBe(true);
+    expect(a.llamadas.some((l) => l.que === 'stroke')).toBe(true);
+    expect(a.textos.map((t) => t.texto)).toContain('+1');
+    // Ninguna mancha con números raros (ni NaN ni infinitos)
+    expect(a.manchas().every((p) => Number.isFinite(p.x) && Number.isFinite(p.y) && Number.isFinite(p.tam))).toBe(true);
+    expect(j.errores).toEqual([]);
+  });
+
+  it('el clima (lluvia, nieve), que cae por toda la pantalla vista desde arriba, no se pinta en primera persona', () => {
+    const j = montar('    efecto.lluvia(5)');
+    j.avanzar(20);
+    j.vista.calcular(j.juego.escena, 960, 540);
+    expect(j.juego.escena.particulas.cantidad).toBeGreaterThan(10);
+    const a = lienzoApuntador();
+    j.juego.escena.efectos.dibujar3D(a.ctx, j.vista.proyector);
+    expect(a.manchas()).toEqual([]);
+  });
+
+  it('sin la vista puesta, no pinta nada (y no falla)', () => {
+    const j = juego3D('cuando empieza:\n    efecto.chispas(yo)');
+    j.avanzar(2);
+    const a = lienzoApuntador();
+    j.juego.escena.efectos.dibujar3D(a.ctx, j.vista.proyector);
+    expect(a.manchas()).toEqual([]);
+  });
+});

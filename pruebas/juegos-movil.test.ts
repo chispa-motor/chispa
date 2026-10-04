@@ -17,7 +17,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ENCOGE_MINIMO, GESTOS, MAXIMO_BOTONES, MS_LARGO, Tactil, encogeParaAncho, UMBRAL_FLECHA, ZONA_MUERTA, gestoAlLevantar, inclinacion } from '../src/motor/Tactil';
 import { AJUSTES_CALIDAD, Calidad, VENTANAS_PARA_SUBIR, VENTANA_CALIDAD, calidad } from '../src/motor/Calidad';
 import { Particulas, TIPOS_PARTICULAS } from '../src/objetos/Particulas';
-import { ponerControlesTactiles, teclasDelJuego } from '../src/reproductor/ControlesTactiles';
+import { ESTILOS_TACTILES, ponerControlesTactiles, teclasDelJuego } from '../src/reproductor/ControlesTactiles';
 import { generarPaginaJuego, politicaDeSeguridad } from '../src/exportar/exportar';
 import { ARCHIVO_MANIFIESTO, ARCHIVO_SERVICIO, archivosDeApp, colorDeLaApp, huellaCorta, iconoPorDefecto, manifiestoDelEditor, manifiestoDelJuego, servicioDelJuego, servicioSinInternet } from '../src/exportar/pwa';
 import { comoInstalar, instalar, prepararApp, queNavegador, sePuedeInstalarConBoton } from '../src/editor/interfaz/instalar';
@@ -172,8 +172,8 @@ describe('La palanca (joystick) y los botones en pantalla', () => {
     t.boton('Saltar', ['espacio']);
     expect(t.mover('Saltar', 85, 20)).toBe(true);
     const b = caja.querySelector<HTMLElement>('.boton-tactil')!;
-    expect(b.style.left).toContain('85');
-    expect(b.style.bottom).toContain('20');
+    expect(b.style.getPropertyValue('--x')).toContain('85');
+    expect(b.style.getPropertyValue('--y')).toContain('20');
     expect(t.mover('joystick', 10, 30)).toBe(true);
     expect(t.mover('NoExiste', 1, 1)).toBe(false);
     quitar();
@@ -352,12 +352,12 @@ describe('Que quien juega coloque los controles a su gusto', () => {
     dos.t.almacen = almacen;
     dos.t.boton('Saltar', ['espacio']);
     dos.t.mover('Saltar', 90, 10);
-    expect(dos.caja.querySelector<HTMLElement>('.boton-tactil')!.style.left).toContain('25');
+    expect(dos.caja.querySelector<HTMLElement>('.boton-tactil')!.style.getPropertyValue('--x')).toContain('25');
     // «Como estaban» lo olvida
     dos.t.colocar();
     [...dos.caja.querySelectorAll<HTMLButtonElement>('.barra-colocar button')].find((b) => b.textContent === 'Como estaban')!.click();
     expect(dos.t.colocadoEn('Saltar')).toBeNull();
-    expect(dos.caja.querySelector<HTMLElement>('.boton-tactil')!.style.left).toContain('90');
+    expect(dos.caja.querySelector<HTMLElement>('.boton-tactil')!.style.getPropertyValue('--x')).toContain('90');
     expect(guardado).toBe('{}');
     dos.quitar();
   });
@@ -768,5 +768,25 @@ describe('Pantallas estrechas', () => {
     // Un botón mide 72 px a tamaño normal
     expect(72 * ENCOGE_MINIMO).toBeGreaterThanOrEqual(44);
     expect(encogeParaAncho(Number.NaN)).toBe(1);
+  });
+});
+
+describe('Un control nunca se sale de la pantalla', () => {
+  it('tactil.mover a una esquina lo deja, como poco, a medio control del borde', () => {
+    const { caja, t, quitar } = conLienzo();
+    t.joystick('izquierda', true);
+    t.boton('Pausa', []);
+    t.mover('Pausa', 100, 100);
+    t.mover('joystick', 0, 0);
+    const pausa = caja.querySelector<HTMLElement>('.boton-tactil')!;
+    expect(pausa.style.getPropertyValue('--x')).toBe('100.00%');
+    expect(pausa.style.getPropertyValue('--y')).toBe('100.00%');
+    // Los estilos son los que no dejan que se salga: left y bottom van entre «medio control» y «el borde menos medio control»
+    expect(ESTILOS_TACTILES).toContain('left:clamp(var(--medio),calc(var(--x,50%) + var(--dx,0px)*var(--t)),calc(100% - var(--medio)))');
+    expect(ESTILOS_TACTILES).toContain('bottom:clamp(var(--medio),calc(var(--y,50%) + var(--dy,0px)*var(--t)),calc(100% - var(--medio)))');
+    // Cada control sabe cuánto mide la mitad (lo dicen los estilos)
+    expect(ESTILOS_TACTILES).toMatch(/\.boton-tactil\{--medio:/);
+    expect(ESTILOS_TACTILES).toMatch(/\.palanca-tactil\{--medio:/);
+    quitar();
   });
 });

@@ -434,6 +434,11 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
       ejey: { obtener: () => mando().ejeY },
       ejederechox: { obtener: () => mando().ejeDerechoX },
       ejederechoy: { obtener: () => mando().ejeDerechoY },
+      // El mando hace de teclado (la palanca son las flechas, A es espacio...). Quitándolo, solo se lee con mando.ejeX, mando.pulsado...
+      comoteclado: {
+        obtener: () => ctx.motor.entrada.mandoHaceDeTeclado,
+        asignar: (v, p) => void (ctx.motor.entrada.mandoHaceDeTeclado = comoLogico(v, 'mando.comoTeclado', p)),
+      },
     }, {
       pulsado: (a, p) => mando().botones.has(botonMando(a, p, 'mando.pulsado')),
       sepulso: (a, p) => mando().pulsados.has(botonMando(a, p, 'mando.sePulso')),
@@ -441,7 +446,7 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
         ctx.motor.entrada.vibrar(argNumero(a, 0, 'mando.vibrar', p, 'mando.vibrar(0.3)', 0.3), argNumero(a, 1, 'mando.vibrar', p, 'mando.vibrar(0.3, 0.5)', 1));
         return null;
       },
-    }, ['conectado', 'ejeX', 'ejeY', 'ejeDerechoX', 'ejeDerechoY', 'pulsado', 'sePulso', 'vibrar']),
+    }, ['conectado', 'ejeX', 'ejeY', 'ejeDerechoX', 'ejeDerechoY', 'comoTeclado', 'pulsado', 'sePulso', 'vibrar']),
   );
 
   // ── raton (coordenadas del mundo, con la Y hacia arriba) ──
@@ -836,6 +841,7 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
     // Sin posición: donde está el objeto que las pide
     const x = a[1] === undefined && aqui() ? aqui()!.x : argNumero(a, 1, 'particulas', p, ej);
     const y = a[2] === undefined && aqui() ? aqui()!.y : argNumero(a, 2, 'particulas', p, ej);
+    ctx.escena.efectos.altura = null;
     ctx.escena.particulas.emitir(config, x, y);
     return null;
   });

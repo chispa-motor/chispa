@@ -2,7 +2,7 @@
 
 > Se genera sola con `npm run manual` (no la cambies a mano). Un test comprueba que no falta ningún comando y que cada ejemplo funciona.
 
-Todos los comandos de Chispa (460), una línea cada uno, para tenerla abierta mientras programas o imprimirla. Para aprender con calma, el [curso](APRENDE_CHISPA.md).
+Todos los comandos de Chispa (461), una línea cada uno, para tenerla abierta mientras programas o imprimirla. Para aprender con calma, el [curso](APRENDE_CHISPA.md).
 
 En los ejemplos se usan estas variables y esta función, como si ya las tuvieras (y en la escena hay un Jugador y un Mapa de casillas):
 
@@ -725,10 +725,11 @@ Las líneas que terminan en `:` empiezan un bloque: lo de dentro va debajo, con 
 | `mapa.puertaAbierta(columna, fila)` | Solo en mapas: verdadero si la puerta de esa casilla está abierta lo bastante para pasar. | `si mapa.puertaAbierta(20, 20):` |
 | `mapa.esPuerta(columna, fila)` | Solo en mapas: verdadero si en esa casilla hay una puerta (abierta o cerrada). | `si mapa.esPuerta(20, 20):` |
 
-### Mirar con el ratón
+### Mirar con el ratón y con el mando
 
 | Comando | Qué hace | Ejemplo |
 |---|---|---|
+| `mando.comoTeclado` | Si es verdadero (lo normal), el mando hace de teclado: la palanca y la cruceta son las flechas, A es espacio, B es "x"... | `mando.comoTeclado = falso` |
 | `raton.capturado` | Si es verdadero, el juego se queda con el ratón: la flecha desaparece y no se sale de la pantalla, y lo que se mueve se lee en raton.movX y raton.movY. | `raton.capturado = verdadero` |
 | `raton.movX` | Cuánto se ha movido el ratón a los lados en este fotograma, en píxeles (positivo = a la derecha). | `yo.rotacion -= raton.movX * 0.2` |
 | `raton.movY` | Cuánto se ha movido el ratón arriba o abajo en este fotograma, en píxeles (positivo = hacia arriba). | `yo.y += raton.movY` |

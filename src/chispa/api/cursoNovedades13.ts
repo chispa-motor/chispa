@@ -69,7 +69,9 @@ export function agregarNovedades13(tema: Tema, c: Comando): void {
   c('objeto:esPuerta', 'cuando empieza:\n    variable m = buscar("Mapa")\n    mostrar(m.esPuerta(m.columnaEn(yo.x), m.filaEn(yo.y)))', 'si mapa.esPuerta(20, 20):',
     'cuando empieza:\n    mostrar(buscar("Mapa").esPuerta(yo.x))', 'Darle un solo número: quiere la columna y la fila.');
 
-  tema(4, 'Mirar con el ratón', 'En primera persona se mira moviendo el ratón. Para eso el juego «captura» el ratón: la flecha desaparece, no se sale de la pantalla y se lee lo que se mueve. El navegador lo concede al hacer clic en el juego y lo suelta con Escape.');
+  tema(4, 'Mirar con el ratón y con el mando', 'En primera persona se mira moviendo el ratón. Para eso el juego «captura» el ratón: la flecha desaparece, no se sale de la pantalla y se lee lo que se mueve. El navegador lo concede al hacer clic en el juego y lo suelta con Escape. Con mando se anda con una palanca y se mira con la otra: para eso el mando tiene que dejar de hacer de teclado.');
+  c('mando:comoTeclado', 'cuando empieza:\n    mando.comoTeclado = falso', 'mando.comoTeclado = falso',
+    'cuando empieza:\n    mando.comoTeclado = "no"', 'Darle un texto: es verdadero o falso.');
   c('raton:capturado', 'cuando empieza:\n    raton.capturado = verdadero', 'raton.capturado = verdadero',
     'cuando empieza:\n    raton.capturado = "si"', 'Darle un texto: es verdadero o falso.');
   c('raton:movX', 'cuando cada fotograma:\n    yo.rotacion -= raton.movX * 0.2', 'yo.rotacion -= raton.movX * 0.2',

@@ -436,6 +436,7 @@ export const DOC_MODULOS: DocModulo[] = [
       d('conectado', 'propiedad', 'mando.conectado', 'Verdadero si hay un mando conectado.', 'si mando.conectado:\n    mostrar("Mando listo")'),
       d('ejeX', 'propiedad', 'mando.ejeX', 'La palanca izquierda de lado: de -1 (izquierda) a 1 (derecha). 0 en el centro.', 'yo.x += mando.ejeX * 300 * delta'),
       d('ejeY', 'propiedad', 'mando.ejeY', 'La palanca izquierda de arriba abajo: de -1 (abajo) a 1 (arriba).', 'yo.y += mando.ejeY * 300 * delta'),
+      d('comoTeclado', 'propiedad', 'mando.comoTeclado', 'Si es verdadero (lo normal), el mando hace de teclado: la palanca y la cruceta son las flechas, A es espacio, B es "x"... Con falso deja de pulsar teclas y solo se lee con mando.ejeX, mando.pulsado... Hace falta cuando las flechas y la palanca tienen que hacer cosas DISTINTAS (en primera persona: las flechas giran y la palanca anda de lado).', 'cuando empieza:\n    mando.comoTeclado = falso'),
       d('ejeDerechoX', 'propiedad', 'mando.ejeDerechoX', 'La palanca derecha de lado (de -1 a 1). Sirve para apuntar.', 'yo.rotacion = angulo(vector(0, 0), vector(mando.ejeDerechoX, mando.ejeDerechoY))'),
       d('ejeDerechoY', 'propiedad', 'mando.ejeDerechoY', 'La palanca derecha de arriba abajo (de -1 a 1).', 'mostrar(mando.ejeDerechoY)'),
       d('pulsado', 'accion', 'mando.pulsado("boton")', 'Verdadero mientras el boton esta pulsado. Botones: a, b, x, y, lb, rb, lt, rt, select, start, l3, r3, arriba, abajo, izquierda, derecha.', 'si mando.pulsado("rt"):\n    yo.x += 400 * delta', 'pulsado("${1:a}")'),

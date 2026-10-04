@@ -26,7 +26,7 @@ import { aTexto, nombreTipo, type Valor } from '../ejecucion/valores';
 import { Vector2 } from '../../motor/Vector2';
 import { esColorValido } from '../../motor/Color';
 import type { ObjetoJuego } from '../../objetos/ObjetoJuego';
-import { CLIMAS, RECETAS, type Efectos, type Sitio } from '../../objetos/Efectos';
+import { CLIMAS, RECETAS, alturaDe, type Efectos, type Sitio } from '../../objetos/Efectos';
 import type { ConfigParticulas } from '../../objetos/Particulas';
 import { normalizar } from '../../utilidades/texto';
 import { propio } from '../../utilidades/seguro';
@@ -73,7 +73,12 @@ const punto = (s: Sitio) => ('transformacion' in s ? s.transformacion.posicion :
 
 export function crearModuloEfecto(ctx: ContextoEfectos): Modulo {
   const e = () => ctx.efectos();
-  const sitio = (a: Valor[], i: number, f: string, p: Posicion, ej: string) => sitioDe(a, i, `efecto.${f}`, p, ej, ctx.aqui);
+  const sitio = (a: Valor[], i: number, f: string, p: Posicion, ej: string) => {
+    const r = sitioDe(a, i, `efecto.${f}`, p, ej, ctx.aqui);
+    // Para la primera persona (vista3d): lo que sale de un objeto, a su altura; lo demás, a media altura
+    e().altura = 'transformacion' in r.sitio ? alturaDe(r.sitio) : null;
+    return r;
+  };
   const segundos = (a: Valor[], i: number, f: string, p: Posicion, ej: string) => {
     if (a[i] === undefined) return Infinity;
     const s = argNumero(a, i, `efecto.${f}`, p, ej);

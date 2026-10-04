@@ -29,7 +29,7 @@ import { calidad } from '../motor/Calidad';
 import type { Renderizador } from '../motor/Renderizador';
 import { resolverColor } from '../motor/Color';
 import type { ObjetoJuego } from './ObjetoJuego';
-import { Particulas, type ConfigParticulas } from './Particulas';
+import { Particulas, type ConfigParticulas, type Proyector } from './Particulas';
 import { Sprite } from './componentes/Sprite';
 import { sinPrototipo } from '../utilidades/seguro';
 
@@ -72,6 +72,8 @@ interface Emisor {
   acumulado: number;
   /** Cuánto: 1 normal, 2 el doble de partículas. */
   intensidad: number;
+  /** Si está en un punto (no en un objeto): a qué altura del suelo, para la primera persona. */
+  altura?: number | null;
 }
 
 interface Rayo {
@@ -92,6 +94,8 @@ interface Anillo {
   color: string;
   /** onda: un anillo que crece; destello: un brillo redondo. */
   clase: 'onda' | 'destello';
+  /** A qué altura del suelo está (para la primera persona). */
+  z: number | null;
 }
 
 interface TextoFlotante {
@@ -102,6 +106,11 @@ interface TextoFlotante {
   total: number;
   color: string;
   tamano: number;
+  /** A qué altura del suelo salió y cuánto ha subido desde entonces (para la primera persona). */
+  z: number | null;
+  subido: number;
+  /** El sitio del mundo al que pertenece (en primera persona se pinta encima de ESE sitio). */
+  ancla: { x: number; y: number };
 }
 
 /** Como mucho, tantos efectos que duran a la vez (más no se distinguen y el juego iría lento). */
@@ -113,6 +122,17 @@ export class Efectos {
   private rayos: Rayo[] = [];
   private anillos: Anillo[] = [];
   private textos: TextoFlotante[] = [];
+  /**
+   * A qué altura del suelo (en píxeles) salen los efectos que se pidan ahora. Solo cuenta en primera persona
+   * (vista3d): null = a media altura. Lo pone quien pide el efecto cuando el sitio es un objeto (su altura de en medio).
+   */
+  get altura(): number | null {
+    return this.particulas.altura;
+  }
+  set altura(z: number | null) {
+    this.particulas.altura = z;
+  }
+
   /** Versión suave (para los más pequeños): la sangre sale como tinta de colores. */
   suave = true;
 
@@ -161,31 +181,39 @@ export class Efectos {
     const s = o.obtener(Sprite);
     const pies = o.transformacion.posicion.y - (s ? s.altoFinal / 2 : 0) + 3;
     const x = o.transformacion.posicion.x;
+    const antes = this.altura;
+    this.altura = o.elevacion + 3;
     this.particulas.emitir({ ...RECETAS.polvo, direccion: 0 }, x + 4, pies);
     this.particulas.emitir({ ...RECETAS.polvo, direccion: 180 }, x - 4, pies);
+    this.altura = antes;
   }
 
   /** Un golpe: chispitas y, si se dice, un número de daño que sube y se desvanece. */
   golpe(o: ObjetoJuego, dano: string | null): void {
     const p = o.transformacion.posicion;
     const s = o.obtener(Sprite);
+    const antes = this.altura;
+    this.altura = alturaDe(o);
     this.lanzar(RECETAS.golpe, p.x, p.y);
-    if (dano !== null) this.texto(dano, p.x, p.y + (s ? s.altoFinal / 2 : 16) + 6, '#ff4545');
+    // (en primera persona, el número sale encima de su cabeza)
+    this.altura = o.elevacion + (s ? s.altoFinal : 32) + 6;
+    if (dano !== null) this.texto(dano, p.x, p.y + (s ? s.altoFinal / 2 : 16) + 6, '#ff4545', 26, p);
+    this.altura = antes;
   }
 
-  texto(texto: string, x: number, y: number, color = 'blanco', tamano = 26): void {
+  texto(texto: string, x: number, y: number, color = 'blanco', tamano = 26, ancla: { x: number; y: number } = { x, y }): void {
     if (this.textos.length > 100) this.textos.shift();
-    this.textos.push({ x: x + (this.azar() - 0.5) * 16, y, texto, vida: 0.9, total: 0.9, color: resolverColor(color), tamano });
+    this.textos.push({ x: x + (this.azar() - 0.5) * 16, y, texto, vida: 0.9, total: 0.9, color: resolverColor(color), tamano, z: this.altura, subido: 0, ancla: { x: ancla.x, y: ancla.y } });
   }
 
   onda(x: number, y: number, radio = 150, color = 'blanco'): void {
     if (this.anillos.length > 100) this.anillos.shift();
-    this.anillos.push({ x, y, radio: Math.max(1, radio), vida: 0.5, total: 0.5, color: resolverColor(color), clase: 'onda' });
+    this.anillos.push({ x, y, radio: Math.max(1, radio), vida: 0.5, total: 0.5, color: resolverColor(color), clase: 'onda', z: this.altura });
   }
 
   destello(x: number, y: number, tamano = 120, color = 'blanco'): void {
     if (this.anillos.length > 100) this.anillos.shift();
-    this.anillos.push({ x, y, radio: Math.max(1, tamano / 2), vida: 0.22, total: 0.22, color: resolverColor(color), clase: 'destello' });
+    this.anillos.push({ x, y, radio: Math.max(1, tamano / 2), vida: 0.22, total: 0.22, color: resolverColor(color), clase: 'destello', z: this.altura });
   }
 
   /** Un rayo eléctrico de un sitio a otro (si son objetos, los sigue mientras dura). */
@@ -204,7 +232,7 @@ export class Efectos {
   empezar(nombre: string, config: ConfigParticulas, sitio: Sitio | 'pantalla', segundos = Infinity, intensidad = 1): void {
     this.parar(nombre, sitio === 'pantalla' ? undefined : sitio, sitio === 'pantalla');
     if (this.emisores.length >= MAXIMO_EMISORES) this.emisores.shift();
-    this.emisores.push({ nombre, config, sitio, restante: segundos, acumulado: 0, intensidad: Math.max(0, intensidad) });
+    this.emisores.push({ nombre, config, sitio, restante: segundos, acumulado: 0, intensidad: Math.max(0, intensidad), altura: this.altura });
   }
 
   /**
@@ -243,6 +271,8 @@ export class Efectos {
       const n = Math.floor(e.acumulado);
       if (n <= 0) continue;
       e.acumulado -= n;
+      // (para la primera persona: lo que sale de un objeto, a su altura; el clima no se ve en ella)
+      this.particulas.altura = sitio === 'pantalla' ? NaN : esObjeto(sitio) ? alturaDe(sitio) : (e.altura ?? null);
       if (sitio === 'pantalla') {
         // El clima: sale por arriba de lo que se ve (y un poco por los lados, por si va inclinado)
         const ancho = vista.derecha - vista.izquierda;
@@ -257,6 +287,7 @@ export class Efectos {
         this.particulas.emitir(e.config, p.x, p.y, n, true);
       }
     }
+    this.particulas.altura = null;
     this.emisores = this.emisores.filter((e) => e.restante > 0);
     this.particulas.actualizar(dt);
     for (const r of this.rayos) {
@@ -269,6 +300,7 @@ export class Efectos {
     for (const t of this.textos) {
       t.vida -= dt;
       t.y += 70 * dt;
+      t.subido += 70 * dt;
     }
     this.textos = this.textos.filter((t) => t.vida > 0);
   }
@@ -360,6 +392,91 @@ export class Efectos {
     ctx.restore();
   }
 
+  /**
+   * Los efectos en PRIMERA PERSONA (vista3d): las partículas, los destellos, las ondas, los rayos y los textos
+   * que suben, cada uno donde se ve su sitio, más pequeño cuanto más lejos y tapado por las paredes.
+   */
+  dibujar3D(ctx: CanvasRenderingContext2D, proyectar: Proyector): void {
+    this.particulas.dibujar3D(ctx, proyectar);
+    if (!this.rayos.length && !this.anillos.length && !this.textos.length) return;
+    ctx.save();
+    ctx.lineCap = ctx.lineJoin = 'round';
+    for (const a of this.anillos) {
+      const s = proyectar(a.x, a.y, a.z);
+      if (!s || s.tapado) continue;
+      const t = 1 - a.vida / a.total;
+      ctx.globalAlpha = 1 - t;
+      if (a.clase === 'onda') {
+        // Una onda es un anillo tumbado en el suelo: visto de lado, una elipse aplastada
+        ctx.strokeStyle = a.color;
+        ctx.lineWidth = Math.max(1, 10 * (1 - t) * s.k);
+        const radio = a.radio * (0.2 + 0.8 * Math.sqrt(t)) * s.k;
+        ctx.beginPath();
+        ctx.ellipse(s.x, s.y, radio, radio * 0.3, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      } else {
+        const radio = Math.max(1, a.radio * (0.5 + t) * s.k);
+        const g = ctx.createRadialGradient?.(s.x, s.y, 0, s.x, s.y, radio);
+        if (g) {
+          g.addColorStop(0, a.color);
+          g.addColorStop(1, 'rgba(255,255,255,0)');
+          ctx.fillStyle = g;
+        } else ctx.fillStyle = a.color;
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, radio, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalCompositeOperation = 'source-over';
+      }
+    }
+    for (const rayo of this.rayos) {
+      const a = proyectar(posicionDe(rayo.desde).x, posicionDe(rayo.desde).y, esObjeto(rayo.desde) ? alturaDe(rayo.desde) : null);
+      const b = proyectar(posicionDe(rayo.hasta).x, posicionDe(rayo.hasta).y, esObjeto(rayo.hasta) ? alturaDe(rayo.hasta) : null);
+      // (si una punta queda detrás de quien mira, no hay manera de pintarlo bien: no se pinta)
+      if (!a || !b || (a.tapado && b.tapado)) continue;
+      const n = Math.max(1, rayo.puntos.length - 1);
+      const largo = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+      const tiembla = Math.min(a.k, b.k) * 10;
+      ctx.globalAlpha = Math.min(1, (rayo.vida / rayo.total) * 2);
+      for (const [ancho, color] of [[9, rayo.color], [4, rayo.color], [1.5, '#ffffff']] as const) {
+        const alfa = Math.min(1, (rayo.vida / rayo.total) * 2);
+        ctx.globalAlpha = ancho === 9 ? alfa * 0.35 : alfa;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = Math.max(1, ancho * Math.max(a.k, b.k));
+        ctx.beginPath();
+        for (let i = 0; i <= n; i++) {
+          const f = i / n;
+          // El mismo zigzag de siempre, a lo largo de la línea que se ve
+          const desvio = i === 0 || i === n ? 0 : Math.sin(i * 12.9898 + rayo.vida * 91) * tiembla;
+          const x = a.x + (b.x - a.x) * f - ((b.y - a.y) / largo) * desvio;
+          const y = a.y + (b.y - a.y) * f + ((b.x - a.x) / largo) * desvio;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+    }
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (const t of this.textos) {
+      const s = proyectar(t.ancla.x, t.ancla.y, t.z === null ? null : t.z + t.subido * 0.5);
+      if (!s || s.tapado) continue;
+      const k = t.vida / t.total;
+      ctx.globalAlpha = Math.min(1, k * 2);
+      // Se lee también de lejos: no baja de 12 píxeles ni pasa de su tamaño de cerca
+      const tam = Math.max(12, Math.min(t.tamano * 1.5, t.tamano * s.k * 1.6)) * (1 + Math.max(0, k - 0.75) * 2);
+      ctx.font = `bold ${tam}px system-ui, "Segoe UI", sans-serif`;
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+      // (si salió «a media altura», sube por la pantalla lo mismo que subiría visto desde arriba)
+      const y = t.z === null ? s.y - t.subido * s.k : s.y;
+      ctx.strokeText(t.texto, s.x, y);
+      ctx.fillStyle = t.color;
+      ctx.fillText(t.texto, s.x, y);
+    }
+    ctx.restore();
+  }
+
   vaciar(): void {
     this.particulas.vaciar();
     this.emisores = [];
@@ -368,3 +485,10 @@ export class Efectos {
     this.textos = [];
   }
 }
+
+/** La altura de en medio de un objeto, desde el suelo (para los efectos en primera persona). */
+export function alturaDe(o: ObjetoJuego): number {
+  const s = o.obtener(Sprite);
+  return o.elevacion + (s ? s.altoFinal / 2 : 16);
+}
+

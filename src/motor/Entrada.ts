@@ -311,7 +311,9 @@ export class Entrada {
       if (this.ratonCapturado) document.exitPointerLock?.();
       return;
     }
-    this.pedirRaton();
+    // En un aparato que se maneja con el dedo no se pide ahora: con el ratón capturado, el navegador
+    // deja de decir DÓNDE toca cada dedo. Si alguien le conecta un ratón, se pide al hacer clic con él.
+    if (!this.tactil.hay) this.pedirRaton();
   }
 
   private pedirRaton(): void {
@@ -391,6 +393,8 @@ export class Entrada {
         this.posicionRaton = this.aCoordenadasJuego(e.clientX, e.clientY);
         // El juego quiere el ratón (raton.capturado): el navegador solo lo da dentro de un clic
         if (this.quiereRaton && e.pointerType === 'mouse') this.pedirRaton();
+        // Y si se toca con el dedo mientras está capturado, se suelta: capturado, los toques no dicen dónde caen
+        else if (e.pointerType === 'touch' && this.ratonCapturado) document.exitPointerLock?.();
         // Con el dedo (o un lápiz) sobre un campo de texto del juego: sale el teclado de pantalla
         if (e.pointerType && e.pointerType !== 'mouse') this.tocarZonaDeTexto(e);
       },

@@ -1493,6 +1493,28 @@ await prueba('juego exportado en TODOS los aparatos táctiles (de pie y tumbados
   comprobar(fallan.length === 0, fallan.join(' | '));
 });
 
+await prueba('juego exportado: un control puesto en una esquina con tactil.mover no se sale de la pantalla, en ningún aparato', [aparato('escritorio')], async (p) => {
+  const codigo = 'cuando empieza:\n    tactil.joystick()\n    tactil.mover("joystick", 0, 0)\n    tactil.boton("A")\n    tactil.mover("A", 100, 100)\n    tactil.boton("B")\n    tactil.mover("B", 100, 0)\n    tactil.boton("C")\n    tactil.mover("C", 50, 97)\n';
+  const archivo = await exportarJuego(p, { scripts: { 'cuadrado.chs': codigo } });
+  const fallan = [];
+  for (const a of [...TACTILES, { nombre: 'movil pequeno tumbado', ancho: 640, alto: 360, tactil: true }, { nombre: 'movil muy estrecho', ancho: 320, alto: 568, tactil: true }]) {
+    const { contexto, juego } = await abrirJuego(pathToFileURL(archivo).href, a);
+    try {
+      await juego.waitForSelector('.palanca-tactil', { timeout: 8000 });
+      await juego.waitForTimeout(400);
+      const cajas = await juego.evaluate(() => [...document.querySelectorAll('.palanca-tactil, .boton-tactil')].map((el) => {
+        const c = el.getBoundingClientRect();
+        return { nombre: el.getAttribute('aria-label'), l: c.left, t: c.top, r: c.right, b: c.bottom, ancho: innerWidth, alto: innerHeight };
+      }));
+      if (cajas.length !== 4) fallan.push(`${a.nombre}: hay ${cajas.length} controles`);
+      for (const c of cajas) if (c.l < -0.5 || c.t < -0.5 || c.r > c.ancho + 0.5 || c.b > c.alto + 0.5) fallan.push(`${a.nombre}: «${c.nombre}» se sale (${Math.round(c.l)}, ${Math.round(c.t)}, ${Math.round(c.r)}, ${Math.round(c.b)})`);
+    } finally {
+      await contexto.close();
+    }
+  }
+  comprobar(fallan.length === 0, fallan.join(' | '));
+});
+
 await prueba('juego exportado SIN controles propios en todos los aparatos táctiles: los botones automáticos caben, no se pisan y miden 44 px', [aparato('escritorio')], async (p) => {
   const archivo = await exportarJuego(p, {});
   const fallan = [];

@@ -98,7 +98,15 @@ interface Particula {
   rozamiento: number;
   sumar: boolean;
   opacidad: number;
+  /** De dónde salió (para la vista en primera persona: ahí lo que se aparta de su origen se ve a los lados y hacia arriba). */
+  ox: number;
+  oy: number;
+  /** A qué altura del suelo salió, en píxeles (null = a media altura; NaN = no se ve en primera persona: el clima). */
+  oz: number | null;
 }
+
+/** Dónde cae en la pantalla un punto del mundo visto en primera persona: el píxel, cuántos píxeles mide allí un píxel del mundo, y si lo tapa una pared. */
+export type Proyector = (x: number, y: number, z: number | null) => { x: number; y: number; k: number; tapado: boolean } | null;
 
 /** Como mucho, estas partículas a la vez (más no se ven, y el juego iría lento). */
 export const MAXIMO_PARTICULAS = 3000;
@@ -124,6 +132,9 @@ export class Particulas {
   get cantidad(): number {
     return this.lista.length;
   }
+
+  /** A qué altura del suelo salen las siguientes (para la vista en primera persona): null = a media altura; NaN = no se ven en ella. */
+  altura: number | null = null;
 
   /** Lanza las partículas de golpe. `cuantas` cambia la cantidad (si no, la de la configuración). `exactas`: sin reducirlas por la calidad (ya vienen reducidas). */
   emitir(c: ConfigParticulas, x: number, y: number, cuantas = c.cantidad, exactas = false): void {
@@ -164,6 +175,9 @@ export class Particulas {
         rozamiento: c.rozamiento ?? 0,
         sumar: c.mezcla === 'sumar',
         opacidad: c.opacidad ?? 1,
+        ox: x,
+        oy: y,
+        oz: this.altura,
       });
     }
   }
@@ -210,6 +224,37 @@ export class Particulas {
     ctx.globalAlpha = 1;
   }
 
+  /**
+   * Las partículas en PRIMERA PERSONA (vista3d). Cada una se pinta donde se ve su punto de salida, y lo que se
+   * ha apartado de él se pone a los lados y hacia arriba: así una explosión se abre delante de quien mira,
+   * en vez de quedarse aplastada contra el suelo. Más pequeñas cuanto más lejos, y tapadas por las paredes.
+   */
+  dibujar3D(ctx: CanvasRenderingContext2D, proyectar: Proyector): void {
+    let ox = NaN;
+    let oy = NaN;
+    let oz: number | null = NaN;
+    let origen: ReturnType<Proyector> = null;
+    for (const sumar of [false, true]) {
+      let alguna = false;
+      for (const p of this.lista) {
+        if (p.sumar !== sumar || (p.oz !== null && Number.isNaN(p.oz))) continue;
+        // Las de un mismo golpe salen del mismo sitio: se calcula una vez
+        if (p.ox !== ox || p.oy !== oy || p.oz !== oz) {
+          ox = p.ox;
+          oy = p.oy;
+          oz = p.oz;
+          origen = proyectar(ox, oy, oz);
+        }
+        if (!origen || origen.tapado || origen.k <= 0.02) continue;
+        if (!alguna && sumar) ctx.globalCompositeOperation = 'lighter';
+        alguna = true;
+        dibujarParticula(ctx, p, { x: origen.x + (p.x - p.ox) * origen.k, y: origen.y - (p.y - p.oy) * origen.k }, 1, origen.k);
+      }
+      if (alguna && sumar) ctx.globalCompositeOperation = 'source-over';
+    }
+    ctx.globalAlpha = 1;
+  }
+
   vaciar(): void {
     this.lista = [];
   }
@@ -233,7 +278,8 @@ function colorEscrito(r: number, g: number, b: number): string {
   return c;
 }
 
-function dibujarParticula(ctx: CanvasRenderingContext2D, p: Particula, s: { x: number; y: number }, escala = 1): void {
+/** `k`: por cuánto se multiplica su tamaño (en primera persona, según lo lejos que esté). */
+function dibujarParticula(ctx: CanvasRenderingContext2D, p: Particula, s: { x: number; y: number }, escala = 1, k = 1): void {
   const t = p.vida / p.vidaTotal; // 1 al nacer, 0 al morir
   ctx.globalAlpha = Math.max(0, Math.min(1, t * 1.5)) * p.opacidad;
   let color = p.color;
@@ -243,7 +289,7 @@ function dibujarParticula(ctx: CanvasRenderingContext2D, p: Particula, s: { x: n
     const b = p.rgbFinal;
     color = colorEscrito(Math.round(a[0] + (b[0] - a[0]) * k), Math.round(a[1] + (b[1] - a[1]) * k), Math.round(a[2] + (b[2] - a[2]) * k));
   }
-  const tam = Math.max(0.5, p.tamano * (p.tamanoFinal + (1 - p.tamanoFinal) * t));
+  const tam = Math.max(0.5, p.tamano * (p.tamanoFinal + (1 - p.tamanoFinal) * t) * k);
   const radio = tam / 2;
   ctx.fillStyle = color;
   // Lo diminuto (motas de polvo, chispas lejanas): un cuadradito, sin trazar ningún camino
@@ -270,7 +316,7 @@ function dibujarParticula(ctx: CanvasRenderingContext2D, p: Particula, s: { x: n
     case 'chispa': {
       // Una rayita en la dirección en que se mueve (lluvia, chispas)
       const v = Math.hypot(p.vx, p.vy) || 1;
-      const largo = p.forma === 'linea' ? tam * 3 : Math.min(tam * 4, 4 + v * 0.03);
+      const largo = p.forma === 'linea' ? tam * 3 : Math.min(tam * 4, (4 + v * 0.03) * k);
       ctx.strokeStyle = color;
       ctx.lineWidth = p.forma === 'linea' ? Math.max(1, tam / 3) : Math.max(1, tam / 2);
       ctx.lineCap = 'round';

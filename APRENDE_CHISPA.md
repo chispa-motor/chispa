@@ -2,7 +2,7 @@
 
 > Este archivo se genera solo con `npm run manual`, a partir de la API de verdad (no lo cambies a mano: cambia `src/chispa/api/curso.ts`). Un test ejecuta cada ejemplo, cada ejercicio y cada mini proyecto para comprobar que funcionan.
 
-Un curso por niveles para aprender a programar juegos con Chispa, aunque no hayas programado nunca. Salen **todos** los comandos que existen (460), cada uno con qué hace, un ejemplo corto que funciona y el error que más se comete con él.
+Un curso por niveles para aprender a programar juegos con Chispa, aunque no hayas programado nunca. Salen **todos** los comandos que existen (461), cada uno con qué hace, un ejemplo corto que funciona y el error que más se comete con él.
 
 **Cómo usarlo:**
 
@@ -66,7 +66,7 @@ Una regla para todo el curso: en el código **no hacen falta tildes**. Se escrib
   - [Calidad, batería y cómo se sujeta el móvil](#calidad-bateria-y-como-se-sujeta-el-movil)
   - [Primera persona: el mundo desde dentro](#primera-persona-el-mundo-desde-dentro)
   - [Puertas en los mapas](#puertas-en-los-mapas)
-  - [Mirar con el ratón](#mirar-con-el-raton)
+  - [Mirar con el ratón y con el mando](#mirar-con-el-raton-y-con-el-mando)
   - [Depurar: encontrar los fallos](#depurar-encontrar-los-fallos)
 - [Nivel 5: Tu juego, de principio a fin](#nivel-5-tu-juego-de-principio-a-fin)
 - [Soluciones de los ejercicios](#soluciones)
@@ -8122,9 +8122,25 @@ cuando empieza:
     mostrar(buscar("Mapa").esPuerta(yo.x))
 ```
 
-### Mirar con el ratón
+### Mirar con el ratón y con el mando
 
-En primera persona se mira moviendo el ratón. Para eso el juego «captura» el ratón: la flecha desaparece, no se sale de la pantalla y se lee lo que se mueve. El navegador lo concede al hacer clic en el juego y lo suelta con Escape.
+En primera persona se mira moviendo el ratón. Para eso el juego «captura» el ratón: la flecha desaparece, no se sale de la pantalla y se lee lo que se mueve. El navegador lo concede al hacer clic en el juego y lo suelta con Escape. Con mando se anda con una palanca y se mira con la otra: para eso el mando tiene que dejar de hacer de teclado.
+
+#### `mando.comoTeclado`
+
+Si es verdadero (lo normal), el mando hace de teclado: la palanca y la cruceta son las flechas, A es espacio, B es "x"...
+
+```
+cuando empieza:
+    mando.comoTeclado = falso
+```
+
+**Error típico:** Darle un texto: es verdadero o falso. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    mando.comoTeclado = "no"
+```
 
 #### `raton.capturado`
 
