@@ -97,12 +97,12 @@ No se ha hecho push de nada. La web sigue como estaba.
 
 El juego NO está en este repositorio: es un proyecto privado, en la carpeta de al lado
 (`../arena-cero/`, con su propio `PROGRESO.md`). Aquí va lo que se añade al MOTOR para poder
-hacerlo, con commit y etiqueta por parte (`arena-parte-N`). Lo que faltaba está en
+hacerlo, con commit y etiqueta por parte (`arena-cero-parte-N`: las `arena-parte-1` a `3` ya existían, de Arena de Habilidades). Lo que faltaba está en
 `FALTABA_EN_EL_MOTOR.md`. No se hace push de nada.
 
 | Parte | Qué | Estado | Etiqueta |
 |---|---|---|---|
-| 1 | Motor 3D simulado: paredes, suelo, techo, niebla, puertas, medir fps | **Hecho** | `arena-parte-1` |
+| 1 | Motor 3D simulado: paredes, suelo, techo, niebla, puertas, medir fps | **Hecho** | `arena-cero-parte-1` |
 | 2 | Jugador: teclado, ratón, mando y táctil | Sin empezar | |
 | 3 | Sprites que miran al jugador | Sin empezar | |
 | 4 | Armas | Sin empezar | |
