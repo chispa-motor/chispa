@@ -771,9 +771,15 @@ export class Aplicacion {
     }
     let reproductor: string;
     try {
-      const r = await fetch('reproductor.js');
-      if (!r.ok) throw new Error();
-      reproductor = await r.text();
+      // El editor «en un solo archivo» (herramientas/editor-un-archivo.mjs) lleva el reproductor dentro de la
+      // página: abierto como archivo local no se puede pedir nada con fetch
+      const dentro = document.getElementById('reproductor-chispa')?.textContent;
+      if (dentro) reproductor = dentro;
+      else {
+        const r = await fetch('reproductor.js');
+        if (!r.ok) throw new Error();
+        reproductor = await r.text();
+      }
     } catch {
       return avisar('No encuentro el reproductor', 'Falta el archivo reproductor.js. Arranca el editor con "npm run dev" (lo genera solo) o ejecuta "npm run reproductor".');
     }

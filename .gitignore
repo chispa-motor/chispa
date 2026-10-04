@@ -2,3 +2,5 @@ node_modules/
 dist/
 *.log
 public/reproductor.js
+dist-un-archivo
+chispa-editor.html
