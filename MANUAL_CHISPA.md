@@ -1310,6 +1310,15 @@ Cuánto está levantado del suelo, en píxeles. En primera persona (vista3d) es 
 yo.elevacion = 20
 ```
 
+#### `yo.enMinimapa`
+
+Cómo sale el objeto en los minimapas (el control «Minimapa»): verdadero = un punto del color de su dibujo (lo normal), falso = no sale, o un color para su punto. Para que los enemigos salgan en rojo, o para esconder lo que no hay que ver.
+
+```
+cuando empieza:
+    yo.enMinimapa = "rojo"
+```
+
 #### `yo.arrastrable`
 
 Si es verdadero, se puede coger con el ratón y moverlo (puzles, inventarios, juegos de ordenar).

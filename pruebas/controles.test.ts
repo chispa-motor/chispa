@@ -15,6 +15,8 @@
 import { describe, expect, it } from 'vitest';
 import { Control, TIPOS_CONTROL, colorDeNombre, type TipoControl } from '../src/objetos/componentes/Control';
 import { Sprite } from '../src/objetos/componentes/Sprite';
+import { MapaCasillas } from '../src/objetos/componentes/MapaCasillas';
+import { texturaLisa } from '../src/objetos/Vista3D';
 import { migrarProyecto, proyectoVacio, type DefControl, type DefObjeto } from '../src/proyecto/formato';
 import { EstadoEditor } from '../src/editor/estado/EstadoEditor';
 import { Inspector } from '../src/editor/paneles/Inspector';
@@ -527,6 +529,112 @@ describe('Minimapa', () => {
     const puntos = l.llamadas.filter(([k, a]) => k === 'arc' && (a as number[])[2] <= 4).map(([, a]) => (a as number[]).slice(0, 2).map(Math.round));
     // El jugador, en el centro; el otro, 500 píxeles a la derecha → casi 50 en el minimapa
     expect(puntos).toEqual([[860, 80], [909, 80]]);
+  });
+});
+
+describe('El minimapa en primera persona (vista3d) y yo.enMinimapa', () => {
+  const celdas: Record<string, string> = { '0,4': 'muro', '2,3': 'puerta', '0,0': 'muro', '90,90': 'muro' };
+  function juego(codigo: string, conVista = true) {
+    const j = juegoDePrueba({
+      gravedad: 0,
+      scripts: { 'j.chs': `cuando empieza:\n${conVista ? '    vista3d.ver(yo)\n' : ''}    yo.rotacion = 0\n${codigo}`, 'otro.chs': '' },
+      escena: [
+        { nombre: 'Mapa', x: 0, y: 0, mapa: { tamano: 40, tipos: { muro: { color: '#00ff00', solida: true }, puerta: { color: '#0000ff', solida: true, puerta: true } }, celdas } },
+        { nombre: 'Jugador', x: 200, y: 200, sprite: { ancho: 20, alto: 20 }, script: 'j.chs' },
+        { nombre: 'Uno', x: 250, y: 200, sprite: { ancho: 20, alto: 20, color: '#ff00ff' } },
+        { nombre: 'Dos', x: 300, y: 200, sprite: { ancho: 20, alto: 20, color: '#ff00ff' } },
+        { nombre: 'Mini', x: 860, y: 460, sprite: { ancho: 206, alto: 106, fijo: true }, control: { tipo: 'minimapa', seguir: 'Jugador', alcance: 400 } },
+      ],
+    });
+    j.juego.escena.vista3d.leerImagen = () => texturaLisa(0xff0000ff);
+    return j;
+  }
+  function pintar(j: ReturnType<typeof juego>) {
+    j.avanzar(1);
+    const l = lienzo();
+    j.juego.escena.dibujar(l.r);
+    return l;
+  }
+  const puntos = (l: ReturnType<typeof lienzo>) => l.llamadas.filter(([k, a]) => k === 'arc' && (a as number[])[2] <= 4).map(([, a]) => (a as number[]).slice(0, 2).map(Math.round));
+
+  /** La punta de la flecha: donde empieza la única figura de cuatro lados que se cierra. */
+  const flecha = (l: ReturnType<typeof lienzo>) => {
+    const i = l.llamadas.findIndex(([k], n) => k === 'moveTo' && l.llamadas.slice(n + 1, n + 5).map(([q]) => q).join() === 'lineTo,lineTo,lineTo,closePath');
+    return (l.llamadas[i][1] as number[]).map(Math.round);
+  };
+
+  it('en vez del marco de la cámara, una flecha dice dónde está quien mira y hacia dónde', () => {
+    const j = juego('');
+    const l = pintar(j);
+    expect(l.cuenta.strokeRect ?? 0).toBe(0);
+    // La punta de la flecha, 8 píxeles a la derecha del centro del minimapa (mira hacia la derecha)
+    expect(flecha(l)).toEqual([868, 80]);
+    // Quien mira no sale además como un punto: solo los otros dos (a 50 y 100 píxeles → 25 y 50 en el minimapa)
+    expect(puntos(l)).toEqual([[884, 80], [909, 80]]);
+    // Si mira hacia arriba, la flecha también
+    j.buscar('Jugador').transformacion.rotacion = 90;
+    expect(flecha(pintar(j))).toEqual([860, 72]);
+    expect(j.errores).toEqual([]);
+  });
+
+  it('sin vista3d sigue saliendo el marco de lo que ve la cámara y quien va en el centro es un punto', () => {
+    const l = pintar(juego('', false));
+    expect(l.cuenta.strokeRect).toBe(1);
+    expect(puntos(l)).toHaveLength(3);
+  });
+
+  it('yo.enMinimapa: falso esconde el punto de un objeto y un color lo cambia', () => {
+    const j = juego('    buscar("Uno").enMinimapa = falso\n    buscar("Dos").enMinimapa = "#ff0000"\n    mostrar(buscar("Uno").enMinimapa)\n    mostrar(buscar("Dos").enMinimapa)\n    mostrar(yo.enMinimapa)');
+    const l = pintar(j);
+    expect(puntos(l)).toEqual([[909, 80]]);
+    expect(l.puesto.fillStyle).toContain('#ff0000');
+    expect(l.puesto.fillStyle).not.toContain('#ff00ff');
+    expect(j.salida).toEqual(['falso', '#ff0000', 'verdadero']);
+    expect(j.errores).toEqual([]);
+  });
+
+  it('enMinimapa explica lo que no vale, y una copia hecha con clonar sale igual que el original', () => {
+    const j = juego('    buscar("Uno").enMinimapa = "rojo"\n    variable copia = buscar("Uno").clonar()\n    mostrar(copia.enMinimapa)\n    yo.enMinimapa = "rojizo"');
+    j.avanzar(1);
+    expect(j.salida).toEqual(['rojo']);
+    expect(j.errores[0].error.message).toContain("'enMinimapa' quiere verdadero, falso o un color");
+    expect(j.errores[0].error.message).toContain('"rojizo"');
+  });
+
+  it('una puerta abierta se pinta apagada, y las casillas que quedan fuera de lo que se enseña no se pintan', () => {
+    const j = juego('');
+    const casillas = (l: ReturnType<typeof lienzo>) => l.llamadas.filter(([k, a]) => k === 'fillRect' && Math.abs((a as number[])[2] - 19.9) < 0.1).length;
+    const l = pintar(j);
+    // El muro de (0,4) y la puerta; los muros de (0,0) y (90,90) quedan fuera
+    expect(casillas(l)).toBe(2);
+    expect((l.puesto.globalAlpha ?? []).filter((a) => a === 0.3)).toHaveLength(0);
+    j.buscar('Mapa').obtener(MapaCasillas)!.moverPuerta(2, 3, 1);
+    j.avanzar(120);
+    expect((pintar(j).puesto.globalAlpha ?? []).filter((a) => a === 0.3)).toHaveLength(1);
+  });
+});
+
+describe('Un menú con el mando sin hacer de teclado (mando.comoTeclado = falso)', () => {
+  it('la cruceta elige y el botón A acepta', () => {
+    const j = conControl({ tipo: 'menu', opciones: ['Seguir', 'Ajustes', 'Salir'], elegido: 1 }, 'cuando empieza:\n    mando.comoTeclado = falso\n\ncuando cambia:\n    mostrar(yo.valor)');
+    const pulsar = (...botones: string[]) => {
+      j.entrada.ponerMando(true, new Set(botones), 0, 0);
+      j.avanzar(1);
+      j.entrada.ponerMando(true, new Set(), 0, 0);
+      j.avanzar(1);
+    };
+    j.avanzar(2);
+    pulsar('abajo');
+    pulsar('abajo');
+    pulsar('arriba');
+    pulsar('a');
+    expect(j.salida).toEqual(['Ajustes']);
+    // Da la vuelta por arriba
+    pulsar('arriba');
+    pulsar('arriba');
+    pulsar('a');
+    expect(j.salida).toEqual(['Ajustes', 'Salir']);
+    expect(j.errores).toEqual([]);
   });
 });
 

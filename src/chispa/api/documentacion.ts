@@ -558,6 +558,7 @@ export const DOC_OBJETO: Doc[] = [
   d('padre', 'propiedad', 'yo.padre', 'El objeto al que está pegado (o nulo).', 'si yo.padre != nulo:\n    mostrar(yo.padre.nombre)'),
   d('hijos', 'propiedad', 'yo.hijos', 'La lista de los objetos pegados a este.', 'para cada h en yo.hijos:\n    h.color = "rojo"'),
   d('elevacion', 'propiedad', 'yo.elevacion', 'Cuánto está levantado del suelo, en píxeles. En primera persona (vista3d) es lo que flota o vuela: un dron, una bala, algo que salta. 0 = apoyado en el suelo.', 'yo.elevacion = 20'),
+  d('enMinimapa', 'propiedad', 'yo.enMinimapa', 'Cómo sale el objeto en los minimapas (el control «Minimapa»): verdadero = un punto del color de su dibujo (lo normal), falso = no sale, o un color para su punto. Para que los enemigos salgan en rojo, o para esconder lo que no hay que ver.', 'cuando empieza:\n    yo.enMinimapa = "rojo"'),
   d('arrastrable', 'propiedad', 'yo.arrastrable', 'Si es verdadero, se puede coger con el ratón y moverlo (puzles, inventarios, juegos de ordenar).', 'yo.arrastrable = verdadero'),
   d('arrastrando', 'propiedad', 'yo.arrastrando', 'Verdadero mientras se está arrastrando con el ratón (solo se lee).', 'si yo.arrastrando:\n    yo.opacidad = 0.7'),
   d('animar', 'accion', 'yo.animar("nombre")', 'Empieza una animación del proyecto. Si ya estaba sonando, no la reinicia.', 'yo.animar("correr")', 'animar("${1:nombre}")'),

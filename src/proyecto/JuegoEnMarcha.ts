@@ -398,6 +398,7 @@ export class JuegoEnMarcha implements ContextoJuego {
     const copia = crearObjetoDesdeDefinicion({ ...def, nombre: o.nombre, tipo: o.tipo, x: o.posicion.x, y: o.posicion.y }, o.nombre, this.proyecto);
     copia.transformacion.rotacion = o.transformacion.rotacion;
     copia.elevacion = o.elevacion;
+    copia.enMinimapa = o.enMinimapa;
     copia.transformacion.escala.x = o.transformacion.escala.x;
     copia.transformacion.escala.y = o.transformacion.escala.y;
     const s = o.obtener(Sprite);

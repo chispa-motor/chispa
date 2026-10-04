@@ -285,6 +285,16 @@ const PROPIEDADES: Record<string, PropiedadObjeto> = sinPrototipo({
       o.elevacion = n;
     },
   },
+  // Cómo sale en un minimapa: verdadero (un punto de su color), falso (no sale) o un color
+  enminimapa: {
+    obtener: (o) => (o.enMinimapa === 'no' ? false : o.enMinimapa === '' ? true : o.enMinimapa),
+    asignar: (o, v, p) => {
+      if (v === true) o.enMinimapa = '';
+      else if (v === false) o.enMinimapa = 'no';
+      else if (typeof v === 'string' && v.trim() && esColorValido(v.trim())) o.enMinimapa = v.trim();
+      else throw new ErrorChispa(p, `'enMinimapa' quiere verdadero, falso o un color, y le das ${typeof v === 'string' ? `"${v}"` : aTexto(v)}.`, 'Ejemplos: yo.enMinimapa = falso · yo.enMinimapa = "rojo"');
+    },
+  },
   arrastrando: { obtener: (o) => o.escena?.arrastrando(o) ?? false },
   imagen: {
     obtener: (o, p) => necesitaSprite(o, 'imagen', p).imagen,
@@ -1020,7 +1030,7 @@ const NOMBRES_BONITOS = [
   'color', 'visible', 'ancho', 'alto', 'texto', 'tamaño', 'colorTexto', 'letra', 'imagen', 'opacidad', 'voltear', 'capa', 'fijo',
   'solido', 'fantasma', 'rozamiento', 'rebote', 'masa', 'estatico', 'moviendo', 'animacion', 'ratonEncima', 'destruido',
   'saltar', 'mover', 'rotar', 'destruir', 'distanciaA', 'empujar', 'animar', 'pararAnimacion', 'moverHacia', 'mirarA', 'direccionA',
-  'moverConFlechas', 'moverConJugador', 'casilla', 'ponerCasilla', 'quitarCasilla', 'casillaEn', 'columnaEn', 'filaEn', 'centroDeCasilla', 'solidoEn', 'abrirPuerta', 'cerrarPuerta', 'puertaAbierta', 'esPuerta', 'elevacion',
+  'moverConFlechas', 'moverConJugador', 'casilla', 'ponerCasilla', 'quitarCasilla', 'casillaEn', 'columnaEn', 'filaEn', 'centroDeCasilla', 'solidoEn', 'abrirPuerta', 'cerrarPuerta', 'puertaAbierta', 'esPuerta', 'elevacion', 'enMinimapa',
   'tamanoLetra', 'transparencia', 'voltearVertical', 'etiquetas', 'padre', 'hijos', 'arrastrable', 'arrastrando',
   'teletransportar', 'irA', 'anguloA', 'rotarHacia', 'avanzar', 'ocultar', 'aparecer', 'parpadear', 'ponerDelante', 'ponerDetras',
   'tocando', 'cercanos', 'masCercano', 'clonar', 'ponerEtiqueta', 'quitarEtiqueta', 'tieneEtiqueta', 'pegarA', 'soltar',

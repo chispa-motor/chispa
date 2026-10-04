@@ -294,6 +294,8 @@ DATOS_CON_BLOQUE.push(
   { categoria: 'vista3d', objetivo: 'vista3d.brillo', valor: '1.5' },
   { categoria: 'vista3d', objetivo: 'vista3d.columnas', valor: '320' },
   { categoria: 'vista3d', objetivo: 'yo.elevacion', valor: '20' },
+  { categoria: 'interfaz', objetivo: 'yo.enMinimapa', valor: '"rojo"' },
+  { categoria: 'interfaz', objetivo: 'yo.enMinimapa', valor: 'falso' },
   { categoria: 'vista3d', objetivo: 'yo.visible', valor: 'vista3d.activa' },
   { categoria: 'vista3d', objetivo: 'yo.visible', valor: 'vista3d.observador == yo' },
   { categoria: 'vista3d', objetivo: 'yo.visible', valor: 'vista3d.seVe(buscar("Jugador"))' },

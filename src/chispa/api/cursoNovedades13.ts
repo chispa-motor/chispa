@@ -56,6 +56,8 @@ export function agregarNovedades13(tema: Tema, c: Comando): void {
     'cuando empieza:\n    vista3d.columnas = 10', 'Pedir muy pocas: va de 64 a 1280 (0 = las que diga pantalla.calidad).');
   c('vista3d:milisegundos', 'cuando empieza:\n    vista3d.ver(yo)\n\ncuando cada 1 segundos:\n    mostrar(vista3d.milisegundos)', 'mostrar(vista3d.milisegundos)',
     'cuando empieza:\n    vista3d.milisegundos = 0', 'Intentar cambiarlo: es una medida, solo se lee.');
+  c('objeto:enMinimapa', 'cuando empieza:\n    yo.enMinimapa = "rojo"', 'yo.enMinimapa = "rojo"',
+    'cuando empieza:\n    yo.enMinimapa = "rojizo"', 'Darle algo que no es un color: vale verdadero, falso o un color.');
   c('objeto:elevacion', 'cuando empieza:\n    yo.elevacion = 20', 'yo.elevacion = 20',
     'cuando empieza:\n    yo.elevacion = "alto"', 'Darle un texto: son píxeles desde el suelo.');
 

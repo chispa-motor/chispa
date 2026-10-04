@@ -2,7 +2,7 @@
 
 > Se genera sola con `npm run manual` (no la cambies a mano). Un test comprueba que no falta ningún comando y que cada ejemplo funciona.
 
-Todos los comandos de Chispa (462), una línea cada uno, para tenerla abierta mientras programas o imprimirla. Para aprender con calma, el [curso](APRENDE_CHISPA.md).
+Todos los comandos de Chispa (463), una línea cada uno, para tenerla abierta mientras programas o imprimirla. Para aprender con calma, el [curso](APRENDE_CHISPA.md).
 
 En los ejemplos se usan estas variables y esta función, como si ya las tuvieras (y en la escena hay un Jugador y un Mapa de casillas):
 
@@ -714,6 +714,7 @@ Las líneas que terminan en `:` empiezan un bloque: lo de dentro va debajo, con 
 | `vista3d.seVe(objeto)` | Verdadero si ese objeto (o esa posición) se ve ahora mismo en la pantalla: está delante y no lo tapa una pared. | `si vista3d.seVe(jugador):` |
 | `vista3d.columnas` | Cuántas columnas tiene la imagen en 3D (cada una es un rayo). | `vista3d.columnas = 320` |
 | `vista3d.milisegundos` | Lo que ha tardado en pintarse la vista 3D en el último fotograma, en milésimas de segundo (solo se lee). | `mostrar(vista3d.milisegundos)` |
+| `yo.enMinimapa` | Cómo sale el objeto en los minimapas (el control «Minimapa»): verdadero = un punto del color de su dibujo (lo normal), falso = no sale, o un color para su punto. | `yo.enMinimapa = "rojo"` |
 | `yo.elevacion` | Cuánto está levantado del suelo, en píxeles. | `yo.elevacion = 20` |
 
 ### Puertas en los mapas

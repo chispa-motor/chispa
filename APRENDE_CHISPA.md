@@ -2,7 +2,7 @@
 
 > Este archivo se genera solo con `npm run manual`, a partir de la API de verdad (no lo cambies a mano: cambia `src/chispa/api/curso.ts`). Un test ejecuta cada ejemplo, cada ejercicio y cada mini proyecto para comprobar que funcionan.
 
-Un curso por niveles para aprender a programar juegos con Chispa, aunque no hayas programado nunca. Salen **todos** los comandos que existen (462), cada uno con qué hace, un ejemplo corto que funciona y el error que más se comete con él.
+Un curso por niveles para aprender a programar juegos con Chispa, aunque no hayas programado nunca. Salen **todos** los comandos que existen (463), cada uno con qué hace, un ejemplo corto que funciona y el error que más se comete con él.
 
 **Cómo usarlo:**
 
@@ -8027,6 +8027,22 @@ cuando cada 1 segundos:
 ```
 cuando empieza:
     vista3d.milisegundos = 0
+```
+
+#### `yo.enMinimapa`
+
+Cómo sale el objeto en los minimapas (el control «Minimapa»): verdadero = un punto del color de su dibujo (lo normal), falso = no sale, o un color para su punto.
+
+```
+cuando empieza:
+    yo.enMinimapa = "rojo"
+```
+
+**Error típico:** Darle algo que no es un color: vale verdadero, falso o un color. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    yo.enMinimapa = "rojizo"
 ```
 
 #### `yo.elevacion`

@@ -418,9 +418,11 @@ export class Control extends Componente {
 
     // El menú: con el ratón por encima o con las flechas, y se elige con Intro o espacio
     if (this.tipo === 'menu' && this.opciones.length) {
-      if (entrada.sePulso('abajo')) this.elegido = (this.elegido + 1) % this.opciones.length;
-      if (entrada.sePulso('arriba')) this.elegido = (this.elegido - 1 + this.opciones.length) % this.opciones.length;
-      if (this.elegido >= 0 && (entrada.sePulso('enter') || entrada.sePulso('espacio'))) this.avisarCambio();
+      // Con el mando también, aunque no esté haciendo de teclado (mando.comoTeclado = falso): la cruceta elige y A acepta
+      const mando = entrada.mandoHaceDeTeclado ? null : entrada.mando.pulsados;
+      if (entrada.sePulso('abajo') || mando?.has('abajo')) this.elegido = (this.elegido + 1) % this.opciones.length;
+      if (entrada.sePulso('arriba') || mando?.has('arriba')) this.elegido = (this.elegido - 1 + this.opciones.length) % this.opciones.length;
+      if (this.elegido >= 0 && (entrada.sePulso('enter') || entrada.sePulso('espacio') || mando?.has('a'))) this.avisarCambio();
     }
 
     // El campo de texto
@@ -759,6 +761,7 @@ export class Control extends Componente {
     ctx.clip();
     let casillas = 0;
     let puntos = 0;
+    const ojos = escena.vista3d.activa ? escena.vista3d.observador : null;
     for (const o of escena.objetos) {
       if (o.destruido || o === this.objeto) continue;
       const mapa = o.obtener(MapaCasillas);
@@ -769,29 +772,56 @@ export class Control extends Componente {
           const def = propio(mapa.tipos, tipo);
           if (!def?.solida) continue;
           const coma = clave.indexOf(',');
-          const sitio = mapa.cajaDe(Number(clave.slice(0, coma)), Number(clave.slice(coma + 1)));
+          const columna = Number(clave.slice(0, coma));
+          const fila = Number(clave.slice(coma + 1));
+          const sitio = mapa.cajaDe(columna, fila);
+          // Fuera de lo que se enseña: ni se pinta (en un mundo grande son casi todas)
+          if (sitio.derecha < zona.izquierda || sitio.izquierda > zona.derecha || sitio.arriba < zona.abajo || sitio.abajo > zona.arriba) continue;
           const p = aMapa(sitio.izquierda, sitio.arriba);
           ctx.fillStyle = resolverColor(def.color ?? '#8892a6');
+          // Una puerta abierta se ve apagada: por ahí se pasa
+          const abierta = def.puerta === true && mapa.abierta(columna, fila);
+          if (abierta) ctx.globalAlpha = 0.3;
           ctx.fillRect(p.x, p.y, lado + 0.5, lado + 0.5);
+          if (abierta) ctx.globalAlpha = 1;
           casillas++;
         }
         continue;
       }
       const s = o.obtener(Sprite);
-      if (!s || !s.visible || s.fijo || s.forma === 'texto' || puntos >= MAXIMO_PUNTOS_MINIMAPA) continue;
+      // yo.enMinimapa: falso = no sale; un color = su punto, de ese color
+      if (!s || !s.visible || s.fijo || s.forma === 'texto' || o.enMinimapa === 'no' || o === ojos || puntos >= MAXIMO_PUNTOS_MINIMAPA) continue;
       const p = aMapa(o.posicion.x, o.posicion.y);
       const esCentro = o === centro;
       ctx.beginPath();
       ctx.arc(p.x, p.y, esCentro ? 4 : Math.max(2, Math.min(4, (Math.max(s.anchoFinal, s.altoFinal) * k) / 2)), 0, Math.PI * 2);
-      ctx.fillStyle = esCentro ? '#ffffff' : resolverColor(s.color);
+      ctx.fillStyle = o.enMinimapa ? resolverColor(o.enMinimapa) : esCentro ? '#ffffff' : resolverColor(s.color);
       ctx.fill();
       puntos++;
     }
-    // Lo que se ve ahora en la pantalla
-    const a = aMapa(vista.izquierda, vista.arriba);
-    ctx.strokeStyle = principal;
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(a.x, a.y, (vista.derecha - vista.izquierda) * k, (vista.arriba - vista.abajo) * k);
+    if (ojos) {
+      // En primera persona (vista3d) no hay «lo que ve la cámara»: una flecha dice dónde está quien mira y hacia dónde
+      const p = aMapa(ojos.posicion.x, ojos.posicion.y);
+      const g = (ojos.transformacion.rotacion * Math.PI) / 180;
+      const punta = (angulo: number, largo: number) => [p.x + Math.cos(g + angulo) * largo, p.y - Math.sin(g + angulo) * largo] as const;
+      ctx.beginPath();
+      ctx.moveTo(...punta(0, 8));
+      ctx.lineTo(...punta(2.5, 6));
+      ctx.lineTo(...punta(Math.PI, 2));
+      ctx.lineTo(...punta(-2.5, 6));
+      ctx.closePath();
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.strokeStyle = '#101422';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    } else {
+      // Lo que se ve ahora en la pantalla
+      const a = aMapa(vista.izquierda, vista.arriba);
+      ctx.strokeStyle = principal;
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(a.x, a.y, (vista.derecha - vista.izquierda) * k, (vista.arriba - vista.abajo) * k);
+    }
     ctx.restore();
     ctx.strokeStyle = principal;
     ctx.lineWidth = 2;

@@ -107,7 +107,7 @@ hacerlo, con commit y etiqueta por parte (`arena-cero-parte-N`: las `arena-parte
 | 3 | Sprites que miran al jugador | **Hecho** | `arena-cero-parte-3` |
 | 4 | Armas | **Hecho** | `arena-cero-parte-4` |
 | 5 | NPCs con IA | **Hecho** | `arena-cero-parte-5` |
-| 6 | Mapa rejugable | Sin empezar | |
+| 6 | Mapa rejugable | **Hecho** | `arena-cero-parte-6` |
 | 7 | Interfaz | Sin empezar | |
 | 8 | Sonido, niveles, guardado, pausa, ajustes | Sin empezar | |
 | 9 | Rendimiento | Sin empezar | |
@@ -169,6 +169,20 @@ hacerlo, con commit y etiqueta por parte (`arena-cero-parte-N`: las `arena-parte
   diálogo) y `scripts/tecnico.chs` (trabaja, se asusta y huye, con diálogo y regalo).
 - Pruebas: `pruebas/parte5.mjs` (8). Con cuatro enemigos persiguiendo: 60 fps; la lógica de todos
   los scripts tarda 1,2 ms por fotograma de media.
+
+## Arena Cero, parte 6 — Mapa (hecho)
+
+- En el motor: el minimapa entiende la primera persona (flecha en vez de marco), `yo.enMinimapa`
+  (463 comandos) y los menús se manejan con el mando aunque no haga de teclado. 1146 tests.
+- En el juego: dos niveles (`mapas/nivel1.txt` Los Almacenes: tarjeta roja → técnico con la azul →
+  armería con la amarilla → ascensor; `mapas/nivel2.txt` El Núcleo: baldosas electrificadas y jefe
+  por fases), `scripts/cosa.chs` (lo que se recoge), `punto.chs` (enemigos y cosas al azar: cada
+  partida es distinta), `salida.chs`, `jefe.chs`, `nivel.chs` (trampas, paso de nivel, reintentar),
+  `partida.chs` y `ajustes.chs` (bibliotecas: armas y munición pasan de un nivel a otro; guardado).
+- Pruebas: `pruebas/parte6.mjs` (8) y `pruebas/exportado.mjs` (4): el juego exportado a UN archivo
+  HTML (`herramientas/exportar.mts`), abierto desde file:// en móvil simulado y manejado con toques.
+- A medio hacer para las partes 7 y 8 (en `pendiente/` del juego, sin conectar): menú de pausa,
+  título, final, indicador de daño, barra del jefe e iconos de tarjetas.
 
 ## Cómo seguir si se corta
 
