@@ -489,6 +489,7 @@ export class Efectos {
 /** La altura de en medio de un objeto, desde el suelo (para los efectos en primera persona). */
 export function alturaDe(o: ObjetoJuego): number {
   const s = o.obtener(Sprite);
-  return o.elevacion + (s ? s.altoFinal / 2 : 16);
+  // (con suelos a distintas alturas: desde el suelo que pisa)
+  return o.elevacion + (o.alturaSuelo ?? 0) + (s ? s.altoFinal / 2 : 16);
 }
 

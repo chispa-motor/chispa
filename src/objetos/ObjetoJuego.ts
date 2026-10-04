@@ -50,6 +50,8 @@ export class ObjetoJuego {
   posicionPadre: Vector2 | null = null;
   /** Cuánto está levantado del suelo, en píxeles (yo.elevacion): en la vista en primera persona, lo que flota o vuela. */
   elevacion = 0;
+  /** A qué altura está el suelo que pisa (píxeles), si es un cuerpo que choca en un mapa con suelos a distintas alturas (lo pone la física); si no, null. */
+  alturaSuelo: number | null = null;
   /** Cómo sale en un minimapa (yo.enMinimapa): '' = un punto del color de su dibujo, 'no' = no sale, o un color. */
   enMinimapa = '';
   /** Se puede coger y mover con el ratón (yo.arrastrable = verdadero). */

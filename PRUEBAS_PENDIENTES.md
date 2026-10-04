@@ -61,3 +61,23 @@ en «cuando empieza», y `yo.moverConFlechas(200)` en «cuando cada fotograma».
 | Mandos | Bluetooth y USB, en móvil, tablet y PC | Conectar un mando con los controles en pantalla puestos: al usar el mando se esconden; al tocar la pantalla, vuelven. Simulado con un mando de mentira; uno de verdad, no. |
 | Colocar los controles | Android y iPhone | `tactil.colocar()`: arrastrar cada control a otro sitio, «Listo», cerrar y abrir: siguen donde se dejaron. Girar el móvil: no se salen de la pantalla. |
 | Pantallas plegables | Móvil plegable | Abrir y cerrar a media partida: el juego sigue y los controles se recolocan. |
+
+## Chispa 1.3 — La primera persona (con «Arena Cero»)
+
+Para probar: abre `arena-cero.html` (el juego exportado: un solo archivo) en el aparato, o publica un
+juego que use `vista3d.ver(yo)`. En Ajustes > «Ver fps» sale el contador.
+
+| Qué | Dónde | Qué hay que mirar |
+|---|---|---|
+| Fotogramas por segundo | Un Android de gama baja, uno normal, un iPhone, una tableta | Con «Ver fps»: andando por el nivel 1 y en la pelea con el Núcleo. Tiene que ir a 30 o más. Apuntar también a qué calidad se queda (Ajustes > Calidad en "auto"; el contador dice las columnas: 640, 480, 320 o 240). |
+| Calidad «mínima» | Un móvil lento | Que en "auto" llegue a bajar hasta ahí si hace falta, que se siga leyendo la interfaz y que vuelva a subir si va sobrado. |
+| Dos pulgares a la vez | Android y iPhone, tumbado | Andar con la palanca y, a la vez, arrastrar para mirar y pulsar Fuego con el otro pulgar, un buen rato. Que no se «enganche» la mirada ni la palanca. |
+| Sensibilidad de la mirada con el dedo | Móvil y tableta | Que con la sensibilidad en 1 se pueda dar media vuelta con un arrastre cómodo. Probar los valores de Ajustes. |
+| Capturar el ratón | Ordenador con Chrome, Firefox y Safari; Chromebook | El primer clic se queda con el ratón; Escape lo suelta y sale el menú de pausa; «Seguir» y un clic lo vuelven a coger. |
+| Un ordenador con pantalla táctil | Windows táctil, Chromebook táctil | Tocar la pantalla mientras se juega con ratón: salen los botones y la mirada con el dedo funciona (el ratón se suelta solo). |
+| El mando | Bluetooth y USB, en ordenador, Android y iPad | Palanca izquierda anda de lado, la derecha mira, RT dispara, A usa, Start pausa; los menús y los diálogos se manejan con la cruceta y A. Que vibre al recibir un golpe. |
+| De dónde viene el sonido | Con auriculares | Con un guardia a la derecha, sus pasos suenan por la derecha; al girarse, cambian de lado. El zumbido del Núcleo sube al acercarse. |
+| «Colocar botones» | Móvil | Ajustes > Colocar botones (desde la pausa): moverlos, pulsar «Listo», seguir jugando; al volver a abrir el juego siguen donde se dejaron. |
+| Guardado | Android (Chrome) y iPhone (Safari) | Cerrar el navegador en el nivel 2 y volver a abrir el archivo: sale «Continuar». Abierto como archivo local (`file://`), algunos navegadores no guardan: comprobarlo también subido a una web. |
+| Abrir el .html desde Archivos | Android | Que Chrome lo abra tocándolo en la app Archivos (o con «Abrir con»). |
+

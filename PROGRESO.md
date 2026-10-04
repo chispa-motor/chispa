@@ -111,7 +111,7 @@ hacerlo, con commit y etiqueta por parte (`arena-cero-parte-N`: las `arena-parte
 | 7 | Interfaz | **Hecho** | `arena-cero-parte-7` |
 | 8 | Sonido, niveles, guardado, pausa, ajustes | **Hecho** | `arena-cero-parte-8` |
 | 9 | Rendimiento | **Hecho** | `arena-cero-parte-9` |
-| 10 | Reto: alturas | Sin empezar | |
+| 10 | Reto: alturas | **Hecho** | `arena-cero-parte-10` |
 
 ## Arena Cero, parte 1 — Motor 3D simulado (hecho)
 
@@ -215,6 +215,18 @@ Medido con `pruebas/exportado.mjs` del juego (el HTML exportado, desde file://, 
   36 (antes 34 y 21); tableta ×3: 59 y 55.
 - OJO: son móviles SIMULADOS (un ordenador con el procesador frenado y sin GPU). En un móvil de
   verdad hay que mirarlo: está en PRUEBAS_PENDIENTES.md.
+
+## Arena Cero, parte 10 — El reto: alturas y rampas (hecho) · Chispa 1.3.0
+
+- En el motor: suelos a distintas alturas y rampas (tipos de casilla con «altura del suelo» y
+  «rampa»; `mapa.alturaEn`; el raycaster, la física, los caminos y la vista 3D lo saben), suelo y
+  techo con números enteros, y el cierre de la versión: **1.3.0**, `NOVEDADES_1.3.md`, la revisión
+  de seguridad (puntos 24 a 29) y lo pendiente de probar en aparatos de verdad.
+- 464 comandos, 1167 tests, 46 pruebas de navegador del editor y 105 de móviles, todo pasando.
+- En el juego: tarima con rampa en la armería y dos galerías con rampa en la sala del Núcleo.
+  `pruebas/parte10.mjs` (3). El juego exportado, con las alturas: 57-60, 33-44 y 59-60 fps
+  andando, y 49-57, 33-40 y 56-57 en la pelea con el jefe (móvil ×4, móvil pequeño ×6, tableta ×3).
+- Nada publicado ni subido: todo son commits locales con etiqueta.
 
 ## Cómo seguir si se corta
 

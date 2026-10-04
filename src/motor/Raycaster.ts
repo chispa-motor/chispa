@@ -51,7 +51,67 @@ export interface Rejilla {
   puertas: Uint8Array;
   /** Por casilla: cuánto está abierta su puerta, de 0 a 1. */
   aperturas: Float32Array;
+  /**
+   * SUELOS A DISTINTAS ALTURAS (si no hay ninguno, no se pone y no cuesta nada). Por casilla:
+   * `alturas` = la altura de su suelo en su lado bajo (en casillas: 1 = hasta el techo);
+   * `subidas` = cuánto sube hasta su lado alto (0 si es llano);
+   * `rampas` = hacia dónde sube: 0 = llano, 1 = derecha (+x), 2 = izquierda, 3 = arriba (+y), 4 = abajo.
+   */
+  alturas?: Float32Array;
+  subidas?: Float32Array;
+  rampas?: Uint8Array;
 }
+
+/** La altura del suelo en un punto (x, y en casillas) de una rejilla con suelos a distintas alturas. */
+export function alturaDelSuelo(rejilla: Rejilla, x: number, y: number): number {
+  const { alturas, subidas, rampas, columnas, filas } = rejilla;
+  if (!alturas || !subidas || !rampas) return 0;
+  const cx = Math.floor(x);
+  const cy = Math.floor(y);
+  // (escrito así, un NaN también cae fuera)
+  if (!(cx >= 0 && cy >= 0 && cx < columnas && cy < filas)) return 0;
+  const i = cy * columnas + cx;
+  const rampa = rampas[i];
+  if (!rampa) return alturas[i];
+  const cuanto = rampa === 1 ? x - cx : rampa === 2 ? 1 - (x - cx) : rampa === 3 ? y - cy : 1 - (y - cy);
+  return alturas[i] + subidas[i] * cuanto;
+}
+
+/**
+ * Una fila de suelo (o de techo) con números enteros. Va aparte, y pequeña, para que el navegador
+ * la convierta en código rápido: es el bucle que más píxeles pinta de todo el motor.
+ * `fx`, `fy`: el punto del mundo del primer píxel, en punto fijo (16 bits de decimales; la Y, del revés).
+ * `m`: cuánta luz (de 0 a 256), o -1 para copiar el color tal cual.
+ */
+function filaRapida(
+  pantalla: Uint32Array, base: number, W: number, y: number, limites: Int32Array, esSuelo: boolean,
+  fx: number, fy: number, dfx: number, dfy: number,
+  fija: Textura | null, colorLiso: number, suelos: Uint8Array | null, columnas: number, filas: number, texturas: Textura[],
+  m: number, nieblaRB: number, nieblaG: number,
+): void {
+  for (let x = 0; x < W; x++, fx += dfx, fy += dfy) {
+    if (esSuelo ? y < limites[x] : y >= limites[x]) continue;
+    let tex = fija;
+    if (suelos !== null) {
+      const cx = fx >> 16;
+      const cy = -fy >> 16;
+      if (cx >= 0 && cy >= 0 && cx < columnas && cy < filas) {
+        const s = suelos[cy * columnas + cx];
+        if (s !== 0) tex = texturas[s - 1] ?? fija;
+      }
+    }
+    if (tex === null) {
+      pantalla[base + x] = colorLiso;
+      continue;
+    }
+    const tw = tex.ancho;
+    const c = tex.pix[(((fy & 65535) * tex.alto) >> 16) * tw + (((fx & 65535) * tw) >> 16)];
+    pantalla[base + x] = m < 0 ? c | 0xff000000 : 0xff000000 | (((((c & 0xff00ff) * m) >>> 8) & 0xff00ff) + nieblaRB) | (((((c & 0xff00) * m) >>> 8) & 0xff00) + nieblaG);
+  }
+}
+
+/** Cuántos «escalones» del relieve se apuntan por columna para tapar los sprites que quedan detrás. */
+const TAPAS_POR_COLUMNA = 6;
 
 export interface Ojo {
   x: number;
@@ -117,6 +177,10 @@ export class Raycaster {
   /** Por columna: dónde empieza y dónde acaba la pared (entre medias no hay ni suelo ni techo). */
   private arriba = new Int32Array(0);
   private abajo = new Int32Array(0);
+  /** Con suelos a distintas alturas, por columna: pares (distancia, fila) = «de esa distancia en adelante, de esa fila hacia abajo está tapado». */
+  private tapas = new Float32Array(0);
+  private cuantasTapas = new Uint8Array(0);
+  private hayRelieve = false;
 
   // Lo del último fotograma pintado (para proyectar puntos después: vista3d.enPantalla)
   private ojo: Ojo = { x: 0, y: 0, angulo: 0, campo: 1, altura: 0.5, inclinacion: 0 };
@@ -134,6 +198,8 @@ export class Raycaster {
     this.profundidad = new Float32Array(ancho);
     this.arriba = new Int32Array(ancho);
     this.abajo = new Int32Array(ancho);
+    this.tapas = new Float32Array(ancho * TAPAS_POR_COLUMNA * 2);
+    this.cuantasTapas = new Uint8Array(ancho);
   }
 
   /** Pinta un fotograma entero. `sprites` se ordena (del más lejano al más cercano). */
@@ -151,6 +217,8 @@ export class Raycaster {
 
     this.pintarParedes(rejilla, texturas, ojo, ambiente);
     this.pintarSueloYTecho(rejilla, texturas, ojo, ambiente);
+    this.hayRelieve = !!(rejilla.alturas && rejilla.subidas && rejilla.rampas);
+    if (this.hayRelieve) this.pintarRelieve(rejilla, texturas, ojo, ambiente);
     this.pintarSprites(ojo, ambiente, sprites);
   }
 
@@ -415,6 +483,17 @@ export class Raycaster {
       const colorLiso = 0xff000000 | (lb << 16) | (lg << 8) | lr;
       const directo = m === 256 && falta === 0;
 
+      // CAMINO RÁPIDO (el de casi siempre: sin más luz de la normal y con el mundo a mano).
+      // Todo con números enteros: la posición en el mundo va en «punto fijo» (16 bits de decimales),
+      // de la que salen con desplazamientos la casilla y el píxel de la textura; y el color se
+      // oscurece y se mezcla con la niebla con dos multiplicaciones (rojo y azul a la vez).
+      if (brillo <= 1 && Math.abs(mx) < 30000 && Math.abs(my) < 30000 && Math.abs(pasoX * W) < 30000 && Math.abs(pasoY * W) < 30000) {
+        // (la Y del mundo va hacia arriba y la de la imagen hacia abajo: se lleva ya del revés)
+        filaRapida(pantalla, fila, W, y, esSuelo ? abajo : arriba, esSuelo, Math.round(mx * 65536), Math.round(-my * 65536), Math.round(pasoX * 65536), Math.round(-pasoY * 65536),
+          fija, colorLiso, esSuelo ? suelos : null, columnas, filas, texturas, directo ? -1 : m, (ab << 16) | ar, ag << 8);
+        continue;
+      }
+
       for (let x = 0; x < W; x++, mx += pasoX, my += pasoY) {
         if (esSuelo ? y < abajo[x] : y >= arriba[x]) continue;
         let tex = fija;
@@ -448,6 +527,221 @@ export class Raycaster {
         if (g > 255) g = 255;
         if (b > 255) b = 255;
         pantalla[fila + x] = 0xff000000 | (b << 16) | (g << 8) | r;
+      }
+    }
+  }
+
+  // ───────────────────────── 2b. Suelos a distintas alturas ─────────────────────────
+
+  /**
+   * Las tarimas y las rampas: los suelos que no están a ras del suelo de siempre. Se pintan ENCIMA de
+   * lo anterior, columna a columna y de cerca a lejos: de cada casilla levantada, su frente (el
+   * escalón) y su parte de arriba. `tope` es la fila hasta la que ya está pintado lo de más cerca:
+   * lo de más lejos solo pinta por encima de ella.
+   */
+  private pintarRelieve(rejilla: Rejilla, texturas: Textura[], ojo: Ojo, ambiente: Ambiente): void {
+    const W = this.ancho;
+    const H = this.alto;
+    const pantalla = this.pantalla;
+    const { columnas, filas, paredes, puertas, suelos } = rejilla;
+    const alturas = rejilla.alturas!;
+    const subidas = rejilla.subidas!;
+    const rampas = rejilla.rampas!;
+    const dirX = Math.cos(ojo.angulo);
+    const dirY = Math.sin(ojo.angulo);
+    const planoX = dirY * this.tangente;
+    const planoY = -dirX * this.tangente;
+    const focal = this.focal;
+    const horizonte = this.horizonte;
+    const ojoZ = Math.min(Math.max(ojo.altura, 0.02), 0.98);
+    const niebla = ambiente.niebla;
+    const nr = niebla ? niebla.color & 255 : 0;
+    const ng = niebla ? (niebla.color >>> 8) & 255 : 0;
+    const nb = niebla ? (niebla.color >>> 16) & 255 : 0;
+    const brillo = Math.max(0, ambiente.brillo);
+    const tapas = this.tapas;
+    const cuantas = this.cuantasTapas;
+    const fija = ambiente.suelo;
+
+    for (let x = 0; x < W; x++) {
+      cuantas[x] = 0;
+      const limite = this.profundidad[x];
+      const camara = (2 * (x + 0.5)) / W - 1;
+      const rx = dirX + planoX * camara;
+      const ry = dirY + planoY * camara;
+      let cx = Math.floor(ojo.x);
+      let cy = Math.floor(ojo.y);
+      const deltaX = rx === 0 ? 1e30 : Math.abs(1 / rx);
+      const deltaY = ry === 0 ? 1e30 : Math.abs(1 / ry);
+      const pasoX = rx < 0 ? -1 : 1;
+      const pasoY = ry < 0 ? -1 : 1;
+      let ladoX = rx < 0 ? (ojo.x - cx) * deltaX : (cx + 1 - ojo.x) * deltaX;
+      let ladoY = ry < 0 ? (ojo.y - cy) * deltaY : (cy + 1 - ojo.y) * deltaY;
+      let entrada = 0;
+      let deLado = false;
+      // La altura del suelo por donde se ha salido de la casilla anterior, y hasta qué fila está ya pintado
+      let antes = alturaDelSuelo(rejilla, ojo.x, ojo.y);
+      let tope = H;
+
+      for (let pasos = 0; pasos < MAXIMO_PASOS && tope > 0; pasos++) {
+        const salida = ladoX < ladoY ? ladoX : ladoY;
+        if (entrada >= limite) break;
+        const dentro = cx >= 0 && cy >= 0 && cx < columnas && cy < filas;
+        if (!dentro && pasos > 0 && ((cx < 0 && pasoX < 0) || (cy < 0 && pasoY < 0) || (cx >= columnas && pasoX > 0) || (cy >= filas && pasoY > 0))) break;
+        const i = dentro ? cy * columnas + cx : -1;
+        const llano = i < 0 || (paredes[i] !== 0 && puertas[i] === 0) || (alturas[i] === 0 && subidas[i] === 0);
+        if (llano) {
+          if (i >= 0 && paredes[i] !== 0 && puertas[i] === 0 && pasos > 0) break;
+          antes = 0;
+        } else {
+          const hasta = salida < limite ? salida : limite;
+          // La altura al entrar y al salir (en una rampa cambia a lo largo del rayo)
+          const rampa = rampas[i];
+          let h0 = alturas[i];
+          let h1 = h0;
+          if (rampa) {
+            const ex = ojo.x + rx * entrada - cx;
+            const ey = ojo.y + ry * entrada - cy;
+            const sx = ojo.x + rx * hasta - cx;
+            const sy = ojo.y + ry * hasta - cy;
+            const c0 = rampa === 1 ? ex : rampa === 2 ? 1 - ex : rampa === 3 ? ey : 1 - ey;
+            const c1 = rampa === 1 ? sx : rampa === 2 ? 1 - sx : rampa === 3 ? sy : 1 - sy;
+            h0 = alturas[i] + subidas[i] * (c0 < 0 ? 0 : c0 > 1 ? 1 : c0);
+            h1 = alturas[i] + subidas[i] * (c1 < 0 ? 0 : c1 > 1 ? 1 : c1);
+          }
+          const tex = (suelos[i] ? texturas[suelos[i] - 1] : null) ?? fija;
+
+          // 1. El frente (el escalón): de la altura de antes a la de entrada, a la distancia de entrada
+          if (pasos > 0 && h0 > antes + 1e-4 && entrada > CERCA) {
+            const escala = focal / entrada;
+            const yAbajo = horizonte + (ojoZ - antes) * escala;
+            const yArriba = horizonte + (ojoZ - h0) * escala;
+            const y0 = Math.max(0, Math.ceil(yArriba));
+            const y1 = Math.min(tope, Math.ceil(yAbajo));
+            if (y1 > y0) {
+              const nitidez = this.nitidez(ambiente, entrada);
+              const m = Math.round(nitidez * brillo * (deLado ? SOMBRA_DE_LADO : 1) * 0.9);
+              const falta = 256 - nitidez;
+              const ar = (nr * falta) >> 8;
+              const ag = (ng * falta) >> 8;
+              const ab = (nb * falta) >> 8;
+              if (!tex) {
+                const liso = ambiente.colorSuelo;
+                const color = 0xff000000 | (Math.min(255, ((((liso >>> 16) & 255) * m) >> 8) + ab) << 16) | (Math.min(255, ((((liso >>> 8) & 255) * m) >> 8) + ag) << 8) | Math.min(255, (((liso & 255) * m) >> 8) + ar);
+                for (let y = y0, p = y0 * W + x; y < y1; y++, p += W) pantalla[p] = color;
+              } else {
+                const tw = tex.ancho;
+                const th = tex.alto;
+                // Por dónde se ha dado en el frente (de 0 a 1), y la altura de cada fila (la imagen, de abajo arriba)
+                let u = deLado ? ojo.x + entrada * rx : ojo.y + entrada * ry;
+                u -= Math.floor(u);
+                let tx = (u * tw) | 0;
+                if (tx >= tw) tx = tw - 1;
+                const porFila = 1 / escala;
+                for (let y = y0, p = y0 * W + x; y < y1; y++, p += W) {
+                  const z = ojoZ - (y + 0.5 - horizonte) * porFila;
+                  let ty = ((1 - (z - Math.floor(z))) * th) | 0;
+                  if (ty >= th) ty = th - 1;
+                  const c = tex.pix[ty * tw + tx];
+                  let r = (((c & 255) * m) >> 8) + ar;
+                  let g = ((((c >>> 8) & 255) * m) >> 8) + ag;
+                  let b = ((((c >>> 16) & 255) * m) >> 8) + ab;
+                  if (r > 255) r = 255;
+                  if (g > 255) g = 255;
+                  if (b > 255) b = 255;
+                  pantalla[p] = 0xff000000 | (b << 16) | (g << 8) | r;
+                }
+              }
+            }
+            if (y0 < tope) {
+              tope = y0;
+              const n = cuantas[x];
+              if (n < TAPAS_POR_COLUMNA) {
+                tapas[(x * TAPAS_POR_COLUMNA + n) * 2] = entrada;
+                tapas[(x * TAPAS_POR_COLUMNA + n) * 2 + 1] = tope;
+                cuantas[x] = n + 1;
+              }
+            }
+          }
+
+          // 2. La parte de arriba: de donde se entra a donde se sale (solo si se ve desde arriba)
+          const cerca = entrada < CERCA ? CERCA : entrada;
+          if (hasta > cerca) {
+            const yCerca = horizonte + ((ojoZ - h0) * focal) / cerca;
+            const yLejos = horizonte + ((ojoZ - h1) * focal) / hasta;
+            const y0 = Math.max(0, Math.ceil(yLejos));
+            const y1 = Math.min(tope, Math.ceil(yCerca));
+            if (y1 > y0 && yLejos < yCerca) {
+              // La altura a lo largo del rayo: a + b·t (en un llano, b = 0)
+              const b = hasta - entrada > 1e-6 ? (h1 - h0) / (hasta - entrada) : 0;
+              const a = h0 - b * entrada;
+              const numerador = (ojoZ - a) * focal;
+              const liso = ambiente.colorSuelo;
+              const tw = tex ? tex.ancho : 0;
+              const th = tex ? tex.alto : 0;
+              // (una rampa, un pelín más clara o más oscura que el llano, para que se note que sube)
+              const luzRampa = rampa ? 1.08 : 1;
+              // (este bucle es el que más pinta: la niebla se calcula aquí mismo, sin llamar a nada)
+              const luz = brillo * luzRampa;
+              const sinNiebla = !niebla;
+              const nDesde = niebla ? niebla.desde : 0;
+              const nHasta = niebla ? niebla.hasta : 1;
+              const nPorCasilla = niebla ? 256 / (niebla.hasta - niebla.desde) : 0;
+              const pix = tex ? tex.pix : null;
+              const bFocal = b * focal;
+              const filaCero = 0.5 - horizonte + bFocal;
+              for (let y = y0, p = y0 * W + x; y < y1; y++, p += W) {
+                const divisor = y + filaCero;
+                if (divisor <= 1e-6) continue;
+                let t = numerador / divisor;
+                if (t < cerca) t = cerca;
+                else if (t > hasta) t = hasta;
+                const nitidez = sinNiebla || t <= nDesde ? 256 : t >= nHasta ? 0 : ((nHasta - t) * nPorCasilla) | 0;
+                let c = liso;
+                if (pix) {
+                  let tx = ((ojo.x + rx * t - cx) * tw) | 0;
+                  let ty = ((1 - (ojo.y + ry * t - cy)) * th) | 0;
+                  if (tx >= tw) tx = tw - 1;
+                  else if (tx < 0) tx = 0;
+                  if (ty >= th) ty = th - 1;
+                  else if (ty < 0) ty = 0;
+                  c = pix[ty * tw + tx];
+                }
+                const m = (nitidez * luz) | 0;
+                const falta = 256 - nitidez;
+                let r = (((c & 255) * m) >> 8) + ((nr * falta) >> 8);
+                let g = ((((c >>> 8) & 255) * m) >> 8) + ((ng * falta) >> 8);
+                let bb = ((((c >>> 16) & 255) * m) >> 8) + ((nb * falta) >> 8);
+                if (r > 255) r = 255;
+                if (g > 255) g = 255;
+                if (bb > 255) bb = 255;
+                pantalla[p] = 0xff000000 | (bb << 16) | (g << 8) | r;
+              }
+              if (y0 < tope) {
+                tope = y0;
+                const n = cuantas[x];
+                if (n < TAPAS_POR_COLUMNA) {
+                  tapas[(x * TAPAS_POR_COLUMNA + n) * 2] = hasta;
+                  tapas[(x * TAPAS_POR_COLUMNA + n) * 2 + 1] = tope;
+                  cuantas[x] = n + 1;
+                }
+              }
+            }
+          }
+          antes = h1;
+        }
+        // A la casilla siguiente
+        if (ladoX < ladoY) {
+          entrada = ladoX;
+          ladoX += deltaX;
+          cx += pasoX;
+          deLado = false;
+        } else {
+          entrada = ladoY;
+          ladoY += deltaY;
+          cy += pasoY;
+          deLado = true;
+        }
       }
     }
   }
@@ -516,13 +810,26 @@ export class Raycaster {
       const opaco = s.opacidad >= 0.99;
       const alfa = Math.round(Math.min(1, s.opacidad) * 256);
 
+      const relieve = this.hayRelieve;
       for (let x = x0; x < x1; x++) {
         if (fondo >= profundidad[x]) continue;
         let tx = ((x - izquierda) * pasoX) | 0;
         if (tx >= tw) tx = tw - 1;
         if (s.voltear) tx = tw - 1 - tx;
         let ty = (y0 - yArriba) * pasoY;
-        for (let y = y0, p = y0 * W + x; y < y1; y++, p += W, ty += pasoY) {
+        // Con suelos a distintas alturas: una tarima que está delante le tapa los pies
+        let fin = y1;
+        if (relieve) {
+          const base = x * TAPAS_POR_COLUMNA * 2;
+          for (let n = this.cuantasTapas[x] - 1; n >= 0; n--) {
+            if (this.tapas[base + n * 2] < fondo) {
+              const fila = this.tapas[base + n * 2 + 1];
+              if (fila < fin) fin = fila;
+              break;
+            }
+          }
+        }
+        for (let y = y0, p = y0 * W + x; y < fin; y++, p += W, ty += pasoY) {
           const fy = ty | 0;
           const c = pix[(fy >= th ? th - 1 : fy) * tw + tx];
           const a = c >>> 24;

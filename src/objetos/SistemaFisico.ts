@@ -199,7 +199,10 @@ export class SistemaFisico {
     for (const objeto of escena.objetos) {
       if (objeto.destruido) continue;
       const mapa = objeto.obtener(MapaCasillas);
-      if (mapa?.activo) mapas.push(mapa);
+      if (mapa?.activo) {
+        mapa.conRelieve = mapa.tieneRelieve;
+        mapas.push(mapa);
+      }
       const recorrido = objeto.obtener(Recorrido);
       const conRecorrido = recorrido !== undefined && recorrido.activo;
       if (conRecorrido) recorridos.push(recorrido);
@@ -383,11 +386,20 @@ export class SistemaFisico {
     };
     for (const s of cerca.rejilla.consultarConGrandes(caja)) meter(s);
     for (const s of cerca.moviles) meter(s);
+    let suelo: number | null = null;
     for (const m of cerca.mapas) {
+      // Suelos a distintas alturas: un escalón demasiado alto para donde está ahora el cuerpo es como una pared
+      const relieve = m.conRelieve;
+      const desde = relieve ? m.alturaBajo(k) : 0;
+      if (relieve) suelo = Math.max(suelo ?? 0, desde);
+      const cx = (k.izquierda + k.derecha) / 2;
+      const cy = (k.abajo + k.arriba) / 2;
       for (const casilla of m.casillasEn(caja)) {
         if (m.solidaEn(casilla.columna, casilla.fila, casilla.tipo)) res.push({ caja: casilla.caja, objeto: m.objeto, soloArriba: propio(m.tipos, casilla.tipo)?.soloDesdeArriba ?? false });
+        else if (relieve && m.esEscalon(casilla.columna, casilla.fila, cx, cy, desde)) res.push({ caja: casilla.caja, objeto: m.objeto, soloArriba: false });
       }
     }
+    c.objeto.alturaSuelo = suelo;
     return res;
   }
 

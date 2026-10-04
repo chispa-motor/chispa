@@ -75,6 +75,7 @@ export function buscarCamino(m: MapaCasillas, desde: Vector2, hasta: Vector2, ra
   const indice = (c: number, f: number) => (f - f0) * ancho + (c - c0);
   const dentro = (c: number, f: number) => c >= c0 && c <= c1 && f >= f0 && f <= f1;
 
+  const relieve = m.tieneRelieve;
   const coste = new Map<number, number>();
   const venida = new Map<number, number>();
   const abiertos = new Monticulo();
@@ -102,6 +103,8 @@ export function buscarCamino(m: MapaCasillas, desde: Vector2, hasta: Vector2, ra
         if (!dentro(nc, nf) || !casillaLibre(m, nc, nf)) continue;
         // En diagonal, solo si las dos casillas de al lado están libres (no se cortan esquinas)
         if (dc && df && (!casillaLibre(m, c + dc, f) || !casillaLibre(m, c, f + df))) continue;
+        // Suelos a distintas alturas: no se sube un escalón demasiado alto (hay que ir por la rampa)
+        if (relieve && (escalonEntre(m, c, f, nc, nf) || (dc && df && (escalonEntre(m, c, f, c + dc, f) || escalonEntre(m, c, f, c, f + df) || escalonEntre(m, c + dc, f, nc, nf) || escalonEntre(m, c, f + df, nc, nf))))) continue;
         const n = indice(nc, nf);
         const nuevo = g + (dc && df ? Math.SQRT2 : 1);
         if (nuevo >= (coste.get(n) ?? Infinity)) continue;
@@ -119,6 +122,16 @@ export function buscarCamino(m: MapaCasillas, desde: Vector2, hasta: Vector2, ra
   casillas.reverse();
   if (finExacto) casillas[casillas.length - 1] = hasta.copiar();
   return estirar(m, desde, casillas, radio);
+}
+
+/** ¿Hay que subir un escalón demasiado alto para pasar de una casilla a la de al lado? */
+function escalonEntre(m: MapaCasillas, c: number, f: number, nc: number, nf: number): boolean {
+  const a = m.cajaDe(c, f);
+  const b = m.centroDe(nc, nf);
+  // La altura de la casilla de salida, en su punto más cercano a la de llegada
+  const x = Math.min(a.derecha - 0.01, Math.max(a.izquierda + 0.01, b.x));
+  const y = Math.min(a.arriba - 0.01, Math.max(a.abajo + 0.01, b.y));
+  return m.esEscalon(nc, nf, x, y, m.alturaEn(x, y));
 }
 
 /** Quita los puntos intermedios que no hacen falta (si se puede ir recto, se va recto). */
@@ -141,11 +154,21 @@ export function lineaLibre(m: MapaCasillas, a: Vector2, b: Vector2, radio = 0): 
   const largo = b.restar(a).longitud();
   const pasos = Math.max(1, Math.ceil(largo / (m.tamano / 4)));
   const r = Math.min(radio, m.tamano * 0.45);
+  const relieve = m.tieneRelieve;
+  // (con suelos a distintas alturas: la altura de cada esquina en el paso anterior)
+  const antes = [0, 0, 0, 0];
+  const esquinas = [[-r, -r], [r, -r], [-r, r], [r, r]];
   for (let k = 0; k <= pasos; k++) {
     const x = a.x + ((b.x - a.x) * k) / pasos;
     const y = a.y + ((b.y - a.y) * k) / pasos;
-    for (const [ox, oy] of [[-r, -r], [r, -r], [-r, r], [r, r]]) {
+    for (let e = 0; e < 4; e++) {
+      const [ox, oy] = esquinas[e];
       if (!casillaLibre(m, m.columnaEn(x + ox), m.filaEn(y + oy))) return false;
+      if (!relieve) continue;
+      // En línea recta no se puede si por el camino hay que subir de golpe más de un escalón
+      const h = m.alturaEn(x + ox, y + oy);
+      if (k > 0 && h - antes[e] > m.escalon + 0.01) return false;
+      antes[e] = h;
     }
   }
   return true;

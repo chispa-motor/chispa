@@ -2,7 +2,7 @@
 
 > Se genera sola con `npm run manual` (no la cambies a mano). Un test comprueba que no falta ningún comando y que cada ejemplo funciona.
 
-Todos los comandos de Chispa (463), una línea cada uno, para tenerla abierta mientras programas o imprimirla. Para aprender con calma, el [curso](APRENDE_CHISPA.md).
+Todos los comandos de Chispa (464), una línea cada uno, para tenerla abierta mientras programas o imprimirla. Para aprender con calma, el [curso](APRENDE_CHISPA.md).
 
 En los ejemplos se usan estas variables y esta función, como si ya las tuvieras (y en la escena hay un Jugador y un Mapa de casillas):
 
@@ -724,6 +724,7 @@ Las líneas que terminan en `:` empiezan un bloque: lo de dentro va debajo, con 
 | `mapa.abrirPuerta(columna, fila, segundos)` | Solo en mapas: abre la puerta de esa casilla poco a poco (0,6 segundos si no se dice). | `mapa.abrirPuerta(20, 20)` |
 | `mapa.cerrarPuerta(columna, fila, segundos)` | Solo en mapas: cierra la puerta de esa casilla poco a poco. | `mapa.cerrarPuerta(20, 20)` |
 | `mapa.puertaAbierta(columna, fila)` | Solo en mapas: verdadero si la puerta de esa casilla está abierta lo bastante para pasar. | `si mapa.puertaAbierta(20, 20):` |
+| `mapa.alturaEn(x, y)` | Solo en mapas: a qué altura está el SUELO en ese punto del mundo, en píxeles (0 = el suelo de siempre). | `mostrar(mapa.alturaEn(yo.x, yo.y))` |
 | `mapa.solidoEn(x, y)` | Solo en mapas: verdadero si en ese punto del mundo hay una casilla SÓLIDA (una pared). | `si mapa.solidoEn(yo.x + 40, yo.y):` |
 | `mapa.esPuerta(columna, fila)` | Solo en mapas: verdadero si en esa casilla hay una puerta (abierta o cerrada). | `si mapa.esPuerta(20, 20):` |
 

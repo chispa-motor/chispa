@@ -2,7 +2,7 @@
 
 > Este archivo se genera solo con `npm run manual`, a partir de la API de verdad (no lo cambies a mano: cambia `src/chispa/api/curso.ts`). Un test ejecuta cada ejemplo, cada ejercicio y cada mini proyecto para comprobar que funcionan.
 
-Un curso por niveles para aprender a programar juegos con Chispa, aunque no hayas programado nunca. Salen **todos** los comandos que existen (463), cada uno con qué hace, un ejemplo corto que funciona y el error que más se comete con él.
+Un curso por niveles para aprender a programar juegos con Chispa, aunque no hayas programado nunca. Salen **todos** los comandos que existen (464), cada uno con qué hace, un ejemplo corto que funciona y el error que más se comete con él.
 
 **Cómo usarlo:**
 
@@ -8119,6 +8119,23 @@ cuando empieza:
 ```
 cuando empieza:
     mostrar(yo.puertaAbierta(20, 20))
+```
+
+#### `mapa.alturaEn(x, y)`
+
+Solo en mapas: a qué altura está el SUELO en ese punto del mundo, en píxeles (0 = el suelo de siempre).
+
+```
+cuando empieza:
+    variable m = buscar("Mapa")
+    mostrar(m.alturaEn(10, 10))
+```
+
+**Error típico:** Darle un vector: quiere los dos números, la x y la y. Chispa te avisa con un error que explica qué pasa.
+
+```
+cuando empieza:
+    mostrar(buscar("Mapa").alturaEn(yo.posicion))
 ```
 
 #### `mapa.solidoEn(x, y)`

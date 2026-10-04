@@ -34,7 +34,7 @@ import { INSTRUMENTOS, LIMITES_CANCION, type DefCancion, type NotaCancion, type 
 import type { DefControl, DefLuz } from './formato';
 import type { DatoInicial, DefCamara, DefColision, DefComportamiento, DefEscena, DefFisica, DefMapa, DefObjeto, DefProyecto, DefRecorrido, DefSprite } from './formato';
 import type { DefAnimacion } from '../objetos/componentes/Animador';
-import type { TipoCasilla } from '../objetos/componentes/MapaCasillas';
+import { RAMPAS, type TipoCasilla } from '../objetos/componentes/MapaCasillas';
 import { NOMBRES_MEZCLAS, PATRONES, TIPOS_RELLENO } from '../motor/Estilo';
 import { CLIMAS, type Clima } from '../objetos/Efectos';
 import type { Filtros } from '../motor/Filtros';
@@ -252,7 +252,7 @@ function fisica(v: unknown, ruta: Ruta): DefFisica {
 }
 
 function tipoCasilla(v: unknown, ruta: Ruta): TipoCasilla {
-  return campos<TipoCasilla>(objeto(v, ruta), ruta, { imagen: nombre, color, solida: logico, soloDesdeArriba: logico, puerta: logico });
+  return campos<TipoCasilla>(objeto(v, ruta), ruta, { imagen: nombre, color, solida: logico, soloDesdeArriba: logico, puerta: logico, altura: (x, r) => numero(x, r, 0, 4096), alturaBaja: (x, r) => numero(x, r, 0, 4096), rampa: (x, r) => unoDe(x, r, RAMPAS) });
 }
 
 function mapa(v: unknown, ruta: Ruta): DefMapa {

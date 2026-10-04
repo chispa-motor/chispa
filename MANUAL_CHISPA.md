@@ -2097,6 +2097,16 @@ Solo en mapas: el centro de una casilla, en el mundo (vector).
 yo.posicion = mapa.centroDeCasilla(2, 5)
 ```
 
+#### `mapa.alturaEn(x, y)`
+
+Solo en mapas: a qué altura está el SUELO en ese punto del mundo, en píxeles (0 = el suelo de siempre). Un tipo de casilla que no es sólida puede tener el suelo levantado (una tarima) o ser una rampa: se pone en el editor, en el tipo de casilla («altura del suelo» y «rampa»). En primera persona (vista3d) se ven a su altura, y solo se sube a ellas por una rampa o si el escalón es bajo.
+
+```
+variable mapa = buscar("Mapa")
+si mapa.alturaEn(yo.x, yo.y) > 0:
+    mostrar("Estoy subido a la tarima")
+```
+
 #### `mapa.solidoEn(x, y)`
 
 Solo en mapas: verdadero si en ese punto del mundo hay una casilla SÓLIDA (una pared). Una casilla que se atraviesa o una puerta abierta no cuentan. Para saber si algo cabe en un sitio, o si una bala ha llegado a una pared.

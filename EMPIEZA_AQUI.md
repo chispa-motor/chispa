@@ -376,8 +376,9 @@ Para probarlo en tu móvil: **Exportar → App para el móvil**.
 ¿Quieres aprender de verdad, paso a paso? Sigue el curso
 **[APRENDE_CHISPA.md](APRENDE_CHISPA.md)**: 5 niveles, cada comando con un
 ejemplo y el error que más se comete, ejercicios y un mini proyecto por nivel.
-Lo nuevo de esta versión está en **[NOVEDADES_1.2.md](NOVEDADES_1.2.md)**
-(y lo de la anterior, en [NOVEDADES_1.1.md](NOVEDADES_1.1.md)).
+Lo nuevo de esta versión (la primera persona) está en
+**[NOVEDADES_1.3.md](NOVEDADES_1.3.md)**, y lo de las anteriores, en
+[NOVEDADES_1.2.md](NOVEDADES_1.2.md) y [NOVEDADES_1.1.md](NOVEDADES_1.1.md).
 Para buscar algo rápido, la **[chuleta](CHULETA_CHISPA.md)** (una línea por
 comando; también hay botones para los dos arriba de la pestaña **Guía**).
 

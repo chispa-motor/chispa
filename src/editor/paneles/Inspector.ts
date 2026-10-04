@@ -21,6 +21,7 @@ import { NOMBRES_COLORES } from '../../motor/Color';
 import { DISTANCIA_POR_DEFECTO } from '../../objetos/componentes/Comportamiento';
 import { leerDatoInicial, tipoPorNombre, type DatoInicial, type DefControl, type DefEscena, type DefObjeto, type DefSprite } from '../../proyecto/formato';
 import { NOMBRES_CONTROLES } from '../../objetos/componentes/Control';
+import { ALTURA_MAXIMA_SUELO, ESCALON, type Rampa } from '../../objetos/componentes/MapaCasillas';
 import { CONTROLES_NUEVOS } from '../interfaz/controlesNuevos';
 import { FORMAS_DIBUJO, MAX_LADOS, POR_DEFECTO } from '../../objetos/formas/figuras';
 import { ESTILO_POR_DEFECTO, NOMBRES_MEZCLAS, PATRONES } from '../../motor/Estilo';
@@ -572,6 +573,7 @@ export class Inspector {
       botonIcono('goma', 'Borrar casillas (E)', () => this.vista.ponerHerramienta('goma'), 'Borrar', this.vista.herramienta === 'goma' ? 'activo' : ''),
     );
     const imagenes = Object.keys(e.proyecto.imagenes);
+    const usaVista3d = Object.values(e.proyecto.scripts).some((codigo) => codigo.includes('vista3d')) || Object.values(mapa.tipos).some((t) => t.altura);
     const listaTipos = h('div', { class: 'tipos-casilla' },
       tipos.map((nombre) => {
         const t = mapa.tipos[nombre];
@@ -591,6 +593,9 @@ export class Inspector {
             campoCasilla('sólida', `tipo.${nombre}.solida`, t.solida, (v) => e.ponerTipoCasilla(ref, nombre, { ...t, solida: v }), 'Sólida = pared o suelo. Si no, se atraviesa (agua, pinchos, monedas...) y avisa con "cuando toco"'),
             t.solida ? campoCasilla('solo desde arriba', `tipo.${nombre}.soloDesdeArriba`, t.soloDesdeArriba ?? false, (v) => e.ponerTipoCasilla(ref, nombre, { ...t, soloDesdeArriba: v || undefined }), 'Plataforma que se atraviesa saltando desde abajo: solo para a lo que cae encima') : null,
             t.solida ? campoCasilla('es una puerta', `tipo.${nombre}.puerta`, t.puerta ?? false, (v) => e.ponerTipoCasilla(ref, nombre, { ...t, puerta: v || undefined }), 'Una puerta se abre y se cierra desde el código: mapa.abrirPuerta(columna, fila). Abierta, se pasa por ella') : null,
+            // Suelos a distintas alturas (para la vista en primera persona): solo en las que no son sólidas
+            !t.solida && usaVista3d ? campoNumero('altura del suelo', `tipo.${nombre}.altura`, t.altura ?? 0, (v) => e.ponerTipoCasilla(ref, nombre, { ...t, altura: (v ?? 0) > 0 ? v : undefined, ...((v ?? 0) > 0 ? {} : { rampa: undefined, alturaBaja: undefined }) }), { min: 0, max: Math.floor(mapa.tamano * ALTURA_MAXIMA_SUELO), paso: 1, ayuda: `En primera persona (vista3d): cuántos píxeles está levantado este suelo (una tarima). Como mucho ${Math.floor(mapa.tamano * ALTURA_MAXIMA_SUELO)}. Solo se sube andando si el escalón no pasa de ${Math.floor(mapa.tamano * ESCALON)}; si no, por una rampa` }) : null,
+            !t.solida && usaVista3d && (t.altura ?? 0) > 0 ? campoLista('rampa', `tipo.${nombre}.rampa`, t.rampa ?? '', [['', 'no (llano)'], ['derecha', 'sube hacia la derecha'], ['izquierda', 'sube hacia la izquierda'], ['arriba', 'sube hacia arriba'], ['abajo', 'sube hacia abajo']], (v) => e.ponerTipoCasilla(ref, nombre, { ...t, rampa: (v || undefined) as Rampa | undefined }), 'Una rampa: el suelo sube poco a poco hasta la «altura del suelo», hacia ese lado del mapa') : null,
             tipos.length > 1 ? botonIcono('basura', `Quitar el tipo "${nombre}" (y sus casillas)`, async () => {
               if (await confirmar('Quitar tipo de casilla', `¿Quitar "${nombre}" y borrar todas sus casillas del mapa?`, 'Quitar', true)) e.borrarTipoCasilla(ref, nombre);
             }, undefined, 'pequeno') : null,

@@ -40,7 +40,23 @@ export interface TipoCasilla {
   soloDesdeArriba?: boolean;
   /** Es una PUERTA: una casilla sólida que se puede abrir y cerrar (mapa.abrirPuerta). Abierta, se pasa por ella. */
   puerta?: boolean;
+  /**
+   * SUELO A OTRA ALTURA (solo en casillas que no son sólidas): cuántos píxeles está levantado.
+   * En la vista en primera persona (vista3d) se ve como una tarima, y solo se sube a ella si el
+   * escalón es pequeño (ESCALON) o por una rampa.
+   */
+  altura?: number;
+  /** Es una RAMPA: hacia qué lado sube. Va de `alturaBaja` (0 si no se dice) a `altura`. */
+  rampa?: Rampa;
+  alturaBaja?: number;
 }
+
+export const RAMPAS = ['derecha', 'izquierda', 'arriba', 'abajo'] as const;
+export type Rampa = (typeof RAMPAS)[number];
+/** El escalón más alto que se sube andando, en casillas (0,2 = la quinta parte del lado de una casilla). */
+export const ESCALON = 0.2;
+/** Lo más alto que puede estar un suelo, en casillas (más arriba, quien mira se daría con el techo). */
+export const ALTURA_MAXIMA_SUELO = 0.45;
 
 /** Cómo está una puerta: de 0 (cerrada) a 1 (abierta del todo), hacia dónde va y a qué velocidad (por segundo). */
 interface EstadoPuerta {
@@ -123,6 +139,72 @@ export class MapaCasillas extends Componente {
       p.apertura = p.objetivo > p.apertura ? Math.min(p.objetivo, p.apertura + paso) : Math.max(p.objetivo, p.apertura - paso);
       if (p.apertura === 0 && p.objetivo === 0) this.puertas.delete(clave);
     }
+  }
+
+  // ───────────────────────── Suelos a distintas alturas ─────────────────────────
+
+  /** ¿Hay algún tipo de casilla con el suelo levantado? (si no, todo lo de las alturas se salta) */
+  get tieneRelieve(): boolean {
+    for (const nombre in this.tipos) {
+      const t = this.tipos[nombre];
+      if (!t.solida && ((t.altura ?? 0) > 0 || (t.alturaBaja ?? 0) > 0)) return true;
+    }
+    return false;
+  }
+
+  /** Lo mismo que `tieneRelieve`, guardado: lo actualiza la física en cada paso (para no recorrer los tipos por cada cuerpo). */
+  conRelieve = false;
+
+  /** El escalón más alto que se sube andando, en píxeles. */
+  get escalon(): number {
+    return this.tamano * ESCALON;
+  }
+
+  /** Entre qué alturas (en píxeles) va el suelo de un tipo de casilla: [la baja, la alta]. Las sólidas, 0. */
+  alturasDe(tipo: string | null): [number, number] {
+    const t = tipo ? propio(this.tipos, tipo) : undefined;
+    if (!t || t.solida) return [0, 0];
+    const tope = this.tamano * ALTURA_MAXIMA_SUELO;
+    const alta = Math.min(tope, Math.max(0, t.altura ?? 0));
+    if (!t.rampa) return [alta, alta];
+    return [Math.min(tope, Math.max(0, t.alturaBaja ?? 0)), alta];
+  }
+
+  /** A qué altura está el suelo en un punto del mundo, en píxeles (0 = el suelo de siempre). */
+  alturaEn(x: number, y: number): number {
+    const c = this.columnaEn(x);
+    const f = this.filaEn(y);
+    const tipo = this.celdas.get(`${c},${f}`);
+    if (!tipo) return 0;
+    const t = propio(this.tipos, tipo);
+    if (!t || t.solida || (!t.altura && !t.alturaBaja)) return 0;
+    const [baja, alta] = this.alturasDe(tipo);
+    if (!t.rampa) return alta;
+    const u = (x - this.origen.x) / this.tamano - c;
+    const v = (y - this.origen.y) / this.tamano - f;
+    const cuanto = t.rampa === 'derecha' ? u : t.rampa === 'izquierda' ? 1 - u : t.rampa === 'arriba' ? v : 1 - v;
+    return baja + (alta - baja) * Math.min(1, Math.max(0, cuanto));
+  }
+
+  /**
+   * ¿Es esta casilla un ESCALÓN demasiado alto para quien está a la altura `desde` (píxeles) en
+   * el punto (x, y)? Se mira la altura de la casilla en su punto más cercano a quien anda.
+   */
+  esEscalon(columna: number, fila: number, x: number, y: number, desde: number): boolean {
+    const caja = this.cajaDe(columna, fila);
+    const px = Math.min(caja.derecha - 0.01, Math.max(caja.izquierda + 0.01, x));
+    const py = Math.min(caja.arriba - 0.01, Math.max(caja.abajo + 0.01, y));
+    return this.alturaEn(px, py) - desde > this.escalon + 0.01;
+  }
+
+  /** La altura del suelo bajo una caja: la más alta de su centro y sus cuatro esquinas (un pelín hacia dentro). */
+  alturaBajo(caja: Caja): number {
+    const m = 2;
+    const x0 = caja.izquierda + m;
+    const x1 = caja.derecha - m;
+    const y0 = caja.abajo + m;
+    const y1 = caja.arriba - m;
+    return Math.max(this.alturaEn((x0 + x1) / 2, (y0 + y1) / 2), this.alturaEn(x0, y0), this.alturaEn(x1, y0), this.alturaEn(x0, y1), this.alturaEn(x1, y1));
   }
 
   // ───────────────────────── Leer y cambiar casillas ─────────────────────────

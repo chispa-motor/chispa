@@ -56,6 +56,8 @@ const MAXIMO_PUNTOS_MINIMAPA = 400;
 const MAXIMO_CASILLAS_MINIMAPA = 6000;
 /** Cada cuánto se repinta un minimapa (entre medias se copia lo ya pintado). */
 export const MILISEGUNDOS_MINIMAPA = 66;
+/** El lienzo aparte del minimapa mide como mucho esto (ancho × alto, en píxeles). */
+export const PIXELES_MAXIMOS_MINIMAPA = 1024 * 1024;
 
 const entre = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
@@ -775,6 +777,8 @@ export class Control extends Componente {
     const escala = Math.min(4, Math.max(0.25, t ? Math.hypot(t.a, t.b) || 1 : 1));
     const ancho = Math.max(1, Math.ceil(w * escala));
     const alto = Math.max(1, Math.ceil(h * escala));
+    // Un minimapa descomunal no se guarda aparte (sería un lienzo enorme en memoria): se pinta directamente
+    if (!(ancho * alto <= PIXELES_MAXIMOS_MINIMAPA)) return (this.copiaMinimapa = null);
     const c = this.copiaMinimapa;
     if (c && c.ancho === ancho && c.alto === alto) return { ...c, nuevo: false };
     const hecho = Control.crearLienzo(ancho, alto);

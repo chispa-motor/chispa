@@ -32,7 +32,7 @@ import { colorAComponentes } from '../motor/Color';
 import type { Renderizador } from '../motor/Renderizador';
 import { Vector2 } from '../motor/Vector2';
 import { propio } from '../utilidades/seguro';
-import { MapaCasillas } from './componentes/MapaCasillas';
+import { MapaCasillas, RAMPAS } from './componentes/MapaCasillas';
 import type { Proyector } from './Particulas';
 import { Sprite } from './componentes/Sprite';
 import type { Escena } from './Escena';
@@ -99,6 +99,8 @@ export class Vista3D {
   private preparado: { mapa: MapaCasillas; version: number; firma: string; c0: number; f0: number; puertas: number[] } | null = null;
   private lienzo: HTMLCanvasElement | null = null;
   private imagen: ImageData | null = null;
+  /** Los píxeles de `imagen`, vistos como números de 32 bits (se hace una vez, no en cada fotograma). */
+  private pixelesDeLaImagen: Uint32Array | null = null;
   private sprites: Sprite3D[] = [];
   /** Dónde se pintó la última vez (para enPantalla). */
   private zona = { ancho: 1, alto: 1 };
@@ -155,7 +157,7 @@ export class Vista3D {
   // ───────────────────────── El mapa, preparado ─────────────────────────
 
   private preparar(m: MapaCasillas, escena: Escena): Rejilla {
-    const firma = Object.entries(m.tipos).map(([n, t]) => `${n}:${t.imagen ?? ''}:${t.color ?? ''}:${t.solida ? 1 : 0}:${t.puerta ? 1 : 0}`).join('|') + '#' + [...this.imagenDeTipo].join(',');
+    const firma = Object.entries(m.tipos).map(([n, t]) => `${n}:${t.imagen ?? ''}:${t.color ?? ''}:${t.solida ? 1 : 0}:${t.puerta ? 1 : 0}:${t.altura ?? 0}:${t.alturaBaja ?? 0}:${t.rampa ?? ''}`).join('|') + '#' + [...this.imagenDeTipo].join(',');
     const p = this.preparado;
     if (p && p.mapa === m && p.firma === firma && this.rejilla) {
       if (p.version !== m.version) {
@@ -199,6 +201,16 @@ export class Vista3D {
     paredes.fill(0);
     suelos.fill(0);
     puertas.fill(0);
+    // Suelos a distintas alturas: solo si el mapa tiene alguno (si no, ni se guardan ni se miran)
+    if (m.tieneRelieve) {
+      const n = columnas * filas;
+      rejilla.alturas = rejilla.alturas?.length === n ? rejilla.alturas.fill(0) : new Float32Array(n);
+      rejilla.subidas = rejilla.subidas?.length === n ? rejilla.subidas.fill(0) : new Float32Array(n);
+      rejilla.rampas = rejilla.rampas?.length === n ? rejilla.rampas.fill(0) : new Uint8Array(n);
+    } else {
+      rejilla.alturas = rejilla.subidas = undefined;
+      rejilla.rampas = undefined;
+    }
     // Una textura por tipo de casilla
     const indice = new Map<string, number>();
     const lista: Textura[] = [];
@@ -230,7 +242,15 @@ export class Vista3D {
           puertas[i] = 1;
           lasPuertas.push(i);
         }
-      } else suelos[i] = texturaDeTipo(tipo);
+      } else {
+        suelos[i] = texturaDeTipo(tipo);
+        if (rejilla.alturas && def && (def.altura || def.alturaBaja)) {
+          const [baja, alta] = m.alturasDe(tipo);
+          rejilla.alturas[i] = baja / m.tamano;
+          rejilla.subidas![i] = (alta - baja) / m.tamano;
+          rejilla.rampas![i] = def.rampa ? RAMPAS.indexOf(def.rampa) + 1 : 0;
+        }
+      }
     }
     // Hacia dónde va cada puerta: entre las dos paredes que tiene a los lados
     for (const i of lasPuertas) {
@@ -275,7 +295,7 @@ export class Vista3D {
       y: (yo.posicion.y - origenY) / t,
       angulo: (yo.transformacion.rotacion * Math.PI) / 180,
       campo: (Math.min(CAMPO_MAXIMO, Math.max(CAMPO_MINIMO, this.campo)) * Math.PI) / 180,
-      altura: Math.min(0.95, Math.max(0.05, this.altura)),
+      altura: Math.min(0.95, Math.max(0.05, this.altura + this.subirOjo(m, yo, t))),
       inclinacion: Math.min(1, Math.max(-1, this.inclinacion)),
     };
     const niebla = this.niebla;
@@ -305,7 +325,9 @@ export class Vista3D {
       const textura = this.texturaDeSprite(s, escena);
       if (!textura) continue;
       const flash = s.flashActual;
-      sprites.push({ x, y, ancho: s.anchoFinal / t, alto: s.altoFinal / t, elevacion: o.elevacion / t, textura, opacidad: s.opacidad, voltear: s.voltearX, tinte: flash ? aColor(flash, 0xffffffff) : 0, cuantoTinte: flash ? 0.85 : 0, dato: o });
+      // (con suelos a distintas alturas, cada cosa va apoyada en el suelo que pisa)
+      const suelo = rejilla.alturas ? (o.alturaSuelo ?? m.alturaEn(o.posicion.x, o.posicion.y)) : 0;
+      sprites.push({ x, y, ancho: s.anchoFinal / t, alto: s.altoFinal / t, elevacion: (o.elevacion + suelo) / t, textura, opacidad: s.opacidad, voltear: s.voltearX, tinte: flash ? aColor(flash, 0xffffffff) : 0, cuantoTinte: flash ? 0.85 : 0, dato: o });
     }
     if (sprites.length > MAXIMO_SPRITES) {
       sprites.sort((a, b) => Math.hypot(a.x - ojo.x, a.y - ojo.y) - Math.hypot(b.x - ojo.x, b.y - ojo.y));
@@ -314,6 +336,16 @@ export class Vista3D {
     this.spritesPintados = sprites.length;
     this.raycaster.pintar(rejilla, this.lista, ojo, ambiente, sprites);
     return true;
+  }
+
+  /** Lo que suben los ojos por el suelo que pisa quien mira (en casillas). Sube y baja suave, no de golpe. */
+  private sueloDelOjo = 0;
+  private subirOjo(m: MapaCasillas, yo: ObjetoJuego, t: number): number {
+    if (!this.rejilla?.alturas) return (this.sueloDelOjo = 0);
+    const suelo = (yo.alturaSuelo ?? m.alturaEn(yo.posicion.x, yo.posicion.y)) / t;
+    const falta = suelo - this.sueloDelOjo;
+    this.sueloDelOjo = Math.abs(falta) < 0.004 ? suelo : this.sueloDelOjo + falta * 0.3;
+    return this.sueloDelOjo;
   }
 
   /** Pinta la vista en la pantalla del juego. Devuelve falso si no había nada que pintar. */
@@ -326,13 +358,14 @@ export class Vista3D {
       const lienzo = this.lienzo;
       const ctx = lienzo.getContext?.('2d');
       if (ctx) {
-        if (lienzo.width !== rc.ancho || lienzo.height !== rc.alto || !this.imagen) {
+        if (lienzo.width !== rc.ancho || lienzo.height !== rc.alto || !this.imagen || !this.pixelesDeLaImagen) {
           lienzo.width = rc.ancho;
           lienzo.height = rc.alto;
           this.imagen = ctx.createImageData(rc.ancho, rc.alto);
+          this.pixelesDeLaImagen = new Uint32Array(this.imagen.data.buffer);
         }
         // (los colores ya están en el orden de la pantalla: se copian tal cual)
-        new Uint32Array(this.imagen.data.buffer).set(rc.pantalla);
+        this.pixelesDeLaImagen.set(rc.pantalla);
         ctx.putImageData(this.imagen, 0, 0);
         r.ctx.drawImage(lienzo, 0, 0, r.ancho, r.alto);
       }

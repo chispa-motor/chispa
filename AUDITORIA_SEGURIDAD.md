@@ -441,6 +441,24 @@ El editor como app no cambia su política: ya tenía `worker-src 'self'`.
 
 ---
 
+## Chispa 1.3: revisión de lo nuevo (primera persona)
+
+Lo nuevo de la 1.3 se ha mirado como lo miraría alguien que quiere hacer daño con un proyecto
+(`.chispa.json`) preparado a propósito o con un juego publicado. No abre ninguna puerta nueva a
+internet ni a los archivos: todo es pintar y calcular. Lo que se ha mirado, y cómo queda:
+
+| # | Qué se intentó | Qué pasa | Dónde se comprueba |
+|---|---|---|---|
+| 24 | **Colgar el juego con un mapa enorme o con números imposibles** en la vista 3D (posiciones `NaN` o infinitas, alturas negativas o gigantes, campo 0). | Cada rayo avanza como mucho 256 casillas; el mapa en primera persona mide como mucho 512×512; se pintan como mucho 400 sprites; la pantalla 3D va de 64 a 1280 columnas. Con números imposibles pinta algo raro, pero ni se cuelga ni falla. | `pruebas/vista3d.test.ts` («va deprisa», límites) y `pruebas/alturas.test.ts` («con números imposibles») |
+| 25 | **Colar cosas en los campos nuevos del proyecto**: `altura`, `alturaBaja` y `rampa` de un tipo de casilla, `elevacion` de un objeto, `puerta`, calidad «minima». | Se validan al abrir como todo lo demás: números entre límites, y `rampa` y `calidad` solo pueden ser una de sus palabras. Lo que no vale, no se abre. La altura de un suelo se recorta además al 45 % de la casilla al usarla. | `src/proyecto/validar.ts`; `pruebas/alturas.test.ts` («una rampa mal escrita no vale») |
+| 26 | **Quedarse con el ratón del usuario** (`raton.capturado`) para que no pueda salir. | El navegador solo lo da después de un clic del usuario en el juego y lo suelta SIEMPRE con Escape; Chispa no puede impedirlo. En aparatos táctiles ni se pide. Un juego no puede mover el ratón ni leerlo fuera de su pantalla. | `pruebas/vista3d.test.ts` («Mirar con el ratón», «Capturar el ratón no estropea los toques») |
+| 27 | **Gastar la memoria con un minimapa gigante** (el minimapa se guarda ahora en un lienzo aparte). | El lienzo aparte mide como mucho 1024×1024 píxeles; si el minimapa pide más, no se guarda aparte y se pinta directamente, como antes. | `PIXELES_MAXIMOS_MINIMAPA` en `Control.ts` |
+| 28 | **Leer imágenes de otro sitio** al convertirlas en texturas (el 3D lee los píxeles de las imágenes). | Las imágenes de un proyecto solo pueden ser «data URL» (van dentro del proyecto, validadas al abrir): no hay nada de otro sitio que leer. La política de seguridad de los juegos exportados (sin conexiones) no ha cambiado. | `pruebas/exportar.test.ts`; `pruebas/exportado.mjs` del juego (ninguna petición a internet) |
+| 29 | **`yo.enMinimapa` con algo que no sea un color** (por ejemplo `url(...)`), que acaba en el estilo de un lienzo. | Solo acepta verdadero, falso o un color que pase `esColorValido` (nombres, `#rrggbb`, `rgb()`/`hsl()` solo con números). | `pruebas/controles.test.ts` («enMinimapa explica lo que no vale») |
+
+Riesgo que se acepta: un juego en primera persona con la calidad en «alta» a propósito y miles de
+objetos puede ir lento en un móvil. No es un daño: es un juego lento, y «auto» lo baja solo.
+
 ## Revisado y sin problemas
 
 - **HTML con datos del usuario (XSS).** Toda la interfaz se construye con
