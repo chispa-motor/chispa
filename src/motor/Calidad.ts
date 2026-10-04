@@ -33,10 +33,10 @@
  * renderizador, las partículas, las luces y los filtros.
  */
 
-export type NivelCalidad = 'baja' | 'media' | 'alta';
+export type NivelCalidad = 'minima' | 'baja' | 'media' | 'alta';
 export type ModoCalidad = NivelCalidad | 'auto';
-export const MODOS_CALIDAD: ModoCalidad[] = ['auto', 'alta', 'media', 'baja'];
-const ORDEN: NivelCalidad[] = ['baja', 'media', 'alta'];
+export const MODOS_CALIDAD: ModoCalidad[] = ['auto', 'alta', 'media', 'baja', 'minima'];
+const ORDEN: NivelCalidad[] = ['minima', 'baja', 'media', 'alta'];
 
 export interface AjustesCalidad {
   /** Como mucho, estos píxeles del lienzo por cada punto de la pantalla. */
@@ -55,6 +55,8 @@ export const AJUSTES_CALIDAD: Record<NivelCalidad, AjustesCalidad> = {
   alta: { resolucion: 2, particulas: 1, sombrasDeLuz: true, filtrosCaros: true, columnas3d: 640 },
   media: { resolucion: 1.5, particulas: 0.6, sombrasDeLuz: true, filtrosCaros: true, columnas3d: 480 },
   baja: { resolucion: 1, particulas: 0.35, sombrasDeLuz: false, filtrosCaros: false, columnas3d: 320 },
+  // Para los aparatos más lentos: menos píxeles que puntos tiene la pantalla (se ve más gordo, pero va)
+  minima: { resolucion: 0.75, particulas: 0.25, sombrasDeLuz: false, filtrosCaros: false, columnas3d: 240 },
 };
 
 /** Cada cuánto se decide en automático (segundos), y cuántas veces seguidas tiene que ir sobrado para subir. */
@@ -161,3 +163,14 @@ export class Calidad {
 
 /** La calidad de ahora (un solo estado para todo el motor). */
 export const calidad = new Calidad();
+
+/**
+ * Cuántos píxeles del lienzo se pintan por cada punto de la pantalla: los que tenga la pantalla,
+ * pero no más de los que deja la calidad. En baja y en mínima (resolución 1 o menos), además, el
+ * lienzo nunca tiene más píxeles que el tamaño del juego por su resolución: en una tableta o un
+ * monitor grandes, pintar más que eso es trabajo que no se ve.
+ */
+export function pixelesPorPunto(dePantalla: number, resolucion: number, anchoJuego: number, anchoEnPantalla: number): number {
+  const tope = resolucion <= 1 && anchoEnPantalla > 0 ? (anchoJuego * resolucion) / anchoEnPantalla : Infinity;
+  return Math.min(dePantalla, resolucion, tope);
+}

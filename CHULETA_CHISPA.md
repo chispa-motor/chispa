@@ -687,8 +687,8 @@ Las líneas que terminan en `:` empiezan un bloque: lo de dentro va debajo, con 
 
 | Comando | Qué hace | Ejemplo |
 |---|---|---|
-| `pantalla.calidad` | La calidad con la que se pinta el juego: "auto" (la que aguante el aparato: si va a trompicones se baja sola, y si va sobrado vuelve a subir), "alta", "media" o "baja". | `pantalla.calidad = "auto"` |
-| `pantalla.nivelCalidad` | La calidad que hay puesta ahora mismo: "alta", "media" o "baja" (con pantalla.calidad = "auto" puede ir cambiando). | `mostrar(pantalla.nivelCalidad)` |
+| `pantalla.calidad` | La calidad con la que se pinta el juego: "auto" (la que aguante el aparato: si va a trompicones se baja sola, y si va sobrado vuelve a subir), "alta", "media", "baja" o "minima" (para aparatos muy lentos: menos píxeles de los que tiene la pantalla). | `pantalla.calidad = "auto"` |
+| `pantalla.nivelCalidad` | La calidad que hay puesta ahora mismo: "alta", "media", "baja" o "minima" (con pantalla.calidad = "auto" puede ir cambiando). | `mostrar(pantalla.nivelCalidad)` |
 | `pantalla.maximoFps` | Cuántos fotogramas por segundo se pintan como mucho (0 = los que dé la pantalla). | `pantalla.maximoFps = 30` |
 | `pantalla.orientacion` | Cómo hay que tener el móvil para jugar: "horizontal" (tumbado), "vertical" (de pie) o "cualquiera". | `pantalla.orientacion = "horizontal"` |
 

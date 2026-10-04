@@ -54,6 +54,8 @@ export const MAXIMO_CASILLAS = 100;
 /** Como mucho, estos puntos (objetos) y estas casillas en un minimapa. */
 const MAXIMO_PUNTOS_MINIMAPA = 400;
 const MAXIMO_CASILLAS_MINIMAPA = 6000;
+/** Cada cuánto se repinta un minimapa (entre medias se copia lo ya pintado). */
+export const MILISEGUNDOS_MINIMAPA = 66;
 
 const entre = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
@@ -526,15 +528,11 @@ export class Control extends Componente {
         const rb = Math.min(h / 2, 8);
         caja(ctx, x - w / 2, y - h / 2, w, h, rb, fondo);
         if (parte > 0) {
-          // Se recorta al hueco de la barra: así el relleno tiene las mismas esquinas redondas
-          ctx.save();
-          trazarCaja(ctx, x - w / 2, y - h / 2, w, h, rb);
-          ctx.clip();
-          ctx.fillStyle = principal;
-          ctx.fillRect(x - w / 2, y - h / 2, w * parte, h);
-          ctx.fillStyle = 'rgba(255,255,255,0.18)';
-          ctx.fillRect(x - w / 2, y - h / 2, w * parte, h * 0.4);
-          ctx.restore();
+          // El relleno, con las mismas esquinas redondas que el hueco. (Sin recortar: recortar con una
+          // forma redonda en cada fotograma es de lo más caro que se le puede pedir a un móvil)
+          const lleno = Math.max(w * parte, Math.min(w, rb * 2));
+          caja(ctx, x - w / 2, y - h / 2, lleno, h, rb, principal);
+          caja(ctx, x - w / 2 + rb / 2, y - h / 2 + 1, Math.max(0, lleno - rb), h * 0.4 - 1, rb / 2, 'rgba(255,255,255,0.18)');
         }
         if (s.texto) texto(s.texto, x, y, 'centro', colorTexto, Math.min(tamano, h * 0.8));
         break;
@@ -730,9 +728,9 @@ export class Control extends Componente {
   private dibujarMinimapa(r: Renderizador, x: number, y: number, w: number, h: number, fondo: string, principal: string): void {
     const ctx = r.ctx;
     const escena = this.objeto.escena;
-    caja(ctx, x - w / 2, y - h / 2, w, h, 6, fondo);
     // En el editor (sin juego en marcha) solo se ve su marco
     if (!escena?.iniciada) {
+      caja(ctx, x - w / 2, y - h / 2, w, h, 6, fondo);
       ctx.strokeStyle = principal;
       ctx.lineWidth = 2;
       trazarCaja(ctx, x - w / 2 + 1, y - h / 2 + 1, w - 2, h - 2, 5);
@@ -740,6 +738,54 @@ export class Control extends Componente {
       r.texto('Minimapa', x, y, { color: principal, tamano: Math.min(16, h / 3), alinear: 'centro', vertical: 'medio' });
       return;
     }
+    // El minimapa se pinta en un lienzo aparte unas 15 veces por segundo, y en cada fotograma solo se
+    // copia: recorrer las casillas del mapa y pintarlas una a una 60 veces por segundo se nota en un móvil
+    const copia = this.lienzoDelMinimapa(ctx, w, h);
+    if (!copia) return this.contenidoMinimapa(ctx, x, y, w, h, fondo, principal);
+    const ahora = Control.reloj();
+    if (copia.nuevo || ahora - this.minimapaPintado >= MILISEGUNDOS_MINIMAPA || ahora < this.minimapaPintado) {
+      this.minimapaPintado = ahora;
+      const k = copia.escala;
+      copia.ctx.setTransform(1, 0, 0, 1, 0, 0);
+      copia.ctx.clearRect(0, 0, copia.lienzo.width, copia.lienzo.height);
+      copia.ctx.setTransform(k, 0, 0, k, -(x - w / 2) * k, -(y - h / 2) * k);
+      this.contenidoMinimapa(copia.ctx, x, y, w, h, fondo, principal);
+    }
+    ctx.drawImage(copia.lienzo, x - w / 2, y - h / 2, w, h);
+  }
+
+  /** Cómo se hace un lienzo aparte (en las pruebas se cambia; sin navegador no hay, y se pinta directamente). */
+  static crearLienzo: (ancho: number, alto: number) => { lienzo: HTMLCanvasElement; ctx: CanvasRenderingContext2D } | null = (ancho, alto) => {
+    if (typeof document === 'undefined') return null;
+    const lienzo = document.createElement('canvas');
+    lienzo.width = ancho;
+    lienzo.height = alto;
+    const ctx = typeof lienzo.getContext === 'function' ? lienzo.getContext('2d') : null;
+    return ctx ? { lienzo, ctx } : null;
+  };
+  /** El reloj con el que se decide cuándo toca repintar el minimapa (en las pruebas se cambia). */
+  static reloj: () => number = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  private copiaMinimapa: { lienzo: HTMLCanvasElement; ctx: CanvasRenderingContext2D; escala: number; ancho: number; alto: number } | null | undefined;
+  private minimapaPintado = 0;
+
+  /** El lienzo aparte del minimapa, del tamaño con el que se ve ahora (o null si no se puede tener uno). */
+  private lienzoDelMinimapa(ctx: CanvasRenderingContext2D, w: number, h: number): { lienzo: HTMLCanvasElement; ctx: CanvasRenderingContext2D; escala: number; nuevo: boolean } | null {
+    if (this.copiaMinimapa === null) return null;
+    const t = typeof ctx.getTransform === 'function' ? ctx.getTransform() : null;
+    const escala = Math.min(4, Math.max(0.25, t ? Math.hypot(t.a, t.b) || 1 : 1));
+    const ancho = Math.max(1, Math.ceil(w * escala));
+    const alto = Math.max(1, Math.ceil(h * escala));
+    const c = this.copiaMinimapa;
+    if (c && c.ancho === ancho && c.alto === alto) return { ...c, nuevo: false };
+    const hecho = Control.crearLienzo(ancho, alto);
+    this.copiaMinimapa = hecho ? { ...hecho, escala, ancho, alto } : null;
+    return hecho ? { ...hecho, escala, nuevo: true } : null;
+  }
+
+  /** Pinta el minimapa de verdad (casillas, puntos, flecha y marco). */
+  private contenidoMinimapa(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, fondo: string, principal: string): void {
+    const escena = this.objeto.escena!;
+    caja(ctx, x - w / 2, y - h / 2, w, h, 6, fondo);
     // Qué trozo del mundo se enseña: alrededor de un objeto, o el mundo entero (los mapas; si no hay, lo que ve la cámara ×3)
     const centro = this.seguir ? escena.buscar(this.seguir) : null;
     const vista = escena.camara.zonaVisible();

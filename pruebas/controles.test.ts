@@ -212,8 +212,13 @@ describe('Barra, deslizador e icono', () => {
     viva.avanzar(120);
     const l = lienzo();
     viva.juego.escena.dibujar(l.r);
-    const relleno = l.llamadas.filter(([k]) => k === 'fillRect').map(([, a]) => a as number[])[0];
-    expect(relleno[2]).toBeCloseTo(100, 0);
+    // (cada caja redonda empieza con un moveTo y un lineTo en su borde de arriba: la segunda es el relleno;
+    //  sus esquinas miden 8, así que mide lo que hay entre los dos puntos más 16)
+    const cajas = l.llamadas.map(([k, a], i) => (k === 'moveTo' ? (l.llamadas[i + 1][1] as number[])[0] - (a as number[])[0] + 16 : null)).filter((x) => x !== null);
+    expect(cajas[0]).toBeCloseTo(200, 0);
+    expect(cajas[1]).toBeCloseTo(100, 0);
+    // Y sin recortar (ctx.clip en cada fotograma es muy caro en un móvil)
+    expect(l.cuenta.clip ?? 0).toBe(0);
     expect(l.textos).toEqual(['50 / 100']);
   });
 
@@ -611,6 +616,49 @@ describe('El minimapa en primera persona (vista3d) y yo.enMinimapa', () => {
     j.buscar('Mapa').obtener(MapaCasillas)!.moverPuerta(2, 3, 1);
     j.avanzar(120);
     expect((pintar(j).puesto.globalAlpha ?? []).filter((a) => a === 0.3)).toHaveLength(1);
+  });
+});
+
+describe('El minimapa no se repinta entero en cada fotograma', () => {
+  it('se pinta en un lienzo aparte cada 66 ms y entre medias solo se copia', () => {
+    const j = juegoDePrueba({
+      escena: [
+        { nombre: 'Mapa', x: 0, y: 0, mapa: { tamano: 50, tipos: { suelo: { color: '#00ff00', solida: true } }, celdas: { '0,0': 'suelo', '1,0': 'suelo', '2,0': 'suelo' } } },
+        { nombre: 'Jugador', x: 100, y: 100, sprite: { ancho: 40, alto: 40 } },
+        { nombre: 'Mini', x: 860, y: 460, sprite: { ancho: 206, alto: 106, fijo: true }, control: { tipo: 'minimapa' } },
+      ],
+    });
+    j.avanzar(1);
+    const aparte = lienzo();
+    const hechos: number[][] = [];
+    const crear = Control.crearLienzo;
+    const reloj = Control.reloj;
+    let ahora = 1000;
+    Control.crearLienzo = (ancho, alto) => (hechos.push([ancho, alto]), { lienzo: { width: ancho, height: alto } as HTMLCanvasElement, ctx: (aparte.r as { ctx: CanvasRenderingContext2D }).ctx });
+    Control.reloj = () => ahora;
+    try {
+      const pantalla = lienzo();
+      const pintar = () => j.juego.escena.dibujar(pantalla.r);
+      pintar();
+      // Un lienzo del tamaño del minimapa; las casillas se pintan en él, y a la pantalla solo va la copia
+      expect(hechos).toEqual([[206, 106]]);
+      expect(aparte.cuenta.fillRect).toBe(3);
+      // (en la pantalla, los únicos fillRect son las tres casillas del propio mapa del mundo)
+      expect(pantalla.cuenta.fillRect).toBe(3);
+      expect(pantalla.llamadas.filter(([k]) => k === 'drawImage').map(([, a]) => (a as number[]).slice(1))).toEqual([[757, 27, 206, 106]]);
+      // Los fotogramas siguientes (16 ms cada uno) no repintan: copian
+      for (let i = 0; i < 3; i++) { ahora += 16; pintar(); }
+      expect(aparte.cuenta.fillRect).toBe(3);
+      expect(pantalla.cuenta.drawImage).toBe(4);
+      // Pasados 66 ms, se repinta (con lo que haya cambiado)
+      ahora += 40;
+      pintar();
+      expect(aparte.cuenta.fillRect).toBe(6);
+      expect(hechos).toHaveLength(1);
+    } finally {
+      Control.crearLienzo = crear;
+      Control.reloj = reloj;
+    }
   });
 });
 

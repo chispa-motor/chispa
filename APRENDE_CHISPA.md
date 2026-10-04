@@ -7644,14 +7644,14 @@ Un móvil barato no puede pintar tanto como un ordenador, y pintar gasta baterí
 
 #### `pantalla.calidad`
 
-La calidad con la que se pinta el juego: "auto" (la que aguante el aparato: si va a trompicones se baja sola, y si va sobrado vuelve a subir), "alta", "media" o "baja".
+La calidad con la que se pinta el juego: "auto" (la que aguante el aparato: si va a trompicones se baja sola, y si va sobrado vuelve a subir), "alta", "media", "baja" o "minima" (para aparatos muy lentos: menos píxeles de los que tiene la pantalla).
 
 ```
 cuando empieza:
     pantalla.calidad = "baja"
 ```
 
-**Error típico:** Escribirla mal: es "auto", "alta", "media" o "baja" (Chispa propone la parecida). Chispa te avisa con un error que explica qué pasa.
+**Error típico:** Escribirla mal: es "auto", "alta", "media", "baja" o "minima" (Chispa propone la parecida). Chispa te avisa con un error que explica qué pasa.
 
 ```
 cuando empieza:
@@ -7660,7 +7660,7 @@ cuando empieza:
 
 #### `pantalla.nivelCalidad`
 
-La calidad que hay puesta ahora mismo: "alta", "media" o "baja" (con pantalla.calidad = "auto" puede ir cambiando).
+La calidad que hay puesta ahora mismo: "alta", "media", "baja" o "minima" (con pantalla.calidad = "auto" puede ir cambiando).
 
 ```
 cuando empieza:

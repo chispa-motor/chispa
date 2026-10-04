@@ -985,7 +985,7 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
             const m = normalizar(aTexto(v)) as ModoCalidad;
             if (typeof v !== 'string' || !MODOS_CALIDAD.includes(m)) {
               const parecida = typeof v === 'string' ? sugerir(v, MODOS_CALIDAD) : null;
-              throw new ErrorChispa(p, `'pantalla.calidad' es "auto" (la que aguante el aparato), "alta", "media" o "baja", y le das ${typeof v === 'string' ? `"${v}"` : nombreTipo(v)}.`, parecida ? `¿Querías decir "${parecida}"?` : 'Ejemplo: pantalla.calidad = "baja"');
+              throw new ErrorChispa(p, `'pantalla.calidad' es "auto" (la que aguante el aparato), "alta", "media", "baja" o "minima", y le das ${typeof v === 'string' ? `"${v}"` : nombreTipo(v)}.`, parecida ? `¿Querías decir "${parecida}"?` : 'Ejemplo: pantalla.calidad = "baja"');
             }
             calidad.modo = m;
           },

@@ -288,8 +288,8 @@ export interface DefProyecto {
   controlesTactiles?: boolean;
   /** Cómo hay que tener el móvil para jugar: "horizontal" (tumbado) o "vertical" (de pie). Si no se dice: da igual. */
   orientacion?: 'horizontal' | 'vertical';
-  /** La calidad con la que empieza el juego: "auto" (la que aguante el aparato; si no se dice, esta), "alta", "media" o "baja". */
-  calidad?: 'auto' | 'alta' | 'media' | 'baja';
+  /** La calidad con la que empieza el juego: "auto" (la que aguante el aparato; si no se dice, esta), "alta", "media", "baja" o "minima". */
+  calidad?: 'auto' | 'alta' | 'media' | 'baja' | 'minima';
   /** Fotogramas por segundo como mucho (30 gasta la mitad de batería). Si no se dice: los que dé la pantalla. */
   maximoFps?: number;
   /** El icono del juego: el nombre de una de sus imágenes. Sale en la pestaña del navegador y en la pantalla de carga del juego exportado. */

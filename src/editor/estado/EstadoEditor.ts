@@ -232,7 +232,7 @@ export class EstadoEditor {
         if (valor === 'horizontal' || valor === 'vertical') p.orientacion = valor;
         else delete p.orientacion;
       } else if (ajuste === 'calidad') {
-        if (valor === 'alta' || valor === 'media' || valor === 'baja') p.calidad = valor;
+        if (valor === 'alta' || valor === 'media' || valor === 'baja' || valor === 'minima') p.calidad = valor;
         else delete p.calidad;
       } else {
         const n = Math.round(Number(valor) || 0);

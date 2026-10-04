@@ -69,7 +69,7 @@ export function agregarNovedades12(tema: Tema, c: Comando): void {
 
   tema(4, 'Calidad, batería y cómo se sujeta el móvil', 'Un móvil barato no puede pintar tanto como un ordenador, y pintar gasta batería. Chispa adapta la calidad sola; con estos datos se decide desde el juego (también están en el inspector > Proyecto).');
   c('pantalla:calidad', 'cuando empieza:\n    pantalla.calidad = "baja"', 'pantalla.calidad = "auto"',
-    'cuando empieza:\n    pantalla.calidad = "bajo"', 'Escribirla mal: es "auto", "alta", "media" o "baja" (Chispa propone la parecida).');
+    'cuando empieza:\n    pantalla.calidad = "bajo"', 'Escribirla mal: es "auto", "alta", "media", "baja" o "minima" (Chispa propone la parecida).');
   c('pantalla:nivelCalidad', 'cuando empieza:\n    pantalla.calidad = "media"\n    mostrar(pantalla.nivelCalidad)', 'mostrar(pantalla.nivelCalidad)',
     'cuando empieza:\n    pantalla.nivelCalidad = "baja"', 'Intentar cambiarla: solo se lee. La que se cambia es pantalla.calidad.');
   c('pantalla:maximoFps', 'cuando empieza:\n    pantalla.maximoFps = 30', 'pantalla.maximoFps = 30',

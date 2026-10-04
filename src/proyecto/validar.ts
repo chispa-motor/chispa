@@ -516,7 +516,7 @@ export function validarProyecto(datos: unknown): Partial<DefProyecto> {
     pixelArt: logico,
     controlesTactiles: logico,
     orientacion: (x, r) => unoDe(x, r, ['horizontal', 'vertical'] as const),
-    calidad: (x, r) => unoDe(x, r, ['auto', 'alta', 'media', 'baja'] as const),
+    calidad: (x, r) => unoDe(x, r, ['auto', 'alta', 'media', 'baja', 'minima'] as const),
     maximoFps: (x, r) => numero(x, r, 15, 240),
     icono: nombre,
     pantallaDeCarga: logico,

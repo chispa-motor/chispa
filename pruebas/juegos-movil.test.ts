@@ -15,7 +15,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ENCOGE_MINIMO, GESTOS, MAXIMO_BOTONES, MS_LARGO, Tactil, encogeParaAncho, UMBRAL_FLECHA, ZONA_MUERTA, gestoAlLevantar, inclinacion } from '../src/motor/Tactil';
-import { AJUSTES_CALIDAD, Calidad, VENTANAS_PARA_SUBIR, VENTANA_CALIDAD, calidad } from '../src/motor/Calidad';
+import { AJUSTES_CALIDAD, Calidad, VENTANAS_PARA_SUBIR, pixelesPorPunto, VENTANA_CALIDAD, calidad } from '../src/motor/Calidad';
 import { Particulas, TIPOS_PARTICULAS } from '../src/objetos/Particulas';
 import { ESTILOS_TACTILES, ponerControlesTactiles, teclasDelJuego } from '../src/reproductor/ControlesTactiles';
 import { generarPaginaJuego, politicaDeSeguridad } from '../src/exportar/exportar';
@@ -447,7 +447,7 @@ describe('Los comandos de tactil: errores claros', () => {
     expect(error('cuando empieza:\n    tactil.tamano = 9')).toMatch(/va de 0.5 \(la mitad\) a 2/);
     expect(error('cuando empieza:\n    tactil.opacidad = 0')).toMatch(/va de 0.1/);
     expect(error('cuando empieza:\n    tactil.vibrar(60)')).toMatch(/de 0 a 5 segundos/);
-    expect(error('cuando empieza:\n    pantalla.calidad = "bajo"')).toMatch(/"auto".*"alta", "media" o "baja"/);
+    expect(error('cuando empieza:\n    pantalla.calidad = "bajo"')).toMatch(/"auto".*"alta", "media", "baja" o "minima"/);
     expect(pista('cuando empieza:\n    pantalla.calidad = "bajo"')).toMatch(/"baja"/);
     expect(error('cuando empieza:\n    pantalla.maximoFps = 5')).toMatch(/va de 15 a 240/);
     expect(error('cuando empieza:\n    pantalla.orientacion = "tumbado"')).toMatch(/"horizontal".*"vertical".*"cualquiera"/);
@@ -482,12 +482,31 @@ describe('Calidad adaptable y límite de fotogramas', () => {
   };
 
   it('cada nivel gasta menos que el anterior', () => {
-    const { alta, media, baja } = AJUSTES_CALIDAD;
+    const { alta, media, baja, minima } = AJUSTES_CALIDAD;
+    expect(baja.resolucion).toBeGreaterThan(minima.resolucion);
+    expect(baja.columnas3d).toBeGreaterThan(minima.columnas3d);
+    expect(minima.sombrasDeLuz || minima.filtrosCaros).toBe(false);
     expect(alta.resolucion).toBeGreaterThan(media.resolucion);
     expect(media.resolucion).toBeGreaterThan(baja.resolucion);
     expect(alta.particulas).toBe(1);
     expect(media.particulas).toBeGreaterThan(baja.particulas);
     expect(baja.sombrasDeLuz || baja.filtrosCaros).toBe(false);
+  });
+
+  it('el lienzo: los píxeles de la pantalla, sin pasar de lo que deja la calidad ni (en baja y mínima) del tamaño del juego', () => {
+    const { alta, media, baja, minima } = AJUSTES_CALIDAD;
+    // Un móvil de 640 puntos de ancho con 3 píxeles por punto, y un juego de 960
+    expect(pixelesPorPunto(3, alta.resolucion, 960, 640)).toBe(2);
+    expect(pixelesPorPunto(3, media.resolucion, 960, 640)).toBe(1.5);
+    expect(pixelesPorPunto(3, baja.resolucion, 960, 640)).toBe(1);
+    expect(pixelesPorPunto(3, minima.resolucion, 960, 640)).toBe(0.75);
+    // Una pantalla normal de ordenador no pinta más de lo que tiene
+    expect(pixelesPorPunto(1, alta.resolucion, 960, 640)).toBe(1);
+    // Una tableta de 1180 puntos: en baja, el lienzo se queda en los 960 del juego; en mínima, en 720
+    expect(Math.round(1180 * pixelesPorPunto(2, baja.resolucion, 960, 1180))).toBe(960);
+    expect(Math.round(1180 * pixelesPorPunto(2, minima.resolucion, 960, 1180))).toBe(720);
+    // En alta y media no hay ese tope
+    expect(pixelesPorPunto(2, alta.resolucion, 960, 1180)).toBe(2);
   });
 
   it('en automático: si va a trompicones baja, y si va sobrado un buen rato vuelve a subir', () => {
@@ -501,15 +520,15 @@ describe('Calidad adaptable y límite de fotogramas', () => {
     expect(c.nivel).toBe('media');
     jugar(c, 30, VENTANA_CALIDAD + 0.1);
     expect(c.nivel).toBe('baja');
-    // En baja ya no puede bajar más
+    // Y si ni así: a mínima, y de ahí ya no puede bajar más
     jugar(c, 20, VENTANA_CALIDAD * 3);
-    expect(c.nivel).toBe('baja');
+    expect(c.nivel).toBe('minima');
     // Va a 60 clavados un buen rato: sube un nivel (no enseguida)
     jugar(c, 60, VENTANA_CALIDAD * (VENTANAS_PARA_SUBIR - 1) + 0.1);
-    expect(c.nivel).toBe('baja');
+    expect(c.nivel).toBe('minima');
     jugar(c, 60, VENTANA_CALIDAD * 2);
-    expect(c.nivel).toBe('media');
-    expect(cambios).toEqual(['media', 'baja', 'media']);
+    expect(c.nivel).toBe('baja');
+    expect(cambios).toEqual(['media', 'baja', 'minima', 'baja']);
   });
 
   it('si al subir vuelve a ir mal, a ese nivel ya no se sube (no se está cambiando todo el rato)', () => {

@@ -110,7 +110,7 @@ hacerlo, con commit y etiqueta por parte (`arena-cero-parte-N`: las `arena-parte
 | 6 | Mapa rejugable | **Hecho** | `arena-cero-parte-6` |
 | 7 | Interfaz | **Hecho** | `arena-cero-parte-7` |
 | 8 | Sonido, niveles, guardado, pausa, ajustes | **Hecho** | `arena-cero-parte-8` |
-| 9 | Rendimiento | Sin empezar | |
+| 9 | Rendimiento | **Hecho** | `arena-cero-parte-9` |
 | 10 | Reto: alturas | Sin empezar | |
 
 ## Arena Cero, parte 1 — Motor 3D simulado (hecho)
@@ -199,6 +199,22 @@ hacerlo, con commit y etiqueta por parte (`arena-cero-parte-N`: las `arena-parte
 - En el juego: escenas Titulo, Nivel1, Nivel2 y Final; pausa, reintentar, continuar y ajustes
   (sensibilidad, volumen, dificultad, calidad, ver fps y colocar los botones táctiles); pasos de
   los guardias y zumbidos con sitio. Pruebas: `pruebas/parte8.mjs` (7).
+
+## Arena Cero, parte 9 — Rendimiento (hecho)
+
+Medido con `pruebas/exportado.mjs` del juego (el HTML exportado, desde file://, con toques) y
+`pruebas/medir9.mjs` / `pruebas/perfil.mjs` (dentro del editor, con perfil del procesador).
+
+- Lo lento que se encontró: el minimapa (8 fps), las barras con recorte (3 fps), un lienzo más
+  grande que el juego en tabletas, y en el juego los scripts que hacían en cada fotograma lo que
+  basta hacer 10 o 20 veces por segundo (cosas que se recogen, bolas de plasma, iconos).
+- Lo que se hizo en el motor: minimapa con copia, barras sin `clip`, calidad «minima» y tope de
+  lienzo (FALTABA 13, 14 y 15). 1148 tests.
+- Resultado en el juego exportado (Chromium sin tarjeta gráfica, procesador frenado):
+  escritorio 60 fps; móvil ×4: 50 fps andando y 54 en la pelea con el jefe; móvil pequeño ×6: 36 y
+  36 (antes 34 y 21); tableta ×3: 59 y 55.
+- OJO: son móviles SIMULADOS (un ordenador con el procesador frenado y sin GPU). En un móvil de
+  verdad hay que mirarlo: está en PRUEBAS_PENDIENTES.md.
 
 ## Cómo seguir si se corta
 

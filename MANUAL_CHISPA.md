@@ -3189,7 +3189,7 @@ cuando cada fotograma:
 
 #### `vista3d.columnas`
 
-Cuántas columnas tiene la imagen en 3D (cada una es un rayo). Si no se toca (0), las que diga pantalla.calidad: 640 en alta, 480 en media y 320 en baja. Con menos va más rápido y se ve más «pixelado». De 64 a 1280.
+Cuántas columnas tiene la imagen en 3D (cada una es un rayo). Si no se toca (0), las que diga pantalla.calidad: 640 en alta, 480 en media, 320 en baja y 240 en mínima. Con menos va más rápido y se ve más «pixelado». De 64 a 1280.
 
 ```
 cuando empieza:
@@ -3513,7 +3513,7 @@ cuando se pulsa "f":
 
 #### `pantalla.calidad`
 
-La calidad con la que se pinta el juego: "auto" (la que aguante el aparato: si va a trompicones se baja sola, y si va sobrado vuelve a subir), "alta", "media" o "baja". Con menos calidad hay menos píxeles, menos partículas y luces sin sombras: se ve un poco peor pero va fluido en un móvil lento. Se elige también en el inspector > Proyecto.
+La calidad con la que se pinta el juego: "auto" (la que aguante el aparato: si va a trompicones se baja sola, y si va sobrado vuelve a subir), "alta", "media", "baja" o "minima" (para aparatos muy lentos: menos píxeles de los que tiene la pantalla). Con menos calidad hay menos píxeles, menos partículas y luces sin sombras: se ve un poco peor pero va fluido en un móvil lento. Se elige también en el inspector > Proyecto.
 
 ```
 cuando empieza:
@@ -3522,7 +3522,7 @@ cuando empieza:
 
 #### `pantalla.nivelCalidad`
 
-La calidad que hay puesta ahora mismo: "alta", "media" o "baja" (con pantalla.calidad = "auto" puede ir cambiando). Solo se lee.
+La calidad que hay puesta ahora mismo: "alta", "media", "baja" o "minima" (con pantalla.calidad = "auto" puede ir cambiando). Solo se lee.
 
 ```
 mostrar(pantalla.nivelCalidad)
