@@ -305,6 +305,7 @@ function objetoJuego(v: unknown, ruta: Ruta): DefObjeto {
     y: numero,
     rotacion: numero,
     escala: numero,
+    elevacion: (x, r) => numero(x, r, -10000, 10000),
     sprite,
     colision,
     fisica,

@@ -463,6 +463,14 @@ describe('vista3d: el juego de siempre, visto desde dentro', () => {
     expect(rc.pantalla[Math.round(rc.alto * 0.9) * rc.ancho + (rc.ancho >> 1)]).not.toBe(BLANCO);
   });
 
+  it('la elevación se puede poner en el proyecto (el inspector) y se copia al clonar', () => {
+    const j = juego3D('cuando empieza:\n    variable c = clonar(buscar("Dron"))\n    mostrar(buscar("Dron").elevacion, c.elevacion)', [{ nombre: 'Dron', x: 140, y: 140, elevacion: 24, sprite: { imagen: 'robot', ancho: 20, alto: 20 } }]);
+    j.avanzar(1);
+    expect(j.errores).toEqual([]);
+    expect(j.salida).toEqual(['24 24']);
+    expect(() => juego3D('cuando empieza:\n    mostrar(1)', [{ nombre: 'Malo', elevacion: 'mucho' as unknown as number }])).toThrow(/por seguridad no se abre/);
+  });
+
   it('cambiar una casilla del mapa se ve al momento', () => {
     const j = juego3D('cuando empieza:\n    vista3d.ver(yo)');
     j.avanzar(2);

@@ -397,6 +397,7 @@ export class JuegoEnMarcha implements ContextoJuego {
     if (!def) throw new ErrorMotor(`No se puede clonar '${o.nombre}'.`, 'Solo se pueden clonar los objetos del juego (los de la escena y los creados con crear).');
     const copia = crearObjetoDesdeDefinicion({ ...def, nombre: o.nombre, tipo: o.tipo, x: o.posicion.x, y: o.posicion.y }, o.nombre, this.proyecto);
     copia.transformacion.rotacion = o.transformacion.rotacion;
+    copia.elevacion = o.elevacion;
     copia.transformacion.escala.x = o.transformacion.escala.x;
     copia.transformacion.escala.y = o.transformacion.escala.y;
     const s = o.obtener(Sprite);
@@ -595,6 +596,7 @@ export function crearObjetoDesdeDefinicion(def: DefObjeto, nombrePorDefecto: str
   const o = new ObjetoJuego(def.nombre ?? nombrePorDefecto, def.tipo ?? tipoPorNombre(def.nombre ?? nombrePorDefecto));
   o.en(def.x ?? 0, def.y ?? 0);
   o.transformacion.rotacion = def.rotacion ?? 0;
+  o.elevacion = def.elevacion ?? 0;
   if (def.escala !== undefined) o.transformacion.escala.x = o.transformacion.escala.y = def.escala;
 
   if (def.sprite) {

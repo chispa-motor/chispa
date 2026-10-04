@@ -231,6 +231,8 @@ export class Inspector {
         campoNumero('rotacion', 'rotacion', def.rotacion ?? 0, (v) => cambiar('rotacion')(v || undefined), { ...largo, paso: 5, ayuda: 'Giro en grados (positivo = contra las agujas del reloj)' }),
         campoNumero('escala', 'escala', def.escala ?? 1, (v) => cambiar('escala')(v === 1 ? undefined : v), { ...largo, paso: 0.1, min: 0.05, ayuda: '1 = tamaño normal, 2 = el doble' }),
       ),
+      // Solo se enseña si se usa: es para los juegos en primera persona (los que usan vista3d en algún script)
+      def.elevacion || Object.values(e.proyecto.scripts).some((codigo) => codigo.includes('vista3d')) ? campoNumero('elevación', 'elevacion', def.elevacion ?? 0, (v) => cambiar('elevacion')(v || undefined), { ...largo, paso: 4, ayuda: 'En primera persona (vista3d): cuántos píxeles está levantado del suelo (lo que flota o vuela). También: yo.elevacion' }) : null,
     ]));
 
     // Dibujo

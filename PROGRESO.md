@@ -104,7 +104,7 @@ hacerlo, con commit y etiqueta por parte (`arena-cero-parte-N`: las `arena-parte
 |---|---|---|---|
 | 1 | Motor 3D simulado: paredes, suelo, techo, niebla, puertas, medir fps | **Hecho** | `arena-cero-parte-1` |
 | 2 | Jugador: teclado, ratón, mando y táctil | **Hecho** | `arena-cero-parte-2` |
-| 3 | Sprites que miran al jugador | Sin empezar | |
+| 3 | Sprites que miran al jugador | **Hecho** | `arena-cero-parte-3` |
 | 4 | Armas | Sin empezar | |
 | 5 | NPCs con IA | Sin empezar | |
 | 6 | Mapa rejugable | Sin empezar | |
@@ -138,6 +138,16 @@ hacerlo, con commit y etiqueta por parte (`arena-cero-parte-N`: las `arena-parte
   táctil se podía salir de la pantalla; capturar el ratón rompía los toques en un móvil).
 - Pruebas del juego (`pruebas/parte2.mjs`, en su carpeta): teclado, choques, ratón capturado,
   sensibilidad, mando, y táctil en tres aparatos (con los dos pulgares a la vez).
+
+## Arena Cero, parte 3 — Sprites (hecho)
+
+- El motor ya lo hacía desde la parte 1 (cada objeto con dibujo es un sprite que mira a quien ve,
+  con su tamaño según la distancia, su animación de siempre y orden por profundidad). En esta parte:
+  la **elevación en el proyecto** (`DefObjeto.elevacion`, campo «elevación» del inspector) y los
+  **efectos en primera persona** (se adelantaron a la parte 2).
+- En el juego: 62 imágenes nuevas (cuatro robots con sus fotogramas de andar, apuntar, disparar y
+  romperse; el dron; el jefe; disparos; objetos y decorado), 17 animaciones y 22 plantillas.
+- Medido con 26 sprites en la sala: 60 fps, 4,1 ms de dibujo a 640×360.
 
 ## Cómo seguir si se corta
 

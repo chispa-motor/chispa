@@ -211,6 +211,8 @@ export interface DefObjeto {
   y?: number;
   rotacion?: number;
   escala?: number;
+  /** Cuánto está levantado del suelo, en píxeles: lo que flota o vuela en la vista en primera persona (vista3d). */
+  elevacion?: number;
   sprite?: DefSprite;
   colision?: DefColision;
   fisica?: DefFisica;
