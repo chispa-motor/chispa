@@ -301,6 +301,7 @@ DATOS_CON_BLOQUE.push(
   { categoria: 'vista3d', objetivo: 'juego.tarda', valor: 'vista3d.milisegundos' },
   { categoria: 'vista3d', objetivo: 'yo.visible', valor: 'yo.puertaAbierta(5, 3)' },
   { categoria: 'vista3d', objetivo: 'yo.visible', valor: 'yo.esPuerta(5, 3)' },
+  { categoria: 'vista3d', objetivo: 'yo.visible', valor: 'yo.solidoEn(100, 100)' },
   { categoria: 'vista3d', objetivo: 'raton.capturado', valor: 'verdadero' },
   { categoria: 'vista3d', objetivo: 'mando.comoTeclado', valor: 'falso' },
   { categoria: 'vista3d', objetivo: 'yo.rotacion', valor: 'yo.rotacion - raton.movX * 0.2' },

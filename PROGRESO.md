@@ -106,7 +106,7 @@ hacerlo, con commit y etiqueta por parte (`arena-cero-parte-N`: las `arena-parte
 | 2 | Jugador: teclado, ratón, mando y táctil | **Hecho** | `arena-cero-parte-2` |
 | 3 | Sprites que miran al jugador | **Hecho** | `arena-cero-parte-3` |
 | 4 | Armas | **Hecho** | `arena-cero-parte-4` |
-| 5 | NPCs con IA | Sin empezar | |
+| 5 | NPCs con IA | **Hecho** | `arena-cero-parte-5` |
 | 6 | Mapa rejugable | Sin empezar | |
 | 7 | Interfaz | Sin empezar | |
 | 8 | Sonido, niveles, guardado, pausa, ajustes | Sin empezar | |
@@ -157,6 +157,18 @@ hacerlo, con commit y etiqueta por parte (`arena-cero-parte-N`: las `arena-parte
   lanza de riel; cargador y reserva por tipo de munición; recarga; cambio con 1-4, Q, rueda, mando y
   botón táctil; retroceso, fogonazo y destello), `scripts/diana.chs` y `scripts/barril.chs`.
   14 sonidos hechos con el generador de efectos del editor. Pruebas: `pruebas/parte4.mjs` (7).
+
+## Arena Cero, parte 5 — NPCs (hecho)
+
+- En el motor: `mapa.solidoEn(x, y)` (462 comandos) y los diálogos se pasan con el mando aunque no
+  haga de teclado. Todo lo demás que usa la IA ya estaba: `yo.irHacia` (camino rodeando paredes),
+  `rayo` (línea de visión), `yo.cercanos`, `dialogo`.
+- En el juego: `scripts/enemigo.chs` (estados patrulla, alerta, persigue, cubre, huye; vista con
+  ángulo y paredes, oído, alarma entre vecinos; piensan seis veces por segundo, no en cada
+  fotograma), `scripts/plasma.chs`, `scripts/aliado.chs` (el centinela: espera, sigue, combate, con
+  diálogo) y `scripts/tecnico.chs` (trabaja, se asusta y huye, con diálogo y regalo).
+- Pruebas: `pruebas/parte5.mjs` (8). Con cuatro enemigos persiguiendo: 60 fps; la lógica de todos
+  los scripts tarda 1,2 ms por fotograma de media.
 
 ## Cómo seguir si se corta
 

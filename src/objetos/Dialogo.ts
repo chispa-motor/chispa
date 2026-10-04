@@ -52,11 +52,14 @@ export class CajaDialogo {
   actualizar(dt: number, entrada: Entrada, raton: { x: number; y: number }): void {
     this.tiempo += dt;
     if (!this.completo) this.letras = Math.min(this.texto.length, this.letras + VELOCIDAD_LETRAS * dt);
-    const aceptar = entrada.sePulso('espacio') || entrada.sePulso('enter') || entrada.ratonSePulso();
+    // Con el mando también, aunque no esté haciendo de teclado (mando.comoTeclado = falso): A acepta y la cruceta o la palanca eligen
+    const mando = entrada.mando.pulsados;
+    const aceptar = entrada.sePulso('espacio') || entrada.sePulso('enter') || entrada.ratonSePulso() || (!entrada.mandoHaceDeTeclado && (mando.has('a') || mando.has('start')));
     if (this.opciones.length && this.completo) {
       const n = this.opciones.length;
-      if (entrada.sePulso('arriba') || entrada.sePulso('w')) this.marcada = (this.marcada + n - 1) % n;
-      if (entrada.sePulso('abajo') || entrada.sePulso('s')) this.marcada = (this.marcada + 1) % n;
+      const sinTeclado = !entrada.mandoHaceDeTeclado;
+      if (entrada.sePulso('arriba') || entrada.sePulso('w') || (sinTeclado && mando.has('arriba'))) this.marcada = (this.marcada + n - 1) % n;
+      if (entrada.sePulso('abajo') || entrada.sePulso('s') || (sinTeclado && mando.has('abajo'))) this.marcada = (this.marcada + 1) % n;
       for (let i = 0; i < Math.min(n, 9); i++) if (entrada.sePulso(String(i + 1))) return this.elegir(i);
       const encima = this.zonas.findIndex((z) => raton.x >= z.x && raton.x <= z.x + z.ancho && raton.y >= z.y && raton.y <= z.y + z.alto);
       if (encima >= 0) this.marcada = encima;

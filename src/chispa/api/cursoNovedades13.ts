@@ -66,6 +66,8 @@ export function agregarNovedades13(tema: Tema, c: Comando): void {
     'cuando empieza:\n    buscar("Mapa").cerrarPuerta(20, 20, 500)', 'Dar los segundos en milisegundos: una puerta tarda de 0 a 60 segundos.');
   c('objeto:puertaAbierta', 'cuando empieza:\n    variable m = buscar("Mapa")\n    m.ponerCasilla(20, 20, "puerta")\n    m.abrirPuerta(20, 20, 0)\n    mostrar(m.puertaAbierta(20, 20))', 'si mapa.puertaAbierta(20, 20):',
     'cuando empieza:\n    mostrar(yo.puertaAbierta(20, 20))', 'Preguntárselo a un objeto que no es el mapa.');
+  c('objeto:solidoEn', 'cuando empieza:\n    variable m = buscar("Mapa")\n    mostrar(m.solidoEn(10, 10))', 'si mapa.solidoEn(yo.x + 40, yo.y):',
+    'cuando empieza:\n    mostrar(buscar("Mapa").solidoEn(yo.posicion))', 'Darle un vector: quiere los dos números, la x y la y.');
   c('objeto:esPuerta', 'cuando empieza:\n    variable m = buscar("Mapa")\n    mostrar(m.esPuerta(m.columnaEn(yo.x), m.filaEn(yo.y)))', 'si mapa.esPuerta(20, 20):',
     'cuando empieza:\n    mostrar(buscar("Mapa").esPuerta(yo.x))', 'Darle un solo número: quiere la columna y la fila.');
 

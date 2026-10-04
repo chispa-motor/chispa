@@ -987,6 +987,17 @@ const METODOS: Record<string, (o: ObjetoJuego, args: Valor[], pos: Posicion) => 
   },
   columnaen: (o, a, p) => necesitaMapa(o, 'columnaEn', p).columnaEn(argNumero(a, 0, 'columnaEn', p, 'mapa.columnaEn(yo.x)')),
   filaen: (o, a, p) => necesitaMapa(o, 'filaEn', p).filaEn(argNumero(a, 0, 'filaEn', p, 'mapa.filaEn(yo.y)')),
+  solidoen: (o, a, p) => {
+    // ¿Hay algo sólido en ese punto del mundo? (una pared; una puerta abierta o una casilla que se atraviesa, no)
+    const ej = 'si mapa.solidoEn(yo.x + 40, yo.y):';
+    const m = necesitaMapa(o, 'solidoEn', p);
+    const x = argNumero(a, 0, 'solidoEn', p, ej);
+    const y = argNumero(a, 1, 'solidoEn', p, ej);
+    const c = m.columnaEn(x);
+    const f = m.filaEn(y);
+    const tipo = m.obtener(c, f);
+    return tipo !== null && m.solidaEn(c, f, tipo);
+  },
   abrirpuerta: (o, a, p) => moverPuerta(o, a, p, 'abrirPuerta', 1),
   cerrarpuerta: (o, a, p) => moverPuerta(o, a, p, 'cerrarPuerta', 0),
   puertaabierta: (o, a, p) => {
@@ -1009,7 +1020,7 @@ const NOMBRES_BONITOS = [
   'color', 'visible', 'ancho', 'alto', 'texto', 'tamaño', 'colorTexto', 'letra', 'imagen', 'opacidad', 'voltear', 'capa', 'fijo',
   'solido', 'fantasma', 'rozamiento', 'rebote', 'masa', 'estatico', 'moviendo', 'animacion', 'ratonEncima', 'destruido',
   'saltar', 'mover', 'rotar', 'destruir', 'distanciaA', 'empujar', 'animar', 'pararAnimacion', 'moverHacia', 'mirarA', 'direccionA',
-  'moverConFlechas', 'moverConJugador', 'casilla', 'ponerCasilla', 'quitarCasilla', 'casillaEn', 'columnaEn', 'filaEn', 'centroDeCasilla', 'abrirPuerta', 'cerrarPuerta', 'puertaAbierta', 'esPuerta', 'elevacion',
+  'moverConFlechas', 'moverConJugador', 'casilla', 'ponerCasilla', 'quitarCasilla', 'casillaEn', 'columnaEn', 'filaEn', 'centroDeCasilla', 'solidoEn', 'abrirPuerta', 'cerrarPuerta', 'puertaAbierta', 'esPuerta', 'elevacion',
   'tamanoLetra', 'transparencia', 'voltearVertical', 'etiquetas', 'padre', 'hijos', 'arrastrable', 'arrastrando',
   'teletransportar', 'irA', 'anguloA', 'rotarHacia', 'avanzar', 'ocultar', 'aparecer', 'parpadear', 'ponerDelante', 'ponerDetras',
   'tocando', 'cercanos', 'masCercano', 'clonar', 'ponerEtiqueta', 'quitarEtiqueta', 'tieneEtiqueta', 'pegarA', 'soltar',

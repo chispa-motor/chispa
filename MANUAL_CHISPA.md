@@ -2088,6 +2088,16 @@ Solo en mapas: el centro de una casilla, en el mundo (vector).
 yo.posicion = mapa.centroDeCasilla(2, 5)
 ```
 
+#### `mapa.solidoEn(x, y)`
+
+Solo en mapas: verdadero si en ese punto del mundo hay una casilla SÓLIDA (una pared). Una casilla que se atraviesa o una puerta abierta no cuentan. Para saber si algo cabe en un sitio, o si una bala ha llegado a una pared.
+
+```
+variable mapa = buscar("Mapa")
+si mapa.solidoEn(yo.x + 40, yo.y):
+    mostrar("hay una pared a mi derecha")
+```
+
 #### `mapa.abrirPuerta(columna, fila, segundos)`
 
 Solo en mapas: abre la puerta de esa casilla poco a poco (0,6 segundos si no se dice). Abierta, se pasa por ella, y los rayos y yo.irHacia también. La casilla tiene que ser de un tipo marcado como puerta (en el editor: el mapa > su tipo de casilla > «es una puerta»).

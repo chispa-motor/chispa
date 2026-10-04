@@ -593,6 +593,14 @@ describe('Puertas en los mapas de casillas', () => {
     expect(APERTURA_PARA_PASAR).toBeGreaterThan(0.5);
   });
 
+  it('mapa.solidoEn(x, y): una pared sí; el suelo, una baldosa que se atraviesa y una puerta abierta, no', () => {
+    const j = juego3D('cuando empieza:\n    variable m = buscar("Mapa")\n    mostrar(m.solidoEn(20, 20), m.solidoEn(100, 140), m.solidoEn(100, 100), m.solidoEn(180, 140), m.solidoEn(-500, 9000))\n    m.abrirPuerta(4, 3, 0)\n    mostrar(m.solidoEn(180, 140))');
+    j.avanzar(1);
+    expect(j.errores).toEqual([]);
+    // (20, 20) es el muro de la esquina; (100, 140) suelo sin casilla; (100, 100) la baldosa azul; (180, 140) la puerta
+    expect(j.salida).toEqual(['verdadero falso falso verdadero falso', 'falso']);
+  });
+
   it('abrir algo que no es una puerta lo explica', () => {
     const error = (codigo: string) => {
       const j = juego3D(`cuando empieza:\n    ${codigo}`);
@@ -758,6 +766,24 @@ describe('El mando deja de hacer de teclado', () => {
     expect(j.salida).toEqual(['falso']);
     expect([j.juego.datoDelJuego('flecha'), j.juego.datoDelJuego('eje'), j.juego.datoDelJuego('a'), j.juego.datoDelJuego('espacio')]).toEqual([false, 0.9, true, false]);
     expect(j.errores).toEqual([]);
+  });
+
+  it('los diálogos se siguen pasando con el botón A del mando, y las opciones se eligen con la cruceta', () => {
+    const j = juego3D('cuando empieza:\n    mando.comoTeclado = falso\n    variable r = dialogo("Ana", "Vienes?", ["Si", "No"])\n    mostrar(r)');
+    const pulsar = (...botones: string[]) => {
+      j.entrada.ponerMando(true, new Set(botones), 0, 0);
+      j.avanzar(1);
+      j.entrada.ponerMando(true, new Set(), 0, 0);
+      j.avanzar(1);
+    };
+    j.avanzar(2);
+    // La primera pulsación enseña todo el texto; luego, abajo elige «No», y A lo acepta
+    pulsar('a');
+    pulsar('abajo');
+    pulsar('a');
+    j.avanzar(2);
+    expect(j.errores).toEqual([]);
+    expect(j.salida).toEqual(['No']);
   });
 });
 
