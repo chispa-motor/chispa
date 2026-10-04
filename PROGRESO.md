@@ -105,7 +105,7 @@ hacerlo, con commit y etiqueta por parte (`arena-cero-parte-N`: las `arena-parte
 | 1 | Motor 3D simulado: paredes, suelo, techo, niebla, puertas, medir fps | **Hecho** | `arena-cero-parte-1` |
 | 2 | Jugador: teclado, ratón, mando y táctil | **Hecho** | `arena-cero-parte-2` |
 | 3 | Sprites que miran al jugador | **Hecho** | `arena-cero-parte-3` |
-| 4 | Armas | Sin empezar | |
+| 4 | Armas | **Hecho** | `arena-cero-parte-4` |
 | 5 | NPCs con IA | Sin empezar | |
 | 6 | Mapa rejugable | Sin empezar | |
 | 7 | Interfaz | Sin empezar | |
@@ -148,6 +148,15 @@ hacerlo, con commit y etiqueta por parte (`arena-cero-parte-N`: las `arena-parte
 - En el juego: 62 imágenes nuevas (cuatro robots con sus fotogramas de andar, apuntar, disparar y
   romperse; el dron; el jefe; disparos; objetos y decorado), 17 animaciones y 22 plantillas.
 - Medido con 26 sprites en la sala: 60 fps, 4,1 ms de dibujo a 640×360.
+
+## Arena Cero, parte 4 — Armas (hecho)
+
+- En el motor: `rayo(desde, direccion, largo, atraviesa)` (el cuarto valor: `"solidos"` o nombres que
+  se salta), con sus tests.
+- En el juego: `scripts/armas.chs` (pistola, escopeta de 7 perdigones, rifle de pulsos automático y
+  lanza de riel; cargador y reserva por tipo de munición; recarga; cambio con 1-4, Q, rueda, mando y
+  botón táctil; retroceso, fogonazo y destello), `scripts/diana.chs` y `scripts/barril.chs`.
+  14 sonidos hechos con el generador de efectos del editor. Pruebas: `pruebas/parte4.mjs` (7).
 
 ## Cómo seguir si se corta
 

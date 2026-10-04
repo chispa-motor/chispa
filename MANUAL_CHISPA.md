@@ -757,9 +757,9 @@ cuando toco Jugador:
         juego.mision = 1
 ```
 
-#### `rayo(desde, direccion, largo)`
+#### `rayo(desde, direccion, largo, atraviesa)`
 
-Lanza una linea invisible y dice lo primero que toca (un objeto con colision o una casilla solida), o nulo. Desde: un objeto (no se toca a si mismo) o un vector. Direccion: un angulo (0 = derecha, 90 = arriba), un vector o un objeto hacia el que mirar. Da una tabla con objeto, punto, distancia y casilla.
+Lanza una linea invisible y dice lo primero que toca (un objeto con colision o una casilla solida), o nulo. Desde: un objeto (no se toca a si mismo) o un vector. Direccion: un angulo (0 = derecha, 90 = arriba), un vector o un objeto hacia el que mirar. Da una tabla con objeto, punto, distancia y casilla. El cuarto valor (si se pone) dice que atraviesa: "solidos" = solo lo paran las cosas solidas (pasa a traves de los fantasmas: monedas, zonas, balas); o un nombre, un tipo o una etiqueta, o una lista de ellos.
 
 ```
 variable r = rayo(yo, buscar("Jugador"), 400)

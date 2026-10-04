@@ -6293,7 +6293,7 @@ cuando empieza:
 
 Un rayo es una línea invisible que dice qué toca primero (para saber si un enemigo te ve). Los diálogos enseñan conversaciones con opciones.
 
-#### `rayo(desde, direccion, largo)`
+#### `rayo(desde, direccion, largo, atraviesa)`
 
 Lanza una linea invisible y dice lo primero que toca (un objeto con colision o una casilla solida), o nulo.
 

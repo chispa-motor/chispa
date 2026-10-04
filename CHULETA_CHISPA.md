@@ -552,7 +552,7 @@ Las líneas que terminan en `:` empiezan un bloque: lo de dentro va debajo, con 
 
 | Comando | Qué hace | Ejemplo |
 |---|---|---|
-| `rayo(desde, direccion, largo)` | Lanza una linea invisible y dice lo primero que toca (un objeto con colision o una casilla solida), o nulo. | `variable r = rayo(yo, jugador, 400)` |
+| `rayo(desde, direccion, largo, atraviesa)` | Lanza una linea invisible y dice lo primero que toca (un objeto con colision o una casilla solida), o nulo. | `variable r = rayo(yo, jugador, 400)` |
 | `dialogo("quien", "texto", opciones)` | Una caja de dialogo abajo de la pantalla: el texto sale letra a letra y se pasa con espacio, intro o clic. | `dialogo("Ana", "Hola")` |
 
 ### Animar valores

@@ -27,6 +27,12 @@ import { MapaCasillas } from './componentes/MapaCasillas';
 import { Sprite } from './componentes/Sprite';
 import { propio } from '../utilidades/seguro';
 
+/** Qué NO cuenta para un rayo: los fantasmas (lo que se atraviesa), o lo que tenga uno de estos nombres, tipos o etiquetas (normalizados). */
+export interface FiltroRayo {
+  soloSolidos?: boolean;
+  saltar?: string[];
+}
+
 export interface Impacto {
   /** El objeto tocado (si es una casilla, el mapa). */
   objeto: ObjetoJuego;
@@ -40,12 +46,13 @@ export interface Impacto {
  * Lanza un rayo desde `origen` en `direccion` (de largo 1) hasta `largo` píxeles.
  * `ignorar`: el objeto que lanza el rayo (y sus hijos), que no cuentan.
  */
-export function lanzarRayo(escena: Escena, origen: Vector2, direccion: Vector2, largo: number, ignorar: ObjetoJuego | null = null): Impacto | null {
+export function lanzarRayo(escena: Escena, origen: Vector2, direccion: Vector2, largo: number, ignorar: ObjetoJuego | null = null, filtro: FiltroRayo = {}): Impacto | null {
   let mejor: Impacto | null = null;
+  const saltar = filtro.saltar?.length ? filtro.saltar : null;
   for (const o of escena.objetos) {
     if (o.destruido || o === ignorar || (ignorar && esDescendiente(o, ignorar)) || o.obtener(Sprite)?.fijo) continue;
     const col = o.obtener(Colision);
-    if (col?.activo) {
+    if (col?.activo && !(filtro.soloSolidos && !col.solido) && !(saltar && saltar.some((n) => o.es(n)))) {
       const d = rayoContraCaja(origen, direccion, col.caja());
       if (d !== null && d <= largo && (!mejor || d < mejor.distancia)) mejor = impacto(o, origen, direccion, d, null);
     }

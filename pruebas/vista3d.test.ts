@@ -886,3 +886,36 @@ describe('Los efectos se ven en primera persona', () => {
     expect(a.manchas()).toEqual([]);
   });
 });
+
+describe('rayo(): qué atraviesa', () => {
+  const mas: DefObjeto[] = [
+    { nombre: 'Moneda', x: 125, y: 140, sprite: { ancho: 10, alto: 10 }, colision: { ancho: 10, alto: 10, solido: false } },
+    { nombre: 'Robot', tipo: 'Enemigo', x: 150, y: 140, sprite: { ancho: 10, alto: 10 }, colision: { ancho: 10, alto: 10 } },
+  ];
+  const rayo = (cuarto: string) => {
+    const j = juego3D(`cuando empieza:\n    variable r = rayo(yo, 0, 500${cuarto})\n    si r == nulo:\n        mostrar("nada")\n    sino si r.casilla != nulo:\n        mostrar("casilla " + r.casilla)\n    sino:\n        mostrar(r.objeto.nombre)`, mas);
+    j.avanzar(1);
+    return j.errores[0] ? `${j.errores[0].error.message} ${j.errores[0].error.pista ?? ''}` : j.salida[0];
+  };
+
+  it('sin decir nada, lo primero que toca (también lo que se atraviesa), como siempre', () => {
+    expect(rayo('')).toBe('Moneda');
+  });
+
+  it('"solidos": pasa a través de los fantasmas y se para en lo sólido', () => {
+    expect(rayo(', "solidos"')).toBe('Robot');
+    expect(rayo(', "Sólidos"')).toBe('Robot');
+  });
+
+  it('un nombre, un tipo, una etiqueta o una lista: se los salta', () => {
+    expect(rayo(', "Moneda"')).toBe('Robot');
+    expect(rayo(', ["Moneda", "Enemigo"]')).toBe('casilla puerta');
+    expect(rayo(', ["solidos", "Robot"]')).toBe('casilla puerta');
+    expect(rayo(', nulo')).toBe('Moneda');
+  });
+
+  it('si se le da otra cosa, lo explica', () => {
+    expect(rayo(', 7')).toContain('se dice con textos');
+    expect(rayo(', 7')).toContain('rayo(yo, 0, 500, "solidos")');
+  });
+});

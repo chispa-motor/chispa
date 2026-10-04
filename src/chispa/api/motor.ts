@@ -50,7 +50,7 @@ import { FPS_MAXIMO, FPS_MINIMO, MODOS_CALIDAD, calidad, type ModoCalidad } from
 import { ORIENTACIONES, type Orientacion } from '../../motor/Tactil';
 import { ControlesJugador, numeroDeJugador } from './jugadores';
 import { Tabla } from '../ejecucion/valores';
-import { lanzarRayo } from '../../objetos/Rayos';
+import { lanzarRayo, type FiltroRayo } from '../../objetos/Rayos';
 import { CajaDialogo } from '../../objetos/Dialogo';
 import { propio, sinPrototipo } from '../../utilidades/seguro';
 
@@ -350,7 +350,20 @@ export function instalarAPIMotor(interprete: Interprete, ctx: ContextoJuego, dat
     if (direccion.longitud() === 0) throw new ErrorChispa(p, 'el rayo no tiene dirección: el vector es (0, 0) o el objetivo está justo en el mismo sitio.', `Ejemplo: ${ej}`);
     const largo = argNumero(a, 2, 'rayo', p, ej, 1000);
     if (largo <= 0) throw new ErrorChispa(p, 'el largo del rayo tiene que ser mayor que 0.', `Ejemplo: ${ej}`);
-    const i = lanzarRayo(ctx.escena, origen, direccion, largo, desde instanceof RefObjeto ? desde.objeto : null);
+    // El cuarto valor: qué atraviesa el rayo. "solidos" = solo le para lo sólido (atraviesa los fantasmas:
+    // monedas, zonas, balas); o un nombre, un tipo o una etiqueta (o una lista de ellos) que se salta.
+    const filtro: FiltroRayo = {};
+    const que = a[3];
+    if (que !== undefined && que !== null) {
+      const lista = Array.isArray(que) ? que : [que];
+      if (lista.length > 50) throw new ErrorChispa(p, `un rayo puede saltarse 50 nombres como mucho, y le das ${lista.length}.`);
+      for (const n of lista) {
+        if (typeof n !== 'string') throw new ErrorChispa(p, `lo que el rayo atraviesa se dice con textos: "solidos", o nombres, tipos o etiquetas. Le das ${nombreTipo(n)}.`, 'Ejemplo: rayo(yo, 0, 500, "solidos")   o   rayo(yo, 0, 500, ["Moneda", "bala"])');
+        if (normalizar(n) === 'solidos') filtro.soloSolidos = true;
+        else (filtro.saltar ??= []).push(normalizar(n));
+      }
+    }
+    const i = lanzarRayo(ctx.escena, origen, direccion, largo, desde instanceof RefObjeto ? desde.objeto : null, filtro);
     if (!i) return null;
     const r = new Tabla();
     r.poner('objeto', referencia(i.objeto));
