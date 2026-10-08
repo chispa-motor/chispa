@@ -192,12 +192,37 @@ const botonesPequenos = (p) => estado(p, () => {
   return mal;
 });
 
+/**
+ * La caja de algo de la página cuando ya se ve y ha dejado de moverse (los cajones y los menús se
+ * abren con una animación: en un ordenador lento, como los de GitHub, tardan más de lo normal).
+ */
+const cajaQuieta = async (localizador, ms = 5000) => {
+  await localizador.waitFor({ state: 'visible', timeout: ms });
+  let antes = null;
+  const fin = Date.now() + ms;
+  while (Date.now() < fin) {
+    const b = await localizador.boundingBox();
+    if (b && antes && Math.abs(b.x - antes.x) < 0.5 && Math.abs(b.y - antes.y) < 0.5 && Math.abs(b.width - antes.width) < 0.5) return b;
+    antes = b;
+    await new Promise((r) => setTimeout(r, 80));
+  }
+  const b = await localizador.boundingBox();
+  if (!b) throw new Error('lo que se buscaba no llega a verse en la pantalla');
+  return b;
+};
+
 console.log(`Pruebas en móviles y tabletas simulados (en ${direccion}):`);
 
 // ═════════════════════════ BLOQUE 1: el editor adaptable ═════════════════════════
 
 await prueba('cada aparato tiene su disposición: cajones y barra de abajo en móvil y tablet, y el escritorio como siempre', APARATOS, async (p, a) => {
-  const e = await estado(p, () => ({ clases: document.getElementById('editor').className, nav: getComputedStyle(document.querySelector('.navegacion-abajo')).display, izquierda: getComputedStyle(document.querySelector('.columna-izquierda')).visibility, disposicion: window.chispa.dispositivo }));
+  const leer = () => estado(p, () => ({ clases: document.getElementById('editor').className, nav: getComputedStyle(document.querySelector('.navegacion-abajo')).display, izquierda: getComputedStyle(document.querySelector('.columna-izquierda')).visibility, disposicion: window.chispa.dispositivo }));
+  // (los cajones se cierran con una animación: en un ordenador lento se espera a que acabe, hasta 3 segundos)
+  let e = await leer();
+  for (let i = 0; i < 30 && a.disposicion !== 'escritorio' && !(e.nav !== 'none' && e.izquierda === 'hidden'); i++) {
+    await p.waitForTimeout(100);
+    e = await leer();
+  }
   comprobar(e.disposicion.disposicion === a.disposicion, `la disposición es «${e.disposicion.disposicion}» y tenía que ser «${a.disposicion}»`);
   comprobar(e.disposicion.tactil === a.tactil, `táctil: ${e.disposicion.tactil}`);
   if (a.disposicion === 'escritorio') {
@@ -454,7 +479,7 @@ await prueba('sin ratón: lo que era doble clic o arrastrar está en el menú de
   });
   await p.waitForTimeout(300);
   const fila = async (texto) => {
-    const b = await p.locator(`.arbol .nodo:not(.hijo):has-text("${texto}")`).first().boundingBox();
+    const b = await cajaQuieta(p.locator(`.arbol .nodo:not(.hijo):has-text("${texto}")`).first());
     return { x: b.x + 60, y: b.y + b.height / 2 };
   };
   // Dejar el dedo en la fila del objeto: su menú
@@ -1325,15 +1350,16 @@ await prueba('juego exportado: quien juega coloca los controles a su gusto y se 
     const despues = await centroDe(juego, '.boton-tactil');
     comprobar(Math.abs(despues.x - 466) < 12 && Math.abs(despues.y - 215) < 12, `el botón no se ha quedado donde se soltó: ${JSON.stringify(despues)}`);
     comprobar(!mensajes.some((m) => m.includes('SALTO')), 'arrastrar el botón en el modo colocar ha pulsado su tecla');
-    const listo = await juego.locator('.barra-colocar button:has-text("Listo")').boundingBox();
+    const listo = await cajaQuieta(juego.locator('.barra-colocar button:has-text("Listo")'));
     comprobar(listo.height >= 44, 'el botón «Listo» mide menos de 44 px');
     await d.tocar(listo.x + listo.width / 2, listo.y + listo.height / 2);
-    await juego.waitForTimeout(150);
-    comprobar((await juego.locator('.barra-colocar').count()) === 0, '«Listo» no cierra el modo colocar');
+    // (en un ordenador lento tarda un poco más: se espera a que se cierre, hasta 3 segundos)
+    const cerrado = await juego.waitForFunction(() => !document.querySelector('.barra-colocar'), null, { timeout: 3000 }).then(() => true, () => false);
+    comprobar(cerrado, '«Listo» no cierra el modo colocar');
     // Ahora sí pulsa
     const b = await centroDe(juego, '.boton-tactil');
     await d.tocar(b.x, b.y);
-    await juego.waitForTimeout(200);
+    for (let i = 0; i < 30 && !mensajes.some((m) => m.includes('SALTO')); i++) await juego.waitForTimeout(100);
     comprobar(mensajes.some((m) => m.includes('SALTO')), 'tras colocar, el botón no pulsa');
     // Se vuelve a abrir el juego: el botón sale donde se dejó
     await juego.reload();
