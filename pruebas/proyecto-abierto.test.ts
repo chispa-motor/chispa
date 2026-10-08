@@ -20,7 +20,7 @@ const leer = (a: string) => readFileSync(a, 'utf8');
 describe('Archivos del proyecto abierto', () => {
   it('están todos, en español', () => {
     const quePide: Record<string, string[]> = {
-      'README.md': ['Chispa', 'Empezar', 'Qué trae', 'Licencia', 'Apoya Chispa', 'docs/imagenes/arena.gif', 'CONTRIBUIR.md'],
+      'README.md': ['Chispa', 'Empezar', 'Qué trae', 'Licencia', 'Apoya Chispa', 'docs/imagenes/arena.gif', 'CONTRIBUIR.md', 'Mozilla Public License 2.0', 'CC0', 'LICENCIA.md'],
       'EMPIEZA_AQUI.md': ['¿De quién son mis juegos?', 'Tuyos', 'MPL 2.0', 'dominio público'],
       'CONTRIBUIR.md': ['issue', 'Pull Request', 'npm run pruebas', 'SEGURIDAD.md'],
       'SEGURIDAD.md': ['Report a vulnerability', 'No abras una *issue* pública'],
@@ -34,7 +34,6 @@ describe('Archivos del proyecto abierto', () => {
       'src/recursos/LICENCIA.md': ['dominio público', 'CC0'],
       // La licencia en dos líneas: el motor, MPL 2.0; ejemplos, plantillas y recursos, CC0
       'LICENCIA.md': ['Mozilla Public License 2.0', 'CC0 1.0', 'proyectos/', 'src/plantillas/', 'src/recursos/'],
-      'README.md': ['Mozilla Public License 2.0', 'CC0', 'LICENCIA.md'],
     };
     for (const [archivo, frases] of Object.entries(quePide)) {
       expect(existsSync(archivo), archivo).toBe(true);
