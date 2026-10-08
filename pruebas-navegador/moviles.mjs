@@ -1352,6 +1352,12 @@ await prueba('juego exportado: quien juega coloca los controles a su gusto y se 
     comprobar(!mensajes.some((m) => m.includes('SALTO')), 'arrastrar el botón en el modo colocar ha pulsado su tecla');
     const listo = await cajaQuieta(juego.locator('.barra-colocar button:has-text("Listo")'));
     comprobar(listo.height >= 44, 'el botón «Listo» mide menos de 44 px');
+    // Que no lo tape nada (el botón de pantalla completa está en la esquina de arriba a la derecha)
+    const encima = await juego.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.textContent?.trim(), { x: listo.x + listo.width / 2, y: listo.y + listo.height / 2 });
+    comprobar(encima === 'Listo', `el botón «Listo» está tapado por otra cosa: «${encima}»`);
+    const completa = await juego.locator('.boton-completa').boundingBox().catch(() => null);
+    const barra = await juego.locator('.barra-colocar').boundingBox();
+    comprobar(!completa || barra.x + barra.width <= completa.x || barra.y >= completa.y + completa.height, 'la barra de colocar se mete debajo del botón de pantalla completa');
     await d.tocar(listo.x + listo.width / 2, listo.y + listo.height / 2);
     // (en un ordenador lento tarda un poco más: se espera a que se cierre, hasta 3 segundos)
     const cerrado = await juego.waitForFunction(() => !document.querySelector('.barra-colocar'), null, { timeout: 3000 }).then(() => true, () => false);

@@ -802,7 +802,7 @@ export const ESTILOS_TACTILES = `
 .pomo-tactil{position:absolute;left:50%;top:50%;width:44%;height:44%;margin:-22% 0 0 -22%;border-radius:50%;background:rgba(255,255,255,.75);pointer-events:none}
 .controles-tactiles.colocando{background:rgba(0,0,0,.45);pointer-events:auto}
 .controles-tactiles.colocando .boton-tactil,.controles-tactiles.colocando .palanca-tactil{opacity:1;outline:3px dashed #f1c40f;outline-offset:3px}
-.barra-colocar{position:absolute;left:50%;top:12px;transform:translateX(-50%);display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;max-width:94%;padding:8px 12px;border-radius:12px;background:rgba(18,20,28,.92);color:#fff;font:14px system-ui,sans-serif}
+.barra-colocar{position:absolute;left:50%;top:12px;transform:translateX(-50%);display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;max-width:calc(100% - 136px);padding:8px 12px;border-radius:12px;background:rgba(18,20,28,.92);color:#fff;font:14px system-ui,sans-serif}
 .barra-colocar button{min-height:44px;padding:0 14px;border-radius:8px;border:1px solid rgba(255,255,255,.4);background:#2b3140;color:#fff;font:inherit}
 .aviso-girar{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;background:#12141c;color:#e8ebf2;text-align:center;font:18px system-ui,sans-serif;pointer-events:auto}
 .aviso-girar p{margin:0;max-width:20em}
