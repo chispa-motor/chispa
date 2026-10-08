@@ -216,11 +216,10 @@ creciendo:
 
 ## Licencia
 
-El código de Chispa tiene licencia **[Mozilla Public License 2.0](LICENSE)**.
-Si cambias un archivo de Chispa y lo repartes, tienes que compartir esos
-cambios con la misma licencia. **Tus juegos no**: son tuyos. Los juegos de
-ejemplo (`proyectos/` y `src/ejemplos/`) son de dominio público (CC0): úsalos
-como quieras.
+- **El motor y el editor:** [Mozilla Public License 2.0](LICENSE). Si cambias Chispa y lo repartes, comparte esos cambios; **tus juegos son tuyos**.
+- **Los juegos de ejemplo, las plantillas y los recursos** (dibujos, sonidos y música): dominio público, **CC0**. Úsalos como quieras.
+
+Los detalles, en [LICENCIA.md](LICENCIA.md).
 
 Creado por **Rodrigo**. Todas las personas que han ayudado están en
 [CREDITOS.md](CREDITOS.md).

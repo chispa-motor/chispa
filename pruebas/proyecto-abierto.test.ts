@@ -30,6 +30,11 @@ describe('Archivos del proyecto abierto', () => {
       'AUDITORIA_SEGURIDAD.md': ['Problemas encontrados'],
       'proyectos/LICENCIA.md': ['dominio público', 'CC0'],
       'src/ejemplos/LICENCIA.md': ['dominio público', 'CC0'],
+      'src/plantillas/LICENCIA.md': ['dominio público', 'CC0'],
+      'src/recursos/LICENCIA.md': ['dominio público', 'CC0'],
+      // La licencia en dos líneas: el motor, MPL 2.0; ejemplos, plantillas y recursos, CC0
+      'LICENCIA.md': ['Mozilla Public License 2.0', 'CC0 1.0', 'proyectos/', 'src/plantillas/', 'src/recursos/'],
+      'README.md': ['Mozilla Public License 2.0', 'CC0', 'LICENCIA.md'],
     };
     for (const [archivo, frases] of Object.entries(quePide)) {
       expect(existsSync(archivo), archivo).toBe(true);
