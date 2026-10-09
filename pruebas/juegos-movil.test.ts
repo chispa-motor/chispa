@@ -362,6 +362,20 @@ describe('Que quien juega coloque los controles a su gusto', () => {
     dos.quitar();
   });
 
+  it('«Listo» responde al levantar el dedo, aunque el navegador no mande «click» (pulsación larga)', () => {
+    const uno = conLienzo();
+    uno.t.boton('Saltar', ['espacio']);
+    uno.t.colocar();
+    const listo = [...uno.caja.querySelectorAll<HTMLButtonElement>('.barra-colocar button')].find((b) => b.textContent === 'Listo')!;
+    dedo(listo, 'pointerdown', 10, 10);
+    dedo(listo, 'pointerup', 10, 10);
+    expect(uno.t.colocandoAhora).toBe(false);
+    // Si luego llega el «click», no vuelve a hacer nada raro
+    listo.click();
+    expect(uno.t.colocandoAhora).toBe(false);
+    uno.quitar();
+  });
+
   it('lo guardado se lee con cuidado: solo sitios de 0 a 1, y nada raro', () => {
     const { t, quitar } = conLienzo();
     t.almacen = { leer: () => '{"saltar":{"x":0.5,"y":0.5},"malo":{"x":5,"y":0},"texto":"hola","__proto__":{"x":0.1,"y":0.1},"otro":{"x":"0.2","y":0.2}}', guardar: () => {} };

@@ -603,11 +603,30 @@ export class Tactil {
       barra.className = 'barra-colocar';
       const texto = document.createElement('span');
       texto.textContent = 'Arrastra los controles a donde quieras';
+      // Los botones de la barra responden al LEVANTAR el dedo, no solo al «clic»: si el dedo se queda
+      // un poco más de la cuenta, el navegador lo toma como «dedo quieto» y no manda el clic, y el botón
+      // parecía no hacer nada. El clic sigue valiendo (ratón, teclado), sin hacerlo dos veces.
       const boton = (t: string, accion: () => void) => {
         const b = document.createElement('button');
         b.type = 'button';
         b.textContent = t;
-        b.addEventListener('click', accion);
+        let pulsando: number | null = null;
+        let hecho = -Infinity;
+        b.addEventListener('pointerdown', (e) => {
+          pulsando = e.pointerId;
+          e.stopPropagation();
+        });
+        b.addEventListener('pointerup', (e) => {
+          if (pulsando !== e.pointerId) return;
+          pulsando = null;
+          hecho = performance.now();
+          accion();
+        });
+        b.addEventListener('pointercancel', () => (pulsando = null));
+        b.addEventListener('contextmenu', (e) => e.preventDefault());
+        b.addEventListener('click', () => {
+          if (performance.now() - hecho > 600) accion();
+        });
         return b;
       };
       barra.append(texto, boton('Como estaban', () => this.olvidarColocados()), boton('Listo', () => this.colocar(false)));
