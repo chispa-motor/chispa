@@ -530,10 +530,21 @@ export class Entrada {
   }
   /** Los mandos del navegador, para vibrar. */
   private mandosNavegador: (Gamepad | null)[] = [];
+  /** Falso si la página no deja usar mandos (se pregunta una vez y no se vuelve a intentar). */
+  private mandosPermitidos = true;
 
   /** Lee los mandos (el navegador no avisa: hay que preguntarle en cada fotograma). */
   leerMandos(): void {
-    const lista = typeof navigator !== 'undefined' && navigator.getGamepads ? navigator.getGamepads() : [];
+    // Dentro de una página que no deja usar mandos (un iframe con «permissions policy», como la vista previa
+    // de un archivo en algunas apps), getGamepads() lanza un error: entonces se juega sin mandos.
+    let lista: Iterable<Gamepad | null> = [];
+    if (this.mandosPermitidos && typeof navigator !== 'undefined' && navigator.getGamepads) {
+      try {
+        lista = navigator.getGamepads() ?? [];
+      } catch {
+        this.mandosPermitidos = false;
+      }
+    }
     const conectados = [...lista].filter((x): x is Gamepad => !!x && x.connected).slice(0, MAXIMO_MANDOS);
     this.mandosNavegador = conectados;
     for (let i = 0; i < MAXIMO_MANDOS; i++) {

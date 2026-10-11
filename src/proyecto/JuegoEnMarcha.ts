@@ -421,7 +421,14 @@ export class JuegoEnMarcha implements ContextoJuego {
   // ───────────────────────── Datos del jugador (guardar / cargar) ─────────────────────────
 
   private get almacen() {
-    return this.opciones.almacen ?? (typeof localStorage !== 'undefined' ? localStorage : null);
+    if (this.opciones.almacen) return this.opciones.almacen;
+    // En una página aislada (un iframe sin «mismo origen») solo con LEER localStorage ya salta un error:
+    // entonces no hay dónde guardar, pero el juego funciona igual.
+    try {
+      return typeof localStorage !== 'undefined' ? localStorage : null;
+    } catch {
+      return null;
+    }
   }
   efectosPropios(): Record<string, ConfigParticulas> {
     return this.proyecto.efectos ?? {};

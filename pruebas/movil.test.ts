@@ -417,3 +417,23 @@ describe('Teclado de pantalla en los campos de texto del juego', () => {
     j.canvas.remove();
   });
 });
+
+describe('Una página que no deja usar mandos', () => {
+  it('si getGamepads() da error (permissions policy), el juego sigue sin mandos y no lo vuelve a intentar', () => {
+    const lienzo = document.createElement('canvas');
+    const entrada = new Entrada(lienzo, (x, y) => new Vector2(x, y));
+    const espia = vi.fn(() => {
+      throw new DOMException('Access to the feature "gamepad" is disallowed by permissions policy.', 'SecurityError');
+    });
+    const antes = Object.getOwnPropertyDescriptor(navigator, 'getGamepads');
+    Object.defineProperty(navigator, 'getGamepads', { value: espia, configurable: true });
+    try {
+      expect(() => entrada.leerMandos()).not.toThrow();
+      expect(() => entrada.leerMandos()).not.toThrow();
+      expect(espia).toHaveBeenCalledTimes(1);
+    } finally {
+      if (antes) Object.defineProperty(navigator, 'getGamepads', antes);
+      else delete (navigator as unknown as { getGamepads?: unknown }).getGamepads;
+    }
+  });
+});
