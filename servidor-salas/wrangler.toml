@@ -1,0 +1,21 @@
+# Servidor de salas de Chispa (programar juntos). Ver SERVIDOR_SALAS.md para subirlo a tu cuenta de Cloudflare.
+name = "chispa-salas"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+
+# Cada sala es un Durable Object con su propia base de datos (SQLite: es lo que hay en el plan gratis)
+[[durable_objects.bindings]]
+name = "SALAS"
+class_name = "Sala"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Sala"]
+
+[vars]
+# Las webs que pueden conectarse: la de Chispa y las de pruebas en tu ordenador (npm run dev y npm run preview)
+ORIGENES = "https://chispa-motor.github.io,http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173"
+
+# No se guardan registros de las conexiones (quién entra, desde dónde)
+[observability]
+enabled = false
