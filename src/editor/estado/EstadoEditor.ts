@@ -94,6 +94,12 @@ export class EstadoEditor {
   /** ¿Hay cambios sin guardar? */
   modificado = false;
 
+  /**
+   * PROGRAMAR JUNTOS: mientras estás en una sala, deshacer y rehacer los lleva la sala
+   * (colaborar/Vinculo.ts), que deshace SOLO LO TUYO sin tocar lo que han hecho los demás.
+   */
+  deshacerExterno: { deshacer(): void; rehacer(): void; puedeDeshacer(): boolean; puedeRehacer(): boolean; cortar(): void } | null = null;
+
   private pasado: string[] = [];
   private futuro: string[] = [];
   private oyentes = new Set<(c: TipoCambio) => void>();
@@ -131,9 +137,11 @@ export class EstadoEditor {
   /** Para cambios que duran (arrastrar un objeto, pintar casillas): se deshacen de una vez. */
   empezarCambioLargo(): void {
     this.fotoPendiente = JSON.stringify(this.proyecto);
+    this.deshacerExterno?.cortar();
   }
   terminarCambioLargo(): void {
     if (this.fotoPendiente === null) return;
+    this.deshacerExterno?.cortar();
     if (this.fotoPendiente !== JSON.stringify(this.proyecto)) this.apuntar(this.fotoPendiente);
     this.fotoPendiente = null;
   }
@@ -146,13 +154,50 @@ export class EstadoEditor {
   }
 
   get puedeDeshacer(): boolean {
-    return this.pasado.length > 0;
+    return this.deshacerExterno ? this.deshacerExterno.puedeDeshacer() : this.pasado.length > 0;
   }
   get puedeRehacer(): boolean {
-    return this.futuro.length > 0;
+    return this.deshacerExterno ? this.deshacerExterno.puedeRehacer() : this.futuro.length > 0;
+  }
+
+  /** ¿Se está arrastrando o pintando algo? (programar juntos espera a que termine para aplicar lo de los demás) */
+  get enCambioLargo(): boolean {
+    return this.fotoPendiente !== null;
+  }
+
+  /** Vuelve a pintar los botones de deshacer y rehacer. */
+  refrescarHistorial(): void {
+    this.avisar('historial');
+  }
+
+  /**
+   * PROGRAMAR JUNTOS: aplica cambios que han llegado de otra persona (ya comprobados). No entran en
+   * el historial de deshacer, y lo que tenías seleccionado sigue seleccionado (aunque se haya movido
+   * de sitio en la lista porque otro ha añadido o borrado objetos).
+   */
+  cambiosDeFuera(fn: () => void, soloCodigo: boolean): void {
+    const objetos = () => this.proyecto.escenas[this.escenaActual]?.objetos ?? [];
+    const antes = objetos();
+    const elegido = this.seleccion?.tipo === 'escena' ? antes[this.seleccion.indice] : null;
+    const elegidos = this.seleccionados.map((i) => antes[i]);
+    fn();
+    if (!soloCodigo) {
+      if (!this.proyecto.escenas[this.escenaActual]) this.escenaActual = this.proyecto.escenaInicial;
+      const ahora = objetos();
+      if (this.seleccion?.tipo === 'escena') {
+        const i = elegido ? ahora.indexOf(elegido) : -1;
+        this.seleccion = i >= 0 ? { tipo: 'escena', escena: this.escenaActual, indice: i } : null;
+      } else if (this.seleccion && !this.definicion(this.seleccion)) this.seleccion = null;
+      this.seleccionados = this.seleccion?.tipo === 'escena' ? elegidos.map((o) => ahora.indexOf(o)).filter((i) => i >= 0) : [];
+      if (this.seleccion?.tipo === 'escena' && !this.seleccionados.includes(this.seleccion.indice)) this.seleccionados.push(this.seleccion.indice);
+      this.pestanas = this.pestanas.filter((p) => tiene(this.proyecto.scripts, p));
+      if (this.pestanaActiva !== 'escena' && !tiene(this.proyecto.scripts, this.pestanaActiva)) this.pestanaActiva = 'escena';
+    }
+    this.avisar(soloCodigo ? 'codigo' : 'proyecto');
   }
 
   deshacer(): void {
+    if (this.deshacerExterno) return this.deshacerExterno.deshacer();
     const foto = this.pasado.pop();
     if (!foto) return;
     this.futuro.push(JSON.stringify(this.proyecto));
@@ -160,6 +205,7 @@ export class EstadoEditor {
   }
 
   rehacer(): void {
+    if (this.deshacerExterno) return this.deshacerExterno.rehacer();
     const foto = this.futuro.pop();
     if (!foto) return;
     this.pasado.push(JSON.stringify(this.proyecto));
@@ -180,9 +226,14 @@ export class EstadoEditor {
 
   // ═════════════════════════ Proyecto entero ═════════════════════════
 
+  /** Se llama antes de abrir otro proyecto (programar juntos sale de la sala: si no, mandaría el otro proyecto a la sala). */
+  antesDeAbrir: (() => void) | null = null;
+
   /** Abre otro proyecto (borra el historial). */
   abrir(datos: unknown): void {
-    this.proyecto = migrarProyecto(datos);
+    const nuevo = migrarProyecto(datos);
+    this.antesDeAbrir?.();
+    this.proyecto = nuevo;
     this.escenaActual = this.proyecto.escenaInicial;
     this.seleccion = null;
     this.seleccionados = [];

@@ -337,6 +337,8 @@ describe('Deshacer y rehacer: TODO lo que cambia el proyecto', () => {
       'alternarSeleccion', 'indicesSeleccionados', 'estaSeleccionado', 'definicion', 'nombreLibre', 'copiarSeleccionado',
       'cambiarCodigo', 'abrirScript', 'cerrarPestana', 'activarPestana', 'todosLosObjetos', 'cambiarEscenaActual',
       'copiasDe', 'plantillaDe', 'usosDe', 'enBloques', 'ponerEnBloques',
+      // Programar juntos: lo que llega de otros no entra en TU deshacer (deshaces solo lo tuyo)
+      'cambiosDeFuera', 'refrescarHistorial',
     ]);
     const metodos = Object.getOwnPropertyNames(EstadoEditor.prototype).filter((m) => {
       const d = Object.getOwnPropertyDescriptor(EstadoEditor.prototype, m);

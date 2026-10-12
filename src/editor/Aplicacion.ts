@@ -42,7 +42,7 @@ import { abrirDialogo, avisar, confirmar, notificar } from './interfaz/dialogos'
 import { vigilarDispositivo, type EstadoDispositivo } from './interfaz/dispositivo';
 import { activarAyudaAlTocar } from './interfaz/ayudaAlTocar';
 import { abrirMenu } from './interfaz/menu';
-import { botonIcono, h, icono, rellenar } from './interfaz/dom';
+import { botonIcono, fondoDeColor, h, icono, rellenar } from './interfaz/dom';
 import { Inspector } from './paneles/Inspector';
 import { PanelInferior } from './paneles/PanelInferior';
 import { PanelIzquierdo } from './paneles/PanelIzquierdo';
@@ -56,6 +56,7 @@ import { abrirAjustes, cargarAjustes } from './ajustes';
 import { LIMITES_PROYECTO } from '../proyecto/validar';
 import { abrirAcercaDe, abrirApoyo } from './acerca';
 import { VERSION } from '../version';
+import { ControlJuntos } from './juntos/ControlJuntos';
 
 const CLAVE_DISPOSICION = 'chispa-editor:disposicion';
 /** Milisegundos después de un cambio para guardar solo, y como mucho sin guardar mientras se sigue cambiando. */
@@ -90,6 +91,8 @@ export class Aplicacion {
   private panelDepurador: PanelDepurador;
   /** El tutorial guiado, si está abierto. */
   tutorial: Tutorial | null = null;
+  /** Programar juntos (salas para hacer el juego entre varios a la vez). */
+  readonly juntos: ControlJuntos;
 
   /** La barra de abajo (móvil y tablet): cada botón enseña una parte del editor. */
   private navegacion = h('nav', { class: 'navegacion-abajo', 'aria-label': 'Partes del editor' });
@@ -109,6 +112,27 @@ export class Aplicacion {
     this.inferior = new PanelInferior(e, (archivo, linea, columna) => this.irA(archivo, linea, columna), this.panelDepurador.elemento);
     this.conectarDepurador();
     this.zonaEscena.append(this.vistaEscena.elemento);
+    this.juntos = new ControlJuntos({
+      estado: e,
+      codigo: this.editorCodigo,
+      escena: this.vistaEscena,
+      guardar: () => this.guardarEnNavegador(),
+      prepararParaAbrir: () => {
+        this.tutorial?.cerrar();
+        this.parar();
+      },
+      despuesDeAbrir: () => {
+        this.recuperado = true;
+        this.enMisProyectos = false;
+        this.vistaEscena.encuadrar();
+        this.inferior.limpiar();
+        void this.guardarEnNavegador();
+      },
+      redibujar: () => {
+        this.dibujarBarra();
+        this.marcarPestanas();
+      },
+    });
 
     this.montar();
     this.soltarArchivos();
@@ -396,6 +420,7 @@ export class Aplicacion {
       { texto: 'Proyecto nuevo', icono: 'nuevo', alPulsar: () => void this.nuevo() },
       { texto: 'Mis proyectos', icono: 'carpeta', ayuda: 'Los proyectos guardados en este aparato (se guardan solos)', alPulsar: () => void this.abrirMisProyectos() },
       { texto: 'Abrir un archivo', icono: 'abrir', ayuda: 'Abre un archivo .chispa.json', alPulsar: () => void this.abrirArchivo() },
+      { texto: this.juntos.sesion ? 'Programar juntos: la sala' : 'Programar juntos', icono: 'juntos', ayuda: 'Haced el juego entre varios a la vez, cada uno desde su aparato', alPulsar: () => this.juntos.abrir() },
       sePuedeCompartir() ? { texto: 'Compartir o guardar copia', icono: 'exportar', ayuda: 'Manda el archivo del proyecto por el menú de compartir: guardarlo en Archivos o en Drive, enviarlo...', alPulsar: () => void this.compartirProyecto() } : null,
       { texto: 'Guardar (descargar)', icono: 'guardar', ayuda: 'Descarga el proyecto como archivo .chispa.json', alPulsar: () => this.descargarProyecto() },
       { texto: 'Exportar el juego', icono: 'exportar', alPulsar: () => void this.exportar() },
@@ -444,7 +469,7 @@ export class Aplicacion {
           h('span', {}, e.proyecto.nombre),
           h('span', { class: 'estado-guardado' }, this.guardadoEn ? '✓ guardado' : ''),
         ),
-        h('div', { class: 'grupo-barra derecha' }, deshacer, rehacer),
+        h('div', { class: 'grupo-barra derecha' }, this.juntos.sesion ? this.juntos.boton(true) : null, deshacer, rehacer),
         h('div', { class: 'grupo-barra controles-juego' }, ejecutar, parar),
       );
       return;
@@ -466,6 +491,7 @@ export class Aplicacion {
         h('span', { class: 'estado-guardado' }, this.guardadoEn ? '✓ guardado' : ''),
       ),
       h('div', { class: 'grupo-barra derecha' },
+        this.juntos.boton(this.dispositivo.disposicion === 'tablet'),
         botonIcono('ajustes', 'Ajustes: tema claro u oscuro, tamaño de la letra y botones grandes (Ctrl + ,)', () => abrirAjustes(() => this.revisarDispositivo()), 'Ajustes'),
         botonIcono('ayuda', 'Ayuda: primeros pasos y atajos (F1: todos los atajos)', () => this.ayuda(), 'Ayuda'),
       ),
@@ -479,6 +505,7 @@ export class Aplicacion {
     const pestana = (id: string, texto: string, ic: string, cerrable: boolean) =>
       h('div', {
         class: `pestana ${e.pestanaActiva === id ? 'activa' : ''}`,
+        'data-pestana': id,
         role: 'tab',
         'aria-selected': String(e.pestanaActiva === id),
         title: id === 'escena' ? 'Vista de la escena (colocar objetos)' : `${texto} · clic central para cerrar`,
@@ -487,6 +514,7 @@ export class Aplicacion {
       },
         icono(ic, 14),
         h('span', {}, texto),
+        h('span', { class: 'gente-pestana' }),
         cerrable ? h('button', { class: 'cerrar-pestana', title: 'Cerrar', 'aria-label': `Cerrar ${texto}`, onclick: (ev: Event) => {
           ev.stopPropagation();
           e.cerrarPestana(id);
@@ -496,6 +524,7 @@ export class Aplicacion {
       pestana('escena', `Escena: ${e.escenaActual}`, 'escena', false),
       ...e.pestanas.map((p) => pestana(p, p, 'script', true)),
     );
+    this.marcarPestanas();
     const esEscena = e.pestanaActiva === 'escena';
     this.zonaEscena.hidden = !esEscena;
     this.zonaCodigo.hidden = esEscena;
@@ -503,6 +532,17 @@ export class Aplicacion {
       this.editorCodigo.mostrar(e.pestanaActiva);
       requestAnimationFrame(() => this.editorCodigo.enfocar(e.pestanaActiva));
     } else this.vistaEscena.redibujar();
+  }
+
+  /** Programar juntos: un circulito del color de cada persona que está en ese script. */
+  private marcarPestanas(): void {
+    for (const el of this.pestanas.querySelectorAll<HTMLElement>('.pestana[data-pestana]')) {
+      const hueco = el.querySelector<HTMLElement>('.gente-pestana');
+      if (!hueco) continue;
+      const id = el.dataset.pestana!;
+      const gente = id === 'escena' ? [] : this.juntos.quienEnScript(id);
+      rellenar(hueco, gente.map((p) => fondoDeColor(h('span', { class: 'circulo-juntos mini', title: `${p.nombre} está aquí` }, p.nombre[0]), p.color)));
+    }
   }
 
   private irA(archivo: string, linea: number, columna: number): void {

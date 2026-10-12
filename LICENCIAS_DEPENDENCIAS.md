@@ -9,10 +9,10 @@ lo permiten todas: solo piden que su aviso de copyright viaje con el código.
 
 ## Resumen
 
-- **114 paquetes** en total (contando los que usan los que usamos).
+- **120 paquetes** en total (contando los que usan los que usamos).
 - **Todos son compatibles con la MPL 2.0.**
-- Por licencia: MIT (105), Apache-2.0 (4), ISC (2), BSD-2-Clause (1), Unlicense (1), BSD-3-Clause (1).
-- **Dentro del editor** van 18 (el editor de código, CodeMirror, y sus piezas). Sus avisos de licencia van con el editor, en `public/licencias-de-terceros.txt`.
+- Por licencia: MIT (111), Apache-2.0 (4), ISC (2), BSD-2-Clause (1), Unlicense (1), BSD-3-Clause (1).
+- **Dentro del editor** van 24 (el editor de código, CodeMirror, y sus piezas). Sus avisos de licencia van con el editor, en `public/licencias-de-terceros.txt`.
 - **Dentro de los juegos exportados no va ninguno**: el reproductor es solo código de Chispa.
 - Los demás (96) solo sirven para **desarrollar y probar** Chispa (compilar, tests, navegador de pruebas). No se reparten con el editor ni con los juegos.
 
@@ -44,11 +44,17 @@ lo permiten todas: solo piden que su aviso de copyright viaje con el código.
 | @marijn/find-cluster-break | 1.0.4 | MIT | Sí |
 | crelt | 1.0.7 | MIT | Sí |
 | earcut | 3.2.4 | ISC | Sí |
+| isomorphic.js | 0.2.5 | MIT | Sí |
+| lib0 | 0.2.119 | MIT | Sí |
 | polygon-clipping | 0.15.7 | MIT | Sí |
 | robust-predicates | 3.0.3 | Unlicense | Sí |
 | splaytree | 3.2.3 | MIT | Sí |
 | style-mod | 4.1.4 | MIT | Sí |
 | w3c-keyname | 2.2.8 | MIT | Sí |
+| y-codemirror.next | 0.3.6 | MIT | Sí |
+| y-protocols | 1.0.7 | MIT | Sí |
+| y-websocket | 3.1.0 | MIT | Sí |
+| yjs | 13.6.33 | MIT | Sí |
 
 ## Solo para desarrollar y probar
 
