@@ -513,3 +513,112 @@ objetos puede ir lento en un móvil. No es un daño: es un juego lento, y «auto
 - **(1.2) «Mis proyectos» vive en el navegador.** Vale lo dicho arriba sobre
   compartir origen, y el navegador puede borrarlo si se queda sin sitio (se
   le pide que no lo haga, pero puede negarse).
+
+## Chispa 1.4: programar juntos (salas)
+
+Lo nuevo de la 1.4 es lo más delicado que ha tenido Chispa: por primera vez el
+editor **se conecta a un servidor** y **recibe cosas de otras personas mientras
+trabajas**. Y lo van a usar chavales, a veces en clase. Se ha diseñado pensando
+en eso desde el principio; aquí está cada riesgo y qué se ha hecho.
+
+### 24. Alta · Lo que llega de otro editor podría venir roto o con trampas
+
+Un editor modificado puede mandar cualquier cosa a la sala: un objeto con
+campos raros, una imagen con dirección de internet (avisaría a esa web de
+quién abre el juego, el problema 2), un `__proto__`...
+
+**Arreglo:** antes de aplicar nada que llegue de la sala, el proyecto entero se
+comprueba con `migrarProyecto` (la misma validación que al abrir un archivo,
+`validar.ts`). Si no pasa, **no se aplica nada**, se avisa una vez y tu
+proyecto se queda como estaba. Lo que solo cambia el código de un script se
+comprueba por tamaño (los scripts nuevos o borrados pasan por la validación
+entera). Test: «un proyecto roto que llega de la sala NO se aplica».
+
+### 25. Alta · Nombres o colores con trampa (texto libre, HTML, CSS)
+
+Cada editor cuenta a los demás su nombre y color. Uno modificado podría poner
+un nombre ofensivo, HTML o un color con `url(...)`.
+
+**Arreglo:** no hay nombres libres: cada uno es un **animal de un color de una
+lista fija**. Lo que llega de los demás se comprueba **antes de enseñarlo**
+(también en los cursores del editor de código, que pinta y-codemirror): si el
+nombre no es de la lista sale «Invitado», y si el color no es de la lista, gris.
+Los nombres se ponen como texto (nodos de texto) y los colores con
+`fondoDeColor`, nunca dentro de `style`. Lo que cuenta cada uno de lo que mira
+(escena, objeto, script) se recorta a 200 letras y se pinta como texto.
+
+### 26. Alta · Que desconocidos encuentren una sala o hablen con los chavales
+
+**Arreglo:** no hay chat ni mensajes, no hay cuentas, no hay lista de salas ni
+buscador. Solo se entra con el código: 9 letras y números al azar con
+`crypto.getRandomValues` (31⁹ ≈ 26 billones de combinaciones), y una sala que
+no existe no se crea al entrar (da «no existe»), así que probar códigos al azar
+no lleva a ninguna parte. El dueño puede **poner el candado** cuando ya está
+todo el mundo y **sacar** a quien no deba estar.
+
+### 27. Media · Hacerse pasar por el dueño de la sala
+
+**Arreglo:** el dueño tiene una llave al azar de 40 letras (unos 238 bits) que
+solo guarda su navegador. El servidor guarda su **huella SHA-256**, no la
+llave. Las órdenes de echar, poner el candado y cerrar solo se aceptan de la
+conexión que entró con esa llave (comprobado en el servidor, no en el editor).
+Al dueño no se le puede echar.
+
+### 28. Media · Llenar la sala de basura o tumbarla
+
+**Arreglo:** en el servidor, un mensaje puede ocupar como mucho 16 MB, un
+proyecto de sala 24 MB (se mide de verdad antes de decir que no), el aviso de
+«quién soy» 8 KB, y en una sala entran como mucho 12 a la vez. Quien manda algo
+que no se entiende es expulsado sin que la sala se caiga. El editor no deja
+crear una sala con un proyecto de más de 20 MB y lo explica.
+
+### 29. Media · Que otras webs usen el servidor
+
+**Arreglo:** el servidor solo acepta conexiones de las webs de `ORIGENES` (la
+de Chispa y las de pruebas en tu ordenador). Y el editor, por su política de
+seguridad (CSP), solo puede conectarse a **su** servidor de salas
+(`connect-src`), que se pone al compilar a partir de `src/configuracion.ts`.
+
+### 30. Baja · Datos de las personas en el servidor
+
+**Arreglo:** no se guarda nada de las personas: ni nombres, ni correos, ni
+direcciones IP, ni registros de conexiones (`observability` apagado en
+`wrangler.toml`). De quien es sacado se guarda solo un número al azar de su
+navegador. Una sala vacía 7 días se borra sola con todo; cerrar la sala la
+borra al momento.
+
+### Lo que no se puede evitar (y se dice)
+
+- **Sacar a alguien no es infalible.** Se recuerda su navegador por un número
+  al azar; borrando los datos del navegador o con una ventana de incógnito
+  podría volver a entrar si tiene el código. Para eso está el **candado**, o
+  cerrar la sala y crear otra con otro código.
+- **El código de los demás se ejecuta en tu aparato** cuando pulsas
+  «Ejecutar», igual que al abrir un proyecto de otra persona, con todas las
+  protecciones de siempre (problemas 1, 7 y 8: nada de JavaScript, límites de
+  bucles, memoria y objetos).
+- **Crear muchas salas.** Cualquiera con la web de Chispa puede crear salas.
+  Cada una ocupa como mucho 24 MB y se borra a los 7 días sin nadie, y el plan
+  gratis de Cloudflare tiene sus propios límites (si se pasan, ese día las
+  salas dan error; no se cobra nada). Si alguien abusara, se puede borrar el
+  Worker desde el panel de Cloudflare.
+
+### Probado
+
+- `pruebas/colaborar.test.ts`: dos y tres editores unidos en memoria (cambios a
+  la vez sin pisarse, el código, deshacer solo lo tuyo, esperar mientras
+  arrastras, lo roto no se aplica).
+- `pruebas/servidor-salas.test.ts`: solo el dueño manda, sacar y no volver,
+  candado, 12 como mucho, mensajes enormes o raros, proyecto demasiado grande,
+  nombres y colores con trampa, códigos al azar sin repetir.
+- `servidor-salas/probar-salas.mjs`: lo mismo contra el servidor de verdad
+  (también con una llave de dueño falsa y un código con mala forma).
+- `npm run pruebas:juntos`: dos navegadores (ordenador y móvil con el dedo).
+- Las dependencias nuevas (Yjs, y-protocols, y-codemirror.next, y-websocket y
+  lib0) son MIT; `npm audit --omit=dev` da 0 vulnerabilidades, en el editor y en
+  el servidor (lo que se sube a Cloudflare es solo Yjs, y-protocols y lib0).
+- `npm audit` en `servidor-salas/` avisa de fallos en `undici` y `sharp`, que
+  vienen dentro de Wrangler (la herramienta de Cloudflare para probar y subir el
+  servidor desde tu ordenador). No van en el servidor subido. Se arreglan
+  actualizando Wrangler cuando Cloudflare saque una versión que los traiga
+  corregidos.

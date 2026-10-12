@@ -81,3 +81,20 @@ juego que use `vista3d.ver(yo)`. En Ajustes > «Ver fps» sale el contador.
 | Guardado | Android (Chrome) y iPhone (Safari) | Cerrar el navegador en el nivel 2 y volver a abrir el archivo: sale «Continuar». Abierto como archivo local (`file://`), algunos navegadores no guardan: comprobarlo también subido a una web. |
 | Abrir el .html desde Archivos | Android | Que Chrome lo abra tocándolo en la app Archivos (o con «Abrir con»). |
 
+## Chispa 1.4 — Programar juntos
+
+Para probar: con el servidor de salas subido (SERVIDOR_SALAS.md), crea una sala en un aparato y
+entra con el código (o el enlace) en otro. La prueba automática (`npm run pruebas:juntos`) usa un
+ordenador y un móvil simulados en el mismo ordenador; esto es lo que solo se ve con aparatos de verdad.
+
+| Qué | Dónde | Qué hay que mirar |
+|---|---|---|
+| Escribir a la vez con el teclado de pantalla | Android (Gboard) e iPhone | Dos personas en el mismo script, una en el móvil: que el texto predictivo no duplique ni se coma letras de la otra persona, y que el cursor del otro no salte al escribir. |
+| El enlace de la sala | WhatsApp, Telegram y Classroom, abierto en Android e iPhone | Que abra Chispa con el código ya puesto. En iPhone, también desde la app instalada en la pantalla de inicio. |
+| Redes de instituto | La red del instituto (con su filtro) | Que se pueda conectar a la sala (va por WebSocket seguro, wss://, al puerto 443). Si el filtro lo bloquea, sale «reconectando…»: apuntar qué red era. |
+| Se corta internet | Móvil: modo avión unos segundos | Sale «reconectando…»; lo que se cambie mientras tanto se manda al volver y se junta con lo de los demás. |
+| Pantalla apagada o app en segundo plano | Android e iPhone | Volver al editor tras unos minutos: se reconecta solo y trae lo que han hecho los demás. |
+| Una clase entera | 12 aparatos a la vez en la misma sala | Que vaya fluido al escribir y mover objetos. Probar el candado cuando ya han entrado todos y sacar a alguien. |
+| Proyectos grandes | Un proyecto con muchas imágenes y sonidos (10-20 MB) | Que se pueda crear la sala y que entrar no tarde demasiado con el wifi del instituto. |
+| Tablet con teclado y ratón | iPad y Android | El cursor y el borde de color de los demás se ven bien, también en tema claro. |
+

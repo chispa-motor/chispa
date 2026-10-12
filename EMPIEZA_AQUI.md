@@ -239,6 +239,24 @@ copiarlo:
   carga del juego exportado, que dice «Hecho con Chispa» (si no la quieres,
   quita la casilla «pantalla de carga»).
 
+### Programar juntos (Chispa 1.4)
+
+Para hacer el juego entre varios a la vez, cada uno desde su aparato:
+
+1. Uno pulsa **Juntos** (arriba; en el móvil, en el menú ☰) y **Crear una sala**.
+   Sale un código como `K7Q-MX4-P2R`.
+2. Los demás pulsan **Juntos**, escriben el código y **Entrar** (o abren el
+   enlace que se puede copiar al crear la sala).
+3. ¡A programar! Veréis los cursores de los demás en el código y un borde de
+   su color en el objeto que tienen seleccionado. **Deshacer** solo deshace lo
+   tuyo, y cada uno pulsa **Ejecutar** en su aparato para probar el juego.
+
+Aquí nadie pone su nombre: cada uno es un animal de un color. No hay chat. Pasa
+el código solo a gente que conozcas. Quien crea la sala puede poner el
+**candado** (que no entre nadie más), **sacar** a alguien y cerrarla. Al salir,
+cada uno se queda con su copia en «Mis proyectos». Más en
+[NOVEDADES_1.4.md](NOVEDADES_1.4.md).
+
 ## ¿De quién son mis juegos?
 
 **Tuyos.** Chispa tiene una licencia de código abierto, la **MPL 2.0**
