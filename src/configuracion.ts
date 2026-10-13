@@ -29,7 +29,7 @@ export const CONFIGURACION = {
   /** El editor en internet, para usarlo sin instalar nada (lo publica .github/workflows/publicar.yml). */
   web: 'https://chispa-motor.github.io/chispa/',
   /** El servidor de salas para programar juntos (https://...workers.dev). Vacío = todavía no hay. */
-  servidorSalas: '',
+  servidorSalas: 'https://chispa-salas.chispa-motor.workers.dev',
 };
 
 /**
