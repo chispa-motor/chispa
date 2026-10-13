@@ -115,9 +115,21 @@ function errorProfundidad(nombre: string, pos: Posicion): ErrorChispa {
   );
 }
 
-/** ¿Es el error de JavaScript de "la pila se ha llenado"? (en cada navegador se escribe distinto) */
+/**
+ * ¿Es el error de JavaScript de "la pila se ha llenado"? (en cada navegador se escribe distinto)
+ * OJO: con la pila llena casi no se puede hacer nada. En Windows, hasta preparar una expresión regular
+ * fallaba («Invalid regular expression: Stack overflow», un SyntaxError) y Chispa daba ese error raro
+ * en vez del suyo. Por eso aquí no se usan expresiones regulares, y si ni siquiera se puede mirar el
+ * mensaje, es que la pila está llena.
+ */
 function esPilaLlena(error: unknown): boolean {
-  return error instanceof RangeError && /call stack|too much recursion|stack/i.test(error.message);
+  if (!(error instanceof RangeError || error instanceof SyntaxError)) return false;
+  try {
+    const m = String(error.message).toLowerCase();
+    return m.includes('call stack') || m.includes('too much recursion') || m.includes('stack');
+  } catch {
+    return true;
+  }
 }
 
 export class Interprete {
