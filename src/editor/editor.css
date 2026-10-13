@@ -984,3 +984,43 @@ html, body { overscroll-behavior: none; }
 /* El aviso de «Gira el móvil» de un juego, dentro del editor: solo tapa la pantalla del juego
    (en el juego exportado tapa la página entera), para que se pueda parar y seguir editando. */
 .editor-chispa .aviso-girar { position: absolute; font-size: 15px; padding: 12px; gap: 10px; }
+
+/* ═════════════════ Programar juntos (salas) ═════════════════ */
+.boton-juntos.en-sala { white-space: nowrap; flex: none; display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px 4px 6px; border-radius: 999px; border: 1px solid var(--acento); background: var(--acento-fondo); color: var(--texto); min-height: 34px; cursor: pointer; font: inherit; }
+.boton-juntos.en-sala.sin-conexion { border-color: var(--aviso); }
+.circulos-juntos { display: inline-flex; }
+.circulos-juntos .circulo-juntos + .circulo-juntos { margin-left: -7px; }
+.circulo-juntos { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; color: #111319; font-weight: 700; font-size: 12px; border: 2px solid var(--fondo-panel); flex: none; }
+.circulo-juntos.mini { width: 16px; height: 16px; font-size: 9px; border-width: 1px; }
+.gente-pestana { display: inline-flex; gap: 2px; }
+.gente-pestana:empty { display: none; }
+.codigo-juntos { font-family: var(--letra-codigo); font-weight: 700; letter-spacing: 1px; font-size: 13px; }
+.dialogo.dialogo-juntos { width: min(520px, calc(100vw - 32px)); }
+.juntos-empezar > p:first-child { margin-top: 0; }
+.fila-yo-juntos { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
+.yo-juntos { display: inline-flex; align-items: center; gap: 8px; }
+.opcion-juntos { border: 1px solid var(--borde); border-radius: 10px; padding: 12px 14px; margin: 10px 0; background: var(--fondo-alterno); }
+.opcion-juntos h3, .juntos-sala h3 { margin: 0 0 4px; font-size: 15px; }
+.opcion-juntos p { margin: 0 0 10px; color: var(--texto-suave); font-size: 13px; }
+.opcion-juntos .boton { min-height: 40px; }
+.fila-codigo-juntos { display: flex; gap: 8px; }
+.campo-codigo-juntos { flex: 1; min-width: 0; min-height: 40px; font-family: var(--letra-codigo); font-size: 18px; letter-spacing: 2px; text-transform: uppercase; text-align: center; padding: 0 10px; border-radius: 8px; border: 1px solid var(--borde-fuerte); background: var(--fondo-codigo); color: var(--texto); }
+.error-juntos { color: var(--error); margin: 8px 0; }
+.error-juntos:empty { display: none; }
+.nota-seguridad-juntos { margin-top: 12px; }
+.codigo-sala-juntos { text-align: center; padding: 12px; border-radius: 10px; background: var(--fondo-alterno); border: 1px solid var(--borde); }
+.codigo-sala-juntos .etiqueta { display: block; color: var(--texto-suave); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+.codigo-grande-juntos { display: block; font-family: var(--letra-codigo); font-size: clamp(28px, 9vw, 40px); letter-spacing: 4px; margin: 4px 0 10px; color: var(--cursor-codigo); user-select: all; }
+.fila-botones-juntos { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.estado-conexion-juntos { font-size: 13px; margin: 10px 0; color: var(--texto-suave); }
+.estado-conexion-juntos.conectado { color: var(--ok); }
+.estado-conexion-juntos.reconectando { color: var(--aviso); }
+.lista-juntos { list-style: none; padding: 0; margin: 6px 0 12px; display: grid; gap: 6px; }
+.lista-juntos li { display: flex; align-items: center; gap: 10px; min-height: 40px; }
+.nombre-juntos { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.nombre-juntos small { color: var(--texto-suave); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.boton.pequeno { min-height: 32px; padding: 0 10px; font-size: 13px; }
+.dueno-juntos { border-top: 1px solid var(--borde); padding-top: 10px; display: grid; gap: 10px; justify-items: start; }
+.dueno-juntos .casilla { display: flex; align-items: center; gap: 8px; min-height: 36px; }
+.movil .boton-juntos.en-sala { padding: 3px 6px 3px 4px; min-height: 36px; }
+@media (pointer: coarse) { .lista-juntos li { min-height: 48px; } .boton.pequeno { min-height: 44px; } }

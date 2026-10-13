@@ -13,7 +13,7 @@ empieza (a partir de unos 12 años): se escribe como se habla, y cuando algo
 sale mal te explica qué pasa y cómo arreglarlo.
 
 [![Licencia: MPL 2.0](https://img.shields.io/badge/licencia-MPL%202.0-brightgreen.svg)](LICENSE)
-![Versión 1.3.0](https://img.shields.io/badge/versi%C3%B3n-1.3.0-blue.svg)
+![Versión 1.4.0](https://img.shields.io/badge/versi%C3%B3n-1.4.0-blue.svg)
 ![Hecho en español](https://img.shields.io/badge/idioma-espa%C3%B1ol-orange.svg)
 
 ![Arena de Habilidades, un juego hecho solo con Chispa](docs/imagenes/arena.gif)
@@ -71,7 +71,13 @@ tienes un personaje que anda, salta y recoge monedas. Después, para aprender
 de verdad, sigue el curso **[Aprende Chispa](APRENDE_CHISPA.md)** (5 niveles,
 con ejercicios y mini proyectos) y ten a mano la **[chuleta](CHULETA_CHISPA.md)**.
 
-**¿Qué hay de nuevo en la 1.3?** La primera persona: un juego visto desde
+**¿Qué hay de nuevo en la 1.4?** Programar juntos: varias personas hacen el
+mismo juego a la vez, cada una desde su aparato, con salas privadas por código,
+los cursores de los demás en el código y «deshacer» que solo deshace lo tuyo:
+**[NOVEDADES_1.4.md](NOVEDADES_1.4.md)** (y el servidor, en
+**[SERVIDOR_SALAS.md](SERVIDOR_SALAS.md)**).
+
+**¿Y en la 1.3?** La primera persona: un juego visto desde
 arriba se puede mirar «desde dentro» (`vista3d.ver(yo)`), con puertas, suelos a
 distintas alturas, rampas y sonido que oye desde quien mira:
 **[NOVEDADES_1.3.md](NOVEDADES_1.3.md)**.

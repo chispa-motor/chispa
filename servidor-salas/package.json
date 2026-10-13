@@ -1,0 +1,26 @@
+{
+  "name": "chispa-servidor-salas",
+  "private": true,
+  "version": "1.4.0",
+  "description": "Servidor de salas de Chispa para programar juntos (Cloudflare Workers + Durable Objects)",
+  "license": "MPL-2.0",
+  "type": "module",
+  "scripts": {
+    "local": "wrangler dev --port 8787 --ip 127.0.0.1",
+    "subir": "wrangler deploy",
+    "revisar": "tsc --noEmit",
+    "probar": "node probar-salas.mjs"
+  },
+  "dependencies": {
+    "lib0": "0.2.117",
+    "y-protocols": "1.0.7",
+    "yjs": "13.6.33"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20260925.1",
+    "typescript": "5.9.3",
+    "wrangler": "4.140.0",
+    "ws": "8.21.3",
+    "y-websocket": "3.1.0"
+  }
+}

@@ -60,8 +60,15 @@ async function arrancarEditor(): Promise<void> {
   // ?limpio = empezar con el ejemplo, sin recuperar lo guardado (lo usan las pruebas del navegador)
   const parametros = new URLSearchParams(location.search);
   if (!parametros.has('limpio')) await app.recuperar();
+  // ?sala=CODIGO: un enlace de «Programar juntos» (abre la ventana para entrar, con el código puesto)
+  const sala = parametros.get('sala');
+  if (sala !== null) {
+    parametros.delete('sala');
+    history.replaceState(null, '', `${location.pathname}${parametros.size ? `?${parametros}` : ''}`);
+    app.juntos.abrir(sala.replace(/[^A-Za-z0-9-]/g, '').slice(0, 20));
+  }
   // La primera vez: «¿Hacemos tu primer juego?» (?tutorial lo abre siempre; ?limpio, nunca)
-  if (parametros.has('tutorial')) void app.empezarTutorial(false);
+  else if (parametros.has('tutorial')) void app.empezarTutorial(false);
   else if (!parametros.has('limpio')) app.ofrecerTutorial();
   // Para poder inspeccionarlo desde la consola del navegador (F12) y en las pruebas
   (window as unknown as { chispa: unknown }).chispa = app;

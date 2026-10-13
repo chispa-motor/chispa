@@ -577,9 +577,47 @@ export class VistaEscena {
     ctx.setLineDash([]);
   }
 
+  /**
+   * PROGRAMAR JUNTOS: qué objetos tienen seleccionados los demás (un borde de su color con su nombre de
+   * animal). Lo pone el editor cuando estás en una sala.
+   */
+  marcasDeOtros: () => { objeto: string; nombre: string; color: string }[] = () => [];
+
+  private dibujarMarcasDeOtros(marco: ReturnType<VistaEscena['marco']>): void {
+    const marcas = this.marcasDeOtros();
+    if (!marcas.length) return;
+    const ctx = this.r.ctx;
+    const cam = this.camara;
+    ctx.save();
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    ctx.font = '600 11px system-ui, sans-serif';
+    ctx.textBaseline = 'bottom';
+    const ya = new Map<string, number>();
+    for (const m of marcas) {
+      const d = this.estado.escena.objetos.find((o) => o.nombre === m.objeto);
+      if (!d) continue;
+      const c = cajaDe(d, marco);
+      const a = cam.aPantalla(c.izquierda, c.arriba);
+      const b = cam.aPantalla(c.derecha, c.abajo);
+      const hueco = (ya.get(m.objeto) ?? 0) * 3;
+      ya.set(m.objeto, (ya.get(m.objeto) ?? 0) + 1);
+      ctx.strokeStyle = m.color;
+      ctx.strokeRect(Math.round(a.x) - 4.5 - hueco, Math.round(a.y) - 4.5 - hueco, Math.round(b.x - a.x) + 9 + hueco * 2, Math.round(b.y - a.y) + 9 + hueco * 2);
+      const ancho = ctx.measureText(m.nombre).width + 8;
+      const y = Math.round(a.y) - 5 - hueco - (ya.get(m.objeto)! - 1) * 16;
+      ctx.fillStyle = m.color;
+      ctx.fillRect(Math.round(a.x) - 5 - hueco, y - 15, ancho, 15);
+      ctx.fillStyle = '#111319';
+      ctx.fillText(m.nombre, Math.round(a.x) - 1 - hueco, y - 2);
+    }
+    ctx.restore();
+  }
+
   private dibujarSeleccion(marco: ReturnType<VistaEscena['marco']>): void {
     const ctx = this.r.ctx;
     const cam = this.camara;
+    this.dibujarMarcasDeOtros(marco);
     // El rectángulo de selección (arrastrando el fondo)
     const r0 = this.arrastre;
     if (r0?.tipo === 'marco') {

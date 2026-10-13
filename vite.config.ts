@@ -12,6 +12,7 @@ import { defineConfig, type Plugin } from 'vite';
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
+import { CONFIGURACION } from './src/configuracion';
 import { ARCHIVO_MANIFIESTO, ARCHIVO_SERVICIO, LADOS_ICONO, archivoIcono, iconoPorDefecto, manifiestoDelEditor, servicioSinInternet } from './src/exportar/pwa';
 
 /**
@@ -25,13 +26,24 @@ import { ARCHIVO_MANIFIESTO, ARCHIVO_SERVICIO, LADOS_ICONO, archivoIcono, iconoP
  * cargar nada de fuera. Solo al compilar: en `npm run dev` Vite necesita más
  * libertad para recargar al momento.
  */
+/**
+ * PROGRAMAR JUNTOS: el editor puede conectarse a SU servidor de salas (y solo a ese). Sale de
+ * src/configuracion.ts, o de VITE_SERVIDOR_SALAS al compilar (las pruebas usan uno en tu ordenador).
+ */
+function origenSalas(): string {
+  const texto = process.env.VITE_SERVIDOR_SALAS || CONFIGURACION.servidorSalas;
+  if (!texto) return '';
+  const u = new URL(texto);
+  return ` ${u.protocol === 'https:' ? 'wss:' : 'ws:'}//${u.host}`;
+}
+
 export const CSP_EDITOR = [
   "default-src 'self'",
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "media-src 'self' data: blob:",
-  "connect-src 'self'",
+  `connect-src 'self'${origenSalas()}`,
   "font-src 'self'",
   "object-src 'none'",
   "frame-src 'none'",
@@ -91,6 +103,8 @@ export default defineConfig({
   // El editor (con CodeMirror) ocupa unos 500 KB: es normal, no hace falta avisar
   build: { chunkSizeWarningLimit: 1000 },
   // Tests del lenguaje (npm run pruebas). happy-dom simula un navegador sin ventana.
+  // Una sola copia de Yjs aunque el servidor de salas (servidor-salas/) tenga la suya
+  resolve: { dedupe: ['yjs', 'lib0', 'y-protocols'] },
   test: {
     environment: 'happy-dom',
     include: ['pruebas/**/*.test.ts'],

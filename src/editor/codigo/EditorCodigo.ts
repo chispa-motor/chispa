@@ -45,6 +45,16 @@ import { EditorBloques } from '../bloques/EditorBloques';
 import { desdeCodigo } from '../bloques/modelo';
 import { h, rellenar } from '../interfaz/dom';
 import { avisar, confirmar } from '../interfaz/dialogos';
+import * as Y from 'yjs';
+import { yCollab, ySyncAnnotation, yUndoManagerKeymap } from 'y-codemirror.next';
+import type { Awareness } from 'y-protocols/awareness';
+import { cambioDeTexto } from '../../colaborar/diferencias';
+
+/** PROGRAMAR JUNTOS: de dónde saca el editor de código los textos compartidos y los cursores de los demás. */
+export interface CodigoJuntos {
+  texto(archivo: string): Y.Text | null;
+  presencia: Awareness;
+}
 
 /** Los textos de CodeMirror, en español. */
 const FRASES = EditorState.phrases.of({
@@ -117,6 +127,8 @@ interface Pestana {
   atajos: HTMLElement;
   /** El editor de bloques (se crea la primera vez que se pasa a bloques). */
   bloques: EditorBloques | null;
+  /** Programar juntos: el texto compartido al que está unida la vista (null = sin sala). */
+  texto: Y.Text | null;
 }
 
 export class EditorCodigo {
@@ -124,6 +136,8 @@ export class EditorCodigo {
   private escribiendo = false;
   /** El código lo están cambiando los bloques (no hay que volver a leerlos). */
   private desdeBloques = false;
+  /** Programar juntos (null = sin sala). */
+  private juntos: CodigoJuntos | null = null;
 
   constructor(
     private contenedor: HTMLElement,
@@ -132,15 +146,17 @@ export class EditorCodigo {
     private depurador: Depurador | null = null,
   ) {}
 
-  private extensiones(archivo: { nombre: string }): Extension[] {
+  private extensiones(archivo: { nombre: string }, texto: Y.Text | null): Extension[] {
     const proyecto = () => this.estado.proyecto;
     const dep = this.depurador;
+    // En una sala, el deshacer y la sincronización los lleva Yjs (deshace solo lo que escribes tú, y se ven los cursores de los demás)
+    const juntos = texto && this.juntos ? yCollab(texto, this.juntos.presencia, { undoManager: new Y.UndoManager(texto) }) : null;
     return [
       // Los números de línea (y a su izquierda, los puntos de parada: clic para ponerlos)
       puntosDeParada(dep?.lineasCon(archivo.nombre) ?? [], (lineas) => dep?.ponerPuntos(archivo.nombre, lineas)),
       highlightActiveLineGutter(),
       highlightSpecialChars(),
-      history(),
+      juntos ?? history(),
       drawSelection(),
       dropCursor(),
       EditorState.allowMultipleSelections.of(true),
@@ -152,7 +168,7 @@ export class EditorCodigo {
       highlightSelectionMatches(),
       rectangularSelection(),
       crosshairCursor(),
-      keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...searchKeymap, ...historyKeymap, ...completionKeymap, ...lintKeymap, indentWithTab]),
+      keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...searchKeymap, ...(juntos ? yUndoManagerKeymap : historyKeymap), ...completionKeymap, ...lintKeymap, indentWithTab]),
       indentUnit.of('    '),
       EditorState.tabSize.of(4),
       lenguajeChispa,
@@ -172,6 +188,8 @@ export class EditorCodigo {
         this.escribiendo = true;
         this.estado.cambiarCodigo(archivo.nombre, u.state.doc.toString());
         this.escribiendo = false;
+        // Programar juntos: si otra persona cambia este script mientras tú lo ves en bloques, los bloques se vuelven a leer
+        if (u.transactions.some((t) => t.annotation(ySyncAnnotation) !== undefined) && this.estado.enBloques(archivo.nombre)) this.releerBloques(archivo.nombre);
       }),
     ];
   }
@@ -200,14 +218,12 @@ export class EditorCodigo {
       const cajaCodigo = h('div', { class: 'caja-codigo' });
       caja.append(barra, cajaCodigo);
       this.contenedor.append(caja);
-      const vista = new EditorView({
-        state: EditorState.create({ doc: this.estado.proyecto.scripts[archivo] ?? '', extensions: this.extensiones(nombre) }),
-        parent: cajaCodigo,
-      });
+      const texto = this.juntos?.texto(archivo) ?? null;
+      const vista = this.nuevaVista(nombre, texto, cajaCodigo);
       // La barra de atajos para escribir con el dedo (solo se ve en móvil y tablet), justo debajo del código: encima del teclado
-      const atajos = barraDeAtajos(() => vista);
+      const atajos = barraDeAtajos(() => p!.vista);
       caja.append(atajos);
-      p = { vista, archivo: nombre, caja, barra, cajaCodigo, atajos, bloques: null };
+      p = { vista, archivo: nombre, caja, barra, cajaCodigo, atajos, bloques: null, texto };
       this.pestanas.set(archivo, p);
       // Si se guardó en modo bloques, se abre en bloques (si todavía se puede)
       if (this.estado.enBloques(archivo) && !this.aBloques(p)) this.estado.ponerEnBloques(archivo, false);
@@ -215,6 +231,40 @@ export class EditorCodigo {
     }
     for (const [nombre, otra] of this.pestanas) otra.caja.style.display = nombre === archivo ? '' : 'none';
     p.vista.requestMeasure();
+  }
+
+  private nuevaVista(archivo: { nombre: string }, texto: Y.Text | null, padre: HTMLElement): EditorView {
+    return new EditorView({
+      state: EditorState.create({ doc: texto ? texto.toString() : (this.estado.proyecto.scripts[archivo.nombre] ?? ''), extensions: this.extensiones(archivo, texto) }),
+      parent: padre,
+    });
+  }
+
+  /** Vuelve a crear la vista de un script (al entrar o salir de una sala, o si su texto compartido ha cambiado). */
+  private rehacerVista(p: Pestana): void {
+    const cursor = Math.min(p.vista.state.selection.main.head, (p.texto?.length ?? this.estado.proyecto.scripts[p.archivo.nombre]?.length ?? 0));
+    const conFoco = p.vista.hasFocus;
+    p.vista.destroy();
+    p.texto = this.juntos?.texto(p.archivo.nombre) ?? null;
+    p.vista = this.nuevaVista(p.archivo, p.texto, p.cajaCodigo);
+    const max = p.vista.state.doc.length;
+    p.vista.dispatch({ selection: { anchor: Math.min(cursor, max) } });
+    if (conFoco) p.vista.focus();
+  }
+
+  /**
+   * PROGRAMAR JUNTOS: con sala, cada script se une a su texto compartido (se ven los cursores de los
+   * demás y lo que escriben); sin sala (null), vuelve a ser un editor normal.
+   */
+  usarJuntos(juntos: CodigoJuntos | null): void {
+    this.juntos = juntos;
+    for (const p of this.pestanas.values()) this.rehacerVista(p);
+  }
+
+  /** Cambia el código de una vista tocando solo lo que cambia (así no se pierde el cursor, ni el de los demás). */
+  private ponerCodigo(vista: EditorView, codigo: string): void {
+    const c = cambioDeTexto(vista.state.doc.toString(), codigo);
+    if (c) vista.dispatch({ changes: { from: c.desde, to: c.hasta, insert: c.meter } });
   }
 
   // ───────────────────────── Código o bloques ─────────────────────────
@@ -260,6 +310,21 @@ export class EditorCodigo {
     return this.aBloques(p);
   }
 
+  private releyendo = new Set<string>();
+  /**
+   * Vuelve a leer los bloques (un momento después, por si la otra persona sigue escribiendo). Si el
+   * código está a medio escribir y no se puede leer, se dejan los bloques como estaban.
+   */
+  private releerBloques(archivo: string): void {
+    if (this.releyendo.has(archivo)) return;
+    this.releyendo.add(archivo);
+    setTimeout(() => {
+      this.releyendo.delete(archivo);
+      const p = this.pestanas.get(archivo);
+      if (p?.bloques && this.estado.enBloques(archivo)) this.aBloques(p);
+    }, 400);
+  }
+
   /** Crea (o actualiza) los bloques a partir del código. Devuelve si ha podido. */
   private aBloques(p: Pestana): boolean {
     const lectura = desdeCodigo(this.estado.proyecto.scripts[p.archivo.nombre] ?? '');
@@ -293,7 +358,7 @@ export class EditorCodigo {
     this.desdeBloques = true;
     this.escribiendo = true;
     try {
-      p.vista.dispatch({ changes: { from: 0, to: p.vista.state.doc.length, insert: codigo } });
+      this.ponerCodigo(p.vista, codigo);
       this.estado.cambiarCodigo(p.archivo.nombre, codigo);
     } finally {
       this.desdeBloques = false;
@@ -335,9 +400,11 @@ export class EditorCodigo {
     }
     // Código cambiado desde fuera (deshacer general, abrir otro proyecto...)
     for (const [nombre, p] of this.pestanas) {
+      // En una sala, si el script tiene otro texto compartido (lo han renombrado o vuelto a crear), se vuelve a unir
+      if (this.juntos && p.texto !== this.juntos.texto(nombre)) this.rehacerVista(p);
       const codigo = this.estado.proyecto.scripts[nombre] ?? '';
       if (p.vista.state.doc.toString() !== codigo) {
-        p.vista.dispatch({ changes: { from: 0, to: p.vista.state.doc.length, insert: codigo } });
+        this.ponerCodigo(p.vista, codigo);
         // En bloques, se vuelven a leer (y si ya no se puede, se pasa a código)
         if (this.estado.enBloques(nombre) && p.bloques && !this.aBloques(p)) this.estado.ponerEnBloques(nombre, false);
       }
