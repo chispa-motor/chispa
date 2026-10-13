@@ -721,6 +721,9 @@ a.boton { text-decoration: none; display: inline-flex; align-items: center; }
   /* En la barra, «itch.io», Pausar y Parar se quedan con su dibujo (el nombre sale al pasar el ratón) */
   .grupo-barra .boton-itch span, .controles-juego .pausar span, .controles-juego .parar span { display: none; }
   .nombre-proyecto { padding: 0 8px; }
+  /* «Juntos» también, solo con su dibujo; y en una sala, solo los circulitos (el código sale al tocarlos) */
+  .grupo-barra .boton-juntos:not(.en-sala) span, .boton-juntos.en-sala .codigo-juntos { display: none; }
+  .boton-juntos.en-sala .circulo-juntos:nth-child(n + 4) { display: none; }
 }
 @media (max-height: 800px) {
   /* Las categorías de los bloques, más juntas: caben las diez sin desplazar */
